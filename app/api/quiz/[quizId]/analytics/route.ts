@@ -30,12 +30,6 @@ function parsePeriod(raw: string | null): { key: PeriodKey; sinceISO: string | n
   return { key: "all", sinceISO: null };
 }
 
-interface LeadRow {
-  created_at: string;
-  quiz_result_id: string | null;
-  quiz_result_title: string | null;
-  exported_sio: boolean | null;
-}
 
 export async function GET(
   req: NextRequest,
@@ -98,26 +92,26 @@ export async function GET(
     .eq("source_id", quizId)
     .eq("exported_sio", true);
 
-  // Leads de la PÉRIODE (time-series + distribution).
-  let leadsQuery = supabase
-    .from("leads")
-    .select("created_at, quiz_result_id, quiz_result_title, exported_sio")
-    .eq("user_id", user.id)
-    .eq("source", "quiz")
-    .eq("source_id", quizId)
-    .order("created_at", { ascending: true })
-    .limit(5000);
-  if (period.sinceISO) leadsQuery = leadsQuery.gte("created_at", period.sinceISO);
-
-  const { data: leadsRaw, error: leadsErr } = await leadsQuery;
-  if (leadsErr) {
+  // Leads de la PÉRIODE (time-series + distribution) — agrégés DANS la
+  // base, sans plafond (avant : cap 5000 → sous-comptage des quiz viraux).
+  // Deux vues : par jour (graphe) et groupés par (result_id, result_title)
+  // pour la distribution. Appels via `supabase` (RLS owner-scoped).
+  const [leadsDailyRes, leadsByResultRes] = await Promise.all([
+    supabase.rpc("quiz_leads_daily", { p_user_id: user.id, p_quiz_id: quizId, p_tz_offset: tzOffset, p_since: period.sinceISO }),
+    supabase.rpc("quiz_leads_by_result", { p_user_id: user.id, p_quiz_id: quizId, p_since: period.sinceISO }),
+  ]);
+  if (leadsByResultRes.error) {
     return NextResponse.json(
-      { ok: false, error: leadsErr.message },
+      { ok: false, error: leadsByResultRes.error.message },
       { status: 400 },
     );
   }
-
-  const leads = (leadsRaw ?? []) as LeadRow[];
+  const leadsDailyRows = (leadsDailyRes.data ?? []) as { day: string; n: number }[];
+  const leadsByResultRows = (leadsByResultRes.data ?? []) as {
+    result_id: string | null;
+    result_title: string | null;
+    n: number;
+  }[];
   const leadsCount = lifetimeLeadsCount ?? 0;
   const exportedSio = lifetimeExportedSio ?? 0;
 
@@ -177,12 +171,12 @@ export async function GET(
   const NO_RESULT_KEY = "__no_result__";
   type Bucket = { count: number; snapshotTitle: string | null };
   const byResult = new Map<string, Bucket>();
-  for (const l of leads) {
-    const key = l.quiz_result_id ?? NO_RESULT_KEY;
+  for (const r of leadsByResultRows) {
+    const key = r.result_id ?? NO_RESULT_KEY;
     const b = byResult.get(key) ?? { count: 0, snapshotTitle: null };
-    b.count += 1;
-    if (!b.snapshotTitle && l.quiz_result_title && l.quiz_result_title.trim()) {
-      b.snapshotTitle = l.quiz_result_title.trim();
+    b.count += Number(r.n);
+    if (!b.snapshotTitle && r.result_title && r.result_title.trim()) {
+      b.snapshotTitle = r.result_title.trim();
     }
     byResult.set(key, b);
   }
@@ -243,18 +237,18 @@ export async function GET(
   }
   const viewDayKeys = [...viewsDayMap.keys()].sort();
 
-  // Série quotidienne : leads ET vues. Bucketing en jour LOCAL du créateur
-  // (tzOffset) pour que "aujourd'hui" ne soit jamais vide (bug Adeline 24/05).
+  // Série quotidienne : leads ET vues, déjà agrégés par jour LOCAL en SQL
+  // (même formule dateKeyForOffset). Fill des jours manquants à 0.
   const leadsDayMap = new Map<string, number>();
-  for (const l of leads) {
-    const k = dateKeyForOffset(new Date(l.created_at), tzOffset);
-    leadsDayMap.set(k, (leadsDayMap.get(k) ?? 0) + 1);
+  for (const r of leadsDailyRows) {
+    leadsDayMap.set(r.day, (leadsDayMap.get(r.day) ?? 0) + Number(r.n));
   }
+  const leadDayKeys = [...leadsDayMap.keys()].sort();
   const leadsByDay = (() => {
-    if (leads.length === 0 && viewDayKeys.length === 0) return [];
+    if (leadDayKeys.length === 0 && viewDayKeys.length === 0) return [];
     const firstTimes: number[] = [];
-    if (leads.length) firstTimes.push(new Date(leads[0]!.created_at).getTime());
-    if (viewDayKeys.length) firstTimes.push(new Date(viewDayKeys[0]! + "T12:00:00Z").getTime());
+    if (leadDayKeys.length) firstTimes.push(new Date(leadDayKeys[0]! + "T00:00:00Z").getTime());
+    if (viewDayKeys.length) firstTimes.push(new Date(viewDayKeys[0]! + "T00:00:00Z").getTime());
     const startMs = period.sinceISO
       ? new Date(period.sinceISO).getTime()
       : firstTimes.length
@@ -297,63 +291,39 @@ export async function GET(
   }[] = [];
   let totalSessions = 0;
   try {
-    // Ordre par created_at DESC (et NON par question_index) : si on plafonne
-    // à 50000 lignes en triant par question_index croissant, ce sont les
-    // questions de FIN qui sont tronquées en premier → le funnel s'arrête aux
-    // 1res questions. En triant par récence, la troncature éventuelle retire
-    // les events les plus vieux, uniformément sur toutes les questions.
-    let qEventsQuery = supabaseAdmin
-      .from("quiz_question_events")
-      .select("question_index, session_id, event")
-      .eq("quiz_id", quizId)
-      .order("created_at", { ascending: false })
-      .limit(50000);
-    if (period.sinceISO) qEventsQuery = qEventsQuery.gte("created_at", period.sinceISO);
-
-    const { data: qEvents } = await qEventsQuery;
-    const rows = (qEvents ?? []) as {
+    // Funnel agrégé DANS la base (RPC), sans plafond (avant : cap 50000).
+    // La RPC renvoie, par question_index croissant, les sessions DISTINCTES
+    // ayant vu (views) et répondu (answers) à chaque question. Sémantique
+    // identique à l'ancienne version JS (par-question, non monotone).
+    const { data: funnelRows } = await supabaseAdmin.rpc("quiz_question_funnel_detail", {
+      p_quiz_id: quizId,
+      p_since: period.sinceISO,
+    });
+    const rows = (funnelRows ?? []) as {
       question_index: number;
-      session_id: string;
-      event: "view" | "answer";
+      views: number;
+      answers: number;
     }[];
 
-    // Distinct sessions per (qIdx, event). Sets are O(1) hash inserts
-    // and fit comfortably in memory at our volume (50k rows cap).
-    const viewsByQ = new Map<number, Set<string>>();
-    const answersByQ = new Map<number, Set<string>>();
-    for (const r of rows) {
-      const targetMap = r.event === "answer" ? answersByQ : viewsByQ;
-      let bucket = targetMap.get(r.question_index);
-      if (!bucket) {
-        bucket = new Set();
-        targetMap.set(r.question_index, bucket);
-      }
-      bucket.add(r.session_id);
-    }
-
-    const allQs = Array.from(
-      new Set([...viewsByQ.keys(), ...answersByQ.keys()]),
-    ).sort((a, b) => a - b);
-
     let prevViews = 0;
-    for (const qIdx of allQs) {
-      const v = viewsByQ.get(qIdx)?.size ?? 0;
-      const a = answersByQ.get(qIdx)?.size ?? 0;
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i]!;
+      const v = Number(r.views);
       const drop =
-        qIdx === allQs[0] || prevViews === 0
+        i === 0 || prevViews === 0
           ? 0
           : Math.round(((prevViews - v) / prevViews) * 1000) / 10;
       funnel.push({
-        questionIndex: qIdx,
+        questionIndex: r.question_index,
         views: v,
-        answers: a,
+        answers: Number(r.answers),
         dropFromPrevious: Math.max(0, drop),
       });
       prevViews = v;
     }
     totalSessions = funnel[0]?.views ?? 0;
   } catch (e) {
-    // Table might not exist yet on a fresh deploy — fail-open with
+    // Table/RPC might not exist yet on a fresh deploy — fail-open with
     // an empty funnel rather than 500 the whole analytics endpoint.
     console.warn("[quiz/analytics] funnel build failed:", e);
   }
