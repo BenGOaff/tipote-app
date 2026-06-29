@@ -75,7 +75,6 @@ interface AnalyticsResponse {
   resultDistribution: { title: string; count: number; pct: number }[];
   // count = inscrits du jour, views = visites du jour (source quiz_events).
   leadsByDay: { date: string; count: number; views?: number }[];
-  viewsDailyTruncated?: boolean;
   funnel?: FunnelStep[];
   totalFunnelSessions?: number;
   error?: string;
@@ -291,9 +290,6 @@ export function QuizAnalyticsClient({ quizId, initial }: Props) {
                 />
               </AreaChart>
             </ResponsiveContainer>
-          )}
-          {showViews && data.viewsDailyTruncated && (
-            <p className="mt-2 text-[11px] text-muted-foreground">{t("analyticsViewsTruncated")}</p>
           )}
         </Card>
 

@@ -226,26 +226,22 @@ export async function GET(
     .sort((a, b) => b.count - a.count);
 
   // ── VUES quotidiennes (demande Gwenn 29 juin 2026) ──
-  // Source FIABLE : quiz_events (event_type='view'), bucketisé au MÊME jour
-  // local que les leads → ligne "vues" alignée sur "inscrits" + conversion
-  // par jour. Desc + cap 50000 : si tronqué, les jours ANCIENS sont affectés
-  // (les récents restent exacts) et on remonte un flag d'honnêteté.
-  let viewEventsQuery = supabaseAdmin
-    .from("quiz_events")
-    .select("created_at")
-    .eq("quiz_id", quizId)
-    .eq("event_type", "view")
-    .order("created_at", { ascending: false })
-    .limit(50000);
-  if (period.sinceISO) viewEventsQuery = viewEventsQuery.gte("created_at", period.sinceISO);
-  const { data: viewEventsRaw } = await viewEventsQuery;
-  const viewEvents = (viewEventsRaw ?? []) as { created_at: string }[];
-  const viewsDailyTruncated = viewEvents.length >= 50000;
+  // Source FIABLE : quiz_events (event_type='view'), agrégé DANS la base via
+  // la RPC daily_quiz_views (GROUP BY jour). Aucun plafond : que le quiz ait
+  // 1 000 ou 10 millions de vues, on ne récupère qu'une ligne par jour. Le
+  // bucketing jour-local (p_tz_offset) reproduit dateKeyForOffset à l'identique
+  // côté SQL → ligne "vues" alignée sur "inscrits" + conversion par jour.
+  const { data: viewsDailyRaw } = await supabaseAdmin.rpc("daily_quiz_views", {
+    p_quiz_id: quizId,
+    p_tz_offset: tzOffset,
+    p_since: period.sinceISO,
+  });
+  const viewsDaily = (viewsDailyRaw ?? []) as { day: string; views: number }[];
   const viewsDayMap = new Map<string, number>();
-  for (const v of viewEvents) {
-    const k = dateKeyForOffset(new Date(v.created_at), tzOffset);
-    viewsDayMap.set(k, (viewsDayMap.get(k) ?? 0) + 1);
+  for (const r of viewsDaily) {
+    viewsDayMap.set(r.day, Number(r.views) || 0);
   }
+  const viewDayKeys = [...viewsDayMap.keys()].sort();
 
   // Série quotidienne : leads ET vues. Bucketing en jour LOCAL du créateur
   // (tzOffset) pour que "aujourd'hui" ne soit jamais vide (bug Adeline 24/05).
@@ -255,10 +251,10 @@ export async function GET(
     leadsDayMap.set(k, (leadsDayMap.get(k) ?? 0) + 1);
   }
   const leadsByDay = (() => {
-    if (leads.length === 0 && viewEvents.length === 0) return [];
+    if (leads.length === 0 && viewDayKeys.length === 0) return [];
     const firstTimes: number[] = [];
     if (leads.length) firstTimes.push(new Date(leads[0]!.created_at).getTime());
-    if (viewEvents.length) firstTimes.push(new Date(viewEvents[viewEvents.length - 1]!.created_at).getTime());
+    if (viewDayKeys.length) firstTimes.push(new Date(viewDayKeys[0]! + "T12:00:00Z").getTime());
     const startMs = period.sinceISO
       ? new Date(period.sinceISO).getTime()
       : firstTimes.length
@@ -385,7 +381,6 @@ export async function GET(
     },
     resultDistribution,
     leadsByDay,
-    viewsDailyTruncated,
     funnel,
     totalFunnelSessions: totalSessions,
   });

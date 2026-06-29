@@ -4728,7 +4728,6 @@
     "analyticsTipViews": "{count} visualizações",
     "analyticsTipLeads": "{count} inscritos",
     "analyticsTipConversion": "Conversão: {pct}%",
-    "analyticsViewsTruncated": "Visualizações parciais neste período (quiz muito acessado).",
     "analyticsViewsHint": "Número total de visitantes (acumulado desde o início)",
     "analyticsEmptyLeads": "Nenhum lead capturado neste período.",
     "analyticsEmptyResults": "Nenhum resultado para mostrar.",

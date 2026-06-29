@@ -4430,7 +4430,6 @@
     "analyticsTipViews": "{count} views",
     "analyticsTipLeads": "{count} sign-ups",
     "analyticsTipConversion": "Conversion: {pct}%",
-    "analyticsViewsTruncated": "Partial views over this period (high-traffic quiz).",
     "analyticsViewsHint": "Total number of visitors (cumulative since the start)",
     "analyticsEmptyLeads": "No leads captured for this period.",
     "analyticsEmptyResults": "No results to show.",

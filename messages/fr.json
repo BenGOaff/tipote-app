@@ -4430,7 +4430,6 @@
     "analyticsTipViews": "{count} vues",
     "analyticsTipLeads": "{count} inscrits",
     "analyticsTipConversion": "Conversion : {pct}%",
-    "analyticsViewsTruncated": "Vues partielles sur cette période (quiz très consulté).",
     "analyticsViewsHint": "Nombre total de visiteurs (cumulé depuis le début)",
     "analyticsEmptyLeads": "Aucun lead capturé sur cette période.",
     "analyticsEmptyResults": "Aucun résultat à afficher.",
