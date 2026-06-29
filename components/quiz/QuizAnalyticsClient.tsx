@@ -73,7 +73,8 @@ interface AnalyticsResponse {
     exportRate: number;
   };
   resultDistribution: { title: string; count: number; pct: number }[];
-  leadsByDay: { date: string; count: number }[];
+  // count = inscrits du jour, views = visites du jour (source quiz_events).
+  leadsByDay: { date: string; count: number; views?: number }[];
   funnel?: FunnelStep[];
   totalFunnelSessions?: number;
   error?: string;
@@ -142,6 +143,9 @@ export function QuizAnalyticsClient({ quizId, initial }: Props) {
   }, [period]);
 
   const m = data.metrics;
+  // Ligne "vues" + conversion par jour affichées seulement si les vues sont
+  // fiables pour ce quiz (sinon vues incomplètes -> trompeur).
+  const showViews = m.viewsReliable !== false;
 
   return (
     <div className="space-y-6">
@@ -222,11 +226,23 @@ export function QuizAnalyticsClient({ quizId, initial }: Props) {
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="lg:col-span-2 p-4">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-3 gap-2">
             <h2 className="text-sm font-semibold">{t("analyticsLeadsEvolution")}</h2>
-            {loading ? (
-              <Loader2 className="size-4 animate-spin text-muted-foreground" />
-            ) : null}
+            <div className="flex items-center gap-3">
+              {showViews && (
+                <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <span className="size-2.5 rounded-full" style={{ backgroundColor: "#94A3B8" }} />
+                    {t("analyticsSeriesViews")}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="size-2.5 rounded-full" style={{ backgroundColor: "#5D6CDB" }} />
+                    {t("analyticsSeriesLeads")}
+                  </span>
+                </div>
+              )}
+              {loading ? <Loader2 className="size-4 animate-spin text-muted-foreground" /> : null}
+            </div>
           </div>
           {data.leadsByDay.length === 0 ? (
             <EmptyState message={t("analyticsEmptyLeads")} />
@@ -237,6 +253,10 @@ export function QuizAnalyticsClient({ quizId, initial }: Props) {
                   <linearGradient id="qaLeadFill" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#5D6CDB" stopOpacity={0.35} />
                     <stop offset="100%" stopColor="#5D6CDB" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="qaViewFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#94A3B8" stopOpacity={0.25} />
+                    <stop offset="100%" stopColor="#94A3B8" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -251,7 +271,16 @@ export function QuizAnalyticsClient({ quizId, initial }: Props) {
                   fontSize={10}
                   tick={{ fill: "hsl(var(--muted-foreground))" }}
                 />
-                <Tooltip content={<DayTooltip />} />
+                <Tooltip content={<DayTooltip showViews={showViews} />} />
+                {showViews && (
+                  <Area
+                    type="monotone"
+                    dataKey="views"
+                    stroke="#94A3B8"
+                    strokeWidth={2}
+                    fill="url(#qaViewFill)"
+                  />
+                )}
                 <Area
                   type="monotone"
                   dataKey="count"
@@ -489,26 +518,64 @@ function shortDate(s: string): string {
   }
 }
 
-function DayTooltip({ active, payload, label }: any) {
+interface TooltipEntry {
+  dataKey?: string | number;
+  value?: number | string;
+  payload?: { title?: string; pct?: number };
+}
+interface TooltipProps {
+  active?: boolean;
+  payload?: TooltipEntry[];
+  label?: string;
+}
+
+function DayTooltip({
+  active,
+  payload,
+  label,
+  showViews,
+}: TooltipProps & { showViews?: boolean }) {
+  const t = useTranslations("quizDetail");
   if (!active || !payload?.length) return null;
+  const byKey: Record<string, number> = {};
+  for (const p of payload) if (p.dataKey) byKey[String(p.dataKey)] = Number(p.value) || 0;
+  const leads = byKey.count ?? 0;
+  const views = byKey.views ?? 0;
+  // Conversion honnête : seulement quand on a des vues fiables ce jour-là
+  // (views > 0 et au moins autant que de leads — sinon vue incomplète).
+  const conv =
+    showViews && views > 0 && views >= leads
+      ? Math.round((leads / views) * 1000) / 10
+      : null;
   return (
-    <div className="rounded-md border bg-background shadow-lg px-3 py-2 text-xs">
-      <div className="font-semibold">{shortDate(label)}</div>
-      <div className="text-muted-foreground tabular-nums">
-        {payload[0].value} lead{payload[0].value > 1 ? "s" : ""}
+    <div className="rounded-md border bg-background shadow-lg px-3 py-2 text-xs space-y-0.5">
+      <div className="font-semibold">{shortDate(label ?? "")}</div>
+      {showViews && (
+        <div className="tabular-nums" style={{ color: "#64748B" }}>
+          {t("analyticsTipViews", { count: views })}
+        </div>
+      )}
+      <div className="tabular-nums" style={{ color: "#5D6CDB" }}>
+        {t("analyticsTipLeads", { count: leads })}
       </div>
+      {conv !== null && (
+        <div className="text-muted-foreground tabular-nums">
+          {t("analyticsTipConversion", { pct: conv })}
+        </div>
+      )}
     </div>
   );
 }
 
-function ResultTooltip({ active, payload }: any) {
+function ResultTooltip({ active, payload }: TooltipProps) {
   if (!active || !payload?.length) return null;
-  const p = payload[0];
+  const p = payload[0]!;
+  const row = p.payload ?? {};
   return (
     <div className="rounded-md border bg-background shadow-lg px-3 py-2 text-xs">
-      <div className="font-semibold">{stripHtml(p.payload.title)}</div>
+      <div className="font-semibold">{stripHtml(String(row.title ?? ""))}</div>
       <div className="text-muted-foreground tabular-nums">
-        {p.value} leads · {p.payload.pct}%
+        {Number(p.value ?? 0)} leads · {Number(row.pct ?? 0)}%
       </div>
     </div>
   );
