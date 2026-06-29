@@ -14,6 +14,7 @@ import {
 } from "@/lib/frenchTypography";
 import { computeLockedLeadIds, redactLockedLead, type LeadLike } from "@/lib/leadLock";
 import { isPaidPlan } from "@/lib/planLimits";
+import { fetchAllRows } from "@/lib/db/fetchAllRows";
 
 export const dynamic = "force-dynamic";
 
@@ -59,11 +60,18 @@ export async function GET(_req: NextRequest, context: RouteContext) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    const [quizRes, questionsRes, resultsRes, leadsRes, planRes] = await Promise.all([
+    const [quizRes, questionsRes, resultsRes, leadsRows, planRes] = await Promise.all([
       supabase.from("quizzes").select("*").eq("id", quizId).eq("user_id", user.id).maybeSingle(),
       supabase.from("quiz_questions").select("*").eq("quiz_id", quizId).order("sort_order"),
       supabase.from("quiz_results").select("*").eq("quiz_id", quizId).order("sort_order"),
-      supabase.from("quiz_leads").select("*, quiz_results(title)").eq("quiz_id", quizId).order("created_at", { ascending: false }),
+      // Leads COMPLETS (paginés) — donut, compteurs, tendance, CSV de
+      // l'onglet Résultats plus plafonnés à 1000. Borne haute navigateur ;
+      // la page Analytics dédiée reste la source non bornée par quiz.
+      fetchAllRows<Record<string, unknown>>(
+        (from, to) =>
+          supabase.from("quiz_leads").select("*, quiz_results(title)").eq("quiz_id", quizId).order("created_at", { ascending: false }).range(from, to),
+        { max: 50000 },
+      ),
       supabase.from("profiles").select("plan").eq("id", user.id).maybeSingle(),
     ]);
 
@@ -86,15 +94,15 @@ export async function GET(_req: NextRequest, context: RouteContext) {
         .eq("user_id", user.id);
       const ownedQuizIds = (ownedQuizzes ?? []).map((q: { id: string }) => q.id);
       if (ownedQuizIds.length > 0) {
-        const { data: timeline } = await supabase
-          .from("quiz_leads")
-          .select("id, created_at")
-          .in("quiz_id", ownedQuizIds);
-        lockedIds = computeLockedLeadIds(timeline ?? [], plan);
+        // Timeline COMPLÈTE (paginée) pour le calcul du lock free-tier.
+        const timeline = await fetchAllRows<{ id: string; created_at: string }>((from, to) =>
+          supabase.from("quiz_leads").select("id, created_at").in("quiz_id", ownedQuizIds).range(from, to),
+        );
+        lockedIds = computeLockedLeadIds(timeline, plan);
       }
     }
 
-    const leads = (leadsRes.data ?? []).map((l: any) => {
+    const leads = leadsRows.map((l: any) => {
       const enriched = {
         ...l,
         result_title:

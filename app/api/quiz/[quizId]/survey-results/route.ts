@@ -15,6 +15,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { aggregateSurvey } from "@/lib/survey/analysis";
+import { fetchAllRows } from "@/lib/db/fetchAllRows";
 import { formatSurveyAnswer, indexAnswers, type SurveyAnswerLike, type SurveyQuestionLike } from "@/lib/survey/format";
 import { stripHtml } from "@/lib/richText";
 
@@ -79,11 +80,16 @@ export async function GET(
       .order("sort_order", { ascending: true });
     const questions = (questionsRaw ?? []) as Array<SurveyQuestionLike>;
 
-    const { data: leads } = await supabaseAdmin
-      .from("quiz_leads")
-      .select("created_at, email, first_name, last_name, phone, country, flagged, answers")
-      .eq("quiz_id", quizId)
-      .order("created_at", { ascending: true });
+    // Export COMPLET (pas de plafond 1000) : pagination serveur, fichier
+    // téléchargé donc le volume n'est pas un souci côté navigateur.
+    const leads = await fetchAllRows((from, to) =>
+      supabaseAdmin
+        .from("quiz_leads")
+        .select("created_at, email, first_name, last_name, phone, country, flagged, answers")
+        .eq("quiz_id", quizId)
+        .order("created_at", { ascending: true })
+        .range(from, to),
+    );
 
     // Identité du répondant EN PREMIER (la demande #1 : savoir qui a répondu
     // quoi) + colonne "Marqué", puis une colonne par question avec le VRAI
