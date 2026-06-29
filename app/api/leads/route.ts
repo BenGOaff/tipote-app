@@ -13,6 +13,7 @@ import {
 } from "@/lib/piiCrypto";
 import { computeLockedLeadIds, redactLockedLead } from "@/lib/leadLock";
 import { isPaidPlan } from "@/lib/planLimits";
+import { fetchAllRows } from "@/lib/db/fetchAllRows";
 
 export const dynamic = "force-dynamic";
 
@@ -78,14 +79,15 @@ export async function GET(req: NextRequest) {
     let lockedIds = new Set<string>();
     let lockedTotal = 0;
     if (!paid) {
-      let timelineQuery = supabase
-        .from("leads")
-        .select("id, created_at")
-        .eq("user_id", user.id);
-      if (projectId) timelineQuery = timelineQuery.or(`project_id.eq.${projectId},project_id.is.null`);
-      if (source) timelineQuery = timelineQuery.eq("source", source);
-      const { data: timeline } = await timelineQuery;
-      lockedIds = computeLockedLeadIds(timeline ?? [], plan);
+      // Timeline GLOBALE complète (paginée) — la règle de fenêtre glissante
+      // free-tier doit voir TOUS les leads, pas les 1000 derniers.
+      const timeline = await fetchAllRows<{ id: string; created_at: string }>((from, to) => {
+        let q = supabase.from("leads").select("id, created_at").eq("user_id", user.id);
+        if (projectId) q = q.or(`project_id.eq.${projectId},project_id.is.null`);
+        if (source) q = q.eq("source", source);
+        return q.range(from, to);
+      });
+      lockedIds = computeLockedLeadIds(timeline, plan);
       lockedTotal = lockedIds.size;
     }
 
