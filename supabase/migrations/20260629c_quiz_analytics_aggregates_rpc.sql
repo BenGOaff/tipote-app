@@ -58,12 +58,11 @@ AS $$
   GROUP BY quiz_result_id, quiz_result_title;
 $$;
 
--- Funnel par question : views + answers = sessions DISTINCTES par
--- question_index. On reproduit EXACTEMENT la logique JS actuelle de
--- Tipote (par-question, NON monotone), le seul changement étant la
--- suppression du plafond 50000. (Tiquiz utilise un calcul monotone
--- différent ; on ne change pas la sémantique Tipote sans demande.)
--- quiz_question_events est clé sur quiz_id (UUID).
+-- Funnel par question : views (MONOTONE, sessions ayant ATTEINT la
+-- question = max index vu >= N) + answers (sessions distinctes ayant
+-- répondu). Aligné sur Tiquiz (Béné 29 juin 2026 : "aligne tipote sur
+-- tiquiz, toujours") : un visiteur arrivé à Q5 a forcément passé Q1-Q4,
+-- la courbe ne remonte jamais. quiz_question_events est clé sur quiz_id.
 CREATE OR REPLACE FUNCTION quiz_question_funnel_detail(
   p_quiz_id UUID,
   p_since TIMESTAMPTZ DEFAULT NULL
@@ -72,17 +71,36 @@ RETURNS TABLE(question_index INT, views BIGINT, answers BIGINT)
 LANGUAGE sql
 STABLE
 AS $$
-  -- Un seul passage : count(DISTINCT) filtré par type, groupé par question.
+  WITH evs AS (
+    SELECT question_index, session_id, event
+    FROM quiz_question_events
+    WHERE quiz_id = p_quiz_id
+      AND event IN ('view', 'answer')
+      AND (p_since IS NULL OR created_at >= p_since)
+  ),
+  -- Par session : la question la PLUS LOIN atteinte (max index vu).
+  session_max AS (
+    SELECT session_id, max(question_index) AS max_q
+    FROM evs WHERE event = 'view' GROUP BY session_id
+  ),
+  -- Sessions regroupées par leur max_q (au plus ~200 lignes) : permet de
+  -- calculer views(N) = SUM(c WHERE max_q >= N) sans rescanner les events.
+  maxdist AS (
+    SELECT max_q, count(*) AS c FROM session_max GROUP BY max_q
+  ),
+  ans AS (
+    SELECT question_index, count(DISTINCT session_id) AS a
+    FROM evs WHERE event = 'answer' GROUP BY question_index
+  ),
+  qs AS (
+    SELECT DISTINCT question_index FROM evs
+  )
   SELECT
-    question_index,
-    count(DISTINCT session_id) FILTER (WHERE event = 'view')::bigint AS views,
-    count(DISTINCT session_id) FILTER (WHERE event = 'answer')::bigint AS answers
-  FROM quiz_question_events
-  WHERE quiz_id = p_quiz_id
-    AND event IN ('view', 'answer')
-    AND (p_since IS NULL OR created_at >= p_since)
-  GROUP BY question_index
-  ORDER BY question_index;
+    qs.question_index,
+    COALESCE((SELECT sum(c) FROM maxdist m WHERE m.max_q >= qs.question_index), 0)::bigint AS views,
+    COALESCE((SELECT a FROM ans WHERE ans.question_index = qs.question_index), 0)::bigint AS answers
+  FROM qs
+  ORDER BY qs.question_index;
 $$;
 
 NOTIFY pgrst, 'reload schema';

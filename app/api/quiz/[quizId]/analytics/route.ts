@@ -292,9 +292,9 @@ export async function GET(
   let totalSessions = 0;
   try {
     // Funnel agrégé DANS la base (RPC), sans plafond (avant : cap 50000).
-    // La RPC renvoie, par question_index croissant, les sessions DISTINCTES
-    // ayant vu (views) et répondu (answers) à chaque question. Sémantique
-    // identique à l'ancienne version JS (par-question, non monotone).
+    // La RPC renvoie, par question_index croissant, views (MONOTONE :
+    // sessions ayant atteint la question) + answers (sessions distinctes
+    // ayant répondu). Aligné sur Tiquiz : la courbe ne remonte jamais.
     const { data: funnelRows } = await supabaseAdmin.rpc("quiz_question_funnel_detail", {
       p_quiz_id: quizId,
       p_since: period.sinceISO,
