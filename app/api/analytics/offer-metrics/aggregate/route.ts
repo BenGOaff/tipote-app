@@ -43,18 +43,18 @@ export async function POST(req: NextRequest) {
 
   // ── Fetch page leads created this month ──
   const pageIds = (pages ?? []).map((p: any) => p.id);
-  let pageLeadCounts: Record<string, number> = {};
+  const pageLeadCounts: Record<string, number> = {};
 
   if (pageIds.length > 0) {
-    const { data: leads } = await supabase
-      .from("page_leads")
-      .select("page_id")
-      .in("page_id", pageIds)
-      .gte("created_at", startISO)
-      .lt("created_at", endISO);
-
-    for (const l of (leads ?? [])) {
-      pageLeadCounts[l.page_id] = (pageLeadCounts[l.page_id] || 0) + 1;
+    // Comptage agrégé en SQL (RPC) — plus de fetch ligne par ligne plafonné
+    // à 1000 (sous-comptage si > 1000 leads de page dans le mois).
+    const { data: rows } = await supabase.rpc("page_leads_count_by_page", {
+      p_page_ids: pageIds,
+      p_since: startISO,
+      p_until: endISO,
+    });
+    for (const r of (rows ?? []) as { page_id: string; n: number }[]) {
+      pageLeadCounts[r.page_id] = Number(r.n) || 0;
     }
   }
 
@@ -68,18 +68,18 @@ export async function POST(req: NextRequest) {
 
   // ── Fetch quiz leads created this month ──
   const quizIds = (quizzes ?? []).map((q: any) => q.id);
-  let quizLeadCounts: Record<string, number> = {};
+  const quizLeadCounts: Record<string, number> = {};
 
   if (quizIds.length > 0) {
-    const { data: leads } = await supabase
-      .from("quiz_leads")
-      .select("quiz_id")
-      .in("quiz_id", quizIds)
-      .gte("created_at", startISO)
-      .lt("created_at", endISO);
-
-    for (const l of (leads ?? [])) {
-      quizLeadCounts[l.quiz_id] = (quizLeadCounts[l.quiz_id] || 0) + 1;
+    // Comptage agrégé en SQL (RPC) — plus de fetch ligne par ligne plafonné
+    // à 1000 (sous-comptage si > 1000 leads de quiz dans le mois).
+    const { data: rows } = await supabase.rpc("quiz_leads_count_by_quiz", {
+      p_quiz_ids: quizIds,
+      p_since: startISO,
+      p_until: endISO,
+    });
+    for (const r of (rows ?? []) as { quiz_id: string; n: number }[]) {
+      quizLeadCounts[r.quiz_id] = Number(r.n) || 0;
     }
   }
 

@@ -11,12 +11,6 @@ import { getSupabaseServerClient } from '@/lib/supabaseServer';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { getActiveProjectId } from '@/lib/projects/activeProject';
 
-function isDone(status: unknown): boolean {
-  if (typeof status !== 'string') return false;
-  const s = status.toLowerCase();
-  return s === 'done' || s === 'completed' || s === 'fait' || s === 'terminé';
-}
-
 export async function GET() {
   try {
     const supabase = await getSupabaseServerClient();
@@ -28,24 +22,21 @@ export async function GET() {
 
     const projectId = await getActiveProjectId(supabase, auth.user.id);
 
-    // supabaseAdmin pour eviter RLS silencieux (cf. /api/tasks GET).
-    // L'auth.user.id est strict ci-dessous, aucune fuite cross-user.
-    let query = supabaseAdmin
-      .from('project_tasks')
-      .select('id, status')
-      .eq('user_id', auth.user.id)
-      .is('deleted_at', null);
-
-    if (projectId) query = query.eq('project_id', projectId);
-
-    const { data, error } = await query;
+    // Comptage agrégé en SQL (RPC task_stats) — plus de fetch de toutes
+    // les lignes project_tasks (plafonné à 1000 → completionRate faux
+    // au-delà). supabaseAdmin + filtre user_id strict, aucune fuite.
+    const { data, error } = await supabaseAdmin.rpc('task_stats', {
+      p_user_id: auth.user.id,
+      p_project_id: projectId ?? null,
+    });
 
     if (error) {
       return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
     }
 
-    const total = Array.isArray(data) ? data.length : 0;
-    const done = Array.isArray(data) ? data.filter((t) => isDone((t as any)?.status)).length : 0;
+    const row = (Array.isArray(data) ? data[0] : data) as { total?: number; done?: number } | null;
+    const total = Number(row?.total ?? 0) || 0;
+    const done = Number(row?.done ?? 0) || 0;
     const todo = total - done;
     const completionRate = total === 0 ? 0 : Math.round((done / total) * 100);
 
