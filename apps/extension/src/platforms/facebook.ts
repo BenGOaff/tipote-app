@@ -91,19 +91,46 @@ function isSinglePostPage(): boolean {
   return /\/permalink\/|\/posts\/|\/photo|\/photos\/|story_fbid=|[?&]fbid=|\/groups\/[^/]+\/(permalink|posts)\//i.test(u);
 }
 
+/** Article (ou <article>) le plus riche en texte sous `root`, en excluant
+ *  la zone du composer. = le post principal quand `root` ne contient
+ *  qu'un post (page "post unique" ou fenetre/modal). */
+function richestArticleIn(root: ParentNode, composer: HTMLElement): HTMLElement | null {
+  const articles = Array.from(root.querySelectorAll<HTMLElement>('[role="article"], article'));
+  let best: HTMLElement | null = null;
+  let bestLen = 0;
+  for (const art of articles) {
+    if (art.contains(composer)) continue; // jamais la zone du composer
+    const len = (art.innerText || "").trim().length;
+    if (len > bestLen) { bestLen = len; best = art; }
+  }
+  return best && bestLen > 30 ? best : null;
+}
+
+/** Fenetre/modal FB : un post ouvert "dans une fenetre" (theater
+ *  permalink, photo, post du fil ouvert en grand) est rendu dans un
+ *  [role="dialog"] / [aria-modal="true"]. */
+function enclosingDialog(composer: HTMLElement): HTMLElement | null {
+  return composer.closest<HTMLElement>('[role="dialog"], [aria-modal="true"]');
+}
+
 /** Sur FB, le post est plus haut dans le DOM (~5-10 niveaux). On
  *  remonte jusqu'a un ancetre avec un texte consequent. Heuristique
  *  identique a LinkedIn mais avec un cap plus large (FB a tendance a
  *  enrouler les posts dans plus de wrappers).
  *
  *  Drame Bene (permalink / groupes, juin 2026) : "post illisible" alors
- *  qu'il y a du texte. Deux causes corrigees ici :
+ *  qu'il y a du texte. Trois causes corrigees ici :
  *   1. On retournait le 1er [role=article] rencontre MEME vide (= le
  *      wrapper du commentaire), d'ou text=0. On ne s'arrete plus sur un
  *      article sans texte, on continue de remonter.
  *   2. Sur les pages "post unique" (permalink/photo/story), le composer
  *      n'est pas un descendant de l'article du post -> la remontee
- *      echoue. Repli : on prend l'article le plus riche de la page. */
+ *      echoue. Repli : on prend l'article le plus riche de la page.
+ *   3. Drame Monique (juin 2026) : un post OUVERT DANS UNE FENETRE (modal
+ *      [role=dialog]) garde l'URL du fil (isSinglePostPage = faux) et son
+ *      composer est si profondement imbrique que la remontee n'atteint
+ *      pas le post -> "post illisible" sur les publications courtes en
+ *      fenetre. Repli scope au dialog (qui ne contient QU'UN post). */
 function findParentPost(composer: HTMLElement): HTMLElement | null {
   let node: HTMLElement | null = composer.parentElement;
   let depth = 0;
@@ -125,23 +152,30 @@ function findParentPost(composer: HTMLElement): HTMLElement | null {
   // Repli page "post unique" : aucun ancetre lisible trouve. On prend le
   // [role=article] (ou <article>) le plus riche en texte = le post
   // principal. Volontairement limite a ces pages pour ne JAMAIS prendre
-  // le mauvais post dans un fil.
+  // le mauvais post dans un fil. (Chemin existant, inchange.)
   if (isSinglePostPage()) {
-    const articles = Array.from(
-      document.querySelectorAll<HTMLElement>('[role="article"], article'),
-    );
-    let best: HTMLElement | null = null;
-    let bestLen = 0;
-    for (const art of articles) {
-      if (art.contains(composer)) continue; // jamais la zone du composer
-      const len = (art.innerText || "").trim().length;
-      if (len > bestLen) { bestLen = len; best = art; }
-    }
-    if (best && bestLen > 30) return best;
+    const best = richestArticleIn(document, composer);
+    if (best) return best;
     // Dernier repli : conteneur principal de la page (contient le post +
     // les commentaires) ; extractPostContext nettoiera le bruit.
     const main = document.querySelector<HTMLElement>('[role="main"]');
     if (main && (main.innerText || "").trim().length > 30) return main;
+  }
+
+  // Repli FENETRE/MODAL (drame Monique) : independant de l'URL, en DERNIER
+  // recours (les chemins ci-dessus, qui marchent deja, gardent la priorite).
+  // Couvre le cas casse : un post ouvert dans une fenetre depuis le fil
+  // (URL "/", donc isSinglePostPage = faux) dont le composer est trop
+  // profondement imbrique pour que la remontee atteigne le post.
+  // On NE prend PAS "l'article le plus riche" ici : dans une fenetre FB le
+  // post n'est souvent PAS un [role=article] alors que chaque COMMENTAIRE
+  // l'est -> prendre le plus riche risquerait de commenter un commentaire.
+  // On retourne le dialog entier : la legende du post est rendue AVANT les
+  // commentaires et cleanPostText garde la tete (cap 800), donc le post
+  // ressort en premier.
+  const dialog = enclosingDialog(composer);
+  if (dialog && (dialog.innerText || "").trim().length > 30) {
+    return dialog;
   }
   return null;
 }
