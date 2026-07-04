@@ -226,6 +226,18 @@ const OFFER_PRICE_PLAN_ID_TO_PLAN: Record<string, StoredPlan> = {
   "offer-price-3103593": "elite",
   "3103592": "elite",
   "3103593": "elite",
+
+  // Offre spéciale clients Tiquiz : Elite au prix Basic (juillet 2026)
+  // Page tipote.fr/tipote-offre-speciale — widget "offerprice-dc9c3e75",
+  // pricePlan 3330096 = mensuel 19 EUR, pricePlan 3330098 = annuel 190 EUR
+  // (IDs vérifiés dans le JSON embarqué de la page de commande le 4 juil).
+  "offerprice-dc9c3e75": "elite",
+  "offer-price-dc9c3e75": "elite",
+  "dc9c3e75": "elite",
+  "offer-price-3330096": "elite",
+  "offer-price-3330098": "elite",
+  "3330096": "elite",
+  "3330098": "elite",
 };
 
 /**

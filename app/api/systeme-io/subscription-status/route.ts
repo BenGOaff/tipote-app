@@ -132,6 +132,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid or missing secret" }, { status: 401 });
     }
 
+    // Garde anti-misconfiguration (offre spéciale juillet 2026) : cet
+    // endpoint ne fait QUE du downgrade. Le payload SIO "sale canceled" a
+    // exactement la même forme qu'un "new sale", donc si le webhook
+    // "Nouvelle vente" est pointé ici par erreur, on downgraderait un
+    // client au moment exact où il PAIE. Le header X-Webhook-Event est le
+    // seul discriminant fiable : tout event non-terminal est ignoré avec
+    // un hint vers la bonne route (/api/systeme-io/webhook).
+    const headerEvent = String(req.headers.get("x-webhook-event") ?? "").trim();
+    if (headerEvent && !/CANCEL|REFUND|EXPIR|CHARGEBACK|FAIL/i.test(headerEvent)) {
+      console.warn(
+        `[Systeme.io subscription-status] ⚠️ Ignoring non-terminal event "${headerEvent}" — ` +
+        `new sales must be sent to /api/systeme-io/webhook (this endpoint only downgrades).`,
+      );
+      return NextResponse.json({
+        status: "ignored",
+        reason: "non_terminal_event",
+        event: headerEvent,
+        hint: "Point the NEW_SALE webhook at https://app.tipote.com/api/systeme-io/webhook?secret=...",
+      });
+    }
+
     const bodyAny = (await readBodyAny(req)) ?? {};
 
     // Log every incoming subscription-status call for debugging

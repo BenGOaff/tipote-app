@@ -57,6 +57,15 @@ const OFFER_PRICE_ID_TO_PLAN: Record<string, StoredPlan> = {
   "offer-price-3103593": "elite",
   "3103592": "elite",
   "3103593": "elite",
+  // Offre spéciale clients Tiquiz : Elite au prix Basic (juillet 2026)
+  // Page tipote.fr/tipote-offre-speciale — mensuel 3330096, annuel 3330098
+  "offerprice-dc9c3e75": "elite",
+  "offer-price-dc9c3e75": "elite",
+  "dc9c3e75": "elite",
+  "offer-price-3330096": "elite",
+  "offer-price-3330098": "elite",
+  "3330096": "elite",
+  "3330098": "elite",
 };
 
 function inferPlanFromSubscription(sub: any): IncomingPlan | StoredPlan | null {
