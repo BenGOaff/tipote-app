@@ -7,8 +7,12 @@
   "scripts": {
     "build": "node build.mjs",
     "build:local": "node build.mjs --local",
+    "build:firefox": "node build.mjs --firefox",
+    "build:firefox:local": "node build.mjs --firefox --local",
     "dev": "node build.mjs --watch",
     "dev:local": "node build.mjs --watch --local",
+    "dev:firefox": "node build.mjs --watch --firefox",
+    "dev:firefox:local": "node build.mjs --watch --firefox --local",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

@@ -63,3 +63,11 @@ export const POST_ELIGIBILITY_HOURS = 6;
  *  chaque chargement. */
 export const TIPOTE_EXTENSION_ID =
   process.env.NEXT_PUBLIC_TIPOTE_EXT_ID ?? "gligkkmphgcpfghplnmknmkkgonolchg";
+
+/** URL de la fiche Firefox Add-ons (AMO) de l'extension Tipote Boost.
+ *  Le slug "tipote-boost" doit correspondre à celui choisi à la première
+ *  soumission AMO (le slug se règle dans la fiche AMO avant publication).
+ *  Surcharge possible via env, comme pour l'ID Chrome ci-dessus. */
+export const TIPOTE_FIREFOX_ADDON_URL =
+  process.env.NEXT_PUBLIC_TIPOTE_FIREFOX_ADDON_URL ??
+  "https://addons.mozilla.org/firefox/addon/tipote-boost/";

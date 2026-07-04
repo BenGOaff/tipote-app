@@ -15,6 +15,58 @@ import { t } from "../i18n";
 const TIPOTE_LANDING_URL = "https://www.tipote.fr/";
 const TIPOTE_PRIVACY_URL = `${TIPOTE_API_BASE}/legal/extension`;
 
+// Firefox : les host permissions MV3 sont OPT-IN (contrairement à Chrome
+// où elles sont accordées à l'installation). Tant que l'user ne les a pas
+// accordées, AUCUN content script ne s'injecte et le background ne peut
+// pas fetch le backend → l'extension est inerte. On détecte le cas et on
+// affiche une carte d'onboarding avec un bouton permissions.request()
+// (autorisé ici : un clic dans le popup compte comme user gesture).
+const IS_FIREFOX = chrome.runtime.getURL("").startsWith("moz-extension:");
+
+function manifestOrigins(): string[] {
+  return (chrome.runtime.getManifest().host_permissions ?? []) as string[];
+}
+
+function PermissionsCard({ onGranted }: { onGranted: () => void }) {
+  const [requesting, setRequesting] = useState(false);
+  return (
+    <div
+      style={{
+        background: "#fffbeb",
+        border: "1px solid #fcd34d",
+        borderRadius: 8,
+        padding: 10,
+        fontSize: 12,
+        color: "#78350f",
+        marginBottom: 12,
+      }}
+    >
+      <div style={{ fontWeight: 600, marginBottom: 4 }}>⚠️ {t("popup.permTitle")}</div>
+      <p style={{ margin: "0 0 8px", lineHeight: 1.5 }}>{t("popup.permDesc")}</p>
+      <button
+        disabled={requesting}
+        onClick={() => {
+          setRequesting(true);
+          chrome.permissions.request({ origins: manifestOrigins() }, (granted) => {
+            setRequesting(false);
+            if (granted) onGranted();
+          });
+        }}
+        style={{
+          ...styles.primaryBtn,
+          border: "none",
+          cursor: "pointer",
+          width: "100%",
+          opacity: requesting ? 0.6 : 1,
+        }}
+      >
+        {t("popup.permCta")}
+      </button>
+      <p style={{ margin: "6px 0 0", fontSize: 10, color: "#92400e" }}>{t("popup.permHint")}</p>
+    </div>
+  );
+}
+
 type LinkedInProfile = {
   linkedin_urn: string;
   full_name: string | null;
@@ -272,6 +324,7 @@ function Popup() {
   const [tasks, setTasks] = useState<PendingTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<"home" | "settings">("home");
+  const [missingPerms, setMissingPerms] = useState(false);
 
   useEffect(() => {
     chrome.storage.local.get(
@@ -282,6 +335,13 @@ function Popup() {
         setLoading(false);
       },
     );
+    // Firefox : vérifie que les host permissions du manifest sont toutes
+    // accordées. Sur Chrome elles le sont d'office → check skippé.
+    if (IS_FIREFOX && chrome.permissions?.contains) {
+      chrome.permissions.contains({ origins: manifestOrigins() }, (granted) => {
+        setMissingPerms(!granted);
+      });
+    }
   }, []);
 
   if (loading) {
@@ -315,6 +375,8 @@ function Popup() {
       <p style={{ fontSize: 13, color: "#666", margin: "0 0 12px" }}>
         {t("popup.tagline")}
       </p>
+
+      {missingPerms && <PermissionsCard onGranted={() => setMissingPerms(false)} />}
 
       {isConnected ? (
         <>

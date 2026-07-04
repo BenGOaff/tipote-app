@@ -187,6 +187,18 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     return true;
   }
 
+  if (msg?.type === "sync") {
+    // Même sémantique que le "sync" externally_connectable ci-dessous,
+    // mais en message INTERNE : sur Firefox c'est bridge.ts (content
+    // script sur app.tipote.com) qui relaie la demande du frontend.
+    void (async () => {
+      const state = await syncMe();
+      void pollTasks();
+      sendResponse({ ok: true, state });
+    })();
+    return true;
+  }
+
   if (msg?.type === "linkedin/connect") {
     void (async () => {
       const r = await tipotePost("/api/pod/auth/connect", msg.payload);
@@ -300,23 +312,29 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 });
 
 // ─── Messaging — externally_connectable (frontend Tipote) ─────────────
+// Chrome uniquement : Firefox ne supporte pas externally_connectable,
+// l'API onMessageExternal n'y existe pas (undefined) → gate d'existence.
+// Sur Firefox le même rôle est joué par bridge.ts qui convertit le
+// postMessage du frontend en messages internes ping/sync (cf. plus haut).
 
-chrome.runtime.onMessageExternal.addListener((msg, sender, sendResponse) => {
-  console.log("[tipote/bg] external msg", msg?.type, "from", sender.origin);
+if (chrome.runtime.onMessageExternal) {
+  chrome.runtime.onMessageExternal.addListener((msg, sender, sendResponse) => {
+    console.log("[tipote/bg] external msg", msg?.type, "from", sender.origin);
 
-  if (msg?.type === "ping") {
-    sendResponse({ ok: true, pong: Date.now() });
-    return true;
-  }
+    if (msg?.type === "ping") {
+      sendResponse({ ok: true, pong: Date.now() });
+      return true;
+    }
 
-  if (msg?.type === "sync") {
-    void (async () => {
-      const state = await syncMe();
-      void pollTasks();
-      sendResponse({ ok: true, state });
-    })();
-    return true;
-  }
+    if (msg?.type === "sync") {
+      void (async () => {
+        const state = await syncMe();
+        void pollTasks();
+        sendResponse({ ok: true, state });
+      })();
+      return true;
+    }
 
-  return false;
-});
+    return false;
+  });
+}
