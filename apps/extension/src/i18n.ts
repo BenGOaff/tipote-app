@@ -116,8 +116,10 @@ const STRINGS: Record<string, { fr: string; en: string }> = {
     en: "Save failed, try again.",
   },
   "settings.needLogin": {
-    fr: "Connecte-toi à Tipote dans Chrome (app.tipote.com) pour gérer tes réglages.",
-    en: "Sign in to Tipote in Chrome (app.tipote.com) to manage your settings.",
+    // Formulation neutre navigateur : la même string sert aux builds
+    // Chrome et Firefox.
+    fr: "Connecte-toi à Tipote dans ce navigateur (app.tipote.com) pour gérer tes réglages.",
+    en: "Sign in to Tipote in this browser (app.tipote.com) to manage your settings.",
   },
   "settings.needPlan": {
     fr: "Les réglages du commentateur IA sont disponibles avec les plans PRO et ELITE.",
@@ -130,6 +132,23 @@ const STRINGS: Record<string, { fr: string; en: string }> = {
   "popup.privacy": {
     fr: "Politique de confidentialité",
     en: "Privacy policy",
+  },
+  // ─── Onboarding permissions Firefox (host permissions opt-in MV3) ──
+  "popup.permTitle": {
+    fr: "Autorisations requises",
+    en: "Permissions needed",
+  },
+  "popup.permDesc": {
+    fr: "Firefox demande ton accord pour que l'extension fonctionne sur tes réseaux (LinkedIn, Facebook, X, etc.) et communique avec Tipote.",
+    en: "Firefox needs your approval so the extension can run on your networks (LinkedIn, Facebook, X, etc.) and talk to Tipote.",
+  },
+  "popup.permCta": {
+    fr: "Autoriser l'accès",
+    en: "Grant access",
+  },
+  "popup.permHint": {
+    fr: "Après autorisation, recharge les onglets déjà ouverts.",
+    en: "After granting, reload any tabs that are already open.",
   },
   // ─── Inline dropdown LinkedIn (feedInjector) ─────────────────────
   "tone.agree": {

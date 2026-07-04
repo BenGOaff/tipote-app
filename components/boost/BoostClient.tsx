@@ -11,9 +11,15 @@
 // L'état "Extension installée ?" est gating commun, donc rendu une fois en
 // haut. Le reste descend dans les 2 sections, chacune avec son badge de scope.
 //
-// Détection extension : chrome.runtime.sendMessage(EXT_ID, {type:'ping'}).
-// Si chrome.runtime n'existe pas (page non vue par une extension declarant
-// externally_connectable sur ce domaine), on considère extension absente.
+// Détection extension, 2 canaux selon le navigateur :
+//   - Chrome : chrome.runtime.sendMessage(EXT_ID, {type:'ping'}) via
+//     externally_connectable. Si chrome.runtime n'existe pas (page non vue
+//     par une extension déclarant externally_connectable sur ce domaine),
+//     on tente le canal bridge ci-dessous avant de conclure absente.
+//   - Firefox : pas d'externally_connectable. L'extension Firefox embarque
+//     un content script "bridge" sur app.tipote.com (apps/extension/src/
+//     bridge.ts) qui pose un marqueur DOM (dataset.tipoteExt) et répond au
+//     protocole window.postMessage {source:"tipote-web"} → {source:"tipote-ext"}.
 
 import { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
@@ -33,7 +39,7 @@ import {
   Settings2,
   Sparkles,
 } from "lucide-react";
-import { TIPOTE_EXTENSION_ID } from "@/lib/podBoost";
+import { TIPOTE_EXTENSION_ID, TIPOTE_FIREFOX_ADDON_URL } from "@/lib/podBoost";
 import { AutoCommentSettings } from "@/components/settings/AutoCommentSettings";
 
 type PodMeResponse = {
@@ -81,6 +87,51 @@ function getChromeRuntime(): ChromeRuntime | null {
   return w.chrome?.runtime ?? null;
 }
 
+// ─── Canal bridge (Firefox) ─────────────────────────────────────────
+// L'extension Firefox injecte bridge.js sur app.tipote.com : marqueur DOM
+// + réponse aux pings postMessage. Utilisé quand chrome.runtime est absent
+// (Firefox ne fournit pas window.chrome aux pages web).
+
+function pingBridge(timeoutMs = 2000): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (typeof window === "undefined") {
+      resolve(false);
+      return;
+    }
+    // Marqueur posé par le bridge à document_start : détection instantanée.
+    if (document.documentElement.dataset.tipoteExt) {
+      resolve(true);
+      return;
+    }
+    const nonce = Math.random().toString(36).slice(2);
+    const timer = setTimeout(() => {
+      window.removeEventListener("message", onMsg);
+      resolve(false);
+    }, timeoutMs);
+    function onMsg(event: MessageEvent) {
+      if (event.source !== window) return;
+      const d = event.data as { source?: string; type?: string; nonce?: string } | null;
+      if (d?.source === "tipote-ext" && d.type === "pong" && d.nonce === nonce) {
+        clearTimeout(timer);
+        window.removeEventListener("message", onMsg);
+        resolve(true);
+      }
+    }
+    window.addEventListener("message", onMsg);
+    window.postMessage({ source: "tipote-web", type: "ping", nonce }, window.location.origin);
+  });
+}
+
+/** Demande un sync au bridge (fire and forget : l'appelant attend un délai
+ *  fixe puis refetch, même logique que le canal Chrome). */
+function syncViaBridge(): void {
+  if (typeof window === "undefined") return;
+  window.postMessage(
+    { source: "tipote-web", type: "sync", nonce: Math.random().toString(36).slice(2) },
+    window.location.origin,
+  );
+}
+
 // Liste des réseaux supportés par le commentateur IA. La couleur sert juste
 // au badge visuel — la classe Tailwind est figée pour éviter les soucis de
 // purge JIT (les classes dynamiques comme `bg-${color}-100` ne sont pas
@@ -111,6 +162,10 @@ export default function BoostClient({ userPlan }: { userPlan: string | null }) {
   const [me, setMe] = useState<PodMeResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [extStatus, setExtStatus] = useState<ExtensionStatus>("checking");
+  // Wording + store selon le navigateur. Pas de risque d'hydration
+  // mismatch : les textes qui en dépendent n'apparaissent qu'après le
+  // premier effet (extStatus quitte "checking" côté client uniquement).
+  const isFirefox = typeof navigator !== "undefined" && navigator.userAgent.includes("Firefox");
   const [syncing, setSyncing] = useState(false);
   const [savingAutoLike, setSavingAutoLike] = useState(false);
 
@@ -153,11 +208,14 @@ export default function BoostClient({ userPlan }: { userPlan: string | null }) {
   }, []);
 
   // Ping de l'extension : si elle répond, c'est qu'elle est installée
-  // ET autorisée à communiquer avec ce domaine (externally_connectable).
+  // ET autorisée à communiquer avec ce domaine (externally_connectable
+  // côté Chrome, host permission accordée côté Firefox).
   const detectExtension = useCallback(() => {
     const runtime = getChromeRuntime();
     if (!runtime) {
-      setExtStatus("not_installed");
+      // Firefox (pas de window.chrome) ou Chrome sans extension : on
+      // tente le canal bridge avant de conclure absente.
+      void pingBridge().then((ok) => setExtStatus(ok ? "installed" : "not_installed"));
       return;
     }
     let resolved = false;
@@ -205,6 +263,8 @@ export default function BoostClient({ userPlan }: { userPlan: string | null }) {
           void runtime.lastError;
         });
       }
+      // Canal Firefox : no-op sur Chrome (aucun bridge à l'écoute).
+      syncViaBridge();
       // Petit délai pour laisser l'extension faire son aller-retour
       // /api/pod/auth/connect (matching LinkedIn) avant qu'on refetch.
       await new Promise((r) => setTimeout(r, 1500));
@@ -242,17 +302,17 @@ export default function BoostClient({ userPlan }: { userPlan: string | null }) {
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-sm">
               {extStatus === "installed"
-                ? t("extInstalled")
+                ? t(isFirefox ? "extInstalledFirefox" : "extInstalled")
                 : extStatus === "checking"
                   ? t("extChecking")
-                  : t("extNotDetected")}
+                  : t(isFirefox ? "extNotDetectedFirefox" : "extNotDetected")}
             </h3>
             <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
               {extStatus === "installed"
                 ? t("extInstalledDesc")
                 : extStatus === "checking"
                   ? " "
-                  : t("extNotDetectedDesc")}
+                  : t(isFirefox ? "extNotDetectedDescFirefox" : "extNotDetectedDesc")}
             </p>
           </div>
           {extStatus === "installed" ? (
@@ -269,8 +329,9 @@ export default function BoostClient({ userPlan }: { userPlan: string | null }) {
             </Button>
           ) : (
             // Quand l'extension n'est pas détectée, CTA explicite vers
-            // le Chrome Web Store. Avant : pas de bouton → l'user voyait
-            // "Extension non détectée" mais ne savait pas où l'installer.
+            // le store du navigateur courant (Chrome Web Store ou Firefox
+            // Add-ons). Avant : pas de bouton → l'user voyait "Extension
+            // non détectée" mais ne savait pas où l'installer.
             // (Bug Laurent 2 juin 2026.)
             <Button
               type="button"
@@ -279,7 +340,11 @@ export default function BoostClient({ userPlan }: { userPlan: string | null }) {
               className="shrink-0"
             >
               <a
-                href="https://chromewebstore.google.com/detail/tipote-boost/gligkkmphgcpfghplnmknmkkgonolchg?utm_source=tipote_boost_panel"
+                href={
+                  isFirefox
+                    ? `${TIPOTE_FIREFOX_ADDON_URL}?utm_source=tipote_boost_panel`
+                    : "https://chromewebstore.google.com/detail/tipote-boost/gligkkmphgcpfghplnmknmkkgonolchg?utm_source=tipote_boost_panel"
+                }
                 target="_blank"
                 rel="noopener noreferrer"
               >
