@@ -314,6 +314,23 @@ export default function BoostClient({ userPlan }: { userPlan: string | null }) {
                   ? " "
                   : t(isFirefox ? "extNotDetectedDescFirefox" : "extNotDetectedDesc")}
             </p>
+            {/* Firefox : contrairement à Chrome, les autorisations d'accès
+                aux sites ne sont PAS accordées à l'installation. Sans ce
+                clic supplémentaire l'extension reste inerte et le statut
+                ici reste "non détectée". Mode d'emploi pas à pas pour les
+                users qui ne comprennent pas la fenêtre Firefox. */}
+            {extStatus === "not_installed" && isFirefox && (
+              <div className="mt-2 rounded-md border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/30 p-3">
+                <p className="text-xs font-medium text-amber-900 dark:text-amber-200">
+                  {t("extFirefoxStepsTitle")}
+                </p>
+                <ol className="mt-1 space-y-1 text-xs text-amber-900/90 dark:text-amber-200/90 leading-relaxed list-decimal list-inside">
+                  <li>{t("extFirefoxStep1")}</li>
+                  <li>{t("extFirefoxStep2")}</li>
+                  <li>{t("extFirefoxStep3")}</li>
+                </ol>
+              </div>
+            )}
           </div>
           {extStatus === "installed" ? (
             <Button
