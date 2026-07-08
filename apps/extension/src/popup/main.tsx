@@ -325,6 +325,10 @@ function Popup() {
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<"home" | "settings">("home");
   const [missingPerms, setMissingPerms] = useState(false);
+  // Après le grant, on affiche une confirmation verte au lieu de faire
+  // disparaître la carte sans explication : l'user doit encore recharger
+  // ses onglets ouverts pour que les content scripts s'injectent.
+  const [justGranted, setJustGranted] = useState(false);
 
   useEffect(() => {
     chrome.storage.local.get(
@@ -376,7 +380,29 @@ function Popup() {
         {t("popup.tagline")}
       </p>
 
-      {missingPerms && <PermissionsCard onGranted={() => setMissingPerms(false)} />}
+      {missingPerms && (
+        <PermissionsCard
+          onGranted={() => {
+            setMissingPerms(false);
+            setJustGranted(true);
+          }}
+        />
+      )}
+      {justGranted && (
+        <div
+          style={{
+            background: "#ecfdf5",
+            border: "1px solid #a7f3d0",
+            borderRadius: 8,
+            padding: 10,
+            fontSize: 12,
+            color: "#065f46",
+            marginBottom: 12,
+          }}
+        >
+          ✓ {t("popup.permDone")}
+        </div>
+      )}
 
       {isConnected ? (
         <>

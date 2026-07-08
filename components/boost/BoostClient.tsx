@@ -39,7 +39,7 @@ import {
   Settings2,
   Sparkles,
 } from "lucide-react";
-import { TIPOTE_EXTENSION_ID, TIPOTE_FIREFOX_ADDON_URL } from "@/lib/podBoost";
+import { TIPOTE_EXTENSION_ID, TIPOTE_CHROME_STORE_URL, TIPOTE_FIREFOX_ADDON_URL } from "@/lib/podBoost";
 import { AutoCommentSettings } from "@/components/settings/AutoCommentSettings";
 
 type PodMeResponse = {
@@ -314,6 +314,23 @@ export default function BoostClient({ userPlan }: { userPlan: string | null }) {
                   ? " "
                   : t(isFirefox ? "extNotDetectedDescFirefox" : "extNotDetectedDesc")}
             </p>
+            {/* Firefox : contrairement à Chrome, les autorisations d'accès
+                aux sites ne sont PAS accordées à l'installation. Sans ce
+                clic supplémentaire l'extension reste inerte et le statut
+                ici reste "non détectée". Mode d'emploi pas à pas pour les
+                users qui ne comprennent pas la fenêtre Firefox. */}
+            {extStatus === "not_installed" && isFirefox && (
+              <div className="mt-2 rounded-md border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/30 p-3">
+                <p className="text-xs font-medium text-amber-900 dark:text-amber-200">
+                  {t("extFirefoxStepsTitle")}
+                </p>
+                <ol className="mt-1 space-y-1 text-xs text-amber-900/90 dark:text-amber-200/90 leading-relaxed list-decimal list-inside">
+                  <li>{t("extFirefoxStep1")}</li>
+                  <li>{t("extFirefoxStep2")}</li>
+                  <li>{t("extFirefoxStep3")}</li>
+                </ol>
+              </div>
+            )}
           </div>
           {extStatus === "installed" ? (
             <Button
@@ -328,30 +345,34 @@ export default function BoostClient({ userPlan }: { userPlan: string | null }) {
               {t("sync")}
             </Button>
           ) : (
-            // Quand l'extension n'est pas détectée, CTA explicite vers
-            // le store du navigateur courant (Chrome Web Store ou Firefox
-            // Add-ons). Avant : pas de bouton → l'user voyait "Extension
-            // non détectée" mais ne savait pas où l'installer.
-            // (Bug Laurent 2 juin 2026.)
-            <Button
-              type="button"
-              size="sm"
-              asChild
-              className="shrink-0"
-            >
-              <a
-                href={
-                  isFirefox
-                    ? `${TIPOTE_FIREFOX_ADDON_URL}?utm_source=tipote_boost_panel`
-                    : "https://chromewebstore.google.com/detail/tipote-boost/gligkkmphgcpfghplnmknmkkgonolchg?utm_source=tipote_boost_panel"
-                }
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-                {t("installExtension")}
-              </a>
-            </Button>
+            // Quand l'extension n'est pas détectée : deux CTA explicites,
+            // un par navigateur (fiche Chrome Web Store + fiche Firefox
+            // Add-ons, publiée juillet 2026). Le navigateur courant est
+            // mis en avant (bouton plein), l'autre en outline. Avant :
+            // pas de bouton du tout → l'user voyait "Extension non
+            // détectée" sans savoir où l'installer (bug Laurent 2 juin).
+            <div className="flex flex-col gap-2 shrink-0">
+              <Button type="button" size="sm" variant={isFirefox ? "outline" : "default"} asChild>
+                <a
+                  href={`${TIPOTE_CHROME_STORE_URL}?utm_source=tipote_boost_panel`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                  {t("installChrome")}
+                </a>
+              </Button>
+              <Button type="button" size="sm" variant={isFirefox ? "default" : "outline"} asChild>
+                <a
+                  href={`${TIPOTE_FIREFOX_ADDON_URL}?utm_source=tipote_boost_panel`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                  {t("installFirefox")}
+                </a>
+              </Button>
+            </div>
           )}
         </div>
       </Card>

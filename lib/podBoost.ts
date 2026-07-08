@@ -64,6 +64,10 @@ export const POST_ELIGIBILITY_HOURS = 6;
 export const TIPOTE_EXTENSION_ID =
   process.env.NEXT_PUBLIC_TIPOTE_EXT_ID ?? "gligkkmphgcpfghplnmknmkkgonolchg";
 
+/** URL de la fiche Chrome Web Store de l'extension Tipote Boost. */
+export const TIPOTE_CHROME_STORE_URL =
+  "https://chromewebstore.google.com/detail/tipote-boost/gligkkmphgcpfghplnmknmkkgonolchg";
+
 /** URL de la fiche Firefox Add-ons (AMO) de l'extension Tipote Boost.
  *  Le slug "tipote-boost" doit correspondre à celui choisi à la première
  *  soumission AMO (le slug se règle dans la fiche AMO avant publication).

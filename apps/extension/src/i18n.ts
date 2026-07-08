@@ -135,20 +135,24 @@ const STRINGS: Record<string, { fr: string; en: string }> = {
   },
   // ─── Onboarding permissions Firefox (host permissions opt-in MV3) ──
   "popup.permTitle": {
-    fr: "Autorisations requises",
-    en: "Permissions needed",
+    fr: "Dernière étape : autoriser l'accès",
+    en: "Last step: grant access",
   },
   "popup.permDesc": {
-    fr: "Firefox demande ton accord pour que l'extension fonctionne sur tes réseaux (LinkedIn, Facebook, X, etc.) et communique avec Tipote.",
-    en: "Firefox needs your approval so the extension can run on your networks (LinkedIn, Facebook, X, etc.) and talk to Tipote.",
+    fr: "Pour l'instant, Firefox bloque l'extension : elle ne peut pas fonctionner sur tes réseaux (LinkedIn, Facebook, X, etc.) ni communiquer avec Tipote. Clique sur le bouton ci-dessous, puis sur Autoriser dans la petite fenêtre que Firefox va ouvrir.",
+    en: "Right now, Firefox is blocking the extension: it cannot run on your networks (LinkedIn, Facebook, X, etc.) or talk to Tipote. Click the button below, then click Allow in the small window Firefox will open.",
   },
   "popup.permCta": {
     fr: "Autoriser l'accès",
     en: "Grant access",
   },
   "popup.permHint": {
-    fr: "Après autorisation, recharge les onglets déjà ouverts.",
-    en: "After granting, reload any tabs that are already open.",
+    fr: "Ensuite, recharge les onglets déjà ouverts (touche F5) pour activer l'extension.",
+    en: "Then reload any tabs that are already open (press F5) to activate the extension.",
+  },
+  "popup.permDone": {
+    fr: "Accès autorisé. Recharge tes onglets ouverts (touche F5) et c'est parti !",
+    en: "Access granted. Reload your open tabs (press F5) and you are all set!",
   },
   // ─── Inline dropdown LinkedIn (feedInjector) ─────────────────────
   "tone.agree": {
