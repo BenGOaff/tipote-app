@@ -6668,6 +6668,8 @@
     "extNotDetectedFirefox": "Extension Firefox non détectée",
     "extNotDetectedDescFirefox": "Installe l'extension Tipote depuis Firefox Add-ons (ou recharge cette page si tu viens de l'installer) pour activer le pod et le commentateur IA. Pense à accorder les autorisations d'accès aux sites demandées par Firefox.",
     "installExtension": "Installer l'extension",
+    "installChrome": "Télécharger pour Chrome",
+    "installFirefox": "Télécharger pour Firefox",
     "sync": "Synchroniser",
     "podTitle": "Pod d'engagement",
     "linkedInOnly": "LinkedIn uniquement",

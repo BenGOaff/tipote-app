@@ -6659,6 +6659,8 @@
     "extInstalledFirefox": "إضافة فايرفوكس مثبتة",
     "extNotDetectedFirefox": "لم يتم اكتشاف إضافة فايرفوكس",
     "extNotDetectedDescFirefox": "ثبّت إضافة Tipote من متجر إضافات فايرفوكس (أو أعد تحميل هذه الصفحة إذا ثبّتها للتو) لتفعيل المجموعة والمعلق الذكي. لا تنس منح أذونات الوصول إلى المواقع التي يطلبها فايرفوكس.",
+    "installChrome": "تنزيل لمتصفح Chrome",
+    "installFirefox": "تنزيل لمتصفح Firefox",
     "sync": "مزامنة",
     "podTitle": "مجموعة التفاعل",
     "linkedInOnly": "لينكدإن فقط",

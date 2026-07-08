@@ -6668,6 +6668,8 @@
     "extNotDetectedFirefox": "Firefox extension not detected",
     "extNotDetectedDescFirefox": "Install the Tipote extension from Firefox Add-ons (or reload this page if you just installed it) to activate the pod and the AI commenter. Remember to grant the site access permissions Firefox asks for.",
     "installExtension": "Install extension",
+    "installChrome": "Download for Chrome",
+    "installFirefox": "Download for Firefox",
     "sync": "Sync",
     "podTitle": "Engagement pod",
     "linkedInOnly": "LinkedIn only",
