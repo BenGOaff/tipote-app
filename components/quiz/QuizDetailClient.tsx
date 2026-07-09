@@ -23,6 +23,7 @@ import {
   Gift, Sparkles, Shuffle, ChevronUp, ChevronDown, Wand2, ImagePlus, Menu, Crop,
 } from "lucide-react";
 import QuizResultsAnalytics from "@/components/quiz/QuizResultsAnalytics";
+import QuizInsightsPanel from "@/components/quiz/QuizInsightsPanel";
 import { toast } from "sonner";
 import { ReadinessRing } from "@/components/ui/readiness-ring";
 import { computeReadiness } from "@/lib/quiz-readiness";
@@ -3699,6 +3700,12 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
               results={editResults}
               onExportCSV={handleExportCSV}
             />
+
+            {/* Analyse IA strategique (funnel, capture, profils, axes
+                d'amelioration, actions) sous les statistiques du quiz. */}
+            <div className="mt-6">
+              <QuizInsightsPanel quizId={quizId} />
+            </div>
           </div>
         </div>
       )}
