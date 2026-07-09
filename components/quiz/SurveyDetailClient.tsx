@@ -25,6 +25,7 @@ import {
 import { SurveyTrends } from "@/components/quiz/SurveyTrends";
 import { SurveyResponsesTable } from "@/components/quiz/SurveyResponsesTable";
 import SurveyResultsPanel from "@/components/quiz/SurveyResultsPanel";
+import QuizInsightsPanel from "@/components/quiz/QuizInsightsPanel";
 import { ReadinessRing } from "@/components/ui/readiness-ring";
 import { computeReadiness } from "@/lib/quiz-readiness";
 import { toast } from "sonner";
@@ -2541,7 +2542,13 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
               />
             )}
 
-            {/* Export (CSV/Excel/PDF) + analyse IA des résultats du sondage. */}
+            {/* Analyse IA stratégique (funnel, capture, profils, axes
+                d'amélioration, actions) : complète l'analyse des réponses. */}
+            <div className="mt-6">
+              <QuizInsightsPanel quizId={quizId} />
+            </div>
+
+            {/* Export (CSV/Excel/PDF) + analyse IA des réponses du sondage. */}
             <div className="mt-6">
               <SurveyResultsPanel
                 quizId={quizId}

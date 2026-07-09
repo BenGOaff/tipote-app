@@ -17,6 +17,7 @@ import { useOfferMetrics } from "@/hooks/useOfferMetrics";
 import { OfferMetricsForm } from "@/components/analytics/OfferMetricsForm";
 import { OfferMetricsDashboard } from "@/components/analytics/OfferMetricsDashboard";
 import { SioSyncButton } from "@/components/analytics/SioSyncButton";
+import GlobalInsightsPanel from "@/components/insights/GlobalInsightsPanel";
 
 import { format, Locale } from "date-fns";
 import { fr, enUS, es, it, ar } from "date-fns/locale";
@@ -54,6 +55,12 @@ export default function AnalyticsLovableClient() {
       title={t("title")}
     >
       <PageBanner icon={<BarChart3 className="w-5 h-5" />} title={t("subtitle")} subtitle={t("description")} />
+
+      {/* Analyse IA stratégique globale (tous les quiz/sondages du user).
+          Gate crédit côté endpoint : 1 crédit la 1ère fois, MAJ gratuites. */}
+      <div className="mb-4">
+        <GlobalInsightsPanel />
+      </div>
 
       {/* Quick action : pull les ventes Systeme.io à la volée. Le
           cron quotidien (`/api/cron/sio-sync-sales`) fait pareil
