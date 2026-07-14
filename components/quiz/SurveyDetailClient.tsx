@@ -1972,7 +1972,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                           </select>
                         </div>
 
-                        <InlineEdit value={q.question_text} onChange={(v) => updateQ(qi, v)} onGenderize={genderize} onAIRewrite={aiRewriteQuestion} previewTransform={previewInterpolate} availableVars={personalizationVars} className="text-2xl sm:text-4xl font-bold leading-tight" placeholder="Texte de la question…" />
+                        <InlineEdit value={q.question_text} onChange={(v) => updateQ(qi, v)} onGenderize={genderize} onAIRewrite={aiRewriteQuestion} previewTransform={previewInterpolate} availableVars={personalizationVars} className="text-2xl sm:text-4xl font-bold leading-tight" style={{ color: pc }} placeholder="Texte de la question…" />
                         {/* Image de la question (au-dessus de l'enonce) + resize. */}
                         {(() => {
                           const cfg = (q.config ?? {}) as Record<string, unknown>;
