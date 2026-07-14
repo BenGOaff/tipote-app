@@ -2601,7 +2601,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     <div className="flex-1 flex flex-col items-center justify-center">
                       <div className="max-w-2xl w-full space-y-8">
                         <p className="text-xs font-bold uppercase tracking-widest" style={{ color: pc }}>Questions {qi + 1}/{editQuestions.length}</p>
-                        <InlineEdit value={q.question_text} onChange={(v) => updateQ(qi, v)} onGenderize={genderize} onAIRewrite={aiRewriteQuestion} previewTransform={previewInterpolate} availableVars={personalizationVars} className="tipote-quiz-question font-bold leading-tight" placeholder="Texte de la question…" />
+                        <InlineEdit value={q.question_text} onChange={(v) => updateQ(qi, v)} onGenderize={genderize} onAIRewrite={aiRewriteQuestion} previewTransform={previewInterpolate} availableVars={personalizationVars} className="tipote-quiz-question font-bold leading-tight" style={{ color: pc }} placeholder="Texte de la question…" />
                         {/* Image de la question (au-dessus de l'enonce) + resize. */}
                         {(() => {
                           const cfg = (q.config ?? {}) as Record<string, unknown>;

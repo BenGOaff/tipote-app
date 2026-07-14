@@ -2166,7 +2166,7 @@ export default function PublicQuizClient({
                   + `tipote-quiz-rich-inline` pour neutraliser les block
                   parasites (sinon la taille saute au milieu de la phrase). */}
               <h2
-                className="tipote-quiz-rich tipote-quiz-rich-inline tipote-quiz-question font-bold leading-tight"
+                className="tipote-quiz-rich tipote-quiz-rich-inline tipote-quiz-question font-bold leading-tight text-primary"
                 dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(q.question_text)) }}
               />
 

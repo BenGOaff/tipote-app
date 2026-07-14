@@ -984,11 +984,19 @@ export function RichTextEdit({
           // l'utilisateur ne voyait pas ce qu'il tapait. On override en
           // !text-foreground pendant l'édition pour garantir un contraste
           // lisible avec le bg-white/90, peu importe la couleur héritée.
-          className={`${baseCls} tiquiz-rich w-full bg-white/90 !text-foreground border-2 outline-none ${dropping ? "border-primary border-dashed bg-primary/5" : "border-primary/40"}`}
-          // Le `style` du parent peut contenir un `color: white` (ex.
-          // CTA blanc) — on l'override aussi via inline style pour
-          // doubler la garantie de contraste.
-          style={{ ...(style ?? {}), color: "hsl(var(--foreground))" }}
+          className={`${baseCls} tiquiz-rich w-full bg-white/90 border-2 outline-none ${style?.color ? "" : "!text-foreground"} ${dropping ? "border-primary border-dashed bg-primary/5" : "border-primary/40"}`}
+          // Drame Gwenn 14 juillet 2026 : "la couleur du titre saute quand
+          // je le centre". Cause RÉELLE (le DOM du centrage est intact,
+          // testé) : ce champ forçait TOUJOURS `color: foreground` en mode
+          // édition, ce qui écrasait la couleur de branding (`style.color`
+          // = couleur principale) que le titre porte en display. Dès qu'on
+          // cliquait le titre pour le centrer, il repassait en bleu de base
+          // à l'écran → impression que "centrer enlève la couleur". On
+          // garde donc la couleur PROPRE du champ quand il en a une
+          // (titres résultat/question = couleur branding), et on ne force
+          // le foreground QUE pour les champs sans couleur explicite (CTA
+          // blanc etc.), qui en ont besoin pour le contraste sur bg-white.
+          style={{ ...(style ?? {}), color: (style?.color as string | undefined) ?? "hsl(var(--foreground))" }}
           data-placeholder={placeholder}
         />
       </div>
