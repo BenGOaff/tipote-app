@@ -493,6 +493,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         cta_text: string | null;
         cta_url: string | null;
         sio_tag_name: string | null;
+        sio_tag_names: string[];
         sio_course_id: string | null;
         sio_community_id: string | null;
         sort_order: number;
@@ -549,7 +550,18 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
               ? null
               : applyFrenchTypography(String(r.cta_text), effectiveLocale),
           cta_url: r.cta_url == null ? null : String(r.cta_url),
-          sio_tag_name: r.sio_tag_name == null ? null : String(r.sio_tag_name),
+          // Multi-tags SIO par profil (Gwenn 12 juillet 2026). On stocke le
+          // tableau `sio_tag_names` (nettoye/dedupe) ET on remet
+          // `sio_tag_name` au premier element pour la compat descendante.
+          sio_tag_names: Array.isArray(r.sio_tag_names)
+            ? (r.sio_tag_names as unknown[])
+                .map((v) => String(v ?? "").trim())
+                .filter((v, idx, arr) => v && arr.findIndex((x) => x.toLowerCase() === v.toLowerCase()) === idx)
+            : (r.sio_tag_name == null ? [] : [String(r.sio_tag_name).trim()].filter(Boolean)),
+          sio_tag_name:
+            Array.isArray(r.sio_tag_names) && r.sio_tag_names.length > 0
+              ? String(r.sio_tag_names[0]).trim() || null
+              : (r.sio_tag_name == null ? null : String(r.sio_tag_name)),
           sio_course_id: r.sio_course_id == null ? null : String(r.sio_course_id),
           sio_community_id:
             r.sio_community_id == null ? null : String(r.sio_community_id),

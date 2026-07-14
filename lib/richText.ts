@@ -117,10 +117,41 @@ function installStyleStripperHook(): void {
 
 const SAFE_URL_RE = /^(https?:\/\/|mailto:|tel:|\/)/i;
 
+// Convertit les balises <font color="..."> / <font style="..."> en
+// <span style="color: ..."> AVANT sanitisation.
+//
+// Pourquoi (drame Gwenn 12 juillet 2026 : "quand je centre un titre, ça
+// enlève sa couleur pour la mettre en bleu") : `document.execCommand
+// ("foreColor")` du contentEditable emet de facon ERRATIQUE, selon le
+// contexte de selection, soit un <span style="color"> (OK), soit un
+// <font color="..."> deprecie. Or `font` n'est pas dans ALLOWED_TAGS :
+// DOMPurify le degageait en gardant seulement le texte -> la couleur
+// choisie par l'user etait perdue au premier re-render / commit (par ex.
+// juste apres un centrage qui declenche une re-sanitisation). En
+// transformant <font> en <span style="color"> ici, la couleur SURVIT
+// partout (save + render), retro-activement, sans migration DB.
+function convertFontTags(html: string): string {
+  if (html.indexOf("<font") === -1 && html.indexOf("<FONT") === -1) return html;
+  return html
+    .replace(/<font\b([^>]*)>/gi, (_m, attrs: string) => {
+      const styleMatch = attrs.match(/\bstyle\s*=\s*"([^"]*)"|\bstyle\s*=\s*'([^']*)'/i);
+      const existingStyle = (styleMatch ? styleMatch[1] ?? styleMatch[2] : "") || "";
+      const colorMatch = attrs.match(/\bcolor\s*=\s*"([^"]*)"|\bcolor\s*=\s*'([^']*)'|\bcolor\s*=\s*([^\s"'>]+)/i);
+      const colorAttr = colorMatch ? (colorMatch[1] ?? colorMatch[2] ?? colorMatch[3]) : "";
+      const decls: string[] = [];
+      if (colorAttr && !/color\s*:/i.test(existingStyle)) decls.push(`color: ${colorAttr}`);
+      const merged = [existingStyle.trim().replace(/;\s*$/, ""), decls.join("; ")]
+        .filter(Boolean)
+        .join("; ");
+      return merged ? `<span style="${merged}">` : "<span>";
+    })
+    .replace(/<\/font>/gi, "</span>");
+}
+
 export function sanitizeRichText(input: string | null | undefined): string {
   if (!input) return "";
   installStyleStripperHook();
-  const clean = DOMPurify.sanitize(input, {
+  const clean = DOMPurify.sanitize(convertFontTags(input), {
     ALLOWED_TAGS,
     ALLOWED_ATTR,
     ALLOW_DATA_ATTR: false,

@@ -72,6 +72,18 @@ async function sioFetch(
 /**
  * Find-or-create a tag in Systeme.io, returns tagId or null.
  */
+// Label lisible d'une URL (hostname sans www) — texte de footer par defaut
+// quand seule l'URL du branding est fournie.
+function hostnameLabel(url: string): string {
+  const raw = url.trim();
+  try {
+    const withProto = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+    return new URL(withProto).hostname.replace(/^www\./i, "");
+  } catch {
+    return raw.replace(/^https?:\/\//i, "").replace(/^www\./i, "").replace(/\/.*$/, "");
+  }
+}
+
 async function ensureSioTag(apiKey: string, tagName: string): Promise<number | null> {
   // Search existing
   const search = await sioFetch(apiKey, `/tags?query=${encodeURIComponent(tagName)}&limit=100`);
@@ -358,17 +370,24 @@ export async function GET(_req: NextRequest, context: RouteContext) {
     let addressForm = "tu";
     let fallbackPrivacyUrl = "";
     let brandFallback: { brand_font: string | null; brand_color_base: string | null; brand_logo_url: string | null } = { brand_font: null, brand_color_base: null, brand_logo_url: null };
+    // Branding profil pour le fallback footer (Gwenn 12 juillet 2026 :
+    // "j'ai mis l'url du site dans le branding" -> on la remonte dans le
+    // footer si le champ pied-de-page par-quiz est vide).
+    let brandWebsiteUrl = "";
+    let brandSiteName = "";
     let tipoteAffiliateId: string | null = null;
     let pixelDefaults: { meta: string | null; ga4: string | null; ads: string | null; adsLabel: string | null } = { meta: null, ga4: null, ads: null, adsLabel: null };
     if (quizUserId) {
       let bpQuery = admin
         .from("business_profiles")
-        .select("address_form, privacy_url, brand_font, brand_color_base, brand_logo_url, tipote_affiliate_id, default_meta_pixel_id, default_ga4_measurement_id, default_google_ads_conversion_id, default_google_ads_conversion_label")
+        .select("address_form, privacy_url, brand_font, brand_color_base, brand_logo_url, brand_website_url, share_site_name, tipote_affiliate_id, default_meta_pixel_id, default_ga4_measurement_id, default_google_ads_conversion_id, default_google_ads_conversion_label")
         .eq("user_id", quizUserId);
       if (quizProjectId) bpQuery = bpQuery.eq("project_id", quizProjectId);
       const { data: bp } = await bpQuery.maybeSingle();
       addressForm = (bp as any)?.address_form === "vous" ? "vous" : "tu";
       fallbackPrivacyUrl = String((bp as any)?.privacy_url ?? "").trim();
+      brandWebsiteUrl = String((bp as any)?.brand_website_url ?? "").trim();
+      brandSiteName = String((bp as any)?.share_site_name ?? "").trim();
       brandFallback = {
         brand_font: (bp as any)?.brand_font ?? null,
         brand_color_base: (bp as any)?.brand_color_base ?? null,
@@ -494,10 +513,22 @@ export async function GET(_req: NextRequest, context: RouteContext) {
         .eq("id", quizUserId)
         .maybeSingle();
       const plan = String((planRow as { plan?: string | null } | null)?.plan ?? "free").toLowerCase();
-      if (plan === "free") {
-        quizPublic.custom_footer_text = null;
-        quizPublic.custom_footer_url = null;
+      // Fallback footer : priorite au champ PAR QUIZ, sinon URL du Branding
+      // (brand_website_url) + nom de site (share_site_name / hostname).
+      // Gwenn 12 juillet 2026 : l'URL mise dans le Branding doit remonter
+      // dans le footer sans repasser par le champ par-quiz.
+      const perQuizFooterText = String(quizPublic.custom_footer_text ?? "").trim();
+      const perQuizFooterUrl = String(quizPublic.custom_footer_url ?? "").trim();
+      const resolvedFooterUrl = perQuizFooterUrl || brandWebsiteUrl || "";
+      let resolvedFooterText = perQuizFooterText;
+      if (resolvedFooterUrl && !resolvedFooterText) {
+        resolvedFooterText = brandSiteName || hostnameLabel(resolvedFooterUrl);
       }
+      // Le footer perso reste reserve aux plans payants (le gratuit garde
+      // le branding Tipote par defaut).
+      const footerAllowed = plan !== "free";
+      quizPublic.custom_footer_text = footerAllowed && resolvedFooterText ? resolvedFooterText : null;
+      quizPublic.custom_footer_url = footerAllowed && resolvedFooterUrl ? resolvedFooterUrl : null;
     }
 
     // G1 — display-time French typography for legacy data. Apply NBSP rules
@@ -803,17 +834,25 @@ export async function POST(req: NextRequest, context: RouteContext) {
           // Quiz : config SIO portee par le resultat. Sondage : pas de
           // resultat, seul le tag de capture du sondage s'applique (pas de
           // course/community/enrich par profil, qui n'existent pas ici).
-          let tagName = surveyCaptureTag;
+          // Multi-tags par profil (Gwenn 12 juillet 2026) : on applique TOUS
+          // les tags de sio_tag_names ; fallback sur l'ancien sio_tag_name
+          // single (profils existants). Le tag de capture sondage s'ajoute.
+          let resultTags: string[] = [];
           let courseId = "";
           let communityId = "";
           let resultTitle = "";
           if (resultId) {
             const { data: result } = await admin
               .from("quiz_results")
-              .select("sio_tag_name, sio_course_id, sio_community_id, title")
+              .select("sio_tag_name, sio_tag_names, sio_course_id, sio_community_id, title")
               .eq("id", resultId)
               .maybeSingle();
-            tagName = String(result?.sio_tag_name ?? "").trim();
+            const rawTags = (result as Record<string, unknown> | null)?.sio_tag_names;
+            const arrTags = Array.isArray(rawTags)
+              ? rawTags.map((v) => String(v ?? "").trim()).filter(Boolean)
+              : [];
+            const singleTag = String(result?.sio_tag_name ?? "").trim();
+            resultTags = arrTags.length > 0 ? arrTags : (singleTag ? [singleTag] : []);
             courseId = String(result?.sio_course_id ?? "").trim();
             communityId = String(result?.sio_community_id ?? "").trim();
             resultTitle = String(result?.title ?? "").trim();
@@ -823,27 +862,29 @@ export async function POST(req: NextRequest, context: RouteContext) {
           const apiKey = (await resolveSioApiKey(admin, quiz.user_id, quiz.project_id)) ?? "";
           if (!apiKey) return;
 
-          // 1. Tag the contact (and get the SIO contact ID back)
-          let sioContactId: number | null = null;
-          if (tagName) {
-            sioContactId = await applyTagToContact(apiKey, email, tagName, {
-              firstName: firstName || undefined,
-              surname: lastName || undefined,
-              phoneNumber: phone || undefined,
-              country: country || undefined,
-            });
-            console.log(`[Systeme.io] Tagged ${email} with "${tagName}" for quiz ${quizId}`);
-          } else {
-            // No tag but we still need the contact ID for other actions
-            sioContactId = await ensureSioContact(apiKey, email, {
-              firstName: firstName || undefined,
-              surname: lastName || undefined,
-              phoneNumber: phone || undefined,
-              country: country || undefined,
-            });
-          }
+          const tagsToApply = [...resultTags, surveyCaptureTag]
+            .map((t) => t.trim())
+            .filter((t, i, arr) => t && arr.findIndex((x) => x.toLowerCase() === t.toLowerCase()) === i);
 
+          // 1. Ensure the contact exists, then apply every tag.
+          const sioContactId = await ensureSioContact(apiKey, email, {
+            firstName: firstName || undefined,
+            surname: lastName || undefined,
+            phoneNumber: phone || undefined,
+            country: country || undefined,
+          });
           if (!sioContactId) return;
+
+          for (const tagName of tagsToApply) {
+            try {
+              const tagId = await ensureSioTag(apiKey, tagName);
+              if (!tagId) continue;
+              await sioFetch(apiKey, `/contacts/${sioContactId}/tags`, { method: "POST", body: { tagId } });
+              console.log(`[Systeme.io] Tagged ${email} with "${tagName}" for quiz ${quizId}`);
+            } catch (e) {
+              console.error("[Systeme.io tag apply] Error:", e);
+            }
+          }
 
           // 2. Enrich contact with quiz result as custom field
           if (resultTitle) {

@@ -45,6 +45,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { SioTagPicker } from "@/components/ui/sio-tag-picker";
+import { SioTagsMultiPicker } from "@/components/ui/sio-tags-multi-picker";
 import { SioTagsProvider } from "@/components/ui/sio-tags-provider";
 import { RichTextEdit } from "@/components/ui/rich-text-edit";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -115,7 +116,7 @@ type IntroImagePosition = "top" | "after_title" | "after_intro" | "bottom";
 // titre du bonus) | "after_heading" | "after_intro" | "bottom".
 type BonusImagePosition = "top" | "after_heading" | "after_intro" | "bottom";
 const RESULT_IMAGE_POSITIONS: ResultImagePosition[] = ["top", "after_title", "after_description", "after_insight", "bottom"];
-type QuizResult = { id?: string; title: string; description: string | null; insight: string | null; projection: string | null; insight_heading?: string | null; projection_heading?: string | null; cta_text: string | null; cta_url: string | null; sio_tag_name: string | null; sio_course_id: string | null; sio_community_id: string | null; sort_order: number; image_url?: string | null; image_position?: ResultImagePosition | null; image_width?: number | null; min_score?: number | null; max_score?: number | null };
+type QuizResult = { id?: string; title: string; description: string | null; insight: string | null; projection: string | null; insight_heading?: string | null; projection_heading?: string | null; cta_text: string | null; cta_url: string | null; sio_tag_name: string | null; sio_tag_names?: string[] | null; sio_course_id: string | null; sio_community_id: string | null; sort_order: number; image_url?: string | null; image_position?: ResultImagePosition | null; image_width?: number | null; min_score?: number | null; max_score?: number | null };
 type QuizLead = { id: string; email: string; first_name: string | null; last_name: string | null; phone: string | null; country: string | null; result_id: string | null; result_title: string | null; answers: { question_index: number; option_index?: number; option_indices?: number[] }[] | null; has_shared: boolean; bonus_unlocked: boolean; created_at: string };
 type QuizData = {
   id: string; title: string; slug: string | null;
@@ -1608,7 +1609,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
             // any plain object and DB column is JSONB.
             config: q.config ?? {},
           })),
-          results: editResults.map((r, i) => ({ title: r.title, description: r.description, insight: r.insight, projection: r.projection, insight_heading: r.insight_heading ?? null, projection_heading: r.projection_heading ?? null, cta_text: r.cta_text, cta_url: r.cta_url, sio_tag_name: r.sio_tag_name || null, sio_course_id: r.sio_course_id || null, sio_community_id: r.sio_community_id || null, sort_order: i, image_url: r.image_url ?? null, image_position: r.image_position ?? "top", image_width: r.image_width ?? null, min_score: r.min_score ?? null, max_score: r.max_score ?? null })),
+          results: editResults.map((r, i) => ({ title: r.title, description: r.description, insight: r.insight, projection: r.projection, insight_heading: r.insight_heading ?? null, projection_heading: r.projection_heading ?? null, cta_text: r.cta_text, cta_url: r.cta_url, sio_tag_name: (r.sio_tag_names && r.sio_tag_names.length > 0 ? r.sio_tag_names[0] : r.sio_tag_name) || null, sio_tag_names: r.sio_tag_names ?? (r.sio_tag_name ? [r.sio_tag_name] : []), sio_course_id: r.sio_course_id || null, sio_community_id: r.sio_community_id || null, sort_order: i, image_url: r.image_url ?? null, image_position: r.image_position ?? "top", image_width: r.image_width ?? null, min_score: r.min_score ?? null, max_score: r.max_score ?? null })),
         }),
       });
       const json = await res.json();
@@ -1801,7 +1802,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const setProjectionHeadingPersonalized = (on: boolean) => {
     setEditResults(p => p.map(r => ({ ...r, projection_heading: on ? (r.projection_heading ?? (resultProjectionHeading.trim() || "Et si...")) : null })));
   };
-  const addResult = () => setEditResults(p => [...p, { title: "", description: null, insight: null, projection: null, cta_text: null, cta_url: null, sio_tag_name: null, sio_course_id: null, sio_community_id: null, sort_order: p.length }]);
+  const addResult = () => setEditResults(p => [...p, { title: "", description: null, insight: null, projection: null, cta_text: null, cta_url: null, sio_tag_name: null, sio_tag_names: [], sio_course_id: null, sio_community_id: null, sort_order: p.length }]);
   const removeResult = (i: number) => { setEditResults(p => p.filter((_, ri) => ri !== i)); setEditQuestions(p => p.map(q => ({ ...q, options: q.options.map(o => ({ ...o, result_index: o.result_index > i ? o.result_index - 1 : o.result_index === i ? 0 : o.result_index })) }))); };
   const handleExportCSV = () => {
     if (!leads.length) return;
@@ -3299,7 +3300,13 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                           es le·la" + les `·xx` inclusifs) pour ne garder
                           que le label court "Solopreneur Invisible". */}
                       <p className="text-[11px] text-muted-foreground mb-2">{t("previewResultTagHint", { title: stripHtml(extractResultLabel(cleanPlaceholdersForLabel(r.title))) || `Résultat ${ri + 1}` })}</p>
-                      <SioTagPicker value={r.sio_tag_name ?? ""} onChange={(v) => updateR(ri, "sio_tag_name", v || null)} />
+                      {/* Multi-tags par profil (Gwenn 12 juillet 2026).
+                          On ecrit sio_tag_names ET sio_tag_name (1er
+                          element) pour la compat descendante. */}
+                      <SioTagsMultiPicker
+                        value={r.sio_tag_names ?? (r.sio_tag_name ? [r.sio_tag_name] : [])}
+                        onChange={(names) => setEditResults((p) => p.map((rr, i) => i === ri ? { ...rr, sio_tag_names: names, sio_tag_name: names[0] ?? null } : rr))}
+                      />
                     </div>
                   </div>
                 </div>

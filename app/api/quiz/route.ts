@@ -241,7 +241,14 @@ export async function POST(req: NextRequest) {
           projection: r.projection ?? null,
           cta_text: r.cta_text ?? null,
           cta_url: r.cta_url ?? null,
-          sio_tag_name: r.sio_tag_name ?? null,
+          // Multi-tags SIO par profil (Gwenn 12 juillet 2026) : on ecrit le
+          // tableau + on garde sio_tag_name (1er) pour la compat descendante.
+          sio_tag_names: Array.isArray(r.sio_tag_names)
+            ? (r.sio_tag_names as unknown[]).map((v) => String(v ?? "").trim()).filter(Boolean)
+            : (r.sio_tag_name ? [String(r.sio_tag_name)] : []),
+          sio_tag_name: Array.isArray(r.sio_tag_names) && r.sio_tag_names.length > 0
+            ? String(r.sio_tag_names[0])
+            : (r.sio_tag_name ?? null),
           sio_course_id: r.sio_course_id ?? null,
           sio_community_id: r.sio_community_id ?? null,
           sort_order: i,

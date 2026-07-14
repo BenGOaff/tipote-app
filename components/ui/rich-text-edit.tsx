@@ -51,6 +51,9 @@ const FIELD_FONT_SIZES = [
   "14px", "16px", "18px", "20px", "24px", "28px", "32px", "40px", "48px", "56px", "64px",
 ] as const;
 
+// Validation d'un code hex (#abc ou #aabbcc) pour l'input couleur perso.
+const HEX_RE = /^#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})$/;
+
 interface RichTextEditProps {
   value: string;
   onChange: (html: string) => void;
@@ -135,6 +138,8 @@ export function RichTextEdit({
   // la couleur choisie soit appliquee. Bug couleur recurrent. react-colorful
   // reste dans le DOM (aucune fenetre OS), donc plus de blur, plus de bug.
   const [customColor, setCustomColor] = useState("#000000");
+  // Wrapper (bouton palette + popover) pour le click-out du picker couleur.
+  const colorWrapRef = useRef<HTMLDivElement>(null);
   const [fontSizeOpen, setFontSizeOpen] = useState(false);
   // Image selectionnee pour resize. On track le <img> courant dans le
   // contentEditable et on affiche un popover avec une dropdown de tailles
@@ -251,13 +256,41 @@ export function RichTextEdit({
       }
       if (color) {
         document.execCommand("foreColor", false, color);
+        // execCommand("foreColor") emet de facon erratique (selon le
+        // contexte de selection) un <font color> deprecie au lieu d'un
+        // <span style="color">. Or `font` est stripped par le sanitizer
+        // -> la couleur etait perdue au prochain commit / re-render (drame
+        // Gwenn 12 juillet 2026 : centrer un titre "enlevait" sa couleur
+        // pour la remettre en bleu par defaut). On convertit tout <font>
+        // en <span style> dans le DOM live pour garantir la persistance
+        // immediate (le sanitizer fait la meme conversion cote save).
+        const el = ref.current;
+        if (el) {
+          el.querySelectorAll("font").forEach((f) => {
+            const span = document.createElement("span");
+            const c = f.getAttribute("color");
+            if (c) span.style.color = c;
+            const inline = f.getAttribute("style");
+            if (inline) span.setAttribute("style", `${span.getAttribute("style") ?? ""};${inline}`);
+            while (f.firstChild) span.appendChild(f.firstChild);
+            f.replaceWith(span);
+          });
+        }
       } else {
         // "Remove formatting" path — strips inline color styles. We use
         // removeFormat which also drops bold/italic, so we follow up by
         // re-applying nothing (the call is the cheapest correct way).
         document.execCommand("removeFormat", false);
       }
+      // styleWithCSS est un flag DOCUMENT-GLOBAL persistant. On le remet a
+      // false pour qu'il ne "fuite" pas dans les commandes suivantes.
+      try {
+        document.execCommand("styleWithCSS", false, "false");
+      } catch {
+        /* noop */
+      }
       setColorOpen(false);
+      dialogPausedRef.current = false;
       ref.current?.focus();
     },
     [restoreSelection],
@@ -384,6 +417,22 @@ export function RichTextEdit({
       commit();
     }
   };
+
+  // Click-out du picker couleur : ferme le popover et leve la pause commit.
+  // Si le clic tombe HORS du champ editable, on committe (le blur reel a
+  // ete neutralise par la pause, il faut donc persister explicitement).
+  useEffect(() => {
+    if (!colorOpen) return;
+    function onDown(e: MouseEvent) {
+      const target = e.target as Node;
+      if (colorWrapRef.current?.contains(target)) return;
+      setColorOpen(false);
+      dialogPausedRef.current = false;
+      if (ref.current && !ref.current.contains(target)) commit();
+    }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [colorOpen, commit]);
 
   // Force every paste to plain text. The browser's contentEditable
   // default eagerly accepts inline styles from Word, Google Docs and
@@ -650,12 +699,22 @@ export function RichTextEdit({
               the click on the popover (which would otherwise blur the
               contentEditable). styleWithCSS in applyColor ensures the
               output is a `<span style="color:…">` that DOMPurify keeps. */}
-          <div className="relative">
+          <div className="relative" ref={colorWrapRef}>
             <ToolbarBtn
               onMouseDown={(e) => {
                 e.preventDefault();
-                if (!colorOpen) saveSelection();
-                setColorOpen((v) => !v);
+                if (colorOpen) {
+                  setColorOpen(false);
+                  dialogPausedRef.current = false;
+                } else {
+                  // On snapshot la selection AVANT d'ouvrir + on met le
+                  // commit-on-blur en pause : l'input hex (focusable) fait
+                  // blur du contentEditable, sans la pause le champ se
+                  // committerait et demonterait le popover.
+                  saveSelection();
+                  dialogPausedRef.current = true;
+                  setColorOpen(true);
+                }
               }}
               title="Couleur du texte"
             >
@@ -722,13 +781,48 @@ export function RichTextEdit({
                     eviter un foreColor a chaque pixel de drag. La selection
                     du contentEditable est preservee (le popover preventDefault
                     le mousedown) puis restauree par applyColor. */}
+                {/* Couleur perso : carre HSV + input code hex + bouton
+                    Appliquer. Drame Gwenn 12 juillet 2026 : l'ancien picker
+                    appliquait au premier pointerUp (couleur perimee) et
+                    FERMAIT le popover ("quand on clique dessus ca ferme la
+                    petite fenetre"), et n'avait AUCUN champ code couleur.
+                    Ici HSV + input mettent a jour `customColor` (aperçu),
+                    "Appliquer" (ou Entree) pose la couleur ; le popover
+                    reste ouvert pendant le reglage. */}
                 <div className="pt-1 border-t space-y-2">
-                  <div
-                    className="rcw"
-                    aria-label={t("customColor")}
-                    onPointerUp={() => applyColor(customColor)}
-                  >
-                    <HexColorPicker color={customColor} onChange={setCustomColor} />
+                  <div className="rcw" aria-label={t("customColor")}>
+                    <HexColorPicker color={HEX_RE.test(customColor) ? customColor : "#000000"} onChange={setCustomColor} />
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className="w-6 h-6 shrink-0 rounded border border-border/60"
+                      style={{ backgroundColor: HEX_RE.test(customColor) ? customColor : "transparent" }}
+                      aria-hidden
+                    />
+                    <span className="text-xs text-muted-foreground">#</span>
+                    <input
+                      type="text"
+                      value={customColor.startsWith("#") ? customColor.slice(1) : customColor}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onChange={(e) => setCustomColor("#" + e.target.value.replace(/[^0-9a-fA-F]/g, "").slice(0, 6))}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          if (HEX_RE.test(customColor)) applyColor(customColor);
+                        }
+                      }}
+                      placeholder="7ed321"
+                      spellCheck={false}
+                      className="flex-1 min-w-0 h-7 rounded border bg-background px-2 text-xs font-mono uppercase"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => { if (HEX_RE.test(customColor)) applyColor(customColor); }}
+                      disabled={!HEX_RE.test(customColor)}
+                      className="h-7 px-2.5 shrink-0 rounded bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {t("rteApply")}
+                    </button>
                   </div>
                   <button
                     type="button"
@@ -737,7 +831,7 @@ export function RichTextEdit({
                     title="Retirer la couleur"
                   >
                     <Eraser className="w-3 h-3" />
-                    Reset
+                    {t("rteReset")}
                   </button>
                 </div>
                 <style jsx global>{`

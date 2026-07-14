@@ -140,7 +140,7 @@ type QuizData = {
   introduction: string | null; cta_text: string | null; cta_url: string | null;
   start_button_text: string | null;
   privacy_url: string | null; consent_text: string | null;
-  capture_heading: string | null; capture_subtitle: string | null;
+  capture_heading: string | null; capture_subtitle: string | null; capture_submit_text: string | null;
   survey_thanks_heading: string | null; survey_thanks_body: string | null;
   result_insight_heading: string | null; result_projection_heading: string | null;
   address_form: string | null;
@@ -496,6 +496,10 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   const [consentText, setConsentText] = useState("");
   const [captureHeading, setCaptureHeading] = useState("");
   const [captureSubtitle, setCaptureSubtitle] = useState("");
+  // Texte du bouton de validation de la capture (sondage). Vide = string
+  // i18n par defaut cote visiteur. Demande Gwenn 12 juillet 2026 : un
+  // sondage n'a pas de "resultats", elle veut "Valider ma reponse".
+  const [captureSubmitText, setCaptureSubmitText] = useState("");
   // Adeline (1er juin 2026) : page de remerciement éditable WYSIWYG.
   // "" = on affiche la string i18n par défaut côté visiteur.
   const [surveyThanksHeading, setSurveyThanksHeading] = useState("");
@@ -648,6 +652,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     consent_text: consentText,
     capture_heading: captureHeading,
     capture_subtitle: captureSubtitle,
+    capture_submit_text: captureSubmitText,
     survey_thanks_heading: surveyThanksHeading,
     survey_thanks_body: surveyThanksBody,
     result_insight_heading: resultInsightHeading,
@@ -685,7 +690,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     questions: editQuestions,
   }), [
     title, introduction, ctaText, ctaUrl, startButtonText, privacyUrl, consentText,
-    captureHeading, captureSubtitle, surveyThanksHeading, surveyThanksBody,
+    captureHeading, captureSubtitle, captureSubmitText, surveyThanksHeading, surveyThanksBody,
     resultInsightHeading, resultProjectionHeading,
     captureFirstName, captureLastName, capturePhone, captureCountry,
     firstNameRequired, lastNameRequired, phoneRequired, countryRequired,
@@ -714,6 +719,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     if (typeof s.consent_text === "string") setConsentText(s.consent_text);
     if (typeof s.capture_heading === "string") setCaptureHeading(s.capture_heading);
     if (typeof s.capture_subtitle === "string") setCaptureSubtitle(s.capture_subtitle);
+    if (typeof s.capture_submit_text === "string") setCaptureSubmitText(s.capture_submit_text);
     if (typeof s.survey_thanks_heading === "string") setSurveyThanksHeading(s.survey_thanks_heading);
     if (typeof s.survey_thanks_body === "string") setSurveyThanksBody(s.survey_thanks_body);
     if (typeof s.result_insight_heading === "string") setResultInsightHeading(s.result_insight_heading);
@@ -840,7 +846,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       setCtaText(q.cta_text ?? ""); setCtaUrl(q.cta_url ?? "");
       setStartButtonText(q.start_button_text ?? "");
       setPrivacyUrl(q.privacy_url ?? ""); setConsentText(q.consent_text ?? "");
-      setCaptureHeading(q.capture_heading ?? ""); setCaptureSubtitle(q.capture_subtitle ?? "");
+      setCaptureHeading(q.capture_heading ?? ""); setCaptureSubtitle(q.capture_subtitle ?? ""); setCaptureSubmitText(q.capture_submit_text ?? "");
       setSurveyThanksHeading((q as { survey_thanks_heading?: string | null }).survey_thanks_heading ?? "");
       setSurveyThanksBody((q as { survey_thanks_body?: string | null }).survey_thanks_body ?? "");
       setResultInsightHeading(q.result_insight_heading ?? ""); setResultProjectionHeading(q.result_projection_heading ?? "");
@@ -1227,6 +1233,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
           privacy_url: privacyUrl || null, consent_text: consentText,
           show_consent_checkbox: showConsentCheckbox,
           capture_heading: captureHeading || null, capture_subtitle: captureSubtitle || null,
+          capture_submit_text: captureSubmitText || null,
           survey_thanks_heading: surveyThanksHeading.trim() || null,
           survey_thanks_body: surveyThanksBody.trim() || null,
           result_insight_heading: resultInsightHeading.trim() || null,
@@ -2193,7 +2200,19 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                       </div>
                     </div>
                   )}
-                  <button className="w-full max-w-md mx-auto block px-8 py-4 rounded-full text-white font-semibold text-lg" style={{ backgroundColor: pc }}>{t("captureSubmitDefault")}</button>
+                  {/* Bouton de validation editable (demande Gwenn 12 juillet
+                      2026). Un sondage n'a pas de "resultats" : defaut
+                      survey-approprie "Valider mes reponses", surchargeable
+                      WYSIWYG. Vide = string i18n par defaut cote visiteur. */}
+                  <button className="w-full max-w-md mx-auto block min-h-[48px] h-auto px-8 py-3 rounded-full text-white font-semibold text-lg whitespace-normal leading-snug" style={{ backgroundColor: pc }}>
+                    <RichTextEdit
+                      value={captureSubmitText || t("captureSubmitDefaultSurvey")}
+                      onChange={setCaptureSubmitText}
+                      singleLine
+                      className="text-white font-semibold text-center w-full"
+                      placeholder={t("captureSubmitDefaultSurvey")}
+                    />
+                  </button>
                 </div>
               </div>
 

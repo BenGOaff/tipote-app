@@ -46,6 +46,7 @@ type QuizResult = {
   cta_text: string;
   cta_url: string;
   sio_tag_name: string;
+  sio_tag_names?: string[];
   sio_course_id: string;
   sio_community_id: string;
 };
@@ -75,6 +76,7 @@ function emptyResult(): QuizResult {
     cta_text: "",
     cta_url: "",
     sio_tag_name: "",
+    sio_tag_names: [],
     sio_course_id: "",
     sio_community_id: "",
   };
@@ -247,6 +249,7 @@ export default function QuizFormClient() {
             cta_text: r.cta_text || null,
             cta_url: r.cta_url || null,
             sio_tag_name: r.sio_tag_name || null,
+            sio_tag_names: r.sio_tag_names ?? (r.sio_tag_name ? [r.sio_tag_name] : []),
             sio_course_id: r.sio_course_id || null,
             sio_community_id: r.sio_community_id || null,
           })),
@@ -536,6 +539,7 @@ export default function QuizFormClient() {
           cta_text: r.cta_text || null,
           cta_url: r.cta_url || null,
           sio_tag_name: r.sio_tag_name || null,
+          sio_tag_names: r.sio_tag_names ?? (r.sio_tag_name ? [r.sio_tag_name] : []),
           sio_course_id: r.sio_course_id || null,
           sio_community_id: r.sio_community_id || null,
         })),
@@ -620,6 +624,7 @@ export default function QuizFormClient() {
             cta_text: r.cta_text ?? "",
             cta_url: r.cta_url ?? "",
             sio_tag_name: r.sio_tag_name ?? "",
+            sio_tag_names: r.sio_tag_names ?? (r.sio_tag_name ? [r.sio_tag_name] : []),
             sio_course_id: r.sio_course_id ?? "",
             sio_community_id: r.sio_community_id ?? "",
           })

@@ -209,6 +209,9 @@ type QuizTranslations = {
   lastNameRequiredError: string;
   countryRequiredError: string;
   viewResult: string;
+  /** Défaut du bouton de validation en mode sondage (pas de "résultats").
+   *  Optionnel : fallback sur viewResult si absent. */
+  surveySubmit?: string;
   privacyPolicy: string;
   defaultConsent: string;
   consentNeedle: string;
@@ -286,6 +289,7 @@ const translations: Record<string, QuizTranslations> = {
     lastNameRequiredError: "Le nom est obligatoire.",
     countryRequiredError: "Le pays est obligatoire.",
     viewResult: "Acc\u00e9der aux r\u00e9sultats",
+    surveySubmit: "Valider mes r\u00e9ponses",
     privacyPolicy: "Politique de confidentialit\u00e9",
     defaultConsent: "J\u2019accepte la politique de confidentialit\u00e9.",
     consentNeedle: "politique de confidentialit\u00e9",
@@ -355,6 +359,7 @@ const translations: Record<string, QuizTranslations> = {
     lastNameRequiredError: "Le nom est obligatoire.",
     countryRequiredError: "Le pays est obligatoire.",
     viewResult: "Acc\u00e9der aux r\u00e9sultats",
+    surveySubmit: "Valider mes r\u00e9ponses",
     privacyPolicy: "Politique de confidentialit\u00e9",
     defaultConsent: "J\u2019accepte la politique de confidentialit\u00e9.",
     consentNeedle: "politique de confidentialit\u00e9",
@@ -415,6 +420,7 @@ const translations: Record<string, QuizTranslations> = {
     lastNameRequiredError: "Last name is required.",
     countryRequiredError: "Country is required.",
     viewResult: "See my results",
+    surveySubmit: "Submit my answers",
     privacyPolicy: "Privacy policy",
     defaultConsent: "I accept the privacy policy.",
     consentNeedle: "privacy policy",
@@ -475,6 +481,7 @@ const translations: Record<string, QuizTranslations> = {
     lastNameRequiredError: "El apellido es obligatorio.",
     countryRequiredError: "El país es obligatorio.",
     viewResult: "Ver mis resultados",
+    surveySubmit: "Enviar mis respuestas",
     privacyPolicy: "Pol\u00edtica de privacidad",
     defaultConsent: "Acepto la pol\u00edtica de privacidad.",
     consentNeedle: "pol\u00edtica de privacidad",
@@ -535,6 +542,7 @@ const translations: Record<string, QuizTranslations> = {
     lastNameRequiredError: "Nachname ist erforderlich.",
     countryRequiredError: "Land ist erforderlich.",
     viewResult: "Mein Ergebnis sehen",
+    surveySubmit: "Antworten absenden",
     privacyPolicy: "Datenschutzerkl\u00e4rung",
     defaultConsent: "Ich akzeptiere die Datenschutzerkl\u00e4rung.",
     consentNeedle: "datenschutzerkl\u00e4rung",
@@ -595,6 +603,7 @@ const translations: Record<string, QuizTranslations> = {
     lastNameRequiredError: "O sobrenome é obrigatório.",
     countryRequiredError: "O país é obrigatório.",
     viewResult: "Ver meu resultado",
+    surveySubmit: "Enviar as minhas respostas",
     privacyPolicy: "Pol\u00edtica de privacidade",
     defaultConsent: "Aceito a pol\u00edtica de privacidade.",
     consentNeedle: "pol\u00edtica de privacidade",
@@ -655,6 +664,7 @@ const translations: Record<string, QuizTranslations> = {
     lastNameRequiredError: "Il cognome è obbligatorio.",
     countryRequiredError: "Il paese è obbligatorio.",
     viewResult: "Vedi il mio risultato",
+    surveySubmit: "Invia le mie risposte",
     privacyPolicy: "Informativa sulla privacy",
     defaultConsent: "Accetto l\u2019informativa sulla privacy.",
     consentNeedle: "informativa sulla privacy",
@@ -715,6 +725,7 @@ const translations: Record<string, QuizTranslations> = {
     lastNameRequiredError: "اسم العائلة مطلوب.",
     countryRequiredError: "البلد مطلوب.",
     viewResult: "\u0639\u0631\u0636 \u0627\u0644\u0646\u062a\u0627\u0626\u062c",
+    surveySubmit: "\u0625\u0631\u0633\u0627\u0644 \u0625\u062c\u0627\u0628\u0627\u062a\u064a",
     privacyPolicy: "\u0633\u064a\u0627\u0633\u0629 \u0627\u0644\u062e\u0635\u0648\u0635\u064a\u0629",
     defaultConsent: "\u0623\u0648\u0627\u0641\u0642 \u0639\u0644\u0649 \u0633\u064a\u0627\u0633\u0629 \u0627\u0644\u062e\u0635\u0648\u0635\u064a\u0629.",
     consentNeedle: "\u0633\u064a\u0627\u0633\u0629 \u0627\u0644\u062e\u0635\u0648\u0635\u064a\u0629",
@@ -2345,6 +2356,8 @@ export default function PublicQuizClient({
                   className="tipote-quiz-rich tipote-quiz-rich-inline block w-full"
                   dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(quiz.capture_submit_text)) }}
                 />
+              ) : quiz.mode === "survey" ? (
+                t.surveySubmit ?? t.viewResult
               ) : (
                 t.viewResult
               )}
@@ -2733,7 +2746,7 @@ export default function PublicQuizClient({
               ) : null;
             })()}
 
-            {resultProfile?.insight && (() => {
+            {resultProfile?.insight && stripHtml(resultProfile.insight).trim() && (() => {
               const ins = interp(resultProfile.insight);
               return (
                 <div className="p-4 rounded-xl bg-muted/50 border">
@@ -2761,7 +2774,7 @@ export default function PublicQuizClient({
               ) : null;
             })()}
 
-            {resultProfile?.projection && (() => {
+            {resultProfile?.projection && stripHtml(resultProfile.projection).trim() && (() => {
               const proj = interp(resultProfile.projection);
               return (
                 <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
@@ -2903,7 +2916,7 @@ export default function PublicQuizClient({
                               /* eslint-disable-next-line @next/next/no-img-element */
                               <img src={r.image_url} alt="" className="w-full h-auto rounded-lg" />
                             )}
-                            {r.insight && (() => {
+                            {r.insight && stripHtml(r.insight).trim() && (() => {
                               const ins = interpNeutral(r.insight);
                               return (
                                 <div className="p-3 rounded-lg bg-muted/40 border">
@@ -2925,7 +2938,7 @@ export default function PublicQuizClient({
                               /* eslint-disable-next-line @next/next/no-img-element */
                               <img src={r.image_url} alt="" className="w-full h-auto rounded-lg" />
                             )}
-                            {r.projection && (() => {
+                            {r.projection && stripHtml(r.projection).trim() && (() => {
                               const proj = interpNeutral(r.projection);
                               return (
                                 <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
