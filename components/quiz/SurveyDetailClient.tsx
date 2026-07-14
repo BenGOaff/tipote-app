@@ -79,8 +79,10 @@ import {
   BRAND_FONT_CHOICES,
   DEFAULT_BRAND_COLOR_BACKGROUND,
   DEFAULT_BRAND_COLOR_PRIMARY,
+  DEFAULT_BRAND_COLOR_TEXT,
   DEFAULT_BRAND_FONT,
   googleFontHref,
+  hexToHslTriplet,
   sanitizeSlug,
   type BrandFontChoice,
   type ShareNetwork,
@@ -150,7 +152,7 @@ type QuizData = {
   virality_enabled: boolean; bonus_description: string | null; bonus_image_url: string | null;
   share_message: string | null; locale: string | null;
   sio_share_tag_name: string | null; sio_capture_tag?: string | null;
-  brand_font: string | null; brand_color_primary: string | null; brand_color_background: string | null;
+  brand_font: string | null; brand_color_primary: string | null; brand_color_background: string | null; brand_color_text: string | null;
   share_networks: string[] | null; og_description: string | null; og_image_url: string | null;
   custom_footer_text: string | null; custom_footer_url: string | null;
   status: string; views_count: number; starts_count: number;
@@ -572,6 +574,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
   const [primaryColor, setPrimaryColor] = useState<string>(DEFAULT_BRAND_COLOR_PRIMARY);
   const [bgColor, setBgColor] = useState<string>(DEFAULT_BRAND_COLOR_BACKGROUND);
+  // Couleur des autres textes. NULL = non défini -> aucun override.
+  const [textColor, setTextColor] = useState<string | null>(null);
   const [fontFamily, setFontFamily] = useState<BrandFontChoice>(DEFAULT_BRAND_FONT);
   const [slug, setSlug] = useState("");
   const [ogDescription, setOgDescription] = useState("");
@@ -680,6 +684,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     brand_font: fontFamily,
     brand_color_primary: primaryColor,
     brand_color_background: bgColor,
+    brand_color_text: textColor,
     slug,
     og_description: ogDescription,
     og_image_url: ogImageUrl,
@@ -700,7 +705,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     firstNameRequired, lastNameRequired, phoneRequired, countryRequired,
     showConsentCheckbox, askFirstName, askGender,
     shareMessage, locale, sioShareTagName, sioCaptureTag, status,
-    fontFamily, primaryColor, bgColor,
+    fontFamily, primaryColor, bgColor, textColor,
     slug, ogDescription, customFooterText, customFooterUrl, shareNetworks,
     ogImageUrl, introImageUrl, introImagePosition, introImageWidth,
     selectedToastWidget, selectedShareWidget,
@@ -750,6 +755,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     }
     if (typeof s.brand_color_primary === "string") setPrimaryColor(s.brand_color_primary);
     if (typeof s.brand_color_background === "string") setBgColor(s.brand_color_background);
+    if (s.brand_color_text === null || typeof s.brand_color_text === "string") setTextColor(s.brand_color_text);
     if (typeof s.slug === "string") setSlug(s.slug);
     if (typeof s.og_description === "string") setOgDescription(s.og_description);
     if (s.og_image_url === null || typeof s.og_image_url === "string") setOgImageUrl(s.og_image_url);
@@ -894,6 +900,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       setFontFamily(resolvedFont);
       setPrimaryColor(q.brand_color_primary || prof?.brand_color_primary || DEFAULT_BRAND_COLOR_PRIMARY);
       setBgColor(q.brand_color_background || DEFAULT_BRAND_COLOR_BACKGROUND);
+      setTextColor(q.brand_color_text ?? null);
       setBrandLogoUrl(prof?.brand_logo_url ?? null);
       const rawPalettes = (prof?.saved_palettes ?? []) as unknown;
       setSavedPalettes(Array.isArray(rawPalettes) ? (rawPalettes as PaletteList) : []);
@@ -1254,7 +1261,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
           share_message: shareMessage, locale: locale || null,
           sio_share_tag_name: sioShareTagName || null, sio_capture_tag: sioCaptureTag || null, status,
           // Branding
-          brand_font: fontFamily, brand_color_primary: primaryColor, brand_color_background: bgColor,
+          brand_font: fontFamily, brand_color_primary: primaryColor, brand_color_background: bgColor, brand_color_text: textColor,
           // Share + SEO
           slug: slug.trim() ? cleanedSlug : null,
           og_description: ogDescription.trim() || null,
@@ -1588,6 +1595,15 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                 <div className="space-y-3"><Label className="text-xs">{t("designColorsLabel")}</Label>
                   <div className="flex items-center gap-2"><input type="color" value={primaryColor} onChange={e => setPrimaryColor(e.target.value)} className="w-8 h-8 rounded border cursor-pointer" /><span className="text-xs text-muted-foreground">{t("designPrimaryColor")}</span></div>
                   <div className="flex items-center gap-2"><input type="color" value={bgColor} onChange={e => setBgColor(e.target.value)} className="w-8 h-8 rounded border cursor-pointer" /><span className="text-xs text-muted-foreground">{t("designBgColor")}</span></div>
+                  {/* Couleur des autres textes. NULL tant que non choisie -> aucun override. */}
+                  <div className="flex items-center gap-2">
+                    <input type="color" value={textColor ?? DEFAULT_BRAND_COLOR_TEXT} onChange={e => setTextColor(e.target.value)} className="w-8 h-8 rounded border cursor-pointer" />
+                    <span className="text-xs text-muted-foreground">{t("designTextColor")}</span>
+                    {textColor && (
+                      <button type="button" onClick={() => setTextColor(null)} className="text-[10px] text-muted-foreground hover:text-primary hover:underline ml-auto">{t("designTextColorDefault")}</button>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">{t("designTextColorHint")}</p>
                   <UserPalettePicker
                     currentColor={primaryColor}
                     onPick={setPrimaryColor}
@@ -1792,7 +1808,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
           )}
 
           {/* RIGHT: LIVE PREVIEW — all sections stacked, exactly as visitor sees it */}
-          <main ref={previewRef} className="flex-1 overflow-y-auto" style={{ backgroundColor: bgColor, fontFamily }}>
+          <main ref={previewRef} className="flex-1 overflow-y-auto" style={{ backgroundColor: bgColor, fontFamily, ...(textColor ? { color: textColor, ["--foreground" as string]: hexToHslTriplet(textColor) ?? undefined } : {}) }}>
             <div data-device-preview={device} className={`mx-auto transition-all duration-300 ${device === "mobile" ? "max-w-sm" : "w-full"}`}>
 
               {/* ── INTRO SECTION ── */}

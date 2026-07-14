@@ -194,7 +194,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       "show_results_breakdown",
       "start_button_text", "result_insight_heading", "result_projection_heading",
       "custom_footer_text", "custom_footer_url",
-      "brand_font", "brand_color_primary", "brand_color_background",
+      "brand_font", "brand_color_primary", "brand_color_background", "brand_color_text",
       "brand_logo_url", "hide_brand_logo",
       "intro_image_url", "intro_image_position", "intro_image_width",
     ];
@@ -220,7 +220,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     }
 
     const hexRe = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
-    for (const key of ["brand_color_primary", "brand_color_background"] as const) {
+    for (const key of ["brand_color_primary", "brand_color_background", "brand_color_text"] as const) {
       if (key in patch) {
         const val = patch[key];
         if (val === null) {
