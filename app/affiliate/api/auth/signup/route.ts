@@ -68,21 +68,27 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ ok: false, reason: "weak_password" }, { status: 400 });
   }
 
-  // 1. Vérifier que l'email existe dans Systeme.io. Empêche un visiteur
-  //    de créer un faux compte avec un sa volé + email inventé.
-  let contactExists = false;
+  // 1. Signal Systeme.io (best-effort, NON bloquant).
+  //
+  //    Drame Christelle 14 juillet 2026 : "je n'arrive pas à créer mon lien,
+  //    email pas reconnu dans Systeme.io" alors que c'est bien son email SIO.
+  //    Cause : on cherchait l'email dans les CONTACTS, or un AFFILIÉ est une
+  //    entité DISTINCTE d'un contact dans Systeme.io. Un affilié légitime
+  //    (qui a un vrai `sa...` émis par SIO) peut ne PAS être un contact du
+  //    compte -> il était bloqué à tort.
+  //
+  //    L'identité de confiance ici, c'est le `sa` (déjà validé en format,
+  //    émis par SIO, clé de conflit de la table affiliates). L'attribution
+  //    des commissions se fait de toute façon au webhook (1ère vente) via ce
+  //    `sa` : un faux affilié n'aurait aucune vente attribuée. On ne bloque
+  //    donc plus sur la présence en contact ; on loggue juste le signal.
   try {
     const contact = await findContactByEmail(email);
-    contactExists = Boolean(contact?.id);
+    if (!contact?.id) {
+      console.warn("[affiliate/signup] email pas trouvé en contact SIO (affilié pur, non bloquant):", email);
+    }
   } catch (err) {
-    console.error("[affiliate/signup] findContactByEmail failed:", err);
-    // Fail open : si l'API Systeme.io est down, on ne bloque pas. Le
-    // pire cas c'est un faux affilié, on le détectera plus tard à la
-    // 1ère vente (no match dans webhook → pas d'attribution).
-    contactExists = true;
-  }
-  if (!contactExists) {
-    return NextResponse.json({ ok: false, reason: "email_not_in_systeme" }, { status: 200 });
+    console.error("[affiliate/signup] findContactByEmail failed (non bloquant):", err);
   }
 
   // 2. Upsert dans affiliates. Si l'utilisateur existe déjà (re-clic
