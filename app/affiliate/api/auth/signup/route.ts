@@ -4,19 +4,22 @@
 // appelé depuis /affiliate/signup après que l'user a confirmé ses infos
 // pré-remplies via merge tags Systeme.io.
 //
-// Sécurité :
-//   1. Format sa validé (regex /^sa[a-f0-9]{20,80}$/i)
-//   2. Email validé syntaxiquement
-//   3. Email DOIT exister comme contact dans Systeme.io (lookup via
-//      leur API publique). Si non → reject. Empêche d'enregistrer un
-//      randomly forged sa avec un email inventé.
-//   4. Upsert dans `affiliates` (status='active'). Idempotent — un
-//      affilié peut re-cliquer le bouton Systeme.io, on update juste.
-//   5. Envoie un magic link Supabase pour qu'il puisse se connecter.
+// Sécurité / identité :
+//   1. Format sa validé (regex /^sa[a-f0-9]{20,80}$/i). Le `sa` (ID affilié
+//      Systeme.io) est la SEULE identité qui compte : c'est lui qui
+//      reconstruit le lien affilié dédié et qui sert à l'attribution des
+//      commissions au webhook. On ne valide PAS l'email contre Systeme.io :
+//      un affilié est une entité distincte d'un contact, et de toute façon
+//      seul le `sa` importe (Béné 14 juillet 2026 : "on s'en fout de l'email
+//      Systeme.io, c'est l'ID qui est important").
+//   2. Email validé syntaxiquement (sert d'identifiant de connexion au
+//      compte affilié, pas de vérification côté Systeme.io).
+//   3. Upsert dans `affiliates` (status='active'). Idempotent — un affilié
+//      peut re-cliquer le bouton Systeme.io, on update juste.
+//   4. Envoie un magic link Supabase pour qu'il puisse se connecter.
 
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { findContactByEmail } from "@/lib/systemeIoClient";
 import { sendAffiliateMagicLink } from "@/lib/affiliate/sendMagicLink";
 
 export const runtime = "nodejs";
@@ -68,25 +71,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ ok: false, reason: "weak_password" }, { status: 400 });
   }
 
-  // 1. Vérifier que l'email existe dans Systeme.io. Empêche un visiteur
-  //    de créer un faux compte avec un sa volé + email inventé.
-  let contactExists = false;
-  try {
-    const contact = await findContactByEmail(email);
-    contactExists = Boolean(contact?.id);
-  } catch (err) {
-    console.error("[affiliate/signup] findContactByEmail failed:", err);
-    // Fail open : si l'API Systeme.io est down, on ne bloque pas. Le
-    // pire cas c'est un faux affilié, on le détectera plus tard à la
-    // 1ère vente (no match dans webhook → pas d'attribution).
-    contactExists = true;
-  }
-  if (!contactExists) {
-    return NextResponse.json({ ok: false, reason: "email_not_in_systeme" }, { status: 200 });
-  }
-
-  // 2. Upsert dans affiliates. Si l'utilisateur existe déjà (re-clic
-  //    sur le bouton activation), on met juste à jour ses infos.
+  // Pas de vérification email côté Systeme.io : seul le `sa` compte
+  // (Christelle 14 juillet 2026, un affilié n'est PAS forcément un contact).
+  // Upsert dans affiliates. Si l'utilisateur existe déjà (re-clic sur le
+  // bouton activation), on met juste à jour ses infos.
   const { error: upsertErr } = await supabaseAdmin
     .from("affiliates")
     .upsert(

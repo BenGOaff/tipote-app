@@ -210,6 +210,22 @@ export function RichTextEdit({
   const exec = useCallback((cmd: string, arg?: string) => {
     if (typeof document === "undefined") return;
     document.execCommand(cmd, false, arg);
+    // Defense couleur (Gwenn 14 juillet 2026 : "la couleur saute quand je
+    // centre") : execCommand peut restructurer le contenu et emettre un
+    // <font> deprecie que le sanitizer stripperait -> perte de couleur. On
+    // normalise tout <font> en <span style> apres CHAQUE commande.
+    const el = ref.current;
+    if (el) {
+      el.querySelectorAll("font").forEach((f) => {
+        const span = document.createElement("span");
+        const c = f.getAttribute("color");
+        if (c) span.style.color = c;
+        const inline = f.getAttribute("style");
+        if (inline) span.setAttribute("style", `${span.getAttribute("style") ?? ""};${inline}`);
+        while (f.firstChild) span.appendChild(f.firstChild);
+        f.replaceWith(span);
+      });
+    }
     ref.current?.focus();
   }, []);
 

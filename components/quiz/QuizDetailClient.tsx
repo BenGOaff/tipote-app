@@ -1764,7 +1764,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const tieAnalysis = useMemo(() => {
     return analyzeTies(
       editQuestions.map((q) => ({
-        options: q.options.map((o) => ({ result_index: o.result_index })),
+        options: q.options.map((o) => ({ result_index: o.result_index, points: o.points })),
         config: (q.config ?? null) as { multi_select?: boolean } | null,
       })),
       editResults.length,
@@ -2719,8 +2719,22 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                                   )}
                                 </div>
                               ) : (
-                                <div className="flex items-center gap-1.5 mt-2">
-                                  <span className="text-xs" style={{ color: `${pc}99` }}>+1 point pour le</span>
+                                <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                                  {/* Poids editable : nb de points attribues au
+                                      profil (defaut 1, > 1 pour privilegier).
+                                      Adeline 14 juillet 2026. */}
+                                  <span className="text-xs" style={{ color: `${pc}99` }}>Attribue</span>
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    max={99}
+                                    value={typeof opt.points === "number" ? opt.points : 1}
+                                    onChange={(e) => updateOptPoints(qi, oi, Math.max(0, Math.min(99, Math.round(Number(e.target.value) || 0))))}
+                                    title="Nombre de points donnés à ce profil quand cette réponse est choisie. Mets plus de points pour privilégier un profil."
+                                    className="w-12 text-xs border rounded px-1.5 py-0.5 bg-background font-medium tabular-nums"
+                                    style={{ color: pc }}
+                                  />
+                                  <span className="text-xs" style={{ color: `${pc}99` }}>point(s) au</span>
                                   <select value={opt.result_index} onChange={(e) => updateOptResult(qi, oi, Number(e.target.value))} className="text-xs border rounded px-1.5 py-0.5 bg-background font-medium cursor-pointer" style={{ color: pc }}>
                                     {editResults.map((_, ri) => <option key={ri} value={ri}>Résultat {ri + 1}</option>)}
                                   </select>

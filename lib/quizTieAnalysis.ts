@@ -12,7 +12,7 @@
 // le rend visible.
 
 export type AnalyzerQuestion = {
-  options: { result_index: number }[];
+  options: { result_index: number; points?: number | null }[];
   config?: { multi_select?: boolean } | null;
   question_type?: string | null;
 };
@@ -96,7 +96,8 @@ export function analyzeTies(
     for (let q = 0; q < slots.length; q++) {
       const opt = slots[q].options[idx[q]];
       const ri = opt.result_index;
-      if (ri >= 0 && ri < resultCount) scores[ri]++;
+      const weight = typeof opt.points === "number" ? opt.points : 1;
+      if (ri >= 0 && ri < resultCount) scores[ri] += weight;
     }
     // Find max
     let maxScore = -1;
