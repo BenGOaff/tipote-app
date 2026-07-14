@@ -126,6 +126,9 @@ type PublicQuizData = {
   result_insight_heading?: string | null;
   result_projection_heading?: string | null;
   capture_first_name?: boolean | null;
+  // Sondage : demander l'email AVANT les questions (Christelle 12 juillet
+  // 2026). Off par defaut -> flux inchange (capture apres les questions).
+  capture_before_questions?: boolean | null;
   capture_last_name?: boolean | null;
   capture_phone?: boolean | null;
   capture_country?: boolean | null;
@@ -824,6 +827,9 @@ export default function PublicQuizClient({
   }, [isPreviewMode, previewName]);
 
   const [step, setStep] = useState<Step>("intro");
+  // Capture AVANT les questions (sondage only). Off par defaut -> flux
+  // historique (capture APRES les questions), inchange pour l'existant.
+  const captureBefore = quiz?.mode === "survey" && Boolean(quiz?.capture_before_questions);
   const [currentQ, setCurrentQ] = useState(0);
   // NOTE (19 mai 2026) : le sessionIdRef client a été retiré — le
   // serveur gère maintenant la session via cookie HttpOnly
@@ -1327,7 +1333,14 @@ export default function PublicQuizClient({
       } else {
         // Visitor completed all questions → track funnel event
         trackEvent("complete");
-        setStep("email");
+        if (captureBefore) {
+          // Email deja capture avant les questions -> on envoie email +
+          // reponses en UNE fois (upsert), pas de double POST. handleSubmitEmail
+          // passe a "result" a la fin.
+          void handleSubmitEmail(newAnswers);
+        } else {
+          setStep("email");
+        }
       }
     };
 
@@ -1354,7 +1367,21 @@ export default function PublicQuizClient({
     );
   };
 
-  const handleSubmitEmail = async () => {
+  // Validation + passage aux questions quand la capture est AVANT (sondage).
+  // On ne soumet PAS ici : email/prenom restent en state et sont envoyes en
+  // UNE seule fois avec les reponses a la fin (pas de double POST -> pas de
+  // double tag SIO / double event Meta).
+  const handleCaptureContinue = () => {
+    if (!email.trim()) return;
+    if (quiz?.capture_first_name && quiz?.first_name_required && !firstName.trim()) { setSubmitError(t.firstNameRequiredError); return; }
+    if (quiz?.capture_last_name && quiz?.last_name_required && !lastName.trim()) { setSubmitError(t.lastNameRequiredError); return; }
+    if (quiz?.capture_phone && quiz?.phone_required && !phone.trim()) { setSubmitError(t.phoneRequiredError); return; }
+    if (quiz?.capture_country && quiz?.country_required && !country.trim()) { setSubmitError(t.countryRequiredError); return; }
+    setSubmitError(null);
+    setStep("quiz");
+  };
+
+  const handleSubmitEmail = async (finalAnswers?: (SurveyAnswer | null | undefined)[]) => {
     if (!email.trim()) return;
     // Validation des champs obligatoires (sauf email, déjà checké au
     // dessus). Adeline + Hugo, 18 mai 2026 — chaque toggle activé
@@ -1400,7 +1427,7 @@ export default function PublicQuizClient({
         // Build per-question answers for analytics / export. Each shape is
         // small but distinct so Tendances (survey) and lead-export (quiz)
         // can render the right widget without re-deriving the type.
-        const answersPayload = answers.map((ans, qIdx) => {
+        const answersPayload = (finalAnswers ?? answers).map((ans, qIdx) => {
           if (!ans) return { question_index: qIdx };
           if (ans.kind === "option") return { question_index: qIdx, option_index: ans.optionIndex };
           if (ans.kind === "options") {
@@ -1758,7 +1785,9 @@ export default function PublicQuizClient({
               // Preview mode with a pre-filled name skips the personalize
               // screen so the creator goes straight to the questions.
               const skipPersonalize = isPreviewMode && firstName.trim().length > 0;
-              setStep(!skipPersonalize && (quiz.ask_first_name || quiz.ask_gender) ? "personalize" : "quiz");
+              // captureBefore : apres l'intro (et l'eventuelle perso) on va
+              // a la capture email AVANT les questions.
+              setStep(!skipPersonalize && (quiz.ask_first_name || quiz.ask_gender) ? "personalize" : (captureBefore ? "email" : "quiz"));
             }}>
               {quiz.start_button_text?.trim() || t.start}
             </Button>
@@ -1826,7 +1855,7 @@ export default function PublicQuizClient({
             size="lg"
             className="w-full h-12 rounded-full"
             disabled={!canContinue}
-            onClick={() => setStep("quiz")}
+            onClick={() => setStep(captureBefore ? "email" : "quiz")}
           >
             {t.personalizeContinue}
           </Button>
@@ -2263,7 +2292,7 @@ export default function PublicQuizClient({
                   placeholder={t.emailPlaceholder}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleSubmitEmail()}
+                  onKeyDown={(e) => e.key === "Enter" && (captureBefore ? handleCaptureContinue() : handleSubmitEmail())}
                   className="h-11"
                   required
                 />
@@ -2335,7 +2364,7 @@ export default function PublicQuizClient({
             <Button
               size="lg"
               className="w-full min-h-[48px] h-auto py-3 px-6 text-base rounded-full whitespace-normal leading-snug"
-              onClick={handleSubmitEmail}
+              onClick={() => (captureBefore ? handleCaptureContinue() : handleSubmitEmail())}
               disabled={
                 submitting ||
                 !email.trim() ||
@@ -2356,6 +2385,8 @@ export default function PublicQuizClient({
                   className="tipote-quiz-rich tipote-quiz-rich-inline block w-full"
                   dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(quiz.capture_submit_text)) }}
                 />
+              ) : captureBefore ? (
+                t.personalizeContinue
               ) : quiz.mode === "survey" ? (
                 t.surveySubmit ?? t.viewResult
               ) : (

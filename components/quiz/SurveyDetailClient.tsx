@@ -500,6 +500,9 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   // i18n par defaut cote visiteur. Demande Gwenn 12 juillet 2026 : un
   // sondage n'a pas de "resultats", elle veut "Valider ma reponse".
   const [captureSubmitText, setCaptureSubmitText] = useState("");
+  // Demander l'email AVANT les questions (Christelle 12 juillet 2026). Off
+  // par defaut = capture apres les questions (comportement historique).
+  const [captureBeforeQuestions, setCaptureBeforeQuestions] = useState<boolean>(false);
   // Adeline (1er juin 2026) : page de remerciement éditable WYSIWYG.
   // "" = on affiche la string i18n par défaut côté visiteur.
   const [surveyThanksHeading, setSurveyThanksHeading] = useState("");
@@ -540,7 +543,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   const [mainTab, setMainTab] = useState<"create" | "share" | "trends">("create");
   // Sous-vue de l'onglet Tendances : agrégat (Synthèse) ou tableau par
   // répondant (Réponses, style Typeform / Tally).
-  const [trendsView, setTrendsView] = useState<"summary" | "responses">("summary");
+  const [trendsView, setTrendsView] = useState<"summary" | "responses">("responses"); // sondage: onglet "Reponses" ouvre sur le tableau (retour Christelle)
 
   // Marquage d'un répondant (étoile). Optimiste, revert si l'API échoue.
   // Met à jour le state `leads` → le tableau ET le PDF reflètent le marquage.
@@ -653,6 +656,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     capture_heading: captureHeading,
     capture_subtitle: captureSubtitle,
     capture_submit_text: captureSubmitText,
+    capture_before_questions: captureBeforeQuestions,
     survey_thanks_heading: surveyThanksHeading,
     survey_thanks_body: surveyThanksBody,
     result_insight_heading: resultInsightHeading,
@@ -690,7 +694,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     questions: editQuestions,
   }), [
     title, introduction, ctaText, ctaUrl, startButtonText, privacyUrl, consentText,
-    captureHeading, captureSubtitle, captureSubmitText, surveyThanksHeading, surveyThanksBody,
+    captureHeading, captureSubtitle, captureSubmitText, captureBeforeQuestions, surveyThanksHeading, surveyThanksBody,
     resultInsightHeading, resultProjectionHeading,
     captureFirstName, captureLastName, capturePhone, captureCountry,
     firstNameRequired, lastNameRequired, phoneRequired, countryRequired,
@@ -720,6 +724,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     if (typeof s.capture_heading === "string") setCaptureHeading(s.capture_heading);
     if (typeof s.capture_subtitle === "string") setCaptureSubtitle(s.capture_subtitle);
     if (typeof s.capture_submit_text === "string") setCaptureSubmitText(s.capture_submit_text);
+    if (typeof s.capture_before_questions === "boolean") setCaptureBeforeQuestions(s.capture_before_questions);
     if (typeof s.survey_thanks_heading === "string") setSurveyThanksHeading(s.survey_thanks_heading);
     if (typeof s.survey_thanks_body === "string") setSurveyThanksBody(s.survey_thanks_body);
     if (typeof s.result_insight_heading === "string") setResultInsightHeading(s.result_insight_heading);
@@ -847,6 +852,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       setStartButtonText(q.start_button_text ?? "");
       setPrivacyUrl(q.privacy_url ?? ""); setConsentText(q.consent_text ?? "");
       setCaptureHeading(q.capture_heading ?? ""); setCaptureSubtitle(q.capture_subtitle ?? ""); setCaptureSubmitText(q.capture_submit_text ?? "");
+      setCaptureBeforeQuestions(Boolean((q as { capture_before_questions?: boolean | null }).capture_before_questions));
       setSurveyThanksHeading((q as { survey_thanks_heading?: string | null }).survey_thanks_heading ?? "");
       setSurveyThanksBody((q as { survey_thanks_body?: string | null }).survey_thanks_body ?? "");
       setResultInsightHeading(q.result_insight_heading ?? ""); setResultProjectionHeading(q.result_projection_heading ?? "");
@@ -1234,6 +1240,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
           show_consent_checkbox: showConsentCheckbox,
           capture_heading: captureHeading || null, capture_subtitle: captureSubtitle || null,
           capture_submit_text: captureSubmitText || null,
+          capture_before_questions: captureBeforeQuestions,
           survey_thanks_heading: surveyThanksHeading.trim() || null,
           survey_thanks_body: surveyThanksBody.trim() || null,
           result_insight_heading: resultInsightHeading.trim() || null,
@@ -1397,7 +1404,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   const pc = primaryColor;
 
   return (
-   <SioTagsProvider>
+   <SioTagsProvider quizId={quizId}>
     <UserPalettesProvider palettes={savedPalettes}>
     <EditorPreviewDeviceProvider device={device}>
       <RestoreDraftDialog
@@ -1450,7 +1457,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
         <nav className="hidden sm:flex items-center bg-muted rounded-lg p-0.5">
           {(["create","share","trends"] as const).map(tab => (
             <button key={tab} onClick={() => setMainTab(tab)} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${mainTab === tab ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
-              {tab === "create" ? <><Pencil className="w-3.5 h-3.5 inline mr-1.5" />{t("tabCreate")}</> : tab === "share" ? <><Share2 className="w-3.5 h-3.5 inline mr-1.5" />{t("tabShare")}</> : <><TrendingUp className="w-3.5 h-3.5 inline mr-1.5" />{t("tabTrends")}</>}
+              {tab === "create" ? <><Pencil className="w-3.5 h-3.5 inline mr-1.5" />{t("tabCreate")}</> : tab === "share" ? <><Share2 className="w-3.5 h-3.5 inline mr-1.5" />{t("tabShare")}</> : <><TrendingUp className="w-3.5 h-3.5 inline mr-1.5" />{t("tabTrendsSurvey")}</>}
             </button>
           ))}
         </nav>
@@ -1509,7 +1516,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       <nav className="sm:hidden flex items-stretch border-b shrink-0 bg-background z-10">
         {(["create","share","trends"] as const).map(tab => (
           <button key={tab} onClick={() => setMainTab(tab)} className={`flex-1 px-2 py-2.5 text-sm font-medium transition-colors inline-flex items-center justify-center gap-1.5 ${mainTab === tab ? "text-foreground border-b-2 border-primary" : "text-muted-foreground"}`}>
-            {tab === "create" ? <><Pencil className="w-3.5 h-3.5" />{t("tabCreate")}</> : tab === "share" ? <><Share2 className="w-3.5 h-3.5" />{t("tabShare")}</> : <><TrendingUp className="w-3.5 h-3.5" />{t("tabTrends")}</>}
+            {tab === "create" ? <><Pencil className="w-3.5 h-3.5" />{t("tabCreate")}</> : tab === "share" ? <><Share2 className="w-3.5 h-3.5" />{t("tabShare")}</> : <><TrendingUp className="w-3.5 h-3.5" />{t("tabTrendsSurvey")}</>}
           </button>
         ))}
       </nav>
@@ -1632,6 +1639,15 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                     <CapturePill label={t("pillPhone")} active={capturePhone} onToggle={() => setCapturePhone(!capturePhone)} />
                     <CapturePill label={t("pillCountry")} active={captureCountry} onToggle={() => setCaptureCountry(!captureCountry)} />
                   </div>
+                  {/* Position de la capture : avant ou apres les questions.
+                      Christelle 12 juillet 2026 : "demander emails + prenom
+                      AVANT les questions". */}
+                  <SettingsToggle
+                    label={t("surveyCaptureBeforeLabel")}
+                    hint={t("surveyCaptureBeforeHint")}
+                    checked={captureBeforeQuestions}
+                    onChange={setCaptureBeforeQuestions}
+                  />
                   {(captureFirstName || captureLastName || capturePhone || captureCountry) && (
                     <div className="flex flex-col gap-1.5 pt-1">
                       {captureFirstName && (
