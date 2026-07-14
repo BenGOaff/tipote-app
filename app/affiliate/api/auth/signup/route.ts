@@ -4,19 +4,22 @@
 // appelé depuis /affiliate/signup après que l'user a confirmé ses infos
 // pré-remplies via merge tags Systeme.io.
 //
-// Sécurité :
-//   1. Format sa validé (regex /^sa[a-f0-9]{20,80}$/i)
-//   2. Email validé syntaxiquement
-//   3. Email DOIT exister comme contact dans Systeme.io (lookup via
-//      leur API publique). Si non → reject. Empêche d'enregistrer un
-//      randomly forged sa avec un email inventé.
-//   4. Upsert dans `affiliates` (status='active'). Idempotent — un
-//      affilié peut re-cliquer le bouton Systeme.io, on update juste.
-//   5. Envoie un magic link Supabase pour qu'il puisse se connecter.
+// Sécurité / identité :
+//   1. Format sa validé (regex /^sa[a-f0-9]{20,80}$/i). Le `sa` (ID affilié
+//      Systeme.io) est la SEULE identité qui compte : c'est lui qui
+//      reconstruit le lien affilié dédié et qui sert à l'attribution des
+//      commissions au webhook. On ne valide PAS l'email contre Systeme.io :
+//      un affilié est une entité distincte d'un contact, et de toute façon
+//      seul le `sa` importe (Béné 14 juillet 2026 : "on s'en fout de l'email
+//      Systeme.io, c'est l'ID qui est important").
+//   2. Email validé syntaxiquement (sert d'identifiant de connexion au
+//      compte affilié, pas de vérification côté Systeme.io).
+//   3. Upsert dans `affiliates` (status='active'). Idempotent — un affilié
+//      peut re-cliquer le bouton Systeme.io, on update juste.
+//   4. Envoie un magic link Supabase pour qu'il puisse se connecter.
 
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { findContactByEmail } from "@/lib/systemeIoClient";
 import { sendAffiliateMagicLink } from "@/lib/affiliate/sendMagicLink";
 
 export const runtime = "nodejs";
@@ -68,31 +71,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ ok: false, reason: "weak_password" }, { status: 400 });
   }
 
-  // 1. Signal Systeme.io (best-effort, NON bloquant).
-  //
-  //    Drame Christelle 14 juillet 2026 : "je n'arrive pas à créer mon lien,
-  //    email pas reconnu dans Systeme.io" alors que c'est bien son email SIO.
-  //    Cause : on cherchait l'email dans les CONTACTS, or un AFFILIÉ est une
-  //    entité DISTINCTE d'un contact dans Systeme.io. Un affilié légitime
-  //    (qui a un vrai `sa...` émis par SIO) peut ne PAS être un contact du
-  //    compte -> il était bloqué à tort.
-  //
-  //    L'identité de confiance ici, c'est le `sa` (déjà validé en format,
-  //    émis par SIO, clé de conflit de la table affiliates). L'attribution
-  //    des commissions se fait de toute façon au webhook (1ère vente) via ce
-  //    `sa` : un faux affilié n'aurait aucune vente attribuée. On ne bloque
-  //    donc plus sur la présence en contact ; on loggue juste le signal.
-  try {
-    const contact = await findContactByEmail(email);
-    if (!contact?.id) {
-      console.warn("[affiliate/signup] email pas trouvé en contact SIO (affilié pur, non bloquant):", email);
-    }
-  } catch (err) {
-    console.error("[affiliate/signup] findContactByEmail failed (non bloquant):", err);
-  }
-
-  // 2. Upsert dans affiliates. Si l'utilisateur existe déjà (re-clic
-  //    sur le bouton activation), on met juste à jour ses infos.
+  // Pas de vérification email côté Systeme.io : seul le `sa` compte
+  // (Christelle 14 juillet 2026, un affilié n'est PAS forcément un contact).
+  // Upsert dans affiliates. Si l'utilisateur existe déjà (re-clic sur le
+  // bouton activation), on met juste à jour ses infos.
   const { error: upsertErr } = await supabaseAdmin
     .from("affiliates")
     .upsert(
