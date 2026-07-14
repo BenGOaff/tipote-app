@@ -19,7 +19,7 @@ export function useSioTagsContext() {
   return useContext(SioTagsContext);
 }
 
-export function SioTagsProvider({ children }: { children: ReactNode }) {
+export function SioTagsProvider({ children, quizId }: { children: ReactNode; quizId?: string }) {
   const [tags, setTags] = useState<SioTag[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [noApiKey, setNoApiKey] = useState(false);
@@ -31,7 +31,9 @@ export function SioTagsProvider({ children }: { children: ReactNode }) {
     setError(false);
     setNoApiKey(false);
     try {
-      const res = await fetch("/api/systeme-io/tags");
+      // quizId => la route resout la cle SIO du projet du quiz (sous-compte
+      // inclus), pas la cle du projet actif (retour Christelle 12 juillet 2026).
+      const res = await fetch(`/api/systeme-io/tags${quizId ? `?quizId=${encodeURIComponent(quizId)}` : ""}`);
       const json = await res.json();
       if (json?.ok && Array.isArray(json.tags)) {
         setTags(json.tags);
@@ -45,7 +47,7 @@ export function SioTagsProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, [tags, loading]);
+  }, [tags, loading, quizId]);
 
   const addTagLocal = useCallback((name: string) => {
     setTags((prev) => {

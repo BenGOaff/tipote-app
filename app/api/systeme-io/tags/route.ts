@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 const SIO_BASE = "https://api.systeme.io/api";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const supabase = await getSupabaseServerClient();
     const {
@@ -22,7 +22,25 @@ export async function GET() {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    const projectId = await getActiveProjectId(supabase, user.id);
+    let projectId = await getActiveProjectId(supabase, user.id);
+
+    // Si un quizId est fourni, on resout la cle SIO depuis le PROJET DU QUIZ
+    // (et non le projet actif du cookie), pour que les tags affiches soient
+    // ceux de la cle que le quiz utilise vraiment. Retour Christelle
+    // (12 juillet 2026) : les tags de son sous-compte SIO n'apparaissaient
+    // pas quand le cookie pointait un autre projet que celui du quiz.
+    const quizId = new URL(req.url).searchParams.get("quizId");
+    if (quizId) {
+      const { data: quizRow } = await supabase
+        .from("quizzes")
+        .select("project_id")
+        .eq("id", quizId)
+        .eq("user_id", user.id)
+        .maybeSingle();
+      const qProject = (quizRow as { project_id?: string | null } | null)?.project_id;
+      if (qProject) projectId = String(qProject);
+    }
+
     const apiKey = (await resolveSioApiKey(supabase, user.id, projectId)) ?? "";
     if (!apiKey) {
       return NextResponse.json(

@@ -183,6 +183,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       "locale", "og_image_url", "og_description",
       "ask_first_name", "ask_gender",
       "capture_heading", "capture_subtitle", "capture_submit_text",
+      "capture_before_questions",
       "survey_thanks_heading", "survey_thanks_body",
       "capture_first_name",
       "capture_last_name", "capture_phone", "capture_country",
