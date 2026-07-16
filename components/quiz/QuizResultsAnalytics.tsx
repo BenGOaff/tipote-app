@@ -114,8 +114,14 @@ export default function QuizResultsAnalytics({
 
   // ─── Réconciliation des compteurs (invariant AGENTS.md) ────────────────
   // vues >= starts >= completions >= leads. Mirror Tiquiz, audit 7 juin 2026.
-  const reconciledCompletions = Math.max(completionsCount, leads.length);
-  const reconciledStarts = Math.max(startsCount, reconciledCompletions);
+  // Funnel monotone : vues >= demarrages >= completions. MAIS les LEADS ne
+  // sont PAS bornes par les completions : une capture placee AVANT l'ecran
+  // de resultat donne legitimement plus de leads que de completions (cas
+  // Adeline : 129 leads pour 114 completions). On borne les leads sur les
+  // DEMARRAGES (un lead implique un demarrage), jamais sur les completions
+  // -> le KPI "Completes" montre le vrai chiffre, pas gonfle.
+  const reconciledCompletions = completionsCount;
+  const reconciledStarts = Math.max(startsCount, completionsCount, leads.length);
   const reconciledViews = Math.max(viewsCount, reconciledStarts);
 
   // Deux taux, chacun coherent avec SON denominateur (fini le 97% affiche a
