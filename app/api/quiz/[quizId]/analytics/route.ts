@@ -168,19 +168,6 @@ export async function GET(
     (currentResults ?? []).map((r) => [r.id as string, (r.title as string) ?? ""]),
   );
 
-  const NO_RESULT_KEY = "__no_result__";
-  type Bucket = { count: number; snapshotTitle: string | null };
-  const byResult = new Map<string, Bucket>();
-  for (const r of leadsByResultRows) {
-    const key = r.result_id ?? NO_RESULT_KEY;
-    const b = byResult.get(key) ?? { count: 0, snapshotTitle: null };
-    b.count += Number(r.n);
-    if (!b.snapshotTitle && r.result_title && r.result_title.trim()) {
-      b.snapshotTitle = r.result_title.trim();
-    }
-    byResult.set(key, b);
-  }
-
   // Seed avec tous les profils actuels (count = 0).
   const byTitle = new Map<string, number>();
   const currentTitles = new Set<string>();
@@ -192,18 +179,28 @@ export async function GET(
     }
   }
 
-  // Walk leads : match via id-live OU snapshot-title-encore-current.
-  // Sinon = orphan/ancien, on l'ignore silencieusement.
-  for (const [key, b] of byResult) {
-    const live = key !== NO_RESULT_KEY ? currentTitleById.get(key) : undefined;
-    const liveTitle = live?.trim();
-    if (liveTitle && currentTitles.has(liveTitle)) {
-      byTitle.set(liveTitle, (byTitle.get(liveTitle) ?? 0) + b.count);
-    } else if (b.snapshotTitle && currentTitles.has(b.snapshotTitle.trim())) {
-      const snap = b.snapshotTitle.trim();
-      byTitle.set(snap, (byTitle.get(snap) ?? 0) + b.count);
+  // Resolution LIGNE PAR LIGNE (le RPC groupe deja par
+  // (result_id, result_title)). BUG CORRIGE (drame Adeline 16 juillet) :
+  // avant, tous les leads a result_id null (orphelins apres un save qui a
+  // recree les profils) etaient regroupes sous une cle unique et TOUT le
+  // paquet etait attribue au PREMIER titre-snapshot vu -> il basculait d'un
+  // profil a l'autre. Desormais chaque snapshot garde son compte.
+  // Match : id-live (suit les renames) OU snapshot-title-encore-current.
+  // Sinon = orphan/ancien, ignore silencieusement.
+  for (const row of leadsByResultRows) {
+    const n = Number(row.n) || 0;
+    if (n <= 0) continue;
+    const live = row.result_id ? currentTitleById.get(row.result_id)?.trim() : undefined;
+    if (live && currentTitles.has(live)) {
+      byTitle.set(live, (byTitle.get(live) ?? 0) + n);
+      continue;
     }
-    // else: orphan / ancien profil -> exclu du donut.
+    const snap = row.result_title?.trim();
+    if (snap && currentTitles.has(snap)) {
+      byTitle.set(snap, (byTitle.get(snap) ?? 0) + n);
+      continue;
+    }
+    // orphelin / ancien nom -> exclu du donut.
   }
 
   // Total des leads MATCHES (denominateur du %). Si tout est orphan,

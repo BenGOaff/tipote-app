@@ -148,28 +148,24 @@ export default function QuizResultsAnalytics({
       }
     }
 
-    type Bucket = { count: number; snapshot: string | null };
-    const byResultId = new Map<string | null, Bucket>();
+    // Resolution LIGNE PAR LIGNE (pas de collapse des orphelins). Bug
+    // corrige (drame Adeline 16 juillet) : avant, tous les leads a
+    // result_id null etaient regroupes sous une cle unique et attribues au
+    // PREMIER titre-snapshot vu -> tout le paquet basculait d'un profil a
+    // l'autre. Desormais chaque snapshot garde son compte.
     for (const lead of leads) {
-      const key = lead.result_id ?? null;
-      const b = byResultId.get(key) ?? { count: 0, snapshot: null };
-      b.count += 1;
-      if (!b.snapshot && lead.result_title && lead.result_title.trim()) {
-        b.snapshot = (stripHtml(lead.result_title) || lead.result_title).trim();
+      const live = lead.result_id ? liveTitleById.get(lead.result_id)?.trim() : undefined;
+      if (live && currentTitles.has(live)) {
+        byTitle.set(live, (byTitle.get(live) ?? 0) + 1);
+        continue;
       }
-      byResultId.set(key, b);
-    }
-
-    for (const [resultId, b] of byResultId) {
-      const live = resultId ? liveTitleById.get(resultId) : undefined;
-      const liveTitle = live?.trim();
-      if (liveTitle && currentTitles.has(liveTitle)) {
-        byTitle.set(liveTitle, (byTitle.get(liveTitle) ?? 0) + b.count);
-      } else if (b.snapshot && currentTitles.has(b.snapshot.trim())) {
-        const snap = b.snapshot.trim();
-        byTitle.set(snap, (byTitle.get(snap) ?? 0) + b.count);
+      const snap = lead.result_title
+        ? (stripHtml(lead.result_title) || lead.result_title).trim()
+        : "";
+      if (snap && currentTitles.has(snap)) {
+        byTitle.set(snap, (byTitle.get(snap) ?? 0) + 1);
       }
-      // else: orphan / ancien profil -> exclu silencieusement.
+      // orphelin / ancien profil -> exclu silencieusement.
     }
 
     return Array.from(byTitle.entries())
