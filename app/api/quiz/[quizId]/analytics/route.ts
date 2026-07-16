@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { dateKeyForOffset, parseTzOffset } from "@/lib/dateKeys";
+import { stripHtml } from "@/lib/richText";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -168,42 +169,36 @@ export async function GET(
     (currentResults ?? []).map((r) => [r.id as string, (r.title as string) ?? ""]),
   );
 
-  const NO_RESULT_KEY = "__no_result__";
-  type Bucket = { count: number; snapshotTitle: string | null };
-  const byResult = new Map<string, Bucket>();
-  for (const r of leadsByResultRows) {
-    const key = r.result_id ?? NO_RESULT_KEY;
-    const b = byResult.get(key) ?? { count: 0, snapshotTitle: null };
-    b.count += Number(r.n);
-    if (!b.snapshotTitle && r.result_title && r.result_title.trim()) {
-      b.snapshotTitle = r.result_title.trim();
-    }
-    byResult.set(key, b);
-  }
-
-  // Seed avec tous les profils actuels (count = 0).
-  const byTitle = new Map<string, number>();
-  const currentTitles = new Set<string>();
+  // Resolution LIGNE PAR LIGNE (le RPC groupe deja par
+  // (result_id, result_title)). BUG CORRIGE (drame Adeline 16 juillet) :
+  // avant, tous les leads a result_id null etaient regroupes sous une cle
+  // unique et TOUT le paquet attribue au PREMIER titre-snapshot vu -> il
+  // basculait d'un profil a l'autre. Desormais chaque snapshot garde son
+  // compte. Match sur le titre NORMALISE (stripHtml) pour reunir les leads
+  // captes sous des mises en forme differentes du meme profil. Affichage :
+  // titre courant BRUT (la page gere le HTML).
+  const byTitle = new Map<string, number>(); // cle = titre courant brut (affichage)
+  const normToRaw = new Map<string, string>(); // titre normalise -> titre courant brut
   for (const r of currentResults ?? []) {
-    const title = ((r.title as string) ?? "").trim();
-    if (title && !byTitle.has(title)) {
-      byTitle.set(title, 0);
-      currentTitles.add(title);
-    }
+    const raw = ((r.title as string) ?? "").trim();
+    if (!raw) continue;
+    const key = stripHtml(raw);
+    if (!key) continue;
+    if (!byTitle.has(raw)) byTitle.set(raw, 0);
+    if (!normToRaw.has(key)) normToRaw.set(key, raw);
   }
 
-  // Walk leads : match via id-live OU snapshot-title-encore-current.
-  // Sinon = orphan/ancien, on l'ignore silencieusement.
-  for (const [key, b] of byResult) {
-    const live = key !== NO_RESULT_KEY ? currentTitleById.get(key) : undefined;
-    const liveTitle = live?.trim();
-    if (liveTitle && currentTitles.has(liveTitle)) {
-      byTitle.set(liveTitle, (byTitle.get(liveTitle) ?? 0) + b.count);
-    } else if (b.snapshotTitle && currentTitles.has(b.snapshotTitle.trim())) {
-      const snap = b.snapshotTitle.trim();
-      byTitle.set(snap, (byTitle.get(snap) ?? 0) + b.count);
+  for (const row of leadsByResultRows) {
+    const n = Number(row.n) || 0;
+    if (n <= 0) continue;
+    let raw: string | undefined;
+    if (row.result_id) {
+      const live = currentTitleById.get(row.result_id);
+      if (live) raw = normToRaw.get(stripHtml(live));
     }
-    // else: orphan / ancien profil -> exclu du donut.
+    if (!raw && row.result_title) raw = normToRaw.get(stripHtml(row.result_title));
+    if (raw) byTitle.set(raw, (byTitle.get(raw) ?? 0) + n);
+    // sinon: orphelin / ancien nom -> exclu du donut.
   }
 
   // Total des leads MATCHES (denominateur du %). Si tout est orphan,

@@ -4225,6 +4225,8 @@
     "kpiShares": "Condivisioni",
     "conversionRate": "Tasso di conversione",
     "conversionSubtitle": "{leads, plural, =0 {0 lead} one {# lead} other {# lead}} su {views, plural, =0 {0 visualizzazioni} one {# visualizzazione} other {# visualizzazioni}}",
+    "startsRateLabel": "Tasso di trasformazione",
+    "startsRateSubtitle": "{leads, plural, =0 {0 lead} one {# lead} other {# lead}} su {starts, plural, =0 {0 avviati} one {# avviato} other {# avviati}}",
     "trendTitle": "Lead negli ultimi 30 giorni",
     "trendEmpty": "Ancora nessun lead",
     "trendTooltipDate": "Il {date}",

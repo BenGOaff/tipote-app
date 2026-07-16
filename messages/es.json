@@ -4225,6 +4225,8 @@
     "kpiShares": "Compartidos",
     "conversionRate": "Tasa de conversión",
     "conversionSubtitle": "{leads, plural, =0 {0 leads} one {# lead} other {# leads}} de {views, plural, =0 {0 vistas} one {# vista} other {# vistas}}",
+    "startsRateLabel": "Tasa de transformación",
+    "startsRateSubtitle": "{leads, plural, =0 {0 leads} one {# lead} other {# leads}} de {starts, plural, =0 {0 iniciados} one {# iniciado} other {# iniciados}}",
     "trendTitle": "Leads en los últimos 30 días",
     "trendEmpty": "Aún no hay leads",
     "trendTooltipDate": "El {date}",

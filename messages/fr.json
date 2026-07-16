@@ -4232,6 +4232,8 @@
     "kpiShares": "Partages",
     "conversionRate": "Taux de conversion",
     "conversionSubtitle": "{leads, plural, =0 {0 lead} one {# lead} other {# leads}} sur {views, plural, =0 {0 vue} one {# vue} other {# vues}}",
+    "startsRateLabel": "Taux de transformation",
+    "startsRateSubtitle": "{leads, plural, =0 {0 lead} one {# lead} other {# leads}} sur {starts, plural, =0 {0 démarrage} one {# démarrage} other {# démarrages}}",
     "trendTitle": "Leads sur les 30 derniers jours",
     "trendEmpty": "Aucun lead pour l'instant",
     "trendTooltipDate": "Le {date}",
