@@ -4224,6 +4224,8 @@
     "kpiShares": "المشاركات",
     "conversionRate": "معدل التحويل",
     "conversionSubtitle": "{leads, plural, =0 {٠ عميل} one {عميل واحد} two {عميلان} few {# عملاء} many {# عميلاً} other {# عميل}} من {views, plural, =0 {٠ مشاهدة} one {مشاهدة واحدة} two {مشاهدتان} few {# مشاهدات} many {# مشاهدةً} other {# مشاهدة}}",
+    "startsRateLabel": "معدل التحويل من البدايات",
+    "startsRateSubtitle": "{leads, plural, =0 {٠ عميل} one {عميل واحد} two {عميلان} few {# عملاء} many {# عميلاً} other {# عميل}} من {starts, plural, =0 {٠ بداية} one {بداية واحدة} two {بدايتان} few {# بدايات} many {# بدايةً} other {# بداية}}",
     "trendTitle": "العملاء المحتملون خلال آخر ٣٠ يوماً",
     "trendEmpty": "لا يوجد عملاء محتملون بعد",
     "trendTooltipDate": "في {date}",

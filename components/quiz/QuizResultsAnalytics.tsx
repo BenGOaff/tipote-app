@@ -118,8 +118,16 @@ export default function QuizResultsAnalytics({
   const reconciledStarts = Math.max(startsCount, reconciledCompletions);
   const reconciledViews = Math.max(viewsCount, reconciledStarts);
 
-  // Taux de conversion HONNÊTE : null si starts < leads (tracking foireux).
-  const conversionRate =
+  // Deux taux, chacun coherent avec SON denominateur (fini le 97% affiche a
+  // cote de "X vues", qui avait l'air d'un bug - drame Adeline 16 juillet).
+  // - captureRate = leads / vues : combien de VISITEURS deviennent leads.
+  // - startsRate   = leads / demarrages : parmi ceux qui COMMENCENT le quiz.
+  // Honnete : null si le denominateur est < leads (tracking incomplet).
+  const captureRate =
+    viewsCount >= leads.length && viewsCount > 0
+      ? Math.round((leads.length / viewsCount) * 100)
+      : null;
+  const startsRate =
     startsCount >= leads.length && startsCount > 0
       ? Math.round((leads.length / startsCount) * 100)
       : null;
@@ -291,20 +299,31 @@ export default function QuizResultsAnalytics({
       {/* Conversion + trend */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
-          <CardContent className="pt-6">
-            <h3 className="text-sm text-muted-foreground mb-2">
-              {t("conversionRate")}
-            </h3>
-            <div className="text-4xl font-bold">
-              {conversionRate === null ? "—" : `${conversionRate}%`}
+          <CardContent className="pt-6 flex flex-col gap-4">
+            {/* Taux de capture : leads / vues (chiffre ET libelle sur la meme base). */}
+            <div>
+              <h3 className="text-sm text-muted-foreground mb-1">
+                {t("conversionRate")}
+              </h3>
+              <div className="text-3xl font-bold">
+                {captureRate === null ? "—" : `${captureRate}%`}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {t("conversionSubtitle", { leads: leads.length, views: viewsCount })}
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {/* Compteur réconcilié pour cohérence avec le KPI vues. */}
-              {t("conversionSubtitle", {
-                leads: leads.length,
-                views: reconciledViews,
-              })}
-            </p>
+            {/* Taux de transformation : leads / demarrages. */}
+            <div className="border-t border-border pt-3">
+              <h3 className="text-sm text-muted-foreground mb-1">
+                {t("startsRateLabel")}
+              </h3>
+              <div className="text-3xl font-bold">
+                {startsRate === null ? "—" : `${startsRate}%`}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {t("startsRateSubtitle", { leads: leads.length, starts: startsCount })}
+              </p>
+            </div>
           </CardContent>
         </Card>
         <Card className="md:col-span-2">
