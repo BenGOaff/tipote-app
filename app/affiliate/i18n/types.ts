@@ -135,10 +135,12 @@ export type AffiliateDict = {
     gain_total: string;
     gain_pending: string;
     gain_paid: string;
-    tier_card_title: string;
-    tier_current: string; // "Tu es actuellement au palier {label}."
-    tier_remaining: string; // "Plus que {count} ventes pour atteindre..."
-    tier_current_badge: string;
+    tier_card_title: string; // @deprecated (paliers supprimés) - conservé pour compat
+    tier_current: string; // @deprecated
+    tier_remaining: string; // @deprecated
+    tier_current_badge: string; // @deprecated
+    commission_title: string; // "Ta commission"
+    commission_tiquiz_desc: string; // description du taux Tiquiz 40%
     coming_soon: string;
     trial_cta_title: string;
     trial_cta_description: string;
@@ -204,6 +206,8 @@ export type AffiliateDict = {
     tiquiz_yearly_description: string;
     tiquiz_yearly_plus_label: string;
     tiquiz_yearly_plus_description: string;
+    atelier_label: string; // L'Atelier du Quiz (formation, FR uniquement)
+    atelier_description: string;
     tipote_main_label: string;
     tipote_main_description: string;
     tipote_order_label: string;

@@ -16,13 +16,12 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 const ATTRIBUTION_WINDOW_DAYS = 90;
 
-// Paliers de commission par défaut. Configurable per-affilié plus tard
-// si besoin (override via colonne `affiliates.commission_rate`).
-const DEFAULT_TIERS = [
-  { minSales: 25, rate: 0.5 },
-  { minSales: 10, rate: 0.45 },
-  { minSales: 0, rate: 0.4 },
-];
+// Taux de commission Tiquiz : 40% FIXE (Béné 17 juil 2026 : pas de palier,
+// nulle part). Les anciens paliers 45%/50% avaient été inventés et sont
+// supprimés. Override per-affilié possible plus tard via une colonne
+// `affiliates.commission_rate` si besoin.
+// NB : l'Atelier du Quiz (Quizing, 70%) est attribué côté formaquiz, pas ici.
+const TIQUIZ_COMMISSION_RATE = 0.4;
 
 export type AttributeSaleInput = {
   customer_email: string;
@@ -59,22 +58,6 @@ async function findRecentConversion(email: string): Promise<{ id: string; sa: st
   return (data as { id: string; sa: string } | null) ?? null;
 }
 
-async function getAffiliateSalesCount(sa: string): Promise<number> {
-  const { count } = await supabaseAdmin
-    .from("affiliate_commissions")
-    .select("id", { count: "exact", head: true })
-    .eq("sa", sa)
-    .in("status", ["pending", "approved", "paid"]);
-  return count ?? 0;
-}
-
-function commissionRateForSales(salesCount: number): number {
-  for (const tier of DEFAULT_TIERS) {
-    if (salesCount >= tier.minSales) return tier.rate;
-  }
-  return DEFAULT_TIERS[DEFAULT_TIERS.length - 1].rate;
-}
-
 export async function attributeSale(input: AttributeSaleInput): Promise<AttributeSaleResult> {
   try {
     const email = input.customer_email.trim().toLowerCase();
@@ -104,9 +87,8 @@ export async function attributeSale(input: AttributeSaleInput): Promise<Attribut
       return { status: "no_affiliate_match" };
     }
 
-    // Calcule la commission selon le palier actuel de l'affilié.
-    const currentSales = await getAffiliateSalesCount(conversion.sa);
-    const rate = commissionRateForSales(currentSales);
+    // Commission Tiquiz : 40% fixe.
+    const rate = TIQUIZ_COMMISSION_RATE;
     const commissionCents = Math.round(input.sale_amount_cents * rate);
 
     const { data: inserted, error: insertErr } = await supabaseAdmin
