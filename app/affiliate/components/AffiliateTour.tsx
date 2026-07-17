@@ -150,19 +150,9 @@ export function AffiliateTour({ onboardedAt }: { onboardedAt: string | null }) {
       body: (
         <>
           <p>{t.tour.step5_body_intro}</p>
-          <div className="space-y-2 mt-3">
-            <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-muted/50 border border-border">
-              <span className="text-sm">{t.tour.step5_tier_low}</span>
-              <span className="font-bold text-sm">40%</span>
-            </div>
-            <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-primary/5 border border-primary/30">
-              <span className="text-sm">{t.tour.step5_tier_mid}</span>
-              <span className="font-bold text-sm">45%</span>
-            </div>
-            <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-primary/10 border border-primary/50">
-              <span className="text-sm">{t.tour.step5_tier_high}</span>
-              <span className="font-bold text-sm">50%</span>
-            </div>
+          <div className="mt-3 flex items-center justify-between px-3 py-2 rounded-lg bg-primary/5 border border-primary/30">
+            <span className="text-sm font-medium">Tiquiz</span>
+            <span className="font-bold text-sm">40%</span>
           </div>
           <p className="text-sm text-muted-foreground mt-3">{t.tour.step5_body_outro}</p>
         </>

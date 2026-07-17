@@ -6,26 +6,15 @@ import { Button } from "@/components/ui/button";
 import { useDict } from "../i18n/context";
 import { interpolate } from "../i18n";
 
-// Mêmes paliers que lib/affiliate/attribution.ts
-const TIERS = [
-  { minSales: 0, rate: 0.4 },
-  { minSales: 10, rate: 0.45 },
-  { minSales: 25, rate: 0.5 },
-];
+// Commission Tiquiz : 40% fixe (Béné 17 juil 2026, pas de palier).
+const TIQUIZ_RATE = 0.4;
 
-// Panier moyen mixte Tiquiz + Tipote (approximation conservative en €).
+// Panier moyen Tiquiz (approximation conservative en €).
 // 1/3 gratuit (0 €), 1/3 mensuel (9 €), 1/3 annuel (90 €).
 // Sur les payants, en pondérant LTV à 1 an : (9×12 + 90)/2 ≈ 99 €.
 // On prend 75 € pour rester conservatif.
 const AVG_CART_EUR = 75;
 const PRESET_VISITORS = [100, 300, 500, 1000, 2000];
-
-function rateForSales(sales: number): number {
-  for (let i = TIERS.length - 1; i >= 0; i--) {
-    if (sales >= TIERS[i].minSales) return TIERS[i].rate;
-  }
-  return TIERS[0].rate;
-}
 
 function eur(value: number): string {
   return new Intl.NumberFormat("fr-FR", {
@@ -35,23 +24,21 @@ function eur(value: number): string {
   }).format(value);
 }
 
-export function RevenueCalculator({ currentTier }: { currentTier: number }) {
+export function RevenueCalculator(_props: { currentTier?: number }) {
   const t = useDict();
   const [visitors, setVisitors] = useState(200);
   const [conversionRate, setConversionRate] = useState(3); // %
 
   const projected = useMemo(() => {
     const sales = (visitors * conversionRate) / 100;
-    const totalSalesProjected = currentTier + sales;
-    const rate = rateForSales(Math.floor(totalSalesProjected));
-    const revenueMonth = sales * AVG_CART_EUR * rate;
+    const revenueMonth = sales * AVG_CART_EUR * TIQUIZ_RATE;
     return {
       sales: Math.round(sales * 10) / 10,
-      rate,
+      rate: TIQUIZ_RATE,
       revenueMonth: Math.round(revenueMonth),
       revenueYear: Math.round(revenueMonth * 12),
     };
-  }, [visitors, conversionRate, currentTier]);
+  }, [visitors, conversionRate]);
 
   return (
     <div className="space-y-6">
@@ -111,7 +98,6 @@ export function RevenueCalculator({ currentTier }: { currentTier: number }) {
         {interpolate(t.revenus.calculator_disclaimer, {
           avgCart: `${AVG_CART_EUR} €`,
           rate: Math.round(projected.rate * 100),
-          totalSales: currentTier,
         })}
       </p>
     </div>

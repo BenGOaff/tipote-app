@@ -19,7 +19,8 @@ export type LinkDestinationSlug =
   | "tiquiz_monthly"
   | "tiquiz_monthly_plus"
   | "tiquiz_yearly"
-  | "tiquiz_yearly_plus";
+  | "tiquiz_yearly_plus"
+  | "atelier";
 
 export type LinkDestinationRow = {
   slug: LinkDestinationSlug;
@@ -30,7 +31,11 @@ export type LinkDestinationRow = {
 
 // Tipote n'est PAS en vente (Bene 8 juin 2026) : on ne propose AUCUN
 // lien Tipote aux affilies. Uniquement les destinations Tiquiz.
+// L'Atelier du Quiz (formation, commission 70%) : tunnel affilié
+// tipote.fr/atelier-du-quiz. Uniquement FR (la formation n'est vendue
+// qu'en français) : la page Promouvoir filtre ce slug hors marché FR.
 const FALLBACK: LinkDestinationRow[] = [
+  { slug: "atelier",             path: "/atelier-du-quiz",           sort_order: 5,  enabled: true },
   { slug: "tiquiz_main",         path: "/part-tiquiz",               sort_order: 10, enabled: true },
   { slug: "tiquiz_free",         path: "/part-tiquiz-gratuit",       sort_order: 20, enabled: true },
   { slug: "tiquiz_monthly",      path: "/part-tiquiz-mensuel",       sort_order: 30, enabled: true },

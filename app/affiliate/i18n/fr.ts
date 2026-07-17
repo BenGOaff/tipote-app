@@ -25,7 +25,7 @@ export const FR: AffiliateDict = {
   layout: {
     page_title: "Tipote Affiliation",
     page_description:
-      "Espace affiliés Tipote - suivi des commissions, ressources promo, paliers de gain.",
+      "Espace affiliés Tipote - suivi des commissions, ressources promo, contenus prêts à l'emploi.",
     space_subtitle: "Espace affiliation",
     copyright: "© {year} Tipote - Programme d'affiliation",
   },
@@ -42,7 +42,7 @@ export const FR: AffiliateDict = {
   login: {
     title_password: "Connexion",
     title_magic: "Recevoir un lien magique",
-    description_password: "Accède à ton espace affilié Tipote × Tiquiz",
+    description_password: "Accède à ton espace affilié Tiquiz",
     description_magic: "On t'envoie un lien à usage unique par email",
     banner_not_affiliate:
       "Cet email n'est pas reconnu comme un affilié actif. Inscris-toi d'abord via le bouton dans ton compte Systeme.io.",
@@ -97,7 +97,7 @@ export const FR: AffiliateDict = {
     activate: "Activer mon espace",
     activating: "Activation…",
     info_bottom:
-      "Tu reçois déjà un email à chaque commission. Cet espace te donne en plus : ressources promos, stats, paliers de commission, et accès démo aux outils Tipote & Tiquiz.",
+      "Tu reçois déjà un email à chaque commission. Cet espace te donne en plus : ressources promos, stats, suivi de tes commissions, et accès démo à Tiquiz.",
     err_invalid_sa:
       "L'identifiant affilié n'a pas le bon format. Vérifie qu'il commence par « sa » suivi d'une suite de caractères.",
     err_email_not_in_systeme:
@@ -117,7 +117,7 @@ export const FR: AffiliateDict = {
   },
   overview: {
     greeting: "Bonjour {name} 👋",
-    subtitle: "Voici ta vue d'ensemble du programme d'affiliation Tipote × Tiquiz.",
+    subtitle: "Voici ta vue d'ensemble du programme d'affiliation Tiquiz.",
     link_card_title: "Ton lien d'affiliation",
     link_card_help:
       "Ton lien principal vers la page de vente Tiquiz. Plus bas, tu trouves les variantes par plan (gratuit, mensuel, annuel). Tous ces liens sont tagués avec ton identifiant ?sa={sa}.",
@@ -132,10 +132,13 @@ export const FR: AffiliateDict = {
     tier_current: "Tu es actuellement au palier {label}.",
     tier_remaining: "Plus que {count} ventes pour atteindre le palier suivant.",
     tier_current_badge: "Palier actuel",
+    commission_title: "Ta commission",
+    commission_tiquiz_desc:
+      "40% sur chaque vente Tiquiz que tu ramènes. Sur les abonnements, tu touches sur les 12 premiers mois.",
     coming_soon: "🚧 Bientôt : classement anonymisé du top 10 du mois.",
-    trial_cta_title: "🎁 Ton mois Tipote Elite gratuit t'attend",
+    trial_cta_title: "🎁 Ton mois Tiquiz Plus offert t'attend",
     trial_cta_description:
-      "Active ton trial 1 mois pour tester Tipote en Elite, créer du contenu de promo authentique, et mieux vendre l'outil à ton audience. À utiliser quand tu veux.",
+      "Active ton mois offert pour tester Tiquiz en Plus (multi-profils, analyse IA), créer du contenu de promo authentique, et mieux vendre l'outil à ton audience. À utiliser quand tu veux.",
     trial_cta_button: "Voir mon trial",
     guide_title: "Guide de lancement 6 étapes",
     guide_subtitle: "Le chemin le plus rapide vers ta première commission.",
@@ -150,8 +153,8 @@ export const FR: AffiliateDict = {
     guide_step_link_body: "Le seul truc à garder sous la main pour toucher tes commissions.",
     guide_step_payment_title: "Configurer ton paiement dans Systeme.io",
     guide_step_payment_body: "Le paiement est géré par Systeme.io. Va sur systeme.io/dashboard/profile/affiliate-settings, choisis PayPal ou virement (RIB), puis reviens cocher cette étape. Tu seras payé entre le 10 et le 13 de chaque mois (après le délai de rétractation légal qui valide ta commission).",
-    guide_step_trial_title: "Activer ton trial Tipote",
-    guide_step_trial_body: "1 mois Elite offert pour tester l'outil et créer du contenu de promo authentique.",
+    guide_step_trial_title: "Activer ton mois Tiquiz Plus",
+    guide_step_trial_body: "1 mois Tiquiz Plus offert pour tester l'outil et créer du contenu de promo authentique.",
     guide_step_email_title: "Envoyer ton 1er email",
     guide_step_email_body: "Sors un email evergreen depuis l'onglet Promouvoir et envoie-le à ta liste.",
     guide_step_post_title: "Publier ton 1er post",
@@ -163,13 +166,13 @@ export const FR: AffiliateDict = {
     badge_first_click_title: "Premier clic",
     badge_first_click_body: "Quelqu'un a cliqué sur ton lien - tu existes.",
     badge_first_signup_title: "Première inscription",
-    badge_first_signup_body: "Ton premier lead ramené sur Tipote ou Tiquiz.",
+    badge_first_signup_body: "Ton premier lead ramené sur Tiquiz.",
     badge_first_sale_title: "Première vente",
     badge_first_sale_body: "La première commission qui tombe. La plus dure à décrocher.",
-    badge_tier_mid_title: "Palier 45%",
-    badge_tier_mid_body: "10 ventes cumulées. Ta commission monte à 45%.",
-    badge_tier_high_title: "Palier 50%",
-    badge_tier_high_body: "25 ventes cumulées. Tu es au taux maximum.",
+    badge_tier_mid_title: "10 ventes",
+    badge_tier_mid_body: "10 ventes cumulées. Tu prends le rythme.",
+    badge_tier_high_title: "25 ventes",
+    badge_tier_high_body: "25 ventes cumulées. Un vrai ambassadeur.",
     badge_100eur_title: "100 € gagnés",
     badge_100eur_body: "Cap des trois chiffres franchi. La machine tourne.",
     leaderboard_title: "Classement du mois",
@@ -193,6 +196,8 @@ export const FR: AffiliateDict = {
     tiquiz_yearly_description: "2 mois offerts vs mensuel.",
     tiquiz_yearly_plus_label: "Tiquiz annuel Plus",
     tiquiz_yearly_plus_description: "Le Plus, paiement annuel avec mois offerts.",
+    atelier_label: "L'Atelier du Quiz (70%)",
+    atelier_description: "La formation quiz, 70% de commission. Elle amène tes filleuls à utiliser Tiquiz naturellement.",
     tipote_main_label: "Page Tipote principale",
     tipote_main_description: "Affiliation Tipote (l'extension de pod d'engagement LinkedIn).",
     tipote_order_label: "Commande Tipote",
@@ -229,7 +234,7 @@ export const FR: AffiliateDict = {
     conditions_lasttouch:
       "Last-touch : si un visiteur a cliqué sur plusieurs liens d'affiliés différents, c'est le dernier clic avant l'achat qui compte.",
     conditions_tiers:
-      "Paliers progressifs : tu commences à 40% de commission, tu passes à 45% à partir de 10 ventes cumulées, et 50% à partir de 25 ventes.",
+      "Commission : 40% sur chaque vente Tiquiz que tu ramènes, et 70% sur L'Atelier du Quiz (la formation).",
     see_full_terms: "Voir les CGV complètes",
     edit_button: "Éditer",
     edit_reset: "Réinitialiser le modèle",
@@ -243,7 +248,7 @@ export const FR: AffiliateDict = {
   },
   revenus: {
     page_title: "Revenus",
-    page_subtitle: "Suivi de tes commissions sur Tipote & Tiquiz.",
+    page_subtitle: "Suivi de tes commissions sur Tiquiz et L'Atelier du Quiz.",
     total_gains: "Gains totaux",
     pending: "En attente",
     approved: "Approuvées",
@@ -275,7 +280,7 @@ export const FR: AffiliateDict = {
     calculator_revenue_per_month: "Revenus estimés / mois",
     calculator_revenue_per_year: "Revenus estimés / an",
     calculator_disclaimer:
-      "Calcul basé sur panier moyen {avgCart}, avec taux de commission de {rate}% (palier en fonction de tes {totalSales} ventes cumulées + ventes projetées). Les résultats réels peuvent varier.",
+      "Calcul basé sur un panier moyen {avgCart} et une commission de {rate}% sur Tiquiz. Les résultats réels peuvent varier.",
   },
   paiement: {
     page_title: "Paiement",
@@ -306,12 +311,12 @@ export const FR: AffiliateDict = {
     restart_tour_button: "Refaire le tour guidé",
     faq_title: "Questions fréquentes",
     terms_card_title:
-      "📜 Pour les conditions complètes (commission, paliers, exclusions, durée de cookie, fiscalité, dispute…) :",
+      "📜 Pour les conditions complètes (commission, exclusions, durée de cookie, fiscalité, dispute…) :",
     terms_card_button: "Voir les CGV affiliation",
     faq_payment_q: "Quand suis-je payé ?",
     faq_payment_a: "Les commissions sont versées le 10 de chaque mois, minimum 30 jours après la vente (délai d'éventuelle annulation client). Seuil minimum de 50 € - si ton solde éligible est inférieur le 10, on reporte au mois suivant.",
     faq_cookie_q: "Comment ça marche, le cookie 90 jours ?",
-    faq_cookie_a: "Quand un visiteur clique sur ton lien d'affiliation, on stocke ton identifiant dans son navigateur pendant 90 jours. Si ce visiteur achète Tiquiz ou Tipote durant cette période, la commission t'est attribuée - même s'il achète à J+89.",
+    faq_cookie_a: "Quand un visiteur clique sur ton lien d'affiliation, on stocke ton identifiant dans son navigateur pendant 90 jours. Si ce visiteur achète Tiquiz ou L'Atelier du Quiz durant cette période, la commission t'est attribuée - même s'il achète à J+89.",
     faq_multi_link_q: "Que se passe-t-il si un visiteur clique sur plusieurs liens affiliés différents ?",
     faq_multi_link_a: "Last-touch : c'est le dernier affilié dont le lien a été cliqué qui touche la commission. Si Marie clique d'abord sur ton lien, puis sur celui de Paul, puis achète : la commission va à Paul. C'est le standard du marché.",
     faq_best_channels_q: "Quels canaux marchent le mieux pour promouvoir ?",
@@ -319,11 +324,11 @@ export const FR: AffiliateDict = {
     faq_minimum_q: "Y a-t-il un minimum pour être payé ?",
     faq_minimum_a: "Oui, 50 €. C'est le seuil standard pour éviter des virements coûteux pour des petits montants. Les commissions s'accumulent jusqu'à atteindre 50 €, puis le virement part le 10 du mois suivant.",
     faq_subscriptions_q: "Est-ce que je touche des commissions sur les abonnements mensuels ?",
-    faq_subscriptions_a: "Oui, sur les 12 premiers mois d'abonnement de chaque client. Si tu amènes un client qui prend l'offre mensuelle à 9 €/mois, tu touches ta commission (40-50% selon ton palier) sur chacun des 12 premiers paiements, soit jusqu'à 54 €/an par client mensuel.",
+    faq_subscriptions_a: "Oui, sur les 12 premiers mois d'abonnement de chaque client. Si tu amènes un client qui prend l'offre mensuelle à 9 €/mois, tu touches ta commission (40%) sur chacun des 12 premiers paiements, soit environ 43 €/an par client mensuel.",
     faq_self_click_q: "Mon propre clic est-il compté ?",
     faq_self_click_a: "Non. Si tu cliques sur ton propre lien et achètes, la commission n'est pas versée (auto-affiliation détectée par email). Ce qui compte c'est les ventes que tu ramènes d'autres personnes.",
     faq_paid_ads_q: "Puis-je faire de la publicité payante (Google Ads, Meta Ads) avec mon lien ?",
-    faq_paid_ads_a: "Oui, à condition de respecter les CGV du programme. Tu ne peux pas faire d'enchère sur les mots-clés de marque Tipote/Tiquiz ni utiliser de domaines qui imitent les nôtres. Pour le reste, tu es libre.",
+    faq_paid_ads_a: "Oui, à condition de respecter les CGV du programme. Tu ne peux pas faire d'enchère sur les mots-clés de marque Tiquiz ni utiliser de domaines qui imitent les nôtres. Pour le reste, tu es libre.",
     faq_first_revenue_q: "Combien de temps avant de voir mes premiers revenus ?",
     faq_first_revenue_a: "Variable. Les affiliés actifs (qui font 3-5 actions par semaine : email, post, message direct) génèrent leur première commission dans les 7-30 jours. Les plus passifs attendent plusieurs mois. La clé c'est de partager régulièrement, pas une fois.",
     faq_taxes_q: "Quelle est la fiscalité de mes commissions ?",
@@ -397,7 +402,7 @@ export const FR: AffiliateDict = {
     step1_title: "Bienvenue dans l'espace affilié 👋",
     step1_subtitle: "1 minute pour comprendre comment ça marche.",
     step1_body_1:
-      "Tu fais maintenant partie du programme d'affiliation Tipote × Tiquiz. Tu touches une commission de 40 à 50% sur chaque vente générée par ton lien.",
+      "Tu fais maintenant partie du programme d'affiliation Tiquiz. Tu touches 40% de commission sur chaque vente Tiquiz générée par ton lien (et 70% sur L'Atelier du Quiz).",
     step1_body_2: "Voici les 5 étapes pour démarrer en force.",
     step2_title: "Ton lien d'affiliation tracké",
     step2_subtitle: "Le seul truc à retenir pour toucher tes commissions.",
@@ -422,9 +427,9 @@ export const FR: AffiliateDict = {
       "On t'offre 30 jours d'accès Tiquiz Plus pour que tu testes l'outil (multi-profils, analyse IA, multi-clés API), captures des screenshots de TON propre dashboard, et puisses faire des démos vidéo authentiques.",
     step4_body_2:
       "C'est une seule fois dans ta vie d'affilié. Réserve-le pour quand tu auras 2h devant toi pour explorer à fond. Onglet Essai gratuit dans la nav.",
-    step5_title: "Tes paliers de commission",
-    step5_subtitle: "Plus tu vends, plus ta com' monte.",
-    step5_body_intro: "Tu démarres à 40%. Ta commission augmente automatiquement :",
+    step5_title: "Ta commission",
+    step5_subtitle: "Simple et claire.",
+    step5_body_intro: "Tu touches 40% sur chaque vente Tiquiz que tu ramènes, abonnements inclus (12 premiers mois).",
     step5_tier_low: "0-9 ventes",
     step5_tier_mid: "10-24 ventes",
     step5_tier_high: "25+ ventes",

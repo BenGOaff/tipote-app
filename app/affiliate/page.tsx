@@ -99,25 +99,6 @@ function eur(cents: number): string {
   }).format(cents / 100);
 }
 
-// Paliers — doit rester en sync avec lib/affiliate/attribution.ts
-const TIERS = [
-  { minSales: 0, rate: 0.4, label: "0–9 ventes" },
-  { minSales: 10, rate: 0.45, label: "10–24 ventes" },
-  { minSales: 25, rate: 0.5, label: "25+ ventes" },
-];
-
-function currentTier(salesCount: number) {
-  let active = TIERS[0];
-  let next: typeof TIERS[number] | null = null;
-  for (let i = 0; i < TIERS.length; i++) {
-    if (salesCount >= TIERS[i].minSales) {
-      active = TIERS[i];
-      next = TIERS[i + 1] ?? null;
-    }
-  }
-  return { rate: active.rate, label: active.label, nextTarget: next?.minSales ?? null };
-}
-
 export default async function AffiliateOverviewPage() {
   const session = await getAffiliateSession();
   if (!session) redirect("/login");
@@ -129,7 +110,7 @@ export default async function AffiliateOverviewPage() {
   // besoin de re-fetch ici.
   const stats = await fetchStats(session.sa);
 
-  const tier = currentTier(stats.total_sales);
+  const isFr = normaliseLocale(session.locale) === "fr";
   // Lien principal du marché de l'affilié (FR → tipote.fr, EN → tipote.blog).
   // Drame Bene 8 juin 2026 : avant ce fix on construisait "/" (racine =
   // page d'accueil Tipote) -> Tipote n'est PAS en vente, on n'en parle
@@ -183,57 +164,37 @@ export default async function AffiliateOverviewPage() {
 
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Award className="h-5 w-5 text-primary" />
-                <CardTitle className="text-lg">{t.overview.tier_card_title}</CardTitle>
-              </div>
-              <Badge variant="default" className="text-base px-3 py-1">
-                {Math.round(tier.rate * 100)}%
-              </Badge>
+            <div className="flex items-center gap-2">
+              <Award className="h-5 w-5 text-primary" />
+              <CardTitle className="text-lg">{t.overview.commission_title}</CardTitle>
             </div>
-            <CardDescription>
-              {interpolate(t.overview.tier_current, { label: tier.label })}
-              {tier.nextTarget !== null && (
-                <>
-                  {" "}
-                  {interpolate(t.overview.tier_remaining, {
-                    count: tier.nextTarget - stats.total_sales,
-                  })}
-                </>
-              )}
-            </CardDescription>
+            <CardDescription>{t.overview.commission_tiquiz_desc}</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2">
-            {TIERS.map((tierItem, i) => {
-              const reached = stats.total_sales >= tierItem.minSales;
-              const isCurrent = reached && (TIERS[i + 1] ? stats.total_sales < TIERS[i + 1].minSales : true);
-              return (
-                <div
-                  key={tierItem.minSales}
-                  className={`flex items-center justify-between px-4 py-3 rounded-lg border ${
-                    isCurrent
-                      ? "border-primary bg-primary/5"
-                      : reached
-                        ? "border-border bg-muted/50"
-                        : "border-border opacity-60"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className={`text-lg ${reached ? "text-primary" : "text-muted-foreground"}`}>
-                      {reached ? "✓" : "○"}
-                    </span>
-                    <span className="text-sm font-medium">{tierItem.label}</span>
-                    {isCurrent && (
-                      <Badge variant="outline" className="text-xs">
-                        {t.overview.tier_current_badge}
-                      </Badge>
-                    )}
-                  </div>
-                  <span className="text-sm font-bold">{Math.round(tierItem.rate * 100)}%</span>
+          <CardContent className="space-y-3">
+            {/* Tiquiz : 40% fixe */}
+            <div className="flex items-center justify-between px-4 py-3 rounded-lg border border-primary bg-primary/5">
+              <span className="text-sm font-semibold">
+                {isFr ? "Tiquiz (l'outil)" : "Tiquiz"}
+              </span>
+              <Badge variant="default" className="text-base px-3 py-1">40%</Badge>
+            </div>
+
+            {/* Atelier du Quiz : 70% - FR uniquement (formation vendue en FR) */}
+            {isFr && (
+              <>
+                <div className="flex items-center justify-between px-4 py-3 rounded-lg border border-primary bg-primary/5">
+                  <span className="text-sm font-semibold">L&apos;Atelier du Quiz (la formation)</span>
+                  <Badge variant="default" className="text-base px-3 py-1">70%</Badge>
                 </div>
-              );
-            })}
+                <div className="rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+                  <span className="font-semibold text-foreground">Le combo malin.</span>{" "}
+                  Tu peux promouvoir l&apos;outil, la formation, ou les deux. La formation paie
+                  le plus (70%) et elle amène naturellement tes filleuls à utiliser Tiquiz :
+                  l&apos;Atelier du Quiz apprend à créer des quiz AVEC Tiquiz. Vendre la
+                  formation, c&apos;est vendre l&apos;outil derrière, sans forcer.
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 

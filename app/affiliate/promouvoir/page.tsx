@@ -35,6 +35,7 @@ function buildLinkDestinations(
   // (DB), le label/description vient de l'i18n locale par locale.
   // Ordre = sort_order de la table (cf. getActiveLinkDestinations).
   const I18N: Record<LinkDestinationSlug, { label: string; description: string }> = {
+    atelier:             { label: ld.atelier_label,             description: ld.atelier_description },
     tiquiz_main:         { label: ld.tiquiz_main_label,         description: ld.tiquiz_main_description },
     tiquiz_free:         { label: ld.tiquiz_free_label,         description: ld.tiquiz_free_description },
     tiquiz_monthly:      { label: ld.tiquiz_monthly_label,      description: ld.tiquiz_monthly_description },
@@ -68,11 +69,14 @@ export default async function PromouvoirPage({
   const pathBySlug = new Map<LinkDestinationSlug, string>(
     activeDestinations.map((d) => [d.slug, d.path]),
   );
-  const LINK_DESTINATIONS = buildLinkDestinations(t.link_destinations, pathBySlug);
   // MARCHÉ de diffusion choisi (≠ langue d'interface) : pilote le domaine des
   // liens (FR → tipote.fr, EN → tipote.blog). Défaut = langue de l'affilié.
   const sp = await searchParams;
   const market = resolveAffiliateMarket(sp.locale, session.locale);
+  // L'Atelier du Quiz (70%) n'est vendu qu'en FR : on ne propose son lien
+  // que sur le marché FR (tipote.fr). Sur les autres marchés, on le retire.
+  if (market !== "fr") pathBySlug.delete("atelier");
+  const LINK_DESTINATIONS = buildLinkDestinations(t.link_destinations, pathBySlug);
   // Lien principal = slug tiquiz_main (path admin-editable). Avant le 8 juin
   // 2026 c'etait code en dur "/tiquiz/affiliation" qui n'existe pas chez
   // Systeme.io -> les affilies perdaient leur commission. Maintenant lu
