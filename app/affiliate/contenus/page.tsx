@@ -23,6 +23,7 @@ import { VisualGallery } from "../promouvoir/components/VisualGallery";
 import { ArticleCard } from "../promouvoir/components/ArticleCard";
 
 import { EMAILS_FR, type EmailTemplate } from "../promouvoir/content/emails-fr";
+import { ATELIER_EMAILS_FR } from "../promouvoir/content/atelier-emails-fr";
 import { POSTS_FR, type PostDay, type SocialPost } from "../promouvoir/content/posts-fr";
 import { VISUELS_FR } from "../promouvoir/content/visuels-fr";
 import { getDict, interpolate, normaliseLocale } from "../i18n";
@@ -62,6 +63,10 @@ export default async function ContenusPage({
   // materiel emails/posts copie par les affilies.
   const mainPath = await getLinkPath("tiquiz_main");
   const baseLink = buildAffiliateLink(contentLocale, mainPath, session.sa);
+  // Lien tracké vers le tunnel affilié de L'Atelier du Quiz (formation, 70%).
+  // Sert à injecter {AFFILIATE_LINK} dans la séquence email Atelier (FR only).
+  const atelierPath = await getLinkPath("atelier");
+  const atelierLink = buildAffiliateLink(contentLocale, atelierPath, session.sa);
 
   const { data: ov } = await supabaseAdmin
     .from("affiliates")
@@ -211,6 +216,36 @@ export default async function ContenusPage({
               <p className="text-muted-foreground leading-relaxed">{t.promouvoir.emails_info_body}</p>
             </CardContent>
           </Card>
+
+          {/* Séquence Atelier du Quiz (formation, 70%) - FR uniquement, lien
+              Atelier injecté (distinct de la séquence Tiquiz ci-dessous). */}
+          {isFrLocale && (
+            <div className="space-y-3">
+              <div className="flex flex-col gap-1 pt-1">
+                <span className="text-sm font-semibold uppercase tracking-wide text-primary">
+                  L&apos;Atelier du Quiz - 70% de commission
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  Séquence prête à copier-coller pour promouvoir la formation. Ton lien Atelier tracké est déjà injecté.
+                </span>
+              </div>
+              {ATELIER_EMAILS_FR.map((email) => (
+                <EmailCard
+                  key={email.id}
+                  email={email}
+                  affiliateLink={atelierLink}
+                  displayName={displayName}
+                  overrides={overrides}
+                />
+              ))}
+              <div className="pt-2">
+                <span className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                  Tiquiz - 40% de commission
+                </span>
+              </div>
+            </div>
+          )}
+
           {emailsToShow.length > 0 ? (
             <div className="space-y-3">
               {emailsToShow.map((email) => (
