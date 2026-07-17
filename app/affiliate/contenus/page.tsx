@@ -67,6 +67,17 @@ export default async function ContenusPage({
   // Sert à injecter {AFFILIATE_LINK} dans la séquence email Atelier (FR only).
   const atelierPath = await getLinkPath("atelier");
   const atelierLink = buildAffiliateLink(contentLocale, atelierPath, session.sa);
+  // Lien tracké vers l'étude de cas Jocelyne (pose le cookie affilié 90j
+  // même si le visiteur achète plus tard). Pré-injecté dans le mail 2.
+  const caseStudyLink = buildAffiliateLink(
+    contentLocale,
+    "/tiquiz/cas-client-jocelyne-tdah",
+    session.sa,
+  );
+  const atelierEmails: EmailTemplate[] = ATELIER_EMAILS_FR.map((e) => ({
+    ...e,
+    body: e.body.replaceAll("{LIEN_ETUDE_CAS}", caseStudyLink),
+  }));
 
   const { data: ov } = await supabaseAdmin
     .from("affiliates")
@@ -229,7 +240,7 @@ export default async function ContenusPage({
                   Séquence prête à copier-coller pour promouvoir la formation. Ton lien Atelier tracké est déjà injecté.
                 </span>
               </div>
-              {ATELIER_EMAILS_FR.map((email) => (
+              {atelierEmails.map((email) => (
                 <EmailCard
                   key={email.id}
                   email={email}
