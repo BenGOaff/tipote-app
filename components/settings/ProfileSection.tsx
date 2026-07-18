@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -74,6 +75,7 @@ export default function ProfileSection() {
   const [mainGoalsCsv, setMainGoalsCsv] = useState("");
   const [contentTypesCsv, setContentTypesCsv] = useState("");
   const [tonePreference, setTonePreference] = useState("");
+  const [notifyResponses, setNotifyResponses] = useState(true);
 
   // ✅ NEW (reset)
   const [resetting, setResetting] = useState(false);
@@ -91,7 +93,8 @@ export default function ProfileSection() {
       asString(p.offers_status ?? "") === offersStatus &&
       arrayToCsv(asArray(p.main_goals ?? [])) === mainGoalsCsv &&
       arrayToCsv(asArray(p.preferred_content_types ?? [])) === contentTypesCsv &&
-      asString(p.tone_preference ?? "") === tonePreference;
+      asString(p.tone_preference ?? "") === tonePreference &&
+      (((p as { notify_responses?: boolean }).notify_responses) ?? true) === notifyResponses;
 
     return !same;
   }, [
@@ -105,6 +108,7 @@ export default function ProfileSection() {
     mainGoalsCsv,
     contentTypesCsv,
     tonePreference,
+    notifyResponses,
   ]);
 
   useEffect(() => {
@@ -141,6 +145,7 @@ export default function ProfileSection() {
         setMainGoalsCsv(arrayToCsv(asArray(p?.main_goals ?? [])));
         setContentTypesCsv(arrayToCsv(asArray(p?.preferred_content_types ?? [])));
         setTonePreference(asString(p?.tone_preference ?? ""));
+        setNotifyResponses(((p as { notify_responses?: boolean } | null)?.notify_responses) ?? true);
       } catch (e) {
         toast({
           title: "Impossible de charger le profil",
@@ -172,6 +177,7 @@ export default function ProfileSection() {
           main_goals: csvToArray(mainGoalsCsv),
           preferred_content_types: csvToArray(contentTypesCsv),
           tone_preference: tonePreference.trim(),
+          notify_responses: notifyResponses,
         };
 
         const res = await fetch("/api/profile", {
@@ -357,6 +363,15 @@ export default function ProfileSection() {
           onChange={(e) => setMission(e.target.value)}
           placeholder={t("missionPh")}
         />
+      </div>
+
+      <div className="grid gap-2">
+        <Label className="text-xs">{t("notifyResponsesTitle")}</Label>
+        <label className="flex items-center gap-3 cursor-pointer">
+          <Switch checked={notifyResponses} onCheckedChange={setNotifyResponses} />
+          <span className="text-sm">{t("notifyResponsesLabel")}</span>
+        </label>
+        <p className="text-xs text-muted-foreground">{t("notifyResponsesDesc")}</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">

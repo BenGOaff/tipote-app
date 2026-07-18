@@ -4835,7 +4835,9 @@
     "unknownError": "erro desconhecido",
     "addOption": "Adicionar uma opção",
     "backToEditorAria": "Voltar ao editor",
-    "distributionByResult": "Distribuição por resultado"
+    "distributionByResult": "Distribuição por resultado",
+    "optionHideResponseCounts": "Ocultar o número de respostas",
+    "optionHideResponseCountsHint": "Mostra apenas as percentagens nas estatísticas. Os números brutos ficam na exportação CSV."
   },
   "contentStrategy": {
     "title": "Estratégia de conteúdo",
@@ -5559,7 +5561,10 @@
       "hiddenInOtherProjects": "+{count} nos teus outros projetos",
       "hiddenQuizzesInProjects": "Tens {count} quizzes nos teus outros projetos. Muda de projeto no canto superior direito para os veres.",
       "hiddenPagesInProjects": "Tens {count} página(s) nos teus outros projetos. Muda de projeto no canto superior direito para as veres.",
-      "loadError": "Não foi possível carregar os teus conteúdos de momento."
+      "loadError": "Não foi possível carregar os teus conteúdos de momento.",
+      "duplicate": "Duplicar",
+      "quizDuplicated": "Cópia criada. Já podes editá-la.",
+      "duplicateFailed": "A duplicação falhou."
     },
     "pageTitle": "Os meus Conteúdos"
   },
@@ -6112,7 +6117,8 @@
     "responsesFlaggedOnly": "Marcados",
     "exportExcel": "Exportar Excel",
     "flagAction": "Marcar este respondente",
-    "unflagAction": "Remover marca"
+    "unflagAction": "Remover marca",
+    "radarTitle": "Visão geral das notas"
   },
   "compta": {
     "revenueGoal": {
@@ -6943,7 +6949,10 @@
     "resetConfirm2": "Confirmação final: tens 100% de certeza?",
     "resetErrorTitle": "Não foi possível reiniciar",
     "resetSuccessTitle": "Tipote reiniciado ✅",
-    "resetSuccessDesc": "Voltar ao onboarding…"
+    "resetSuccessDesc": "Voltar ao onboarding…",
+    "notifyResponsesTitle": "Notificações de respostas",
+    "notifyResponsesLabel": "Enviar-me um email a cada nova resposta",
+    "notifyResponsesDesc": "Recebe um email a cada nova resposta nos teus quizzes e questionários. Podes desativar quando quiseres."
   },
   "highlightBadge": {
     "topPerformer": "Top performer",

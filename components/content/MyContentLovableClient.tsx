@@ -73,6 +73,7 @@ import {
   Globe,
   ExternalLink,
   Copy,
+  CopyPlus,
   Download,
   Loader2,
   BarChart3,
@@ -355,6 +356,29 @@ export default function MyContentLovableClient({
   // Modifier + Supprimer, plus a confirm dialog so a click can't wipe a
   // quiz with leads accidentally.
   const [deleteQuizConfirm, setDeleteQuizConfirm] = useState<QuizListItem | null>(null);
+  // Duplicate is quiz/survey only. We POST to the deep-copy route and jump
+  // straight into the new draft's editor on success ("clone then tweak").
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+
+  async function handleDuplicateQuiz(quizId: string) {
+    if (duplicatingId) return;
+    setDuplicatingId(quizId);
+    try {
+      const res = await fetch(`/api/quiz/${quizId}/duplicate`, { method: "POST" });
+      const data = await res.json();
+      if (data.ok && data.id) {
+        toast({ title: t("ui.quizDuplicated") });
+        router.push(`/quiz/${data.id}`);
+        return;
+      }
+      // Surface the free-plan cap message (or any server message) when present.
+      toast({ title: data.message || t("ui.duplicateFailed"), variant: "destructive" as const });
+    } catch {
+      toast({ title: t("ui.duplicateFailed"), variant: "destructive" as const });
+    } finally {
+      setDuplicatingId(null);
+    }
+  }
   const [funnelLeads, setFunnelLeads] = useState<{ pageId: string; leads: any[] } | null>(null);
   const [loadingLeads, setLoadingLeads] = useState(false);
 
@@ -994,6 +1018,18 @@ export default function MyContentLovableClient({
                                     <Link href={`/quiz/${qz.id}/analytics`}>
                                       <BarChart3 className="w-4 h-4 mr-2" /> {t("ui.statistics")}
                                     </Link>
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    disabled={duplicatingId === qz.id}
+                                    onSelect={(e) => {
+                                      // Keep the menu logic out of Radix's default
+                                      // close-then-navigate race: run our async
+                                      // handler explicitly.
+                                      e.preventDefault();
+                                      void handleDuplicateQuiz(qz.id);
+                                    }}
+                                  >
+                                    <CopyPlus className="w-4 h-4 mr-2" /> {t("ui.duplicate")}
                                   </DropdownMenuItem>
                                   {isActive && (() => {
                                     // Gwenn (19 mai 2026) : URL respecte

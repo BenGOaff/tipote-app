@@ -86,6 +86,10 @@ type Props = {
   questions: Question[];
   results: Result[];
   onExportCSV: () => void;
+  // Quand true (quizzes.hide_response_counts), on masque les nombres bruts
+  // de reponses dans la synthese a l'ecran (donut, barres par question,
+  // tooltip) et on ne garde QUE les pourcentages. N'affecte pas l'export CSV.
+  hideCounts?: boolean;
 };
 
 function formatPct(n: number, total: number): string {
@@ -108,6 +112,7 @@ export default function QuizResultsAnalytics({
   questions,
   results,
   onExportCSV,
+  hideCounts = false,
 }: Props) {
   const t = useTranslations("quizDetail");
   const locale = useLocale();
@@ -434,7 +439,9 @@ export default function QuizResultsAnalytics({
                         fontSize: 12,
                       }}
                       formatter={(v: number, _n, p) => [
-                        `${v} (${formatPct(v, distributionTotal)})`,
+                        hideCounts
+                          ? formatPct(v, distributionTotal)
+                          : `${v} (${formatPct(v, distributionTotal)})`,
                         p?.payload?.name ?? "",
                       ]}
                     />
@@ -451,7 +458,7 @@ export default function QuizResultsAnalytics({
                         style={{ backgroundColor: color }}
                       />
                       <span className="flex-1 truncate">{r.name}</span>
-                      <span className="font-medium">{r.value}</span>
+                      {!hideCounts && <span className="font-medium">{r.value}</span>}
                       <span className="text-muted-foreground text-xs w-10 text-right">
                         {formatPct(r.value, distributionTotal)}
                       </span>
@@ -483,9 +490,11 @@ export default function QuizResultsAnalytics({
                       </span>
                       {q.questionText}
                     </p>
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">
-                      {t("answersCount", { count: q.totalAnswered })}
-                    </span>
+                    {!hideCounts && (
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">
+                        {t("answersCount", { count: q.totalAnswered })}
+                      </span>
+                    )}
                   </div>
                   <div className="space-y-3">
                     {q.data.map((opt, i) => {
@@ -505,9 +514,11 @@ export default function QuizResultsAnalytics({
                               <span className="truncate">{opt.fullName}</span>
                             </div>
                             <div className="flex items-center gap-2 shrink-0 text-xs text-muted-foreground">
-                              <span className="font-medium text-foreground tabular-nums">
-                                {opt.value}
-                              </span>
+                              {!hideCounts && (
+                                <span className="font-medium text-foreground tabular-nums">
+                                  {opt.value}
+                                </span>
+                              )}
                               <span className="tabular-nums w-10 text-right">
                                 {pct.toFixed(0)}%
                               </span>

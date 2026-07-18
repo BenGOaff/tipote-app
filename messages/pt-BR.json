@@ -4834,7 +4834,9 @@
     "unknownError": "erro desconhecido",
     "addOption": "Adicionar uma opção",
     "backToEditorAria": "Voltar ao editor",
-    "distributionByResult": "Distribuição por resultado"
+    "distributionByResult": "Distribuição por resultado",
+    "optionHideResponseCounts": "Ocultar o número de respostas",
+    "optionHideResponseCountsHint": "Mostra apenas as porcentagens nas estatísticas. Os números brutos ficam na exportação CSV."
   },
   "contentStrategy": {
     "title": "Estratégia de conteúdo",
@@ -5558,7 +5560,10 @@
       "hiddenInOtherProjects": "+{count} em seus outros projetos",
       "hiddenQuizzesInProjects": "Você tem {count} quizzes em seus outros projetos. Mude de projeto no canto superior direito para vê-los.",
       "hiddenPagesInProjects": "Você tem {count} página(s) em seus outros projetos. Mude de projeto no canto superior direito para vê-las.",
-      "loadError": "Não foi possível carregar seus conteúdos no momento."
+      "loadError": "Não foi possível carregar seus conteúdos no momento.",
+      "duplicate": "Duplicar",
+      "quizDuplicated": "Cópia criada. Você já pode editá-la.",
+      "duplicateFailed": "A duplicação falhou."
     },
     "pageTitle": "Meus Conteúdos"
   },
@@ -6111,7 +6116,8 @@
     "responsesFlaggedOnly": "Marcados",
     "exportExcel": "Exportar Excel",
     "flagAction": "Marcar este respondente",
-    "unflagAction": "Remover marca"
+    "unflagAction": "Remover marca",
+    "radarTitle": "Visão geral das notas"
   },
   "compta": {
     "revenueGoal": {
@@ -6942,7 +6948,10 @@
     "resetConfirm2": "Confirmação final: você tem 100% de certeza?",
     "resetErrorTitle": "Não foi possível reiniciar",
     "resetSuccessTitle": "Tipote reiniciado ✅",
-    "resetSuccessDesc": "Voltando ao onboarding…"
+    "resetSuccessDesc": "Voltando ao onboarding…",
+    "notifyResponsesTitle": "Notificações de respostas",
+    "notifyResponsesLabel": "Enviar-me um email a cada nova resposta",
+    "notifyResponsesDesc": "Receba um email a cada nova resposta nos seus quizzes e pesquisas. Você pode desativar quando quiser."
   },
   "highlightBadge": {
     "topPerformer": "Top performer",

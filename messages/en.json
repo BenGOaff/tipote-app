@@ -4537,7 +4537,9 @@
     "unknownError": "unknown error",
     "addOption": "Add an option",
     "backToEditorAria": "Back to editor",
-    "distributionByResult": "Distribution by result"
+    "distributionByResult": "Distribution by result",
+    "optionHideResponseCounts": "Hide the number of responses",
+    "optionHideResponseCountsHint": "Shows only percentages in the stats. Raw numbers stay in the CSV export."
   },
   "contentStrategy": {
     "title": "Content strategy",
@@ -5261,7 +5263,10 @@
       "hiddenInOtherProjects": "+{count} in your other projects",
       "hiddenQuizzesInProjects": "You have {count} quizzes in your other projects. Switch project from the top-right to see them.",
       "hiddenPagesInProjects": "You have {count} page(s) in your other projects. Switch project from the top-right to see them.",
-      "loadError": "Couldn't load your content right now."
+      "loadError": "Couldn't load your content right now.",
+      "duplicate": "Duplicate",
+      "quizDuplicated": "Copy created. You can now edit it.",
+      "duplicateFailed": "Duplication failed."
     },
     "pageTitle": "My Content"
   },
@@ -5814,7 +5819,8 @@
     "responsesFlaggedOnly": "Flagged",
     "exportExcel": "Export Excel",
     "flagAction": "Flag this respondent",
-    "unflagAction": "Remove flag"
+    "unflagAction": "Remove flag",
+    "radarTitle": "Ratings overview"
   },
   "compta": {
     "revenueGoal": {
@@ -6645,7 +6651,10 @@
     "resetConfirm2": "Final confirmation: are you 100% sure?",
     "resetErrorTitle": "Could not reset",
     "resetSuccessTitle": "Tipote reset ✅",
-    "resetSuccessDesc": "Back to onboarding…"
+    "resetSuccessDesc": "Back to onboarding…",
+    "notifyResponsesTitle": "Response notifications",
+    "notifyResponsesLabel": "Email me on every new response",
+    "notifyResponsesDesc": "Get an email for every new response on your quizzes and surveys. You can turn it off anytime."
   },
   "highlightBadge": {
     "topPerformer": "Top performer",
