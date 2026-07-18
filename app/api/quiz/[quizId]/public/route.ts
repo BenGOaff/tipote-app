@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { getUserDEK } from "@/lib/piiKeys";
+import { notifyCreatorOfResponse } from "@/lib/responseNotification";
 import { encryptLeadPII } from "@/lib/piiCrypto";
 import { isNewLeadLocked } from "@/lib/leadLock";
 import { isPaidPlan } from "@/lib/planLimits";
@@ -715,7 +716,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
         },
         { onConflict: "quiz_id,email" },
       )
-      .select("id")
+      .select("id, created_at")
       .single();
 
     if (error) {
@@ -740,6 +741,28 @@ export async function POST(req: NextRequest, context: RouteContext) {
       },
       dedupeKey: dedupeKeys.quizLead(quizId, email),
     }).catch(() => {});
+
+    // ── Notification créateur (best-effort, non bloquant) ──
+    // Email au propriétaire quand une NOUVELLE réponse arrive, s'il n'a pas
+    // coupé l'option. On ne notifie que sur un lead fraîchement créé
+    // (created_at récent) pour éviter les doublons quand un même email
+    // re-répond (upsert = update, created_at inchangé).
+    if (lead?.id && quiz.user_id) {
+      const createdAt = (lead as { created_at?: string | null }).created_at;
+      const isNewLead = !createdAt || Date.now() - new Date(createdAt).getTime() < 15000;
+      if (isNewLead) {
+        notifyCreatorOfResponse({
+          ownerUserId: quiz.user_id,
+          projectId: quiz.project_id ?? null,
+          quizId,
+          quizTitle: quiz.title,
+          quizMode: (quiz as { mode?: string | null }).mode ?? null,
+          respondentEmail: email,
+          respondentName: [firstName, lastName].filter(Boolean).join(" ") || null,
+          resultId,
+        }).catch(() => {});
+      }
+    }
 
     // ── Sync to unified leads table (non-blocking) ──
     (async () => {

@@ -88,6 +88,9 @@ const UpdateSchema = z.object({
 
   content_locale: z.string().trim().max(10).optional(),
   address_form: z.enum(["tu", "vous"]).optional(),
+  // Notifications email a chaque nouvelle reponse (opt-out, par projet).
+  // Cf. migration 20260718_business_profiles_notify_responses.sql.
+  notify_responses: z.boolean().optional(),
   revenue_goal_monthly: z.string().trim().max(200).optional(),
 
   // Branding — nullable so a paid user can clear the value (e.g. remove

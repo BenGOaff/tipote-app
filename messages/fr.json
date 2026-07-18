@@ -4537,7 +4537,9 @@
     "unknownError": "erreur inconnue",
     "addOption": "Ajouter une option",
     "backToEditorAria": "Retour à l'éditeur",
-    "distributionByResult": "Distribution par résultat"
+    "distributionByResult": "Distribution par résultat",
+    "optionHideResponseCounts": "Masquer le nombre de réponses",
+    "optionHideResponseCountsHint": "N'affiche que les pourcentages dans les statistiques. Les nombres bruts restent dans l'export CSV."
   },
   "contentStrategy": {
     "title": "Stratégie de contenu",
@@ -5261,7 +5263,10 @@
       "hiddenInOtherProjects": "+{count} dans tes autres projets",
       "hiddenQuizzesInProjects": "Tu as {count} quiz dans tes autres projets. Change de projet en haut à droite pour les voir.",
       "hiddenPagesInProjects": "Tu as {count} page(s) dans tes autres projets. Change de projet en haut à droite pour les voir.",
-      "loadError": "Impossible de charger tes contenus pour le moment."
+      "loadError": "Impossible de charger tes contenus pour le moment.",
+      "duplicate": "Dupliquer",
+      "quizDuplicated": "Copie créée. Tu peux la modifier.",
+      "duplicateFailed": "La duplication a échoué."
     },
     "pageTitle": "Mes Contenus"
   },
@@ -5814,7 +5819,8 @@
     "responsesFlaggedOnly": "Marqués",
     "exportExcel": "Export Excel",
     "flagAction": "Marquer ce répondant",
-    "unflagAction": "Retirer le marquage"
+    "unflagAction": "Retirer le marquage",
+    "radarTitle": "Vue d'ensemble des notes"
   },
   "compta": {
     "revenueGoal": {
@@ -6645,7 +6651,10 @@
     "resetConfirm2": "Dernière confirmation : tu es sûr(e) à 100% ?",
     "resetErrorTitle": "Réinitialisation impossible",
     "resetSuccessTitle": "Tipote réinitialisé ✅",
-    "resetSuccessDesc": "Retour à l'onboarding…"
+    "resetSuccessDesc": "Retour à l'onboarding…",
+    "notifyResponsesTitle": "Notifications de réponses",
+    "notifyResponsesLabel": "M'envoyer un email à chaque nouvelle réponse",
+    "notifyResponsesDesc": "Reçois un email à chaque nouvelle réponse sur tes quiz et sondages. Désactivable à tout moment."
   },
   "highlightBadge": {
     "topPerformer": "Top performer",

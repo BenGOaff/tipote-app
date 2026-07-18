@@ -561,6 +561,9 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const [showConsentCheckbox, setShowConsentCheckbox] = useState(true);
   const [showResultsBreakdown, setShowResultsBreakdown] = useState(false);
   const [showOtherResults, setShowOtherResults] = useState(false);
+  // Masquer le nombre brut de reponses dans la synthese (onglet Resultats)
+  // et n'afficher que les %. Default false = compteurs visibles (compat).
+  const [hideResponseCounts, setHideResponseCounts] = useState(false);
   // Phase B (Adeline, 19 mai 2026) : pixels Meta + Google per-quiz.
   const [metaPixelId, setMetaPixelId] = useState("");
   const [ga4MeasurementId, setGa4MeasurementId] = useState("");
@@ -740,6 +743,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     show_consent_checkbox: showConsentCheckbox,
     show_results_breakdown: showResultsBreakdown,
     show_other_results: showOtherResults,
+    hide_response_counts: hideResponseCounts,
     meta_pixel_id: metaPixelId,
     ga4_measurement_id: ga4MeasurementId,
     google_ads_conversion_id: googleAdsConversionId,
@@ -781,7 +785,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     captureHeading, captureSubtitle, captureSubmitText, resultInsightHeading, resultProjectionHeading,
     captureFirstName, captureLastName, capturePhone, captureCountry,
     firstNameRequired, lastNameRequired, phoneRequired, countryRequired,
-    showConsentCheckbox, showResultsBreakdown, showOtherResults,
+    showConsentCheckbox, showResultsBreakdown, showOtherResults, hideResponseCounts,
     metaPixelId, ga4MeasurementId, googleAdsConversionId, googleAdsConversionLabel,
     askFirstName, askGender,
     viralityEnabled, bonusDescription, bonusIntroText, bonusUnlockedMessage, bonusImageUrl, bonusImagePosition, bonusImageWidth,
@@ -823,6 +827,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     if (typeof s.show_consent_checkbox === "boolean") setShowConsentCheckbox(s.show_consent_checkbox);
     if (typeof s.show_results_breakdown === "boolean") setShowResultsBreakdown(s.show_results_breakdown);
     if (typeof s.show_other_results === "boolean") setShowOtherResults(s.show_other_results);
+    if (typeof s.hide_response_counts === "boolean") setHideResponseCounts(s.hide_response_counts);
     if (typeof s.meta_pixel_id === "string") setMetaPixelId(s.meta_pixel_id);
     if (typeof s.ga4_measurement_id === "string") setGa4MeasurementId(s.ga4_measurement_id);
     if (typeof s.google_ads_conversion_id === "string") setGoogleAdsConversionId(s.google_ads_conversion_id);
@@ -1054,6 +1059,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       setShowConsentCheckbox((q as { show_consent_checkbox?: boolean | null }).show_consent_checkbox !== false);
       setShowResultsBreakdown((q as { show_results_breakdown?: boolean | null }).show_results_breakdown === true);
       setShowOtherResults((q as { show_other_results?: boolean | null }).show_other_results === true);
+      setHideResponseCounts((q as { hide_response_counts?: boolean | null }).hide_response_counts === true);
       setMetaPixelId((q as { meta_pixel_id?: string | null }).meta_pixel_id ?? "");
       setGa4MeasurementId((q as { ga4_measurement_id?: string | null }).ga4_measurement_id ?? "");
       setGoogleAdsConversionId((q as { google_ads_conversion_id?: string | null }).google_ads_conversion_id ?? "");
@@ -1570,6 +1576,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           show_consent_checkbox: showConsentCheckbox,
           show_results_breakdown: showResultsBreakdown,
           show_other_results: showOtherResults,
+          hide_response_counts: hideResponseCounts,
           meta_pixel_id: metaPixelId.trim() || null,
           ga4_measurement_id: ga4MeasurementId.trim() || null,
           google_ads_conversion_id: googleAdsConversionId.trim() || null,
@@ -2351,6 +2358,15 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     hint={t("optionShowOtherResultsHint")}
                     checked={showOtherResults}
                     onChange={v => setShowOtherResults(v)}
+                  />
+                  {/* Masque le nombre brut de reponses dans l'onglet
+                      Resultats (donut + barres) et n'affiche que les %.
+                      Off par defaut = compteurs visibles. */}
+                  <SettingsToggle
+                    label={t("optionHideResponseCounts")}
+                    hint={t("optionHideResponseCountsHint")}
+                    checked={hideResponseCounts}
+                    onChange={v => setHideResponseCounts(v)}
                   />
                 </section>
 
@@ -3756,6 +3772,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
               questions={editQuestions}
               results={editResults}
               onExportCSV={handleExportCSV}
+              hideCounts={hideResponseCounts}
             />
 
             {/* Analyse IA strategique (funnel, capture, profils, axes

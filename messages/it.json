@@ -4530,7 +4530,9 @@
     "unknownError": "errore sconosciuto",
     "addOption": "Aggiungi un'opzione",
     "backToEditorAria": "Torna all'editor",
-    "distributionByResult": "Distribuzione per risultato"
+    "distributionByResult": "Distribuzione per risultato",
+    "optionHideResponseCounts": "Nascondere il numero di risposte",
+    "optionHideResponseCountsHint": "Mostra solo le percentuali nelle statistiche. I numeri grezzi restano nell'esportazione CSV."
   },
   "contentStrategy": {
     "title": "Strategia di contenuto",
@@ -5254,7 +5256,10 @@
       "hiddenInOtherProjects": "+{count} negli altri tuoi progetti",
       "hiddenQuizzesInProjects": "Hai {count} quiz negli altri tuoi progetti. Cambia progetto in alto a destra per vederli.",
       "hiddenPagesInProjects": "Hai {count} pagina/e negli altri tuoi progetti. Cambia progetto in alto a destra per vederle.",
-      "loadError": "Impossibile caricare i tuoi contenuti al momento."
+      "loadError": "Impossibile caricare i tuoi contenuti al momento.",
+      "duplicate": "Duplica",
+      "quizDuplicated": "Copia creata. Ora puoi modificarla.",
+      "duplicateFailed": "Duplicazione non riuscita."
     },
     "pageTitle": "I miei Contenuti"
   },
@@ -5807,7 +5812,8 @@
     "responsesFlaggedOnly": "Contrassegnati",
     "exportExcel": "Esporta Excel",
     "flagAction": "Contrassegna questo rispondente",
-    "unflagAction": "Rimuovi contrassegno"
+    "unflagAction": "Rimuovi contrassegno",
+    "radarTitle": "Panoramica dei voti"
   },
   "compta": {
     "revenueGoal": {
@@ -6638,7 +6644,10 @@
     "resetConfirm2": "Conferma finale: sei sicuro/a al 100%?",
     "resetErrorTitle": "Reset impossibile",
     "resetSuccessTitle": "Tipote resettato ✅",
-    "resetSuccessDesc": "Ritorno all'onboarding…"
+    "resetSuccessDesc": "Ritorno all'onboarding…",
+    "notifyResponsesTitle": "Notifiche di risposta",
+    "notifyResponsesLabel": "Inviami un'email a ogni nuova risposta",
+    "notifyResponsesDesc": "Ricevi un'email a ogni nuova risposta ai tuoi quiz e sondaggi. Puoi disattivarla quando vuoi."
   },
   "highlightBadge": {
     "topPerformer": "Top performer",

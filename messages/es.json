@@ -4530,7 +4530,9 @@
     "unknownError": "error desconocido",
     "addOption": "Añadir una opción",
     "backToEditorAria": "Volver al editor",
-    "distributionByResult": "Distribución por resultado"
+    "distributionByResult": "Distribución por resultado",
+    "optionHideResponseCounts": "Ocultar el número de respuestas",
+    "optionHideResponseCountsHint": "Muestra solo los porcentajes en las estadísticas. Los números brutos se conservan en la exportación CSV."
   },
   "contentStrategy": {
     "title": "Estrategia de contenido",
@@ -5254,7 +5256,10 @@
       "hiddenInOtherProjects": "+{count} en tus otros proyectos",
       "hiddenQuizzesInProjects": "Tienes {count} quizzes en tus otros proyectos. Cambia de proyecto arriba a la derecha para verlos.",
       "hiddenPagesInProjects": "Tienes {count} página(s) en tus otros proyectos. Cambia de proyecto arriba a la derecha para verlas.",
-      "loadError": "No se han podido cargar tus contenidos por ahora."
+      "loadError": "No se han podido cargar tus contenidos por ahora.",
+      "duplicate": "Duplicar",
+      "quizDuplicated": "Copia creada. Ya puedes editarla.",
+      "duplicateFailed": "La duplicación falló."
     },
     "pageTitle": "Mis Contenidos"
   },
@@ -5807,7 +5812,8 @@
     "responsesFlaggedOnly": "Marcados",
     "exportExcel": "Exportar Excel",
     "flagAction": "Marcar este encuestado",
-    "unflagAction": "Quitar marca"
+    "unflagAction": "Quitar marca",
+    "radarTitle": "Resumen de las valoraciones"
   },
   "compta": {
     "revenueGoal": {
@@ -6638,7 +6644,10 @@
     "resetConfirm2": "Última confirmación: ¿estás 100% seguro/a?",
     "resetErrorTitle": "No se ha podido restablecer",
     "resetSuccessTitle": "Tipote restablecido ✅",
-    "resetSuccessDesc": "De vuelta al onboarding…"
+    "resetSuccessDesc": "De vuelta al onboarding…",
+    "notifyResponsesTitle": "Notificaciones de respuestas",
+    "notifyResponsesLabel": "Enviarme un email por cada nueva respuesta",
+    "notifyResponsesDesc": "Recibe un email por cada nueva respuesta en tus quizzes y encuestas. Puedes desactivarlo cuando quieras."
   },
   "highlightBadge": {
     "topPerformer": "Top performer",

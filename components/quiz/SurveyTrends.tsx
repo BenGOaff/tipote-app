@@ -11,8 +11,16 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Star } from "lucide-react";
+import { Star, Radar as RadarIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
+import {
+  PolarAngleAxis,
+  PolarGrid,
+  PolarRadiusAxis,
+  Radar,
+  RadarChart,
+  ResponsiveContainer,
+} from "recharts";
 import { stripHtml } from "@/lib/richText";
 
 type SurveyOption = { text: string; result_index: number; image_url?: string | null };
@@ -42,14 +50,67 @@ type SurveyLead = {
   created_at: string;
 };
 
+// Couleur primaire Tipote - alignee sur les charts de QuizResultsAnalytics
+// (donut + aire) pour rester coherent visuellement.
+const RADAR_PRIMARY = "#5D6CDB";
+
+// Libelle court d'axe radar : on tronque le texte de la question pour ne pas
+// deformer la grille avec des libelles a rallonge.
+function shortAxisLabel(s: string, max = 24): string {
+  const plain = stripHtml(s || "").trim();
+  if (!plain) return "";
+  return plain.length > max ? `${plain.slice(0, max - 1)}…` : plain;
+}
+
+// Agrege les questions de type note (rating_scale + star_rating) en un point
+// par question : moyenne des reponses normalisee en % du max propre a chaque
+// question (rating_scale 0-10 / NPS, star_rating 1-5), pour que les axes
+// soient comparables sur une meme echelle 0..100.
+function buildRadarData(questions: SurveyQuestion[], leads: SurveyLead[]) {
+  const rows: { axis: string; value: number; avg: number; max: number }[] = [];
+  questions.forEach((q, qIdx) => {
+    if (q.question_type !== "rating_scale" && q.question_type !== "star_rating") return;
+    const values: number[] = [];
+    for (const l of leads) {
+      if (!Array.isArray(l.answers)) continue;
+      const a = l.answers.find((x) => x.question_index === qIdx);
+      if (!a) continue;
+      const v = q.question_type === "rating_scale" ? a.rating : a.stars;
+      if (typeof v === "number" && Number.isFinite(v)) values.push(v);
+    }
+    if (values.length === 0) return;
+    const max =
+      q.question_type === "rating_scale"
+        ? Number(q.config?.max ?? 10)
+        : Number(q.config?.max ?? 5);
+    const safeMax = max > 0 ? max : 1;
+    const avg = values.reduce((s, n) => s + n, 0) / values.length;
+    rows.push({
+      axis: shortAxisLabel(q.question_text) || `Q${qIdx + 1}`,
+      value: Math.round((avg / safeMax) * 1000) / 10,
+      avg: Math.round(avg * 10) / 10,
+      max: safeMax,
+    });
+  });
+  return rows;
+}
+
 export function SurveyTrends({
   questions,
   leads,
+  hideCounts = false,
 }: {
   questions: SurveyQuestion[];
   leads: SurveyLead[];
+  // Masque les nombres bruts de reponses (garde les %). Cf.
+  // quizzes.hide_response_counts.
+  hideCounts?: boolean;
 }) {
   const t = useTranslations("survey");
+
+  // Radar agrege des questions de type note. Rendu seulement si >= 3 axes
+  // (un radar a moins de 3 sommets est degenere / illisible).
+  const radarData = buildRadarData(questions, leads);
 
   if (leads.length === 0) {
     return (
@@ -82,8 +143,42 @@ export function SurveyTrends({
         </CardContent>
       </Card>
 
+      {radarData.length >= 3 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <RadarIcon className="w-4 h-4 text-primary" />
+              {t("radarTitle")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={320}>
+              <RadarChart data={radarData} outerRadius="70%">
+                <PolarGrid stroke="hsl(var(--border))" />
+                <PolarAngleAxis
+                  dataKey="axis"
+                  tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                />
+                <PolarRadiusAxis
+                  angle={90}
+                  domain={[0, 100]}
+                  tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                />
+                <Radar
+                  name={t("radarTitle")}
+                  dataKey="value"
+                  stroke={RADAR_PRIMARY}
+                  fill={RADAR_PRIMARY}
+                  fillOpacity={0.3}
+                />
+              </RadarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      )}
+
       {questions.map((q, qIdx) => (
-        <QuestionTrend key={qIdx} question={q} qIdx={qIdx} leads={leads} />
+        <QuestionTrend key={qIdx} question={q} qIdx={qIdx} leads={leads} hideCounts={hideCounts} />
       ))}
     </div>
   );
@@ -93,10 +188,12 @@ function QuestionTrend({
   question,
   qIdx,
   leads,
+  hideCounts,
 }: {
   question: SurveyQuestion;
   qIdx: number;
   leads: SurveyLead[];
+  hideCounts: boolean;
 }) {
   const t = useTranslations("survey");
 
@@ -123,6 +220,7 @@ function QuestionTrend({
             answers={answers.map((a) => a.rating).filter((v): v is number => typeof v === "number")}
             min={Number(question.config?.min ?? 0)}
             max={Number(question.config?.max ?? 10)}
+            hideCounts={hideCounts}
           />
         )}
         {question.question_type === "star_rating" && (
@@ -130,6 +228,7 @@ function QuestionTrend({
             answers={answers.map((a) => a.stars).filter((v): v is number => typeof v === "number")}
             min={1}
             max={Number(question.config?.max ?? 5)}
+            hideCounts={hideCounts}
             renderLabel={(v) => (
               <span className="flex items-center gap-0.5">
                 {v} <Star className="w-3 h-3 fill-current" />
@@ -141,10 +240,12 @@ function QuestionTrend({
           <YesNoDistribution
             yes={answers.filter((a) => a.option_index === 0).length}
             no={answers.filter((a) => a.option_index === 1).length}
+            hideCounts={hideCounts}
           />
         )}
         {(question.question_type === "multiple_choice" || question.question_type === "image_choice") && (
           <OptionDistribution
+            hideCounts={hideCounts}
             options={question.options}
             counts={question.options.map(
               // Count both legacy single picks (option_index) AND multi-select
@@ -174,11 +275,13 @@ function RatingDistribution({
   min,
   max,
   renderLabel,
+  hideCounts,
 }: {
   answers: number[];
   min: number;
   max: number;
   renderLabel?: (v: number) => React.ReactNode;
+  hideCounts?: boolean;
 }) {
   const t = useTranslations("survey");
   const total = answers.length;
@@ -209,7 +312,7 @@ function RatingDistribution({
                   style={{ width: `${pct}%`, transition: "width 200ms" }}
                 />
               </div>
-              <span className="w-10 text-muted-foreground">{count}</span>
+              {!hideCounts && <span className="w-10 text-muted-foreground">{count}</span>}
             </div>
           );
         })}
@@ -218,7 +321,7 @@ function RatingDistribution({
   );
 }
 
-function YesNoDistribution({ yes, no }: { yes: number; no: number }) {
+function YesNoDistribution({ yes, no, hideCounts }: { yes: number; no: number; hideCounts?: boolean }) {
   const t = useTranslations("survey");
   const total = yes + no;
   const yesPct = total > 0 ? Math.round((yes / total) * 100) : 0;
@@ -228,20 +331,20 @@ function YesNoDistribution({ yes, no }: { yes: number; no: number }) {
       <div className="text-center p-4 rounded-xl bg-primary/5">
         <div className="text-3xl font-bold text-primary">{yesPct}%</div>
         <div className="text-xs text-muted-foreground">
-          {t("yesLabel")} ({yes})
+          {t("yesLabel")}{hideCounts ? "" : ` (${yes})`}
         </div>
       </div>
       <div className="text-center p-4 rounded-xl bg-muted/40">
         <div className="text-3xl font-bold">{noPct}%</div>
         <div className="text-xs text-muted-foreground">
-          {t("noLabel")} ({no})
+          {t("noLabel")}{hideCounts ? "" : ` (${no})`}
         </div>
       </div>
     </div>
   );
 }
 
-function OptionDistribution({ options, counts }: { options: SurveyOption[]; counts: number[] }) {
+function OptionDistribution({ options, counts, hideCounts }: { options: SurveyOption[]; counts: number[]; hideCounts?: boolean }) {
   const total = counts.reduce((a, b) => a + b, 0);
   const peak = Math.max(1, ...counts);
   return (
@@ -255,7 +358,7 @@ function OptionDistribution({ options, counts }: { options: SurveyOption[]; coun
             <div className="flex items-center justify-between text-sm">
               <span className="truncate">{stripHtml(opt.text) || `Option ${oi + 1}`}</span>
               <span className="text-xs text-muted-foreground">
-                {c} ({sharePct}%)
+                {hideCounts ? `${sharePct}%` : `${c} (${sharePct}%)`}
               </span>
             </div>
             <div className="bg-muted/40 rounded-full h-2 overflow-hidden">

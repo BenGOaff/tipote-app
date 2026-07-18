@@ -505,6 +505,9 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   // Demander l'email AVANT les questions (Christelle 12 juillet 2026). Off
   // par defaut = capture apres les questions (comportement historique).
   const [captureBeforeQuestions, setCaptureBeforeQuestions] = useState<boolean>(false);
+  // Masquer le nombre brut de reponses dans la synthese (onglet Tendances)
+  // et n'afficher que les %. Default false = compteurs visibles (compat).
+  const [hideResponseCounts, setHideResponseCounts] = useState<boolean>(false);
   // Adeline (1er juin 2026) : page de remerciement éditable WYSIWYG.
   // "" = on affiche la string i18n par défaut côté visiteur.
   const [surveyThanksHeading, setSurveyThanksHeading] = useState("");
@@ -661,6 +664,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     capture_subtitle: captureSubtitle,
     capture_submit_text: captureSubmitText,
     capture_before_questions: captureBeforeQuestions,
+    hide_response_counts: hideResponseCounts,
     survey_thanks_heading: surveyThanksHeading,
     survey_thanks_body: surveyThanksBody,
     result_insight_heading: resultInsightHeading,
@@ -699,7 +703,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     questions: editQuestions,
   }), [
     title, introduction, ctaText, ctaUrl, startButtonText, privacyUrl, consentText,
-    captureHeading, captureSubtitle, captureSubmitText, captureBeforeQuestions, surveyThanksHeading, surveyThanksBody,
+    captureHeading, captureSubtitle, captureSubmitText, captureBeforeQuestions, hideResponseCounts, surveyThanksHeading, surveyThanksBody,
     resultInsightHeading, resultProjectionHeading,
     captureFirstName, captureLastName, capturePhone, captureCountry,
     firstNameRequired, lastNameRequired, phoneRequired, countryRequired,
@@ -730,6 +734,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     if (typeof s.capture_subtitle === "string") setCaptureSubtitle(s.capture_subtitle);
     if (typeof s.capture_submit_text === "string") setCaptureSubmitText(s.capture_submit_text);
     if (typeof s.capture_before_questions === "boolean") setCaptureBeforeQuestions(s.capture_before_questions);
+    if (typeof s.hide_response_counts === "boolean") setHideResponseCounts(s.hide_response_counts);
     if (typeof s.survey_thanks_heading === "string") setSurveyThanksHeading(s.survey_thanks_heading);
     if (typeof s.survey_thanks_body === "string") setSurveyThanksBody(s.survey_thanks_body);
     if (typeof s.result_insight_heading === "string") setResultInsightHeading(s.result_insight_heading);
@@ -859,6 +864,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       setPrivacyUrl(q.privacy_url ?? ""); setConsentText(q.consent_text ?? "");
       setCaptureHeading(q.capture_heading ?? ""); setCaptureSubtitle(q.capture_subtitle ?? ""); setCaptureSubmitText(q.capture_submit_text ?? "");
       setCaptureBeforeQuestions(Boolean((q as { capture_before_questions?: boolean | null }).capture_before_questions));
+      setHideResponseCounts((q as { hide_response_counts?: boolean | null }).hide_response_counts === true);
       setSurveyThanksHeading((q as { survey_thanks_heading?: string | null }).survey_thanks_heading ?? "");
       setSurveyThanksBody((q as { survey_thanks_body?: string | null }).survey_thanks_body ?? "");
       setResultInsightHeading(q.result_insight_heading ?? ""); setResultProjectionHeading(q.result_projection_heading ?? "");
@@ -1248,6 +1254,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
           capture_heading: captureHeading || null, capture_subtitle: captureSubtitle || null,
           capture_submit_text: captureSubmitText || null,
           capture_before_questions: captureBeforeQuestions,
+          hide_response_counts: hideResponseCounts,
           survey_thanks_heading: surveyThanksHeading.trim() || null,
           survey_thanks_body: surveyThanksBody.trim() || null,
           result_insight_heading: resultInsightHeading.trim() || null,
@@ -1663,6 +1670,14 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                     hint={t("surveyCaptureBeforeHint")}
                     checked={captureBeforeQuestions}
                     onChange={setCaptureBeforeQuestions}
+                  />
+                  {/* Masque le nombre brut de reponses dans la synthese
+                      (onglet Tendances) et n'affiche que les %. */}
+                  <SettingsToggle
+                    label={t("optionHideResponseCounts")}
+                    hint={t("optionHideResponseCountsHint")}
+                    checked={hideResponseCounts}
+                    onChange={setHideResponseCounts}
                   />
                   {(captureFirstName || captureLastName || capturePhone || captureCountry) && (
                     <div className="flex flex-col gap-1.5 pt-1">
@@ -2575,6 +2590,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
             {trendsView === "summary" ? (
               <SurveyTrends
                 questions={editQuestions}
+                hideCounts={hideResponseCounts}
                 leads={leads.map((l) => ({
                   id: l.id,
                   email: l.email,

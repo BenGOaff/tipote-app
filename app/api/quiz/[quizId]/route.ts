@@ -192,6 +192,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       "meta_pixel_id", "ga4_measurement_id", "google_ads_conversion_id", "google_ads_conversion_label",
       "show_consent_checkbox",
       "show_results_breakdown",
+      "hide_response_counts",
       "start_button_text", "result_insight_heading", "result_projection_heading",
       "custom_footer_text", "custom_footer_url",
       "brand_font", "brand_color_primary", "brand_color_background", "brand_color_text",

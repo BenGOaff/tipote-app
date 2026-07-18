@@ -106,9 +106,12 @@ interface Props {
   quizId: string;
   /** Initial data fetched server-side so the page renders immediately. */
   initial: AnalyticsResponse;
+  /** quizzes.hide_response_counts : masque les nombres bruts dans la
+   *  distribution par résultat (garde les %). N'affecte pas les exports. */
+  hideCounts?: boolean;
 }
 
-export function QuizAnalyticsClient({ quizId, initial }: Props) {
+export function QuizAnalyticsClient({ quizId, initial, hideCounts = false }: Props) {
   const t = useTranslations("quizDetail");
   const PERIOD_LABELS = buildPeriodLabels(t);
   const [period, setPeriod] = useState<Period>(initial.period);
@@ -314,7 +317,7 @@ export function QuizAnalyticsClient({ quizId, initial }: Props) {
                       <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip content={<ResultTooltip />} />
+                  <Tooltip content={<ResultTooltip hideCounts={hideCounts} />} />
                   {/* La légende recharts a été retirée (Béné 2 juin 2026) :
                       elle chevauchait visuellement la liste custom ci-dessous,
                       surtout quand les titres de profils sont longs. La <ul>
@@ -337,7 +340,7 @@ export function QuizAnalyticsClient({ quizId, initial }: Props) {
                       <span className="truncate">{stripHtml(r.title)}</span>
                     </span>
                     <span className="font-mono tabular-nums text-muted-foreground">
-                      {r.count} · {r.pct}%
+                      {hideCounts ? `${r.pct}%` : `${r.count} · ${r.pct}%`}
                     </span>
                   </li>
                 ))}
@@ -572,7 +575,7 @@ function DayTooltip({
   );
 }
 
-function ResultTooltip({ active, payload }: TooltipProps) {
+function ResultTooltip({ active, payload, hideCounts }: TooltipProps & { hideCounts?: boolean }) {
   if (!active || !payload?.length) return null;
   const p = payload[0]!;
   const row = p.payload ?? {};
@@ -580,7 +583,9 @@ function ResultTooltip({ active, payload }: TooltipProps) {
     <div className="rounded-md border bg-background shadow-lg px-3 py-2 text-xs">
       <div className="font-semibold">{stripHtml(String(row.title ?? ""))}</div>
       <div className="text-muted-foreground tabular-nums">
-        {Number(p.value ?? 0)} leads · {Number(row.pct ?? 0)}%
+        {hideCounts
+          ? `${Number(row.pct ?? 0)}%`
+          : `${Number(p.value ?? 0)} leads · ${Number(row.pct ?? 0)}%`}
       </div>
     </div>
   );

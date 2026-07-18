@@ -4529,7 +4529,9 @@
     "unknownError": "خطأ غير معروف",
     "addOption": "إضافة خيار",
     "backToEditorAria": "العودة إلى المحرر",
-    "distributionByResult": "التوزيع حسب النتيجة"
+    "distributionByResult": "التوزيع حسب النتيجة",
+    "optionHideResponseCounts": "إخفاء عدد الردود",
+    "optionHideResponseCountsHint": "يعرض النسب المئوية فقط في الإحصائيات. تبقى الأرقام الأصلية في تصدير CSV."
   },
   "contentStrategy": {
     "title": "استراتيجية المحتوى",
@@ -5253,7 +5255,10 @@
       "hiddenInOtherProjects": "+{count} في مشاريعك الأخرى",
       "hiddenQuizzesInProjects": "لديك {count} اختبارات في مشاريعك الأخرى. غيّر المشروع من أعلى اليمين لرؤيتها.",
       "hiddenPagesInProjects": "لديك {count} صفحة في مشاريعك الأخرى. غيّر المشروع من أعلى اليمين لرؤيتها.",
-      "loadError": "تعذّر تحميل محتوياتك الآن."
+      "loadError": "تعذّر تحميل محتوياتك الآن.",
+      "duplicate": "تكرار",
+      "quizDuplicated": "تم إنشاء نسخة. يمكنك تعديلها الآن.",
+      "duplicateFailed": "فشل التكرار."
     },
     "pageTitle": "محتوياتي"
   },
@@ -5806,7 +5811,8 @@
     "responsesFlaggedOnly": "المعلّمة",
     "exportExcel": "تصدير Excel",
     "flagAction": "تعليم هذا المشارك",
-    "unflagAction": "إزالة العلامة"
+    "unflagAction": "إزالة العلامة",
+    "radarTitle": "نظرة عامة على التقييمات"
   },
   "compta": {
     "revenueGoal": {
@@ -6637,7 +6643,10 @@
     "resetConfirm2": "تأكيد أخير: هل أنت متأكد بنسبة 100%؟",
     "resetErrorTitle": "تعذّرت إعادة التعيين",
     "resetSuccessTitle": "تمت إعادة تعيين Tipote ✅",
-    "resetSuccessDesc": "العودة إلى الإعداد…"
+    "resetSuccessDesc": "العودة إلى الإعداد…",
+    "notifyResponsesTitle": "إشعارات الردود",
+    "notifyResponsesLabel": "أرسل لي بريدًا عند كل رد جديد",
+    "notifyResponsesDesc": "احصل على بريد إلكتروني عند كل رد جديد على اختباراتك واستطلاعاتك. يمكنك إيقافه في أي وقت."
   },
   "highlightBadge": {
     "topPerformer": "الأفضل أداءً",
