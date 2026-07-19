@@ -4837,7 +4837,10 @@
     "backToEditorAria": "Voltar ao editor",
     "distributionByResult": "Distribuição por resultado",
     "optionHideResponseCounts": "Ocultar o número de respostas",
-    "optionHideResponseCountsHint": "Mostra apenas as percentagens nas estatísticas. Os números brutos ficam na exportação CSV."
+    "optionHideResponseCountsHint": "Mostra apenas as percentagens nas estatísticas. Os números brutos ficam na exportação CSV.",
+    "optionNotifyResponses": "Notificações por email",
+    "optionNotifyResponsesHint": "Recebe um email por cada nova resposta neste quiz. Desliga aqui se preferires silêncio para este quiz.",
+    "optionSioTagLabel": "Tag Systeme.io para esta resposta"
   },
   "contentStrategy": {
     "title": "Estratégia de conteúdo",

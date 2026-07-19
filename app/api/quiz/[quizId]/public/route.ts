@@ -823,7 +823,8 @@ export async function POST(req: NextRequest, context: RouteContext) {
     const surveyCaptureTag = isSurveyLead
       ? String((quiz as { sio_capture_tag?: string | null }).sio_capture_tag ?? "").trim()
       : "";
-    if (resultId || surveyCaptureTag) {
+    const surveyHasAnswers = isSurveyLead && Array.isArray(answers) && answers.length > 0;
+    if (resultId || surveyCaptureTag || surveyHasAnswers) {
       // Fire & forget: don't await so the response is fast
       (async () => {
         try {
@@ -885,7 +886,35 @@ export async function POST(req: NextRequest, context: RouteContext) {
           const apiKey = (await resolveSioApiKey(admin, quiz.user_id, quiz.project_id)) ?? "";
           if (!apiKey) return;
 
-          const tagsToApply = [...resultTags, surveyCaptureTag]
+          // Tags PAR RÉPONSE de sondage (Gwenn 19 juil 2026) : chaque option
+          // choisie peut porter un tag Systeme.io (choix simple ou multiple).
+          const answerTags: string[] = [];
+          if (surveyHasAnswers) {
+            try {
+              const { data: qRows } = await admin
+                .from("quiz_questions")
+                .select("options, sort_order")
+                .eq("quiz_id", quizId)
+                .order("sort_order", { ascending: true });
+              const questionOptions = (qRows ?? []).map(
+                (r) => ((r as { options?: unknown }).options as Array<{ sio_tag_name?: string | null }> | null) ?? [],
+              );
+              for (const a of answers as Array<{ question_index?: number; option_indices?: number[] }>) {
+                const qIdx = Number(a?.question_index);
+                const opts = Number.isInteger(qIdx) ? questionOptions[qIdx] : null;
+                if (!opts) continue;
+                const chosen = Array.isArray(a?.option_indices) ? a.option_indices : [];
+                for (const oIdx of chosen) {
+                  const tag = String(opts[Number(oIdx)]?.sio_tag_name ?? "").trim();
+                  if (tag) answerTags.push(tag);
+                }
+              }
+            } catch (e) {
+              console.error("[survey answer tags] error:", e);
+            }
+          }
+
+          const tagsToApply = [...resultTags, surveyCaptureTag, ...answerTags]
             .map((t) => t.trim())
             .filter((t, i, arr) => t && arr.findIndex((x) => x.toLowerCase() === t.toLowerCase()) === i);
 

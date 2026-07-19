@@ -4532,7 +4532,10 @@
     "backToEditorAria": "Torna all'editor",
     "distributionByResult": "Distribuzione per risultato",
     "optionHideResponseCounts": "Nascondere il numero di risposte",
-    "optionHideResponseCountsHint": "Mostra solo le percentuali nelle statistiche. I numeri grezzi restano nell'esportazione CSV."
+    "optionHideResponseCountsHint": "Mostra solo le percentuali nelle statistiche. I numeri grezzi restano nell'esportazione CSV.",
+    "optionNotifyResponses": "Notifiche via email",
+    "optionNotifyResponsesHint": "Ricevi un'email per ogni nuova risposta a questo quiz. Disattivala qui se preferisci il silenzio per questo quiz.",
+    "optionSioTagLabel": "Tag Systeme.io per questa risposta"
   },
   "contentStrategy": {
     "title": "Strategia di contenuto",

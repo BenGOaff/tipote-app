@@ -4539,7 +4539,10 @@
     "backToEditorAria": "Back to editor",
     "distributionByResult": "Distribution by result",
     "optionHideResponseCounts": "Hide the number of responses",
-    "optionHideResponseCountsHint": "Shows only percentages in the stats. Raw numbers stay in the CSV export."
+    "optionHideResponseCountsHint": "Shows only percentages in the stats. Raw numbers stay in the CSV export.",
+    "optionNotifyResponses": "Email notifications",
+    "optionNotifyResponsesHint": "Get an email for each new response on this quiz. Turn it off here if you prefer silence for this quiz.",
+    "optionSioTagLabel": "Systeme.io tag for this answer"
   },
   "contentStrategy": {
     "title": "Content strategy",

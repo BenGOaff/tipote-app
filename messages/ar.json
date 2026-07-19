@@ -4531,7 +4531,10 @@
     "backToEditorAria": "العودة إلى المحرر",
     "distributionByResult": "التوزيع حسب النتيجة",
     "optionHideResponseCounts": "إخفاء عدد الردود",
-    "optionHideResponseCountsHint": "يعرض النسب المئوية فقط في الإحصائيات. تبقى الأرقام الأصلية في تصدير CSV."
+    "optionHideResponseCountsHint": "يعرض النسب المئوية فقط في الإحصائيات. تبقى الأرقام الأصلية في تصدير CSV.",
+    "optionNotifyResponses": "إشعارات البريد الإلكتروني",
+    "optionNotifyResponsesHint": "تصلك رسالة بريد إلكتروني عند كل رد جديد على هذا الاختبار. أوقفها هنا إذا كنت تفضل الصمت لهذا الاختبار.",
+    "optionSioTagLabel": "وسم Systeme.io لهذه الإجابة"
   },
   "contentStrategy": {
     "title": "استراتيجية المحتوى",
