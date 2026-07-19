@@ -99,7 +99,7 @@ type QuestionType =
   | "free_text"
   | "image_choice"
   | "yes_no";
-type QuizOption = { text: string; result_index: number; image_url?: string | null; image_width?: number | null };
+type QuizOption = { text: string; result_index: number; image_url?: string | null; image_width?: number | null; sio_tag_name?: string | null };
 type QuizQuestion = {
   id?: string;
   question_text: string;
@@ -1293,6 +1293,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
               result_index: o.result_index,
               ...(o.image_url ? { image_url: o.image_url } : {}),
               ...(o.image_width != null ? { image_width: o.image_width } : {}),
+              ...(o.sio_tag_name && o.sio_tag_name.trim() ? { sio_tag_name: o.sio_tag_name.trim() } : {}),
             })),
             sort_order: i,
             question_type: q.question_type,
@@ -1356,6 +1357,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   // Pose une image (GIF / IA / recadrée) sur une option de sondage.
   const setOptImage = (qi: number, oi: number, url: string) => setEditQuestions(p => p.map((q, i) => i !== qi ? q : { ...q, options: q.options.map((o, j) => j === oi ? { ...o, image_url: url } : o) }));
   const updateOptResult = (qi: number, oi: number, ri: number) => setEditQuestions(p => p.map((q, i) => i !== qi ? q : { ...q, options: q.options.map((o, j) => j === oi ? { ...o, result_index: ri } : o) }));
+  // Tag Systeme.io par réponse de sondage (Gwenn 19 juil 2026).
+  const updateOptTag = (qi: number, oi: number, v: string) => setEditQuestions(p => p.map((q, i) => i !== qi ? q : { ...q, options: q.options.map((o, j) => j === oi ? { ...o, sio_tag_name: v } : o) }));
   const addOpt = (qi: number) => setEditQuestions(p => p.map((q, i) => i !== qi ? q : { ...q, options: [...q.options, { text: "", result_index: 0 }] }));
   const removeOpt = (qi: number, oi: number) => setEditQuestions(p => p.map((q, i) => i !== qi ? q : { ...q, options: q.options.filter((_, j) => j !== oi) }));
   // New survey questions default to a rating_scale (NPS) — covers the most
@@ -2215,6 +2218,11 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                                       </div>
                                     )}
                                     <InlineEdit value={opt.text} onChange={(v) => updateOpt(qi, oi, v)} onGenderize={genderize} onAIRewrite={aiRewriteOption} previewTransform={previewInterpolate} availableVars={personalizationVars} className="text-base font-medium" placeholder={`Option ${oi + 1}…`} />
+                                    {/* Tag Systeme.io appliqué au lead qui choisit cette réponse (Gwenn 19 juil 2026). */}
+                                    <div className="pt-1" onClick={(e) => e.stopPropagation()}>
+                                      <Label className="text-[10px] font-medium text-muted-foreground">{t("optionSioTagLabel")}</Label>
+                                      <SioTagPicker value={opt.sio_tag_name ?? ""} onChange={(v) => updateOptTag(qi, oi, v)} />
+                                    </div>
                                   </div>
                                   {q.options.length > 2 && <button onClick={() => removeOpt(qi, oi)} className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-destructive hover:bg-destructive/10 rounded p-0.5 z-10"><X className="w-3.5 h-3.5" /></button>}
                                 </div>

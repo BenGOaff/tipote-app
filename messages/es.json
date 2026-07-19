@@ -4534,7 +4534,8 @@
     "optionHideResponseCounts": "Ocultar el número de respuestas",
     "optionHideResponseCountsHint": "Muestra solo los porcentajes en las estadísticas. Los números brutos se conservan en la exportación CSV.",
     "optionNotifyResponses": "Notificaciones por email",
-    "optionNotifyResponsesHint": "Recibe un email por cada nueva respuesta en este quiz. Desactívalo aquí si prefieres silencio para este quiz."
+    "optionNotifyResponsesHint": "Recibe un email por cada nueva respuesta en este quiz. Desactívalo aquí si prefieres silencio para este quiz.",
+    "optionSioTagLabel": "Etiqueta Systeme.io para esta respuesta"
   },
   "contentStrategy": {
     "title": "Estrategia de contenido",
