@@ -4539,7 +4539,9 @@
     "backToEditorAria": "Retour à l'éditeur",
     "distributionByResult": "Distribution par résultat",
     "optionHideResponseCounts": "Masquer le nombre de réponses",
-    "optionHideResponseCountsHint": "N'affiche que les pourcentages dans les statistiques. Les nombres bruts restent dans l'export CSV."
+    "optionHideResponseCountsHint": "N'affiche que les pourcentages dans les statistiques. Les nombres bruts restent dans l'export CSV.",
+    "optionNotifyResponses": "Notifications par email",
+    "optionNotifyResponsesHint": "Reçois un email à chaque nouvelle réponse sur ce quiz. Coupe-le ici si tu préfères le silence pour ce quiz."
   },
   "contentStrategy": {
     "title": "Stratégie de contenu",

@@ -56,6 +56,17 @@ export interface ResponseNotificationArgs {
 /** Best-effort. Retourne true si un email a été envoyé. */
 export async function notifyCreatorOfResponse(args: ResponseNotificationArgs): Promise<boolean> {
   try {
+    // Opt-out PAR QUIZ (Gwenn 19 juil 2026) : chaque quiz/sondage peut couper
+    // ses notifications, indépendamment du réglage projet. Défaut = activé.
+    const { data: quizRow } = await supabaseAdmin
+      .from("quizzes")
+      .select("notify_responses")
+      .eq("id", args.quizId)
+      .maybeSingle();
+    if ((quizRow as { notify_responses?: boolean | null } | null)?.notify_responses === false) {
+      return false;
+    }
+
     // Opt-out par projet (défaut = activé si la ligne n'existe pas).
     let bpQuery = supabaseAdmin
       .from("business_profiles")

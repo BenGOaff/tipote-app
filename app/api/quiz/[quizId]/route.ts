@@ -193,6 +193,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       "show_consent_checkbox",
       "show_results_breakdown",
       "hide_response_counts",
+      "notify_responses",
       "start_button_text", "result_insight_heading", "result_projection_heading",
       "custom_footer_text", "custom_footer_url",
       "brand_font", "brand_color_primary", "brand_color_background", "brand_color_text",
