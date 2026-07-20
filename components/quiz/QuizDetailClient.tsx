@@ -20,7 +20,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft, ArrowUp, Copy, Eye, CheckCircle, Share2,
   Loader2, Plus, Trash2, Monitor, Smartphone, Pencil, X, Save, GripVertical,
-  Gift, Sparkles, Shuffle, ChevronUp, ChevronDown, Wand2, ImagePlus, Menu, Crop,
+  Gift, Sparkles, Shuffle, ChevronUp, ChevronDown, Wand2, ImagePlus, Menu, Crop, Star, Settings2,
 } from "lucide-react";
 import QuizResultsAnalytics from "@/components/quiz/QuizResultsAnalytics";
 import QuizInsightsPanel from "@/components/quiz/QuizInsightsPanel";
@@ -97,16 +97,31 @@ import {
 } from "@/lib/quizBranding";
 
 // Types
+// Un quiz (profil ou scoring) peut mélanger des types de questions, comme le
+// sondage. Le scoring dépend du mode (cf. computeResult côté visiteur) :
+//  - choix / image / yes_no : chaque option porte result_index (profil) et/ou
+//    points (scoring). yes_no = 2 options fixes (Oui = 0, Non = 1).
+//  - rating_scale / star_rating : la note choisie = points en scoring ; en
+//    profil elle est collectée mais ne change pas le profil.
+//  - free_text : jamais scoré (collecte pure).
+type QuestionType =
+  | "multiple_choice"
+  | "rating_scale"
+  | "star_rating"
+  | "free_text"
+  | "image_choice"
+  | "yes_no";
 type QuizOption = { text: string; result_index: number; image_url?: string | null; points?: number | null; image_width?: number | null };
 type QuizQuestion = {
   id?: string;
   question_text: string;
   options: QuizOption[];
   sort_order: number;
-  // Per-question JSON config. Today only multi_select is read here, but the
-  // shape is open-ended so future quiz-specific knobs (time limit, weighted
-  // scoring…) land without another type change. Mirrors the DB column added
-  // in supabase/migrations/20260428_survey_mode.sql.
+  // Type de question. Optionnel en mémoire (compat anciennes lignes) ; défaut
+  // "multiple_choice" à l'affichage.
+  question_type?: QuestionType;
+  // Per-question JSON config (multi_select, min/max/labels, max, maxLength,
+  // optional, image_url/image_width). Mirrors quiz_questions.config.
   config?: Record<string, unknown> | null;
 };
 type ResultImagePosition = "top" | "after_title" | "after_description" | "after_insight" | "bottom";
@@ -1624,6 +1639,9 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           share_widget_id: selectedShareWidget || null,
           questions: editQuestions.map((q, i) => ({
             question_text: q.question_text,
+            // Type de question (défaut multiple_choice). La colonne
+            // quiz_questions.question_type accepte les 6 types.
+            question_type: q.question_type ?? "multiple_choice",
             // Bug Hugo (18 mai 2026) : avant ce fix, le payload ne
             // remontait que {text, result_index} et écrasait silencieusement
             // l'image_url uploadée par l'éditeur. L'image n'arrivait
@@ -1824,8 +1842,47 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     [out[oi], out[ni]] = [out[ni], out[oi]];
     return { ...q, options: out };
   }));
-  const addQuestion = () => setEditQuestions(p => [...p, { question_text: "", options: [{ text: "", result_index: 0 }, { text: "", result_index: 1 }, { text: "", result_index: 2 }, { text: "", result_index: 0 }], sort_order: p.length }]);
+  const addQuestion = () => setEditQuestions(p => [...p, { question_text: "", question_type: "multiple_choice", options: [{ text: "", result_index: 0 }, { text: "", result_index: 1 }, { text: "", result_index: 2 }, { text: "", result_index: 0 }], sort_order: p.length, config: {} }]);
   const removeQuestion = (i: number) => setEditQuestions(p => p.filter((_, qi) => qi !== i));
+  // Change le type d'une question (repris du sondage), avec deux specificites
+  // quiz : yes_no = 2 options fixes porteuses du scoring (Oui=0/Non=1), et on
+  // preserve le flag `optional` a travers le changement de type.
+  const updateQuestionType = (i: number, type: QuestionType) =>
+    setEditQuestions((p) =>
+      p.map((q, qi) => {
+        if (qi !== i) return q;
+        const prev = (q.config ?? {}) as Record<string, unknown>;
+        let baseOptions: QuizOption[];
+        if (type === "yes_no") {
+          baseOptions = q.options.length >= 2
+            ? [q.options[0], q.options[1]]
+            : [{ text: "Oui", result_index: 0 }, { text: "Non", result_index: 1 }];
+        } else if (type === "multiple_choice" || type === "image_choice") {
+          baseOptions = q.options.length >= 2
+            ? q.options
+            : [
+                { text: "", result_index: 0 },
+                { text: "", result_index: 1 },
+                { text: "", result_index: 2 },
+                { text: "", result_index: 0 },
+              ];
+        } else {
+          baseOptions = [];
+        }
+        const baseConfig: Record<string, unknown> =
+          type === "rating_scale"
+            ? { min: 0, max: 10, minLabel: t("ratingMinDefault"), maxLabel: t("ratingMaxDefault") }
+            : type === "star_rating"
+              ? { max: 5 }
+              : type === "free_text"
+                ? { maxLength: 500 }
+                : {};
+        if (prev.optional === true) baseConfig.optional = true;
+        return { ...q, question_type: type, options: baseOptions, config: baseConfig };
+      }),
+    );
+  const updateQuestionConfig = (i: number, patch: Record<string, unknown>) =>
+    setEditQuestions((p) => p.map((q, qi) => (qi === i ? { ...q, config: { ...(q.config ?? {}), ...patch } } : q)));
   const updateR = (i: number, field: string, v: unknown) => setEditResults(p => p.map((r, ri) => ri === i ? { ...r, [field]: v } : r));
 
   // Titres de blocs personnalisables par profil (Gwenn 13 juin 2026,
@@ -2644,6 +2701,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
               {/* ── QUESTIONS — one full page per question ── */}
               {editQuestions.map((q, qi) => {
                 const progress = ((qi + 1) / editQuestions.length) * 100;
+                const qType: QuestionType = q.question_type ?? "multiple_choice";
+                const cfg = (q.config ?? {}) as Record<string, unknown>;
                 return (
                   <div key={qi} ref={el => { questionRefs.current[qi] = el; }} className="min-h-screen flex flex-col px-6 sm:px-12 py-8">
                     {/* Progress bar */}
@@ -2652,7 +2711,37 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     </div>
                     <div className="flex-1 flex flex-col items-center justify-center">
                       <div className="max-w-2xl w-full space-y-8">
-                        <p className="text-xs font-bold uppercase tracking-widest" style={{ color: pc }}>Questions {qi + 1}/{editQuestions.length}</p>
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-xs font-bold uppercase tracking-widest" style={{ color: pc }}>Questions {qi + 1}/{editQuestions.length}</p>
+                          <div className="flex items-center gap-2">
+                            {/* Type de question. Changer de type reinitialise
+                                options + config aux defauts du type. */}
+                            <select
+                              value={qType}
+                              onChange={(e) => updateQuestionType(qi, e.target.value as QuestionType)}
+                              className="text-xs border rounded-lg px-2 py-1 bg-background font-medium cursor-pointer"
+                              title={t("questionTypeLabel")}
+                            >
+                              <option value="multiple_choice">{t("typeMultipleChoice")}</option>
+                              <option value="image_choice">{t("typeImageChoice")}</option>
+                              <option value="yes_no">{t("typeYesNo")}</option>
+                              <option value="rating_scale">{t("typeRatingScale")}</option>
+                              <option value="star_rating">{t("typeStarRating")}</option>
+                              <option value="free_text">{t("typeFreeText")}</option>
+                            </select>
+                            {/* Question facultative : le visiteur peut la passer,
+                                une question sautee ne compte pas dans le resultat. */}
+                            <label className="inline-flex items-center gap-1.5 text-xs bg-muted/60 rounded-full px-2.5 py-1 cursor-pointer" title={t("optionalQuestionHint")}>
+                              <input
+                                type="checkbox"
+                                checked={cfg.optional === true}
+                                onChange={(e) => updateQuestionConfig(qi, { optional: e.target.checked })}
+                                className="h-3.5 w-3.5 rounded border-border accent-primary cursor-pointer"
+                              />
+                              <span>{t("optionalQuestionLabel")}</span>
+                            </label>
+                          </div>
+                        </div>
                         <InlineEdit value={q.question_text} onChange={(v) => updateQ(qi, v)} onGenderize={genderize} onAIRewrite={aiRewriteQuestion} previewTransform={previewInterpolate} availableVars={personalizationVars} className="tipote-quiz-question font-bold leading-tight" style={{ color: pc }} placeholder="Texte de la question…" />
                         {/* Image de la question (au-dessus de l'enonce) + resize. */}
                         {(() => {
@@ -2683,6 +2772,118 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                             </div>
                           );
                         })()}
+                        {/* ── Échelle 0-10 (NPS) ─────────────────────────── */}
+                        {qType === "rating_scale" && (() => {
+                          const min = typeof cfg.min === "number" ? cfg.min : 0;
+                          const max = typeof cfg.max === "number" ? cfg.max : 10;
+                          const minLabel = (cfg.minLabel as string) || t("ratingMinDefault");
+                          const maxLabel = (cfg.maxLabel as string) || t("ratingMaxDefault");
+                          const values: number[] = [];
+                          for (let v = min; v <= max; v++) values.push(v);
+                          return (
+                            <div className="space-y-3">
+                              <div className="grid grid-cols-6 sm:grid-cols-11 gap-2">
+                                {values.map((v) => (
+                                  <div key={v} className="h-12 rounded-lg border-2 border-border flex items-center justify-center font-semibold text-sm" style={{ borderColor: `${pc}30` }}>{v}</div>
+                                ))}
+                              </div>
+                              <div className="flex justify-between text-xs text-muted-foreground px-1">
+                                <input value={minLabel} onChange={(e) => updateQuestionConfig(qi, { minLabel: e.target.value })} className="bg-transparent outline-none text-left max-w-[40%]" />
+                                <input value={maxLabel} onChange={(e) => updateQuestionConfig(qi, { maxLabel: e.target.value })} className="bg-transparent outline-none text-right max-w-[40%]" />
+                              </div>
+                              <div className="flex items-center gap-3 text-xs text-muted-foreground pt-2 border-t">
+                                <span className="font-semibold uppercase tracking-widest">{t("scaleConfig")}:</span>
+                                <label className="inline-flex items-center gap-1">
+                                  {t("scaleMin")}
+                                  <input type="number" value={min} onChange={(e) => updateQuestionConfig(qi, { min: Number(e.target.value) })} className="w-14 border rounded px-1.5 py-0.5 text-center" />
+                                </label>
+                                <label className="inline-flex items-center gap-1">
+                                  {t("scaleMax")}
+                                  <input type="number" value={max} onChange={(e) => updateQuestionConfig(qi, { max: Number(e.target.value) })} className="w-14 border rounded px-1.5 py-0.5 text-center" />
+                                </label>
+                              </div>
+                              <p className="text-xs italic" style={{ color: `${pc}99` }}>{isScoring ? t("scaleScoringHint", { max }) : t("scaleProfilHint")}</p>
+                            </div>
+                          );
+                        })()}
+
+                        {/* ── Étoiles ──────────────────────────────────── */}
+                        {qType === "star_rating" && (() => {
+                          const max = typeof cfg.max === "number" ? cfg.max : 5;
+                          const stars: number[] = [];
+                          for (let v = 1; v <= max; v++) stars.push(v);
+                          return (
+                            <div className="space-y-3">
+                              <div className="flex justify-center gap-2 sm:gap-3">
+                                {stars.map((v) => (
+                                  <Star key={v} className="w-12 h-12 sm:w-14 sm:h-14" style={{ color: `${pc}55` }} />
+                                ))}
+                              </div>
+                              <div className="flex items-center gap-3 text-xs text-muted-foreground pt-2 border-t justify-center">
+                                <label className="inline-flex items-center gap-1">
+                                  {t("starMax")}
+                                  <input type="number" min={3} max={10} value={max} onChange={(e) => updateQuestionConfig(qi, { max: Math.min(10, Math.max(3, Number(e.target.value) || 5)) })} className="w-14 border rounded px-1.5 py-0.5 text-center" />
+                                </label>
+                              </div>
+                              <p className="text-xs italic text-center" style={{ color: `${pc}99` }}>{isScoring ? t("scaleScoringHint", { max }) : t("scaleProfilHint")}</p>
+                            </div>
+                          );
+                        })()}
+
+                        {/* ── Oui / Non (2 options fixes porteuses du scoring) ── */}
+                        {qType === "yes_no" && (
+                          <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                            {[0, 1].map((oi) => {
+                              const opt = q.options[oi] ?? { text: oi === 0 ? "Oui" : "Non", result_index: oi };
+                              const label = oi === 0 ? t("yesLabel") : t("noLabel");
+                              return (
+                                <div key={oi} className="rounded-2xl border-2 p-4 space-y-3" style={{ borderColor: `${pc}30` }}>
+                                  <div className="h-12 flex items-center justify-center text-xl sm:text-2xl font-bold">{label}</div>
+                                  {isScoring ? (
+                                    <div className="flex items-center justify-center gap-2 flex-wrap">
+                                      <label className="flex items-center gap-1.5 text-xs cursor-pointer font-medium" style={{ color: pc }}>
+                                        <input type="checkbox" checked={(opt.points ?? 0) > 0} onChange={(e) => updateOptPoints(qi, oi, e.target.checked ? 1 : 0)} className="cursor-pointer accent-current" />
+                                        Bonne réponse
+                                      </label>
+                                      {(opt.points ?? 0) > 0 && (
+                                        <input type="number" min={0} value={opt.points ?? 1} onChange={(e) => updateOptPoints(qi, oi, Math.max(0, Math.trunc(Number(e.target.value) || 0)))} className="w-14 text-xs border rounded px-1.5 py-0.5 bg-background" />
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                                      <span className="text-xs" style={{ color: `${pc}99` }}>point(s) au</span>
+                                      <select value={opt.result_index} onChange={(e) => updateOptResult(qi, oi, Number(e.target.value))} className="text-xs border rounded px-1.5 py-0.5 bg-background font-medium cursor-pointer" style={{ color: pc }}>
+                                        {editResults.map((_, ri) => <option key={ri} value={ri}>Résultat {ri + 1}</option>)}
+                                      </select>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {/* ── Réponse libre (jamais scorée) ───────────────── */}
+                        {qType === "free_text" && (() => {
+                          const maxLength = typeof cfg.maxLength === "number" ? cfg.maxLength : 500;
+                          return (
+                            <div className="space-y-3">
+                              <textarea readOnly placeholder={t("previewFreeTextPh")} rows={5} maxLength={maxLength} className="w-full rounded-xl border-2 border-border px-4 py-3 text-base resize-none bg-muted/10" style={{ borderColor: `${pc}30` }} />
+                              <div className="flex items-center justify-between gap-2">
+                                <p className="text-xs italic" style={{ color: `${pc}99` }}>{t("freeTextNotCounted")}</p>
+                                <label className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground bg-muted/60 rounded-full px-2.5 py-1 cursor-pointer" title={t("textMaxLengthHint")}>
+                                  <Settings2 className="w-3 h-3 opacity-60" />
+                                  <span>{t("textMaxLengthShort")}</span>
+                                  <input type="number" min={50} max={5000} value={maxLength} onChange={(e) => updateQuestionConfig(qi, { maxLength: Math.min(5000, Math.max(50, Number(e.target.value) || 500)) })} className="w-14 bg-background border border-border/60 rounded px-1.5 py-0.5 text-center text-[11px] font-medium" />
+                                  <span>{t("textMaxLengthChars")}</span>
+                                </label>
+                              </div>
+                            </div>
+                          );
+                        })()}
+
+                        {/* ── Choix (simple / multiple / image) ──────────── */}
+                        {(qType === "multiple_choice" || qType === "image_choice") && (<>
                         {/* Multi-select toggle (Typeform/Tally pattern):
                             quiz mode lets the creator allow multiple picks
                             per question. Each picked option scores its
@@ -2692,8 +2893,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                           <input
                             type="checkbox"
                             id={`q-multi-select-${qi}`}
-                            checked={((q.config ?? {}) as Record<string, unknown>).multi_select === true}
-                            onChange={(e) => setEditQuestions((p) => p.map((qq, i) => i !== qi ? qq : { ...qq, config: { ...(qq.config ?? {}), multi_select: e.target.checked } }))}
+                            checked={cfg.multi_select === true}
+                            onChange={(e) => updateQuestionConfig(qi, { multi_select: e.target.checked })}
                             className="mt-0.5 h-4 w-4 rounded border-border accent-primary cursor-pointer"
                           />
                           <label htmlFor={`q-multi-select-${qi}`} className="flex-1 cursor-pointer">
@@ -2814,6 +3015,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                             </button>
                           )}
                         </div>
+                        </>)}
                         <p className="text-center text-xs text-muted-foreground pt-4 italic">{t("optionClickAutoNext")}</p>
                       </div>
                     </div>

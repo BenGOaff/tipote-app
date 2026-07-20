@@ -31,11 +31,15 @@ import { toast } from "sonner";
 type QuizOption = {
   text: string;
   result_index: number;
+  points?: number;
 };
 
 type QuizQuestion = {
   question_text: string;
   options: QuizOption[];
+  // Type de question (defaut "multiple_choice"). Porte par l'IA / l'import.
+  question_type?: string;
+  config?: Record<string, unknown>;
 };
 
 type QuizResult = {
@@ -239,6 +243,8 @@ export default function QuizFormClient() {
           sio_share_tag_name: sioShareTagName.trim() || null,
           questions: questions.map((q) => ({
             question_text: q.question_text,
+            question_type: q.question_type ?? "multiple_choice",
+            ...(q.config ? { config: q.config } : {}),
             options: q.options,
           })),
           results: results.map((r) => ({
@@ -529,6 +535,8 @@ export default function QuizFormClient() {
         sio_share_tag_name: sioShareTagName.trim() || null,
         questions: questions.map((q) => ({
           question_text: q.question_text,
+          question_type: q.question_type ?? "multiple_choice",
+          ...(q.config ? { config: q.config } : {}),
           options: q.options,
         })),
         results: results.map((r) => ({
@@ -597,17 +605,19 @@ export default function QuizFormClient() {
     if (Array.isArray(quiz.questions) && quiz.questions.length > 0) {
       setQuestions(
         quiz.questions.map(
-          (q: { question_text?: string; options?: QuizOption[] }) => ({
+          (q: { question_text?: string; question_type?: string; config?: Record<string, unknown>; options?: QuizOption[] }) => ({
             question_text: q.question_text ?? "",
+            // On preserve le type IA (echelle, etoiles, oui/non, texte libre)
+            // et sa config ; defaut multiple_choice.
+            question_type: q.question_type ?? "multiple_choice",
+            ...(q.config && typeof q.config === "object" ? { config: q.config } : {}),
             options: Array.isArray(q.options)
               ? q.options.map((o: QuizOption) => ({
                   text: o.text ?? "",
                   result_index: o.result_index ?? 0,
+                  ...(typeof o.points === "number" ? { points: o.points } : {}),
                 }))
-              : [
-                  { text: "", result_index: 0 },
-                  { text: "", result_index: 0 },
-                ],
+              : [],
           })
         )
       );

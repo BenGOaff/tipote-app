@@ -167,11 +167,15 @@ ${isShort
 - L'introduction installe le contexte et promet une révélation personnalisée.`}
 
 QUESTIONS — RÈGLES :
-- Chaque question doit avoir exactement 4 options de réponse.
-- Variété de formats : Vrai/Faux, Oui/Non, Choix simple, scénarios, mises en situation.
-- PAS de questions scolaires ni d'échelles 1-5.
-- Chaque option de réponse est mappée vers un profil résultat via result_index (entre 0 et ${resultCount - 1}).
-- Répartir les result_index de façon équilibrée parmi les 4 options pour que chaque profil ait des chances égales.
+- La MAJORITÉ des questions sont des choix (3 à 5 options), chaque option mappée vers un profil résultat via result_index (entre 0 et ${resultCount - 1}). C'est ce qui détermine le profil, donc garde-les majoritaires pour que le résultat reste pertinent.
+- Chaque question porte un champ "question_type". Formats disponibles :
+  - "multiple_choice" (défaut) : 3 à 5 options, chacune avec un result_index.
+  - "yes_no" : exactement 2 options, "Oui" puis "Non", chacune avec son result_index.
+  - "rating_scale" (échelle 0-10) ou "star_rating" (étoiles) : question d'engagement. En quiz par profil elle est collectée mais ne détermine PAS le profil. À utiliser avec parcimonie (0 à 1 par quiz), et JAMAIS scolaire.
+  - "free_text" : réponse libre, jamais comptée dans le résultat. Très rare.
+- Pour "rating_scale" ajoute "config": { "min": 0, "max": 10 } ; pour "star_rating" ajoute "config": { "max": 5 }. Ces types (et free_text) n'ont PAS d'options (mets "options": []).
+- Varie les formulations : Vrai/Faux, scénarios, mises en situation.
+- Répartis les result_index de façon équilibrée parmi les options pour que chaque profil ait des chances égales.
 
 RÉSULTATS — RÈGLES :
 - Chaque résultat doit être TRANSFORMATIF : révéler un élément caché, bloquant ou valorisant.
@@ -190,6 +194,7 @@ FORMAT DE SORTIE : JSON strict uniquement. Pas de markdown, pas de commentaires,
   "questions": [
     {
       "question_text": "La question",
+      "question_type": "multiple_choice",
       "options": [
         { "text": "Option A", "result_index": 0 },
         { "text": "Option B", "result_index": 1 },
@@ -231,10 +236,10 @@ FORMAT DE SORTIE : JSON strict uniquement. Pas de markdown, pas de commentaires,
   userParts.push(`FORME D'ADRESSE : ${formality === "vous" ? "Vouvoiement (vous)" : "Tutoiement (tu)"}`);
   userParts.push(
     `\nCONSIGNES STRICTES :`,
-    `- Génère exactement ${questionCount} questions avec 4 options chacune.`,
+    `- Génère exactement ${questionCount} questions, en MAJORITÉ des choix (3 à 5 options).`,
     `- Génère exactement ${resultCount} profils résultat.`,
-    `- Chaque option doit avoir un result_index entre 0 et ${resultCount - 1}.`,
-    `- Répartis les result_index de façon équilibrée parmi les 4 options de chaque question.`,
+    `- Pour les questions de type choix, chaque option a un result_index entre 0 et ${resultCount - 1}, répartis équilibré.`,
+    `- Ajoute "question_type" à chaque question (défaut "multiple_choice"). Échelle/étoiles/texte libre avec parcimonie (ne déterminent pas le profil).`,
     `- Tout le contenu DOIT être en ${langLabel}.`,
     `- Les résultats doivent être TRANSFORMATIFS, pas génériques.`,
     `- Le CTA doit s'intégrer naturellement, comme une suite logique du résultat.`,
@@ -262,7 +267,8 @@ RÔLE : On te fournit le contenu brut d'un quiz (copié d'un doc, d'un brouillon
 
 RÈGLES D'OR :
 - Respecte FIDÈLEMENT les questions, options et résultats du texte source.
-- Si une question a moins de 4 options dans le source, ajoute des options neutres/plausibles pour arriver à 4 (et seulement dans ce cas).
+- Détecte le type de chaque question et remplis "question_type" : "yes_no" si Oui/Non (2 options "Oui" puis "Non"), "rating_scale" si échelle numérique (ajoute "config": { "min": 0, "max": 10 }, "options": []), "star_rating" si notation en étoiles ("config": { "max": 5 }, "options": []), "free_text" si réponse ouverte ("options": []), sinon "multiple_choice".
+- Pour une question de type choix ("multiple_choice") qui a moins de 3 options dans le source, complète avec des options neutres/plausibles pour arriver à 3 ou 4 (et seulement dans ce cas). yes_no reste à 2 options.
 - Si le source n'a pas de résultats explicites, déduis 3 profils cohérents à partir du ton et des questions (ex: débutant / intermédiaire / expert).
 - Si certains champs manquent (introduction, CTA, share_message), génère-les de façon brève et cohérente avec le contenu.
 - NE TRADUIS PAS le contenu si le source est déjà dans la bonne langue. La langue de sortie est ${langLabel}.
@@ -276,6 +282,7 @@ FORMAT DE SORTIE : JSON strict uniquement, sans markdown, sans commentaires.
   "questions": [
     {
       "question_text": "La question",
+      "question_type": "multiple_choice",
       "options": [
         { "text": "Option A", "result_index": 0 },
         { "text": "Option B", "result_index": 1 },
@@ -307,7 +314,7 @@ ${content}
 
 CONSIGNES :
 - Si des questions/options/résultats apparaissent clairement dans le source, RESPECTE-LES fidèlement.
-- Chaque question DOIT avoir exactement 4 options avec un result_index valide (0 à results.length - 1).
+- Renseigne "question_type" pour chaque question. Les questions de type choix ont des options avec un result_index valide (0 à results.length - 1) ; yes_no a 2 options ; échelle/étoiles/texte libre ont "options": [].
 - Répartis les result_index de façon équilibrée si le source ne le fait pas.
 - Si aucun résultat n'est fourni, crée 3 profils cohérents à partir du thème du source.
 - Réponds UNIQUEMENT en JSON valide, rien autour.`;

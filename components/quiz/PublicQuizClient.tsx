@@ -207,6 +207,7 @@ type QuizTranslations = {
   phonePlaceholder: string;
   countryPlaceholder: string;
   optional: string;
+  skipQuestion: string;
   phoneRequiredError: string;
   firstNameRequiredError: string;
   lastNameRequiredError: string;
@@ -287,6 +288,7 @@ const translations: Record<string, QuizTranslations> = {
     phonePlaceholder: "T\u00e9l\u00e9phone",
     countryPlaceholder: "Pays",
     optional: "optionnel",
+    skipQuestion: "Passer",
     phoneRequiredError: "Le numéro de téléphone est obligatoire.",
     firstNameRequiredError: "Le prénom est obligatoire.",
     lastNameRequiredError: "Le nom est obligatoire.",
@@ -357,6 +359,7 @@ const translations: Record<string, QuizTranslations> = {
     phonePlaceholder: "T\u00e9l\u00e9phone",
     countryPlaceholder: "Pays",
     optional: "optionnel",
+    skipQuestion: "Passer",
     phoneRequiredError: "Le numéro de téléphone est obligatoire.",
     firstNameRequiredError: "Le prénom est obligatoire.",
     lastNameRequiredError: "Le nom est obligatoire.",
@@ -418,6 +421,7 @@ const translations: Record<string, QuizTranslations> = {
     phonePlaceholder: "Phone",
     countryPlaceholder: "Country",
     optional: "optional",
+    skipQuestion: "Skip",
     phoneRequiredError: "Phone number is required.",
     firstNameRequiredError: "First name is required.",
     lastNameRequiredError: "Last name is required.",
@@ -479,6 +483,7 @@ const translations: Record<string, QuizTranslations> = {
     phonePlaceholder: "Tel\u00e9fono",
     countryPlaceholder: "Pa\u00eds",
     optional: "opcional",
+    skipQuestion: "Saltar",
     phoneRequiredError: "El número de teléfono es obligatorio.",
     firstNameRequiredError: "El nombre es obligatorio.",
     lastNameRequiredError: "El apellido es obligatorio.",
@@ -540,6 +545,7 @@ const translations: Record<string, QuizTranslations> = {
     phonePlaceholder: "Telefon",
     countryPlaceholder: "Land",
     optional: "optional",
+    skipQuestion: "Überspringen",
     phoneRequiredError: "Telefonnummer ist erforderlich.",
     firstNameRequiredError: "Vorname ist erforderlich.",
     lastNameRequiredError: "Nachname ist erforderlich.",
@@ -601,6 +607,7 @@ const translations: Record<string, QuizTranslations> = {
     phonePlaceholder: "Telefone",
     countryPlaceholder: "Pa\u00eds",
     optional: "opcional",
+    skipQuestion: "Ignorar",
     phoneRequiredError: "O número de telefone é obrigatório.",
     firstNameRequiredError: "O nome é obrigatório.",
     lastNameRequiredError: "O sobrenome é obrigatório.",
@@ -662,6 +669,7 @@ const translations: Record<string, QuizTranslations> = {
     phonePlaceholder: "Telefono",
     countryPlaceholder: "Paese",
     optional: "opzionale",
+    skipQuestion: "Salta",
     phoneRequiredError: "Il numero di telefono è obbligatorio.",
     firstNameRequiredError: "Il nome è obbligatorio.",
     lastNameRequiredError: "Il cognome è obbligatorio.",
@@ -723,6 +731,7 @@ const translations: Record<string, QuizTranslations> = {
     phonePlaceholder: "\u0627\u0644\u0647\u0627\u062a\u0641",
     countryPlaceholder: "\u0627\u0644\u0628\u0644\u062f",
     optional: "\u0627\u062e\u062a\u064a\u0627\u0631\u064a",
+    skipQuestion: "تخطي",
     phoneRequiredError: "رقم الهاتف مطلوب.",
     firstNameRequiredError: "الاسم الأول مطلوب.",
     lastNameRequiredError: "اسم العائلة مطلوب.",
@@ -1236,6 +1245,19 @@ export default function PublicQuizClient({
       let scoreValue = 0;
       let scoreMax = 0;
       quiz.questions.forEach((q, qIdx) => {
+        const qType = q.question_type ?? "multiple_choice";
+        const ans = answers[qIdx];
+        // Échelle / étoiles : la note choisie EST le score de la question,
+        // le max atteignable = la borne haute (config.max, défaut 10 / 5).
+        if (qType === "rating_scale" || qType === "star_rating") {
+          const cfg = (q.config ?? {}) as Record<string, unknown>;
+          const qMax = typeof cfg.max === "number" ? cfg.max : qType === "star_rating" ? 5 : 10;
+          if (qMax > 0) scoreMax += qMax;
+          if (ans && (ans.kind === "rating" || ans.kind === "star")) scoreValue += ans.value;
+          return;
+        }
+        // Réponse libre : jamais comptée (ni score, ni max).
+        if (qType === "free_text") return;
         const opts = q.options ?? [];
         const pts = opts.map((o) => (typeof o.points === "number" ? o.points : 0));
         // Max atteignable pour la question : meilleure option (choix unique)
@@ -1245,7 +1267,6 @@ export default function PublicQuizClient({
           ? pts.reduce((a, p) => a + (p > 0 ? p : 0), 0)
           : pts.reduce((a, p) => Math.max(a, p), 0);
         if (qMax > 0) scoreMax += qMax;
-        const ans = answers[qIdx];
         if (!ans) return;
         const picked: number[] =
           ans.kind === "option" ? [ans.optionIndex] : ans.kind === "options" ? ans.optionIndices : [];
@@ -1360,6 +1381,30 @@ export default function PublicQuizClient({
       }, ONE_TAP_ADVANCE_DELAY_MS);
     } else {
       advance();
+    }
+  };
+
+  // Question facultative : le visiteur passe sans repondre. Le slot reste
+  // `undefined`, donc computeResult / analytics l'ignorent (0 point/vote).
+  const skipQuestion = () => {
+    if (advanceTimerRef.current) {
+      window.clearTimeout(advanceTimerRef.current);
+      advanceTimerRef.current = null;
+    }
+    const newAnswers = [...answers];
+    newAnswers[currentQ] = undefined;
+    setAnswers(newAnswers);
+    setFreeTextDraft("");
+    setMultiOptionsDraft([]);
+    if (quiz && currentQ < quiz.questions.length - 1) {
+      setCurrentQ(currentQ + 1);
+    } else {
+      trackEvent("complete");
+      if (captureBefore) {
+        void handleSubmitEmail(newAnswers);
+      } else {
+        setStep("email");
+      }
     }
   };
 
@@ -1878,6 +1923,9 @@ export default function PublicQuizClient({
     const hasMultipleOptions = q.options.length >= 3;
     const qType: QuestionType = (q.question_type as QuestionType) ?? "multiple_choice";
     const currentAnswer = answers[currentQ];
+    // Question facultative : affiche un lien "Passer" qui saute la question
+    // sans la compter (config.optional posé dans l'éditeur).
+    const isOptional = ((q.config ?? {}) as Record<string, unknown>).optional === true;
 
     let answerBlock: React.ReactNode;
 
@@ -2188,7 +2236,18 @@ export default function PublicQuizClient({
                     <ArrowLeft className="w-4 h-4 mr-1" /> {t.previous}
                   </Button>
                 ) : <div />}
-                <span className="text-sm text-muted-foreground">{Math.round(progress)}%</span>
+                <div className="flex items-center gap-3">
+                  {isOptional && (
+                    <button
+                      type="button"
+                      onClick={skipQuestion}
+                      className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
+                    >
+                      {t.skipQuestion}
+                    </button>
+                  )}
+                  <span className="text-sm text-muted-foreground">{Math.round(progress)}%</span>
+                </div>
               </div>
             </div>
           </div>
