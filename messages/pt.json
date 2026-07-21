@@ -4846,7 +4846,10 @@
     "optionHideResponseCountsHint": "Mostra apenas as percentagens nas estatísticas. Os números brutos ficam na exportação CSV.",
     "optionNotifyResponses": "Notificações por email",
     "optionNotifyResponsesHint": "Recebe um email por cada nova resposta neste quiz. Desliga aqui se preferires silêncio para este quiz.",
-    "optionSioTagLabel": "Tag Systeme.io para esta resposta"
+    "optionSioTagLabel": "Tag Systeme.io para esta resposta",
+    "quizLanguageLabel": "Idioma do quiz",
+    "quizLanguageHint": "O idioma da interface que os teus visitantes veem (botões, ecrã de personalização, formulário). Independente do idioma da tua conta.",
+    "quizLanguagePick": "Escolher o idioma"
   },
   "contentStrategy": {
     "title": "Estratégia de conteúdo",
@@ -6731,7 +6734,11 @@
     "videoPreparing": "A preparar (a extrair miniatura…)",
     "videoFinalizing": "A finalizar…",
     "videoDropZone": "Arrasta um vídeo aqui ou clica para escolher",
-    "videoFormats": "MP4, WebM, MOV - até 20 GB."
+    "videoFormats": "MP4, WebM, MOV - até 20 GB.",
+    "srcUnavailable": "Fonte de vídeo indisponível.",
+    "loadErrorTitle": "Não foi possível carregar o vídeo.",
+    "loadErrorBody": "O link de reprodução pode ter expirado. Recarrega a página para tentar de novo.",
+    "poweredByVideo": "Este vídeo é-te proposto através da Tiquiz"
   },
   "popquizAppearance": {
     "sectionTitle": "Aspeto da página pública",

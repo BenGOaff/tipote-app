@@ -23,12 +23,14 @@ import {
   tiquizDiscoveryUrl,
 } from "@/lib/popquiz/appearance";
 import type { Popquiz } from "@/lib/popquiz";
+import { useTranslations } from "next-intl";
 
 export default function EmbedPopquizPlayClient({
   popquiz,
 }: {
   popquiz: Popquiz;
 }) {
+  const t = useTranslations("popquiz");
   const { branding, appearance } = popquiz;
   const onEvent = usePopquizEventTracker(popquiz.id);
 
@@ -54,7 +56,7 @@ export default function EmbedPopquizPlayClient({
           rel="noopener noreferrer"
           className="block text-center mt-2 text-[11px] text-foreground/40 hover:text-foreground/70 transition-colors"
         >
-          Cette vidéo vous est proposée via Tiquiz
+          {t("poweredByVideo")}
         </a>
       </div>
     </div>

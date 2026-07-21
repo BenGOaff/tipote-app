@@ -4540,7 +4540,10 @@
     "optionHideResponseCountsHint": "يعرض النسب المئوية فقط في الإحصائيات. تبقى الأرقام الأصلية في تصدير CSV.",
     "optionNotifyResponses": "إشعارات البريد الإلكتروني",
     "optionNotifyResponsesHint": "تصلك رسالة بريد إلكتروني عند كل رد جديد على هذا الاختبار. أوقفها هنا إذا كنت تفضل الصمت لهذا الاختبار.",
-    "optionSioTagLabel": "وسم Systeme.io لهذه الإجابة"
+    "optionSioTagLabel": "وسم Systeme.io لهذه الإجابة",
+    "quizLanguageLabel": "لغة الاختبار",
+    "quizLanguageHint": "لغة الواجهة التي يراها زوّارك (الأزرار، شاشة التخصيص، النموذج). مستقلة عن لغة حسابك.",
+    "quizLanguagePick": "اختر اللغة"
   },
   "contentStrategy": {
     "title": "استراتيجية المحتوى",
@@ -6425,7 +6428,11 @@
     "videoPreparing": "تحضير (استخراج المصغّرة…)",
     "videoFinalizing": "إنهاء…",
     "videoDropZone": "اسحب فيديو هنا أو انقر للاختيار",
-    "videoFormats": "MP4, WebM, MOV - حتى 20 جيجابايت."
+    "videoFormats": "MP4, WebM, MOV - حتى 20 جيجابايت.",
+    "srcUnavailable": "مصدر الفيديو غير متاح.",
+    "loadErrorTitle": "تعذّر تحميل الفيديو.",
+    "loadErrorBody": "ربما انتهت صلاحية رابط التشغيل. أعد تحميل الصفحة للمحاولة مرة أخرى.",
+    "poweredByVideo": "هذا الفيديو مقدَّم لك عبر Tiquiz"
   },
   "popquizAppearance": {
     "sectionTitle": "مظهر الصفحة العامة",

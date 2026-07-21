@@ -376,17 +376,21 @@ export async function GET(_req: NextRequest, context: RouteContext) {
     // footer si le champ pied-de-page par-quiz est vide).
     let brandWebsiteUrl = "";
     let brandSiteName = "";
+    // Langue de l'interface (compte) du créateur : fallback de la langue du
+    // joueur quand le quiz n'a pas de locale explicite (retour anglophone).
+    let ownerUiLocale = "";
     let tipoteAffiliateId: string | null = null;
     let pixelDefaults: { meta: string | null; ga4: string | null; ads: string | null; adsLabel: string | null } = { meta: null, ga4: null, ads: null, adsLabel: null };
     if (quizUserId) {
       let bpQuery = admin
         .from("business_profiles")
-        .select("address_form, privacy_url, brand_font, brand_color_base, brand_logo_url, brand_website_url, share_site_name, tipote_affiliate_id, default_meta_pixel_id, default_ga4_measurement_id, default_google_ads_conversion_id, default_google_ads_conversion_label")
+        .select("address_form, privacy_url, brand_font, brand_color_base, brand_logo_url, brand_website_url, share_site_name, tipote_affiliate_id, default_meta_pixel_id, default_ga4_measurement_id, default_google_ads_conversion_id, default_google_ads_conversion_label, ui_locale")
         .eq("user_id", quizUserId);
       if (quizProjectId) bpQuery = bpQuery.eq("project_id", quizProjectId);
       const { data: bp } = await bpQuery.maybeSingle();
       addressForm = (bp as any)?.address_form === "vous" ? "vous" : "tu";
       fallbackPrivacyUrl = String((bp as any)?.privacy_url ?? "").trim();
+      ownerUiLocale = String((bp as any)?.ui_locale ?? "").trim();
       brandWebsiteUrl = String((bp as any)?.brand_website_url ?? "").trim();
       brandSiteName = String((bp as any)?.share_site_name ?? "").trim();
       brandFallback = {
@@ -536,7 +540,12 @@ export async function GET(_req: NextRequest, context: RouteContext) {
     // to text fields when the quiz locale is French, so quizzes saved before
     // the on-save typography pass landed (Round 2) still render correctly
     // without forcing creators to re-save every quiz.
-    const quizLocale = quizPublic.locale as string | null;
+    // Locale effective du joueur : langue explicite du quiz, sinon langue de
+    // l'interface (compte) du créateur, sinon fr. Un créateur anglophone a un
+    // joueur en anglais sans avoir a regler la langue du quiz (21 juil 2026).
+    const rawQuizLocale = String((quizPublic.locale as string | null) ?? "").trim();
+    const quizLocale = rawQuizLocale || ownerUiLocale || null;
+    quizPublic.locale = quizLocale;
     const fr = (s: any) => (typeof s === "string" ? applyFrenchTypography(s, quizLocale) : s);
     const renderedQuiz = isFrenchLocale(quizLocale)
       ? {
