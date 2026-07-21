@@ -9,6 +9,7 @@
 // panneau d'analyse de sondage Tipote (accent indigo).
 
 import { useCallback, useEffect, useState } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import { toast } from "sonner";
 import { Sparkles, Loader2, RefreshCw, TrendingUp, Users, Wrench, Rocket } from "lucide-react";
 
@@ -34,6 +35,8 @@ interface PanelState {
 }
 
 export default function QuizInsightsPanel({ quizId }: { quizId: string }) {
+  const t = useTranslations("insights");
+  const locale = useLocale();
   const [state, setState] = useState<PanelState | null>(null);
   const [generating, setGenerating] = useState(false);
 
@@ -64,19 +67,19 @@ export default function QuizInsightsPanel({ quizId }: { quizId: string }) {
       const res = await fetch(`/api/quiz/${quizId}/insights`, { method: "POST" });
       const data = await res.json();
       if (!res.ok || !data?.ok) {
-        if (data?.error === "NOT_ENOUGH_DATA") toast.error(data.message ?? "Pas assez d'activite.");
-        else if (data?.error === "NO_CREDITS") toast.error(data.message ?? "Plus de credits IA.");
-        else toast.error("L'analyse a echoue. Reessaie dans un instant.");
+        if (data?.error === "NOT_ENOUGH_DATA") toast.error(data.message ?? t("errNotEnough"));
+        else if (data?.error === "NO_CREDITS") toast.error(data.message ?? t("creditsExhausted"));
+        else toast.error(t("errGeneric"));
         return;
       }
       setState((prev) => (prev ? { ...prev, analysis: data.analysis, analysisAt: data.analysisAt, cost: 0 } : prev));
-      toast.success("Analyse prete !");
+      toast.success(t("ready"));
     } catch {
-      toast.error("Erreur reseau.");
+      toast.error(t("errNetwork"));
     } finally {
       setGenerating(false);
     }
-  }, [quizId]);
+  }, [quizId, t]);
 
   const a = state?.analysis ?? null;
 
@@ -84,42 +87,38 @@ export default function QuizInsightsPanel({ quizId }: { quizId: string }) {
     <Card className="p-5 border-indigo-200 dark:border-indigo-800/40 bg-indigo-50/30 dark:bg-indigo-950/15">
       <div className="flex items-center gap-2 mb-1">
         <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-300" />
-        <h3 className="text-sm font-semibold">Analyse IA de tes statistiques</h3>
+        <h3 className="text-sm font-semibold">{t("quizTitle")}</h3>
       </div>
 
       {state && !state.hasEnough && !a ? (
         <p className="text-sm text-muted-foreground mt-1">
-          Pas encore assez d&apos;activite pour une analyse fiable. Reviens quand tu auras au moins{" "}
-          {state.minLeads} leads ou {state.minViews} vues : l&apos;IA a besoin de vrais chiffres pour
-          te donner des conclusions justes.
+          {t("quizNotEnough", { minLeads: state.minLeads, minViews: state.minViews })}
         </p>
       ) : (
         <>
           <p className="text-xs text-muted-foreground mb-3">
             Ton diagnostic complet : ce qui marche, ou tu perds des gens, qui sont tes visiteurs, et
             quoi faire pour capter et vendre plus.
-            {state && state.cost > 0
-              ? " La premiere analyse coute 1 credit IA, les mises a jour sont gratuites."
-              : " Mise a jour gratuite."}
+            {state && state.cost > 0 ? t("costFirstCredit") : t("costFree")}
           </p>
 
           {a && (
             <div className="space-y-3 mb-3">
-              <Section icon={<TrendingUp className="w-3.5 h-3.5" />} label="Diagnostic">
+              <Section icon={<TrendingUp className="w-3.5 h-3.5" />} label={t("quizSectionDiag")}>
                 <p className="text-sm">{a.summary}</p>
               </Section>
               {a.funnel && (
-                <Section icon={<TrendingUp className="w-3.5 h-3.5" />} label="Ton funnel (vues, completion, capture)">
+                <Section icon={<TrendingUp className="w-3.5 h-3.5" />} label={t("quizSectionFunnel")}>
                   <p className="text-sm">{a.funnel}</p>
                 </Section>
               )}
               {a.audience && (
-                <Section icon={<Users className="w-3.5 h-3.5" />} label="Profil de tes visiteurs">
+                <Section icon={<Users className="w-3.5 h-3.5" />} label={t("quizSectionAudience")}>
                   <p className="text-sm">{a.audience}</p>
                 </Section>
               )}
               {a.improvements.length > 0 && (
-                <Section icon={<Wrench className="w-3.5 h-3.5" />} label="Axes d'amelioration">
+                <Section icon={<Wrench className="w-3.5 h-3.5" />} label={t("quizSectionImprove")}>
                   <ul className="mt-1 space-y-1">
                     {a.improvements.map((t, i) => (
                       <li key={i} className="text-sm flex items-start gap-2">
@@ -131,7 +130,7 @@ export default function QuizInsightsPanel({ quizId }: { quizId: string }) {
                 </Section>
               )}
               {a.actions.length > 0 && (
-                <Section icon={<Rocket className="w-3.5 h-3.5" />} label="Actions pour capter et vendre plus">
+                <Section icon={<Rocket className="w-3.5 h-3.5" />} label={t("quizSectionActions")}>
                   <ul className="mt-1 space-y-1">
                     {a.actions.map((t, i) => (
                       <li key={i} className="text-sm flex items-start gap-2">
@@ -149,24 +148,24 @@ export default function QuizInsightsPanel({ quizId }: { quizId: string }) {
             {generating ? (
               <>
                 <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
-                Analyse en cours…
+                {t("btnGenerating")}
               </>
             ) : a ? (
               <>
                 <RefreshCw className="w-4 h-4 mr-1.5" />
-                Mettre a jour l&apos;analyse
+                {t("btnRefresh")}
               </>
             ) : (
               <>
                 <Sparkles className="w-4 h-4 mr-1.5" />
-                Lancer l&apos;analyse
-                {state && state.cost > 0 ? " (1 credit)" : ""}
+                {t("btnRun")}
+                {state && state.cost > 0 ? t("oneCreditSuffix") : ""}
               </>
             )}
           </Button>
           {a?.generated_at && (
             <p className="text-[11px] text-muted-foreground mt-2">
-              Derniere analyse : {new Date(a.generated_at).toLocaleString("fr-FR")}
+              {t("lastRun")} {new Date(a.generated_at).toLocaleString(locale)}
             </p>
           )}
         </>

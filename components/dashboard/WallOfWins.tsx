@@ -15,6 +15,7 @@
 // le voie au prochain refresh (sans avoir à attendre un revalidate).
 
 import { useEffect, useMemo, useState } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Sparkles, TrendingUp, TrendingDown, Minus } from "lucide-react";
@@ -49,11 +50,7 @@ interface WallOfWinsResponse {
   error?: string;
 }
 
-const PERIOD_LABELS: Record<Period, string> = {
-  month: "Ce mois",
-  "30d": "30 derniers jours",
-  "90d": "90 derniers jours",
-};
+const PERIODS: Period[] = ["month", "30d", "90d"];
 
 const NUMBER_FMT = new Intl.NumberFormat("fr-FR");
 const CURRENCY_FMT = new Intl.NumberFormat("fr-FR", {
@@ -77,22 +74,27 @@ function formatHours(h: number): string {
 }
 
 function delta(current: number, previous: number): {
+  kind: "new" | "same" | "flat" | "pct";
   label: string;
   direction: "up" | "down" | "flat";
 } {
-  if (previous === 0 && current === 0) return { label: "—", direction: "flat" };
-  if (previous === 0) return { label: "Nouveau", direction: "up" };
+  if (previous === 0 && current === 0)
+    return { kind: "flat", label: "—", direction: "flat" };
+  if (previous === 0) return { kind: "new", label: "Nouveau", direction: "up" };
   const diff = current - previous;
-  if (diff === 0) return { label: "= période préc.", direction: "flat" };
+  if (diff === 0)
+    return { kind: "same", label: "= période préc.", direction: "flat" };
   const pct = Math.round((diff / previous) * 100);
   const sign = diff > 0 ? "+" : "";
   return {
+    kind: "pct",
     label: `${sign}${pct} %`,
     direction: diff > 0 ? "up" : "down",
   };
 }
 
 function DeltaBadge({ value }: { value: ReturnType<typeof delta> }) {
+  const t = useTranslations("dashboard");
   const Icon =
     value.direction === "up"
       ? TrendingUp
@@ -105,12 +107,18 @@ function DeltaBadge({ value }: { value: ReturnType<typeof delta> }) {
       : value.direction === "down"
         ? "text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-900/30"
         : "text-muted-foreground bg-muted/40";
+  const text =
+    value.kind === "new"
+      ? t("wowDeltaNew")
+      : value.kind === "same"
+        ? t("wowDeltaSame")
+        : value.label;
   return (
     <span
       className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${colorClass}`}
     >
       <Icon className="w-3 h-3" />
-      {value.label}
+      {text}
     </span>
   );
 }
@@ -150,6 +158,14 @@ function StatTile({
 }
 
 export function WallOfWins() {
+  const t = useTranslations("dashboard");
+  const locale = useLocale();
+  const periodLabel = (p: Period) =>
+    p === "month"
+      ? t("wowPeriodMonth")
+      : p === "30d"
+        ? t("wowPeriod30")
+        : t("wowPeriod90");
   const [period, setPeriod] = useState<Period>("month");
   const [payload, setPayload] = useState<WallOfWinsResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -207,15 +223,15 @@ export function WallOfWins() {
             </div>
             <div>
               <h3 className="text-sm font-semibold text-foreground">
-                Ce que Tipote t&apos;a apporté
+                {t("wowHeading")}
               </h3>
               <p className="text-xs text-muted-foreground">
-                {PERIOD_LABELS[payload.period]}
+                {periodLabel(payload.period)}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-1">
-            {(Object.keys(PERIOD_LABELS) as Period[]).map((p) => (
+            {PERIODS.map((p) => (
               <Button
                 key={p}
                 variant={p === period ? "default" : "ghost"}
@@ -223,7 +239,7 @@ export function WallOfWins() {
                 className="h-7 px-2.5 text-xs"
                 onClick={() => setPeriod(p)}
               >
-                {PERIOD_LABELS[p]}
+                {periodLabel(p)}
               </Button>
             ))}
           </div>
@@ -239,7 +255,7 @@ export function WallOfWins() {
           )}
           {c.salesCount > 0 && (
             <StatTile
-              label="Ventes"
+              label={t("wowSales")}
               value={formatCount(c.salesCount)}
               deltaValue={deltas?.sales}
               highlight
@@ -247,7 +263,7 @@ export function WallOfWins() {
           )}
           {c.salesAmountCents > 0 && (
             <StatTile
-              label="CA"
+              label={t("wowRevenue")}
               value={formatEur(c.salesAmountCents)}
               deltaValue={deltas?.revenue}
               highlight
@@ -255,21 +271,21 @@ export function WallOfWins() {
           )}
           {c.postsPublished > 0 && (
             <StatTile
-              label="Posts"
+              label={t("wowPosts")}
               value={formatCount(c.postsPublished)}
               deltaValue={deltas?.posts}
             />
           )}
           {c.quizCompletes > 0 && (
             <StatTile
-              label="Quiz finis"
+              label={t("wowFinished")}
               value={formatCount(c.quizCompletes)}
               deltaValue={deltas?.completes}
             />
           )}
           {c.hoursSavedEstimate > 0 && (
             <StatTile
-              label="Temps gagné"
+              label={t("wowTimeSaved")}
               value={formatHours(c.hoursSavedEstimate)}
             />
           )}
@@ -282,13 +298,15 @@ export function WallOfWins() {
                 <span className="text-base">🏆</span>
                 <div className="min-w-0">
                   <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                    Top quiz de la période
+                    {t("wowTopQuiz")}
                   </p>
                   <p className="text-sm font-medium text-foreground truncate">
                     {stripHtml(c.topQuiz.title) || c.topQuiz.title}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {formatCount(c.topQuiz.completes)} complétions
+                    {t("wowCompletions", {
+                      count: formatCount(c.topQuiz.completes),
+                    })}
                   </p>
                 </div>
               </div>
@@ -296,7 +314,7 @@ export function WallOfWins() {
             {c.milestonesUnlocked.length > 0 && (
               <div className="rounded-lg bg-background/80 border border-border/50 px-3 py-2">
                 <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                  Milestones débloqués
+                  {t("wowMilestones")}
                 </p>
                 <ul className="mt-1 space-y-0.5">
                   {c.milestonesUnlocked.slice(0, 3).map((m) => (
@@ -310,7 +328,7 @@ export function WallOfWins() {
                   ))}
                   {c.milestonesUnlocked.length > 3 && (
                     <li className="text-xs text-muted-foreground pt-0.5">
-                      + {c.milestonesUnlocked.length - 3} de plus
+                      {t("wowMore", { count: c.milestonesUnlocked.length - 3 })}
                     </li>
                   )}
                 </ul>

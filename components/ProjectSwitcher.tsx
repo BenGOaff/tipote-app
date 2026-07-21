@@ -490,9 +490,9 @@ export function ProjectSwitcher() {
       <Dialog open={showRenameDialog} onOpenChange={setShowRenameDialog}>
         <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Modifier le projet</DialogTitle>
+            <DialogTitle>{t("editProjectTitle")}</DialogTitle>
             <DialogDescription className="sr-only">
-              Personnalise le nom, la couleur et l&apos;icône.
+              {t("editProjectDesc")}
             </DialogDescription>
           </DialogHeader>
           <ProjectIdentityEditor

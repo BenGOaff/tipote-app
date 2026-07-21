@@ -94,8 +94,8 @@ export function ProjectIdentityEditor({
                 type="button"
                 onClick={() => update({ accent_color: c.hex })}
                 disabled={disabled}
-                title={c.label}
-                aria-label={c.label}
+                title={t(`color_${c.key}`)}
+                aria-label={t(`color_${c.key}`)}
                 aria-pressed={active}
                 className={`relative size-7 rounded-md border-2 transition-all ${
                   active
