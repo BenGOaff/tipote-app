@@ -493,7 +493,7 @@ export function PopquizPlayer({
   if (!src) {
     return (
       <div className="aspect-video w-full grid place-items-center bg-black text-white/70 text-sm rounded-2xl">
-        Source vidéo indisponible.
+        {t("srcUnavailable")}
       </div>
     );
   }
@@ -555,10 +555,10 @@ export function PopquizPlayer({
         <div className="absolute inset-0 z-30 grid place-items-center bg-black/85 px-6 text-center">
           <div className="max-w-sm space-y-3">
             <p className="text-white text-base font-medium">
-              La vidéo n&apos;a pas pu se charger.
+              {t("loadErrorTitle")}
             </p>
             <p className="text-white/70 text-sm">
-              Le lien de lecture a peut-être expiré. Recharge la page pour réessayer.
+              {t("loadErrorBody")}
             </p>
             <button
               type="button"

@@ -3238,6 +3238,7 @@ const tipoteFooterTexts: Record<string, string> = {
   de: "Dieses Quiz wird Ihnen über Tiquiz bereitgestellt",
   it: "Questo quiz ti è offerto tramite Tiquiz",
   pt: "Este quiz é oferecido por Tiquiz",
+  "pt-BR": "Este quiz é oferecido pela Tiquiz",
   ar: "\u0647\u0630\u0627 \u0627\u0644\u0627\u062e\u062a\u0628\u0627\u0631 \u0645\u0642\u062f\u0645 \u0644\u0643\u0645 \u0639\u0628\u0631 Tiquiz",
 };
 
@@ -3270,7 +3271,10 @@ function TipoteFooter({ locale, customText, customUrl, logoUrl, tipoteAffiliateI
     );
   }
   // Free plan or no custom: show Tipote branding (with creator logo, or Tipote fallback)
-  const text = tipoteFooterTexts[locale ?? "fr"] ?? tipoteFooterTexts.fr;
+  // Fallback BCP-47 : pt-BR -> pt, etc., avant de retomber sur fr, pour
+  // qu'aucune locale régionale ne réaffiche le français par accident.
+  const code = locale ?? "fr";
+  const text = tipoteFooterTexts[code] ?? tipoteFooterTexts[code.split("-")[0]] ?? tipoteFooterTexts.fr;
   return (
     <div className="text-center mt-6 pb-6 px-4 space-y-2">
       {/* eslint-disable-next-line @next/next/no-img-element */}

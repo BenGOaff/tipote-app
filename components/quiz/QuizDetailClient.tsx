@@ -78,6 +78,7 @@ import { useAutosave } from "@/hooks/use-autosave";
 import { stripHtml } from "@/lib/richText";
 import { isPixelFieldValid } from "@/lib/clientPixels";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
+import { SUPPORTED_LOCALES, LOCALE_LABELS } from "@/i18n/config";
 import { useTutorial } from "@/hooks/useTutorial";
 // SidebarProvider / AppSidebar intentionally NOT imported — the WYSIWYG editor
 // is fullscreen so the global sidebar is hidden while editing (same pattern
@@ -2269,6 +2270,28 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                 </div>
               </div>)}
               {leftTab === "settings" && (<div className="space-y-6">
+                {/* ── Langue du quiz (langue du joueur public) ──
+                    Pilote quizzes.locale, qui détermine TOUTE la langue de
+                    l'interface vue par le visiteur (perso, boutons, capture)
+                    via getT(quiz.locale). Sans ce sélecteur, un quiz au
+                    contenu anglais restait en français (retour anglophone). */}
+                <section className="space-y-2">
+                  <div>
+                    <h3 className="text-sm font-semibold">{t("quizLanguageLabel")}</h3>
+                    <p className="text-[11px] text-muted-foreground leading-snug">{t("quizLanguageHint")}</p>
+                  </div>
+                  <select
+                    value={locale}
+                    onChange={(e) => setLocale(e.target.value)}
+                    className="w-full text-sm bg-background border border-input rounded-md px-2 py-1.5 cursor-pointer"
+                    aria-label={t("quizLanguageLabel")}
+                  >
+                    {!locale && <option value="">{t("quizLanguagePick")}</option>}
+                    {SUPPORTED_LOCALES.map((loc) => (
+                      <option key={loc} value={loc}>{LOCALE_LABELS[loc] ?? loc}</option>
+                    ))}
+                  </select>
+                </section>
                 {/* ── Formulaire de prise de contact ── */}
                 <section className="space-y-2.5">
                   <div>
