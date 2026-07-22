@@ -5855,7 +5855,8 @@
     "exportExcel": "Exportar Excel",
     "flagAction": "Marcar este encuestado",
     "unflagAction": "Quitar marca",
-    "radarTitle": "Resumen de las valoraciones"
+    "radarTitle": "Resumen de las valoraciones",
+    "radarTooltip": "Media {avg}/{max} ({pct}%)"
   },
   "compta": {
     "revenueGoal": {

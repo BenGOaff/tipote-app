@@ -5862,7 +5862,8 @@
     "exportExcel": "Export Excel",
     "flagAction": "Flag this respondent",
     "unflagAction": "Remove flag",
-    "radarTitle": "Ratings overview"
+    "radarTitle": "Ratings overview",
+    "radarTooltip": "Average {avg}/{max} ({pct}%)"
   },
   "compta": {
     "revenueGoal": {

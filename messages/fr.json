@@ -5862,7 +5862,8 @@
     "exportExcel": "Export Excel",
     "flagAction": "Marquer ce répondant",
     "unflagAction": "Retirer le marquage",
-    "radarTitle": "Vue d'ensemble des notes"
+    "radarTitle": "Vue d'ensemble des notes",
+    "radarTooltip": "Moyenne {avg}/{max} ({pct}%)"
   },
   "compta": {
     "revenueGoal": {

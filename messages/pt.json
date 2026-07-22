@@ -6160,7 +6160,8 @@
     "exportExcel": "Exportar Excel",
     "flagAction": "Marcar este respondente",
     "unflagAction": "Remover marca",
-    "radarTitle": "Visão geral das notas"
+    "radarTitle": "Visão geral das notas",
+    "radarTooltip": "Média {avg}/{max} ({pct}%)"
   },
   "compta": {
     "revenueGoal": {

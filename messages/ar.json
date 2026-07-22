@@ -5854,7 +5854,8 @@
     "exportExcel": "تصدير Excel",
     "flagAction": "تعليم هذا المشارك",
     "unflagAction": "إزالة العلامة",
-    "radarTitle": "نظرة عامة على التقييمات"
+    "radarTitle": "نظرة عامة على التقييمات",
+    "radarTooltip": "المتوسط {avg}/{max} ({pct}%)"
   },
   "compta": {
     "revenueGoal": {
