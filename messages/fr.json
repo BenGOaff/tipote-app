@@ -5862,7 +5862,8 @@
     "exportExcel": "Export Excel",
     "flagAction": "Marquer ce répondant",
     "unflagAction": "Retirer le marquage",
-    "radarTitle": "Vue d'ensemble des notes"
+    "radarTitle": "Vue d'ensemble des notes",
+    "radarTooltip": "Moyenne {avg}/{max} ({pct}%)"
   },
   "compta": {
     "revenueGoal": {
@@ -7412,7 +7413,7 @@
     "quizSectionImprove": "Axes d'amélioration",
     "quizSectionActions": "Actions pour capter et vendre plus",
     "surveyExportTitle": "Exporter les résultats",
-    "surveyExportBody": "Au choix : CSV ou Excel (une ligne par répondant, colonnes prêtes : identité + réponses), ou PDF (rapport agrégé + détail des répondants, prêt à présenter).",
+    "surveyExportBody": "Au choix : CSV ou Excel (une ligne par répondant), ou PDF synthèse (rapport agrégé, sans les répondants) ou PDF détaillé (avec le détail de chaque répondant).",
     "surveyAnalysisTitle": "Analyse IA des résultats",
     "surveyLock": "L'analyse IA décode ce que disent vraiment tes réponses, résume ce qu'il faut en retenir et te propose les actions concrètes à mettre en place. Mises à jour gratuites.",
     "surveyNotEnough": "Il n'y a pas assez de réponses pour une analyse pertinente ({total}/{min}). Reviens quand tu auras au moins {min} réponses.",
@@ -7426,6 +7427,8 @@
     "creditsExhausted": "Plus de crédits IA.",
     "costFirstCredit": " La première analyse coûte 1 crédit IA, les mises à jour sont gratuites.",
     "costFree": " Mise à jour gratuite.",
-    "oneCreditSuffix": " (1 crédit)"
+    "oneCreditSuffix": " (1 crédit)",
+    "surveyExportPdfGlobal": "PDF synthèse",
+    "surveyExportPdfFull": "PDF détaillé"
   }
 }

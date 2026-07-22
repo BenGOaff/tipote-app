@@ -20,6 +20,7 @@ import {
   Radar,
   RadarChart,
   ResponsiveContainer,
+  Tooltip,
 } from "recharts";
 import { stripHtml } from "@/lib/richText";
 
@@ -66,8 +67,10 @@ function shortAxisLabel(s: string, max = 24): string {
 // par question : moyenne des reponses normalisee en % du max propre a chaque
 // question (rating_scale 0-10 / NPS, star_rating 1-5), pour que les axes
 // soient comparables sur une meme echelle 0..100.
-function buildRadarData(questions: SurveyQuestion[], leads: SurveyLead[]) {
-  const rows: { axis: string; value: number; avg: number; max: number }[] = [];
+type RadarRow = { n: number; axis: string; label: string; value: number; avg: number; max: number };
+function buildRadarData(questions: SurveyQuestion[], leads: SurveyLead[]): RadarRow[] {
+  const rows: RadarRow[] = [];
+  let n = 0;
   questions.forEach((q, qIdx) => {
     if (q.question_type !== "rating_scale" && q.question_type !== "star_rating") return;
     const values: number[] = [];
@@ -84,9 +87,16 @@ function buildRadarData(questions: SurveyQuestion[], leads: SurveyLead[]) {
         ? Number(q.config?.max ?? 10)
         : Number(q.config?.max ?? 5);
     const safeMax = max > 0 ? max : 1;
-    const avg = values.reduce((s, n) => s + n, 0) / values.length;
+    const avg = values.reduce((s, m) => s + m, 0) / values.length;
+    n += 1;
     rows.push({
-      axis: shortAxisLabel(q.question_text) || `Q${qIdx + 1}`,
+      // Les axes sont numerotes (1, 2, 3...) au lieu d'afficher le texte
+      // tronque : plusieurs questions commencent pareil ("Quelle note
+      // donneriez-vous...") et devenaient indistinguables une fois coupees.
+      // La legende sous le radar fait le lien numero -> question complete.
+      n,
+      axis: String(n),
+      label: stripHtml(q.question_text || "").trim() || `Q${qIdx + 1}`,
       value: Math.round((avg / safeMax) * 1000) / 10,
       avg: Math.round(avg * 10) / 10,
       max: safeMax,
@@ -152,27 +162,61 @@ export function SurveyTrends({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={320}>
-              <RadarChart data={radarData} outerRadius="70%">
+            <ResponsiveContainer width="100%" height={360}>
+              <RadarChart data={radarData} outerRadius="72%" margin={{ top: 8, right: 24, bottom: 8, left: 24 }}>
                 <PolarGrid stroke="hsl(var(--border))" />
                 <PolarAngleAxis
                   dataKey="axis"
-                  tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                  tick={{ fontSize: 13, fontWeight: 600, fill: "hsl(var(--muted-foreground))" }}
                 />
                 <PolarRadiusAxis
                   angle={90}
                   domain={[0, 100]}
                   tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
                 />
+                <Tooltip
+                  cursor={{ stroke: "hsl(var(--border))" }}
+                  content={({ active, payload }) => {
+                    if (!active || !payload?.length) return null;
+                    const r = payload[0]?.payload as RadarRow | undefined;
+                    if (!r) return null;
+                    return (
+                      <div className="rounded-lg border border-border bg-background px-3 py-2 text-xs shadow-md max-w-xs">
+                        <p className="font-semibold mb-0.5">{r.n}. {r.label}</p>
+                        <p className="text-muted-foreground">
+                          {t("radarTooltip", { avg: r.avg, max: r.max, pct: r.value })}
+                        </p>
+                      </div>
+                    );
+                  }}
+                />
                 <Radar
                   name={t("radarTitle")}
                   dataKey="value"
                   stroke={RADAR_PRIMARY}
+                  strokeWidth={2}
                   fill={RADAR_PRIMARY}
-                  fillOpacity={0.3}
+                  fillOpacity={0.28}
+                  dot={{ r: 3, fill: RADAR_PRIMARY, strokeWidth: 0 }}
                 />
               </RadarChart>
             </ResponsiveContainer>
+            {/* Legende numerotee : fait le lien entre chaque numero d'axe et
+                la question complete + sa moyenne. Indispensable des qu'il y a
+                plusieurs questions au libelle proche (retour Christelle). */}
+            <ol className="mt-3 grid gap-1 sm:grid-cols-2 text-xs text-muted-foreground">
+              {radarData.map((r) => (
+                <li key={r.n} className="flex gap-1.5">
+                  <span className="font-semibold text-foreground shrink-0">{r.n}.</span>
+                  <span className="min-w-0">
+                    <span className="truncate">{shortAxisLabel(r.label, 70)}</span>{" "}
+                    <span className="whitespace-nowrap font-medium text-foreground">
+                      {r.avg}/{r.max}
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ol>
           </CardContent>
         </Card>
       )}

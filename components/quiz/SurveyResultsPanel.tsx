@@ -125,48 +125,56 @@ export default function SurveyResultsPanel({
     }));
   }, [leads, questions, locale]);
 
-  const handleExportPdf = useCallback(async () => {
-    setExportingPdf(true);
-    try {
-      const res = await fetch(`/api/quiz/${quizId}/survey-results?format=json`, {
-        cache: "no-store",
-      });
-      const data = await res.json();
-      if (!res.ok || !data?.ok) {
-        toast.error(t("surveyErrLoad"));
-        return;
+  // includeRespondents=false → PDF synthèse globale (hero + KPI + analyse IA
+  // + agrégats par question, SANS le détail par répondant). Retour Christelle :
+  // certains veulent une synthèse à présenter sans exposer chaque profil.
+  const handleExportPdf = useCallback(
+    async (includeRespondents: boolean) => {
+      setExportingPdf(true);
+      try {
+        const res = await fetch(`/api/quiz/${quizId}/survey-results?format=json`, {
+          cache: "no-store",
+        });
+        const data = await res.json();
+        if (!res.ok || !data?.ok) {
+          toast.error(t("surveyErrLoad"));
+          return;
+        }
+
+        // jspdf + renderer chargés en dynamic import (client-only).
+        const [{ jsPDF }, { renderSurveyPdf, BRAND_TIPOTE }] = await Promise.all([
+          import("jspdf"),
+          import("@/lib/survey/pdfReport"),
+        ]);
+        const doc = new jsPDF({ unit: "pt", format: "a4" });
+
+        renderSurveyPdf(
+          doc,
+          {
+            title: String(data.title ?? surveyTitle),
+            totalResponses: data.totalResponses ?? 0,
+            questions: data.questions ?? [],
+            // On embarque l'analyse IA déjà chargée dans l'état (zéro
+            // round-trip supplémentaire ; absente si jamais générée).
+            analysis: state?.analysis ?? null,
+            // Synthèse globale : on n'embarque PAS le détail par répondant.
+            respondents: includeRespondents ? buildRespondents() : [],
+          },
+          BRAND_TIPOTE,
+        );
+
+        const suffix = includeRespondents ? "detaille" : "synthese";
+        const safe = String(data.title ?? "sondage").replace(/[^a-z0-9]+/gi, "-").slice(0, 40);
+        doc.save(`${safe}-${suffix}-${new Date().toISOString().slice(0, 10)}.pdf`);
+      } catch (err) {
+        console.error("[survey pdf]", err);
+        toast.error(t("surveyErrPdf"));
+      } finally {
+        setExportingPdf(false);
       }
-
-      // jspdf + renderer chargés en dynamic import (client-only).
-      const [{ jsPDF }, { renderSurveyPdf, BRAND_TIPOTE }] = await Promise.all([
-        import("jspdf"),
-        import("@/lib/survey/pdfReport"),
-      ]);
-      const doc = new jsPDF({ unit: "pt", format: "a4" });
-
-      renderSurveyPdf(
-        doc,
-        {
-          title: String(data.title ?? surveyTitle),
-          totalResponses: data.totalResponses ?? 0,
-          questions: data.questions ?? [],
-          // On embarque l'analyse IA déjà chargée dans l'état (zéro
-          // round-trip supplémentaire ; absente si jamais générée).
-          analysis: state?.analysis ?? null,
-          respondents: buildRespondents(),
-        },
-        BRAND_TIPOTE,
-      );
-
-      const safe = String(data.title ?? "sondage").replace(/[^a-z0-9]+/gi, "-").slice(0, 40);
-      doc.save(`${safe}-${new Date().toISOString().slice(0, 10)}.pdf`);
-    } catch (err) {
-      console.error("[survey pdf]", err);
-      toast.error(t("surveyErrPdf"));
-    } finally {
-      setExportingPdf(false);
-    }
-  }, [quizId, surveyTitle, state?.analysis, buildRespondents, t]);
+    },
+    [quizId, surveyTitle, state?.analysis, buildRespondents, t],
+  );
 
   const handleGenerate = useCallback(async () => {
     setGenerating(true);
@@ -216,13 +224,31 @@ export default function SurveyResultsPanel({
             <FileSpreadsheet className="w-4 h-4 mr-1.5" />
             Export Excel
           </Button>
-          <Button variant="outline" size="sm" onClick={handleExportPdf} disabled={exportingPdf}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleExportPdf(false)}
+            disabled={exportingPdf}
+          >
             {exportingPdf ? (
               <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
             ) : (
               <FileText className="w-4 h-4 mr-1.5" />
             )}
-            Export PDF
+            {t("surveyExportPdfGlobal")}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleExportPdf(true)}
+            disabled={exportingPdf}
+          >
+            {exportingPdf ? (
+              <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+            ) : (
+              <FileText className="w-4 h-4 mr-1.5" />
+            )}
+            {t("surveyExportPdfFull")}
           </Button>
         </div>
       </Card>
