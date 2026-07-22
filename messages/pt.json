@@ -7711,7 +7711,7 @@
     "quizSectionImprove": "Áreas de melhoria",
     "quizSectionActions": "Ações para captar e vender mais",
     "surveyExportTitle": "Exportar os resultados",
-    "surveyExportBody": "À escolha: CSV ou Excel (uma linha por respondente, colunas prontas: identidade + respostas), ou PDF (relatório agregado + detalhe dos respondentes, pronto a apresentar).",
+    "surveyExportBody": "À escolha: CSV ou Excel (uma linha por respondente), ou PDF síntese (relatório agregado, sem os respondentes) ou PDF detalhado (com o detalhe de cada respondente).",
     "surveyAnalysisTitle": "Análise por IA dos resultados",
     "surveyLock": "A análise por IA descodifica o que as tuas respostas dizem realmente, resume o essencial e propõe-te ações concretas a implementar. Atualizações gratuitas.",
     "surveyNotEnough": "Não há respostas suficientes para uma análise pertinente ({total}/{min}). Volta quando tiveres pelo menos {min} respostas.",
@@ -7725,6 +7725,8 @@
     "creditsExhausted": "Sem créditos de IA.",
     "costFirstCredit": " A primeira análise custa 1 crédito de IA, as atualizações são gratuitas.",
     "costFree": " Atualização gratuita.",
-    "oneCreditSuffix": " (1 crédito)"
+    "oneCreditSuffix": " (1 crédito)",
+    "surveyExportPdfGlobal": "PDF síntese",
+    "surveyExportPdfFull": "PDF detalhado"
   }
 }

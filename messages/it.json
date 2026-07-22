@@ -7406,7 +7406,7 @@
     "quizSectionImprove": "Aree di miglioramento",
     "quizSectionActions": "Azioni per acquisire e vendere di più",
     "surveyExportTitle": "Esporta i risultati",
-    "surveyExportBody": "A scelta: CSV o Excel (una riga per rispondente, colonne pronte: identità + risposte), oppure PDF (report aggregato + dettaglio dei rispondenti, pronto da presentare).",
+    "surveyExportBody": "A scelta: CSV o Excel (una riga per rispondente), o PDF sintesi (report aggregato, senza i rispondenti) o PDF dettagliato (con il dettaglio di ogni rispondente).",
     "surveyAnalysisTitle": "Analisi IA dei risultati",
     "surveyLock": "L'analisi IA decodifica ciò che dicono davvero le tue risposte, riassume i punti chiave e ti propone azioni concrete da attuare. Aggiornamenti gratuiti.",
     "surveyNotEnough": "Non ci sono abbastanza risposte per un'analisi pertinente ({total}/{min}). Torna quando avrai almeno {min} risposte.",
@@ -7420,6 +7420,8 @@
     "creditsExhausted": "Crediti IA esauriti.",
     "costFirstCredit": " La prima analisi costa 1 credito IA, gli aggiornamenti sono gratuiti.",
     "costFree": " Aggiornamento gratuito.",
-    "oneCreditSuffix": " (1 credito)"
+    "oneCreditSuffix": " (1 credito)",
+    "surveyExportPdfGlobal": "PDF sintesi",
+    "surveyExportPdfFull": "PDF dettagliato"
   }
 }
