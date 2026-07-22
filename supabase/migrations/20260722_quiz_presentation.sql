@@ -10,6 +10,7 @@ ALTER TABLE public.quizzes
   ADD COLUMN IF NOT EXISTS background_gradient TEXT,
   ADD COLUMN IF NOT EXISTS background_image_url TEXT,
   ADD COLUMN IF NOT EXISTS intro_layout TEXT,
+  ADD COLUMN IF NOT EXISTS button_shape TEXT,
   ADD COLUMN IF NOT EXISTS theme_id TEXT;
 
 COMMENT ON COLUMN public.quizzes.background_style IS
@@ -20,6 +21,8 @@ COMMENT ON COLUMN public.quizzes.background_image_url IS
   'URL image de fond (bucket public-assets). NULL si non utilisée.';
 COMMENT ON COLUMN public.quizzes.intro_layout IS
   'Disposition de l accueil : card (défaut/NULL) | cover.';
+COMMENT ON COLUMN public.quizzes.button_shape IS
+  'Forme des boutons : pill (défaut/NULL) | rounded | square.';
 COMMENT ON COLUMN public.quizzes.theme_id IS
   'Thème prêt-à-l-emploi appliqué (affichage éditeur). NULL = réglages manuels.';
 

@@ -17,6 +17,7 @@ import {
   hexToHslTriplet,
   quizBackgroundCss,
   quizBackgroundIsDark,
+  buttonShapeRadiusClass,
   type QuizBranding,
 } from "@/lib/quizBranding";
 import { sanitizeRichText, stripHtml } from "@/lib/richText";
@@ -860,6 +861,10 @@ export default function PublicQuizClient({
   // historique (capture APRES les questions), inchange pour l'existant.
   const captureBefore = quiz?.mode === "survey" && Boolean(quiz?.capture_before_questions);
   const [currentQ, setCurrentQ] = useState(0);
+  // Sens de navigation pour la transition directionnelle (facon Typeform) :
+  // "forward" -> la question glisse depuis la droite, "back" -> depuis la
+  // gauche. Purement visuel.
+  const [navDir, setNavDir] = useState<"forward" | "back">("forward");
   // NOTE (19 mai 2026) : le sessionIdRef client a été retiré — le
   // serveur gère maintenant la session via cookie HttpOnly
   // `tquiz_visit` (cf. app/api/quiz/[id]/track/route.ts). Le client
@@ -989,6 +994,9 @@ export default function PublicQuizClient({
   // bascule QUE si l'user a explicitement choisi un fond sombre (jamais sur
   // un quiz existant).
   const bgIsDark = quizBackgroundIsDark(branding);
+  // Override d'arrondi des boutons/réponses. Vide sur 'pill' (défaut) ->
+  // aucun changement pour les quiz existants.
+  const btnShapeClass = buttonShapeRadiusClass(branding.buttonShape);
   const rootStyle: React.CSSProperties = {
     fontFamily: cssFontFamily(branding.font),
     backgroundColor: branding.backgroundColor,
@@ -1465,6 +1473,7 @@ export default function PublicQuizClient({
     setAnswers(newAnswers);
     setFreeTextDraft("");
     setMultiOptionsDraft([]);
+    setNavDir("forward");
 
     const advance = () => {
       // Funnel: record the answer for the question the visitor just
@@ -1514,6 +1523,7 @@ export default function PublicQuizClient({
     setAnswers(newAnswers);
     setFreeTextDraft("");
     setMultiOptionsDraft([]);
+    setNavDir("forward");
     if (quiz && currentQ < quiz.questions.length - 1) {
       setCurrentQ(currentQ + 1);
     } else {
@@ -1534,6 +1544,80 @@ export default function PublicQuizClient({
         ? prev.filter((i) => i !== optionIndex)
         : [...prev, optionIndex].sort((a, b) => a - b),
     );
+  };
+
+  // ─── Raccourcis clavier (desktop, facon Typeform) ───────────────────
+  // Chiffres 1..9 / lettres a..i choisissent une reponse, fleche gauche
+  // revient. On n'intercepte JAMAIS quand le visiteur tape dans un champ,
+  // ni avec une touche de modification (copier-coller, etc.).
+  useEffect(() => {
+    if (step !== "quiz" || !quiz) return;
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || target?.isContentEditable) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const q = quiz.questions[currentQ];
+      if (!q) return;
+      if (e.key === "ArrowLeft" && currentQ > 0) {
+        e.preventDefault();
+        setFreeTextDraft("");
+        setNavDir("back");
+        setCurrentQ(currentQ - 1);
+        return;
+      }
+      const qType = (q.question_type as QuestionType) ?? "multiple_choice";
+      const isChoice = qType === "multiple_choice" || qType === "image_choice" || qType === "yes_no";
+      if (!isChoice) return;
+      let idx = -1;
+      if (/^[1-9]$/.test(e.key)) idx = parseInt(e.key, 10) - 1;
+      else {
+        const c = e.key.toLowerCase();
+        if (c >= "a" && c <= "z") idx = c.charCodeAt(0) - 97;
+      }
+      const optCount = qType === "yes_no" ? 2 : q.options.length;
+      if (idx < 0 || idx >= optCount) return;
+      e.preventDefault();
+      const multiSelect = ((q.config ?? {}) as Record<string, unknown>).multi_select === true;
+      if (multiSelect) toggleMultiOption(idx);
+      else commitAnswer({ kind: "option", optionIndex: idx });
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // commitAnswer / toggleMultiOption capturent l'etat frais via currentQ
+    // (re-bind a chaque changement de question).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, currentQ, quiz]);
+
+  // ─── Gestes tactiles (mobile) ───────────────────────────────────────
+  // Swipe gauche = question suivante (si repondue ou optionnelle, jamais la
+  // derniere pour ne pas soumettre par accident), swipe droite = precedente.
+  // On exige un mouvement franchement horizontal pour ne pas gener le scroll.
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const onQuizTouchStart = (e: React.TouchEvent) => {
+    const t0 = e.touches[0];
+    touchStartRef.current = { x: t0.clientX, y: t0.clientY };
+  };
+  const onQuizTouchEnd = (e: React.TouchEvent) => {
+    const s = touchStartRef.current;
+    touchStartRef.current = null;
+    if (!s || !quiz) return;
+    const t0 = e.changedTouches[0];
+    const dx = t0.clientX - s.x;
+    const dy = t0.clientY - s.y;
+    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    if (dx < 0) {
+      const answered = answers[currentQ] !== undefined;
+      const isOptional = ((quiz.questions[currentQ]?.config ?? {}) as Record<string, unknown>).optional === true;
+      if ((answered || isOptional) && currentQ < quiz.questions.length - 1) {
+        setNavDir("forward");
+        setCurrentQ(currentQ + 1);
+      }
+    } else if (currentQ > 0) {
+      setFreeTextDraft("");
+      setNavDir("back");
+      setCurrentQ(currentQ - 1);
+    }
   };
 
   // Validation + passage aux questions quand la capture est AVANT (sondage).
@@ -1927,7 +2011,7 @@ export default function PublicQuizClient({
                   </p>
                 )
               )}
-              <Button size="lg" className="h-14 px-12 text-lg rounded-full shadow-lg" onClick={onStart}>
+              <Button size="lg" className={`h-14 px-12 text-lg rounded-full shadow-lg ${btnShapeClass}`} onClick={onStart}>
                 {quiz.start_button_text?.trim() || t.start}
               </Button>
             </div>
@@ -2008,7 +2092,7 @@ export default function PublicQuizClient({
               <img src={quiz.intro_image_url} alt="" className={`h-auto rounded-xl ${quiz.intro_image_width ? "mx-auto block" : "w-full"}`} style={quiz.intro_image_width ? { width: `${quiz.intro_image_width}%` } : undefined} />
             )}
 
-            <Button size="lg" className="h-14 px-12 text-lg rounded-full shadow-lg" onClick={onStart}>
+            <Button size="lg" className={`h-14 px-12 text-lg rounded-full shadow-lg ${btnShapeClass}`} onClick={onStart}>
               {quiz.start_button_text?.trim() || t.start}
             </Button>
 
@@ -2073,7 +2157,7 @@ export default function PublicQuizClient({
           )}
           <Button
             size="lg"
-            className="w-full h-12 rounded-full"
+            className={`w-full h-12 rounded-full ${btnShapeClass}`}
             disabled={!canContinue}
             onClick={() => setStep(captureBefore ? "email" : "quiz")}
           >
@@ -2165,7 +2249,7 @@ export default function PublicQuizClient({
         <div className="grid grid-cols-2 gap-3 sm:gap-4">
           <button
             onClick={() => commitAnswer({ kind: "option", optionIndex: 0 })}
-            className={`select-none active:scale-[0.98] h-20 sm:h-24 rounded-2xl border-2 text-xl sm:text-2xl font-bold transition-all ${
+            className={`select-none active:scale-[0.98] h-20 sm:h-24 rounded-2xl border-2 text-xl sm:text-2xl font-bold transition-all ${btnShapeClass} ${
               selectedYes
                 ? "border-primary bg-primary/5 shadow-md scale-[1.02]"
                 : "border-border hover:border-primary/40 hover:bg-muted/30"
@@ -2175,7 +2259,7 @@ export default function PublicQuizClient({
           </button>
           <button
             onClick={() => commitAnswer({ kind: "option", optionIndex: 1 })}
-            className={`select-none active:scale-[0.98] h-20 sm:h-24 rounded-2xl border-2 text-xl sm:text-2xl font-bold transition-all ${
+            className={`select-none active:scale-[0.98] h-20 sm:h-24 rounded-2xl border-2 text-xl sm:text-2xl font-bold transition-all ${btnShapeClass} ${
               selectedNo
                 ? "border-primary bg-primary/5 shadow-md scale-[1.02]"
                 : "border-border hover:border-primary/40 hover:bg-muted/30"
@@ -2204,7 +2288,7 @@ export default function PublicQuizClient({
           </div>
           <Button
             size="lg"
-            className="w-full h-12 rounded-full"
+            className={`w-full h-12 rounded-full ${btnShapeClass}`}
             disabled={trimmed.length === 0}
             onClick={() => commitAnswer({ kind: "text", value: trimmed })}
           >
@@ -2241,7 +2325,7 @@ export default function PublicQuizClient({
                       ? toggleMultiOption(oi)
                       : commitAnswer({ kind: "option", optionIndex: oi })
                   }
-                  className={`select-none active:scale-[0.98] group flex flex-col rounded-xl border-2 overflow-hidden transition-all ${
+                  className={`select-none active:scale-[0.98] group flex flex-col rounded-xl border-2 overflow-hidden transition-all ${btnShapeClass} ${
                     isSelected
                       ? "border-primary shadow-md scale-[1.02]"
                       : "border-border hover:border-primary/40 hover:shadow-sm"
@@ -2269,7 +2353,7 @@ export default function PublicQuizClient({
           {multiSelect && (
             <Button
               size="lg"
-              className="w-full h-12 rounded-full"
+              className={`w-full h-12 rounded-full ${btnShapeClass}`}
               disabled={selectedSet!.size === 0}
               onClick={() =>
                 commitAnswer({ kind: "options", optionIndices: Array.from(selectedSet!).sort((a, b) => a - b) })
@@ -2311,7 +2395,7 @@ export default function PublicQuizClient({
                       ? toggleMultiOption(oi)
                       : commitAnswer({ kind: "option", optionIndex: oi })
                   }
-                  className={`select-none active:scale-[0.98] text-left rounded-xl border-2 overflow-hidden transition-all duration-200 ${
+                  className={`select-none active:scale-[0.98] text-left rounded-xl border-2 overflow-hidden transition-all duration-200 ${btnShapeClass} ${
                     isSelected
                       ? "border-primary bg-primary/5 shadow-md scale-[1.02]"
                       : "border-border hover:border-primary/40 hover:bg-muted/30 hover:shadow-sm"
@@ -2343,7 +2427,7 @@ export default function PublicQuizClient({
           {multiSelect && (
             <Button
               size="lg"
-              className="w-full h-12 rounded-full"
+              className={`w-full h-12 rounded-full ${btnShapeClass}`}
               disabled={selectedSet!.size === 0}
               onClick={() =>
                 commitAnswer({ kind: "options", optionIndices: Array.from(selectedSet!).sort((a, b) => a - b) })
@@ -2365,8 +2449,12 @@ export default function PublicQuizClient({
             <Progress value={progress} className="h-1.5 rounded-none" />
           </div>
 
-          <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-16">
-            <div className="max-w-2xl w-full space-y-8">
+          <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-16" onTouchStart={onQuizTouchStart} onTouchEnd={onQuizTouchEnd}>
+            {/* key={currentQ} re-mounts ce bloc a chaque changement de
+                question -> la keyframe directionnelle se rejoue (glisse
+                depuis la droite en avancant, depuis la gauche en revenant),
+                facon Typeform. */}
+            <div key={currentQ} className={`max-w-2xl w-full space-y-8 ${navDir === "back" ? "animate-quiz-slide-in-left" : "animate-quiz-slide-in-right"}`}>
               <p className="text-xs font-bold uppercase tracking-widest text-primary">
                 {t.questions.charAt(0).toUpperCase() + t.questions.slice(1)} {currentQ + 1}/{totalQ}
               </p>
@@ -2418,6 +2506,7 @@ export default function PublicQuizClient({
                     size="sm"
                     onClick={() => {
                       setFreeTextDraft("");
+                      setNavDir("back");
                       setCurrentQ(currentQ - 1);
                     }}
                   >
@@ -2616,7 +2705,7 @@ export default function PublicQuizClient({
 
             <Button
               size="lg"
-              className="w-full min-h-[48px] h-auto py-3 px-6 text-base rounded-full whitespace-normal leading-snug"
+              className={`w-full min-h-[48px] h-auto py-3 px-6 text-base rounded-full whitespace-normal leading-snug ${btnShapeClass}`}
               onClick={() => (captureBefore ? handleCaptureContinue() : handleSubmitEmail())}
               disabled={
                 submitting ||
@@ -2754,7 +2843,7 @@ export default function PublicQuizClient({
               {canWebShare && (
                 <Button
                   size="lg"
-                  className="w-full h-12 rounded-full"
+                  className={`w-full h-12 rounded-full ${btnShapeClass}`}
                   onClick={() => shareOn("native")}
                 >
                   {t.shareToUnlock}
@@ -2850,7 +2939,7 @@ export default function PublicQuizClient({
             <Button
               onClick={proceedToResult}
               size="lg"
-              className="w-full h-12 rounded-full"
+              className={`w-full h-12 rounded-full ${btnShapeClass}`}
             >
               <CheckCircle2 className="w-4 h-4 mr-2" />
               {bonusUnlocked ? t.bonusUnlockedContinue : t.continueToResult}
@@ -2924,7 +3013,7 @@ export default function PublicQuizClient({
           {ctaUrl && (
             <Button
               size="lg"
-              className="w-full min-h-[48px] h-auto py-3 px-6 text-base rounded-full whitespace-normal leading-snug"
+              className={`w-full min-h-[48px] h-auto py-3 px-6 text-base rounded-full whitespace-normal leading-snug ${btnShapeClass}`}
               asChild
             >
               <a href={ensureExternalUrl(ctaUrl)} target="_blank" rel="noopener noreferrer">
@@ -3261,7 +3350,7 @@ export default function PublicQuizClient({
             const ctaUrl = resultProfile?.cta_url || quiz.cta_url;
             const ctaText = interp(resultProfile?.cta_text || quiz.cta_text || "") || t.resultCtaDefault;
             return ctaUrl ? (
-              <Button size="lg" className="w-full min-h-[48px] h-auto py-3 px-6 text-base rounded-full whitespace-normal leading-snug" asChild>
+              <Button size="lg" className={`w-full min-h-[48px] h-auto py-3 px-6 text-base rounded-full whitespace-normal leading-snug ${btnShapeClass}`} asChild>
                 <a href={ensureExternalUrl(ctaUrl)} target="_blank" rel="noopener noreferrer">
                   {ctaText}
                 </a>

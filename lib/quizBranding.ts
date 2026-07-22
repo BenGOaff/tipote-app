@@ -62,6 +62,19 @@ const DARK_GRADIENTS = new Set(["nuit"]);
 // facon Typeform). NULL/'card' = rendu historique.
 export type QuizIntroLayout = "card" | "cover";
 
+// Forme des boutons. 'pill' = arrondi complet (historique), 'rounded' =
+// coins doux, 'square' = coins nets. NULL/'pill' = rendu historique.
+export type QuizButtonShape = "pill" | "rounded" | "square";
+
+// Classe Tailwind d'arrondi correspondant à la forme choisie. Sert aux
+// boutons de réponse et aux CTA. 'pill' (défaut) renvoie une chaîne VIDE :
+// aucun override, chaque bouton garde son arrondi d'origine -> les quiz
+// existants sont rendus STRICTEMENT à l'identique. Seuls 'rounded' et
+// 'square' émettent un override (!important pour battre les classes utilitaires).
+export function buttonShapeRadiusClass(shape: QuizButtonShape): string {
+  return shape === "square" ? "!rounded-md" : shape === "rounded" ? "!rounded-xl" : "";
+}
+
 export type QuizBranding = {
   font: BrandFontChoice;
   primaryColor: string;
@@ -79,6 +92,7 @@ export type QuizBranding = {
   /** URL d'image de fond, sinon null. */
   backgroundImageUrl: string | null;
   introLayout: QuizIntroLayout;
+  buttonShape: QuizButtonShape;
 };
 
 const HEX_RE = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
@@ -115,6 +129,10 @@ function sanitizeIntroLayout(raw: unknown): QuizIntroLayout {
   return raw === "cover" ? "cover" : "card";
 }
 
+function sanitizeButtonShape(raw: unknown): QuizButtonShape {
+  return raw === "rounded" || raw === "square" ? raw : "pill";
+}
+
 function sanitizeUrlOrNull(raw: unknown): string | null {
   if (typeof raw !== "string") return null;
   const t = raw.trim();
@@ -135,6 +153,7 @@ type QuizInput = {
   background_gradient?: string | null;
   background_image_url?: string | null;
   intro_layout?: string | null;
+  button_shape?: string | null;
 } | null | undefined;
 
 // Tipote stores branding on business_profiles: brand_color_base is the
@@ -172,6 +191,7 @@ export function resolveQuizBranding(quiz: QuizInput, profile: BusinessProfileInp
     backgroundGradient: sanitizeGradientKey(quiz?.background_gradient),
     backgroundImageUrl: sanitizeUrlOrNull(quiz?.background_image_url),
     introLayout: sanitizeIntroLayout(quiz?.intro_layout),
+    buttonShape: sanitizeButtonShape(quiz?.button_shape),
   };
 }
 

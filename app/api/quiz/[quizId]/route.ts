@@ -200,7 +200,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       "brand_logo_url", "hide_brand_logo",
       "intro_image_url", "intro_image_position", "intro_image_width",
       "background_style", "background_gradient", "background_image_url",
-      "intro_layout", "theme_id",
+      "intro_layout", "button_shape", "theme_id",
     ];
 
     const patch: Record<string, any> = { updated_at: new Date().toISOString() };
@@ -221,6 +221,10 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     }
     if ("intro_layout" in patch) {
       patch.intro_layout = patch.intro_layout === "cover" ? "cover" : "card";
+    }
+    if ("button_shape" in patch) {
+      const v = patch.button_shape;
+      patch.button_shape = v === "rounded" || v === "square" ? v : "pill";
     }
     if ("background_image_url" in patch) {
       const v = patch.background_image_url;

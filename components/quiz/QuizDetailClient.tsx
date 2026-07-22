@@ -99,6 +99,7 @@ import {
   type ShareNetwork,
   type QuizBackgroundStyle,
   type QuizIntroLayout,
+  type QuizButtonShape,
 } from "@/lib/quizBranding";
 
 // Types
@@ -657,6 +658,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const [backgroundImageUploading, setBackgroundImageUploading] = useState(false);
   const backgroundImageInputRef = useRef<HTMLInputElement>(null);
   const [introLayout, setIntroLayout] = useState<QuizIntroLayout>("card");
+  const [buttonShape, setButtonShape] = useState<QuizButtonShape>("pill");
   const [themeId, setThemeId] = useState<string | null>(null);
   const [slug, setSlug] = useState("");
   const [ogDescription, setOgDescription] = useState("");
@@ -796,6 +798,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     background_gradient: backgroundGradient,
     background_image_url: backgroundImageUrl,
     intro_layout: introLayout,
+    button_shape: buttonShape,
     theme_id: themeId,
     share_message: shareMessage,
     locale,
@@ -827,7 +830,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     askFirstName, askGender,
     viralityEnabled, bonusDescription, bonusIntroText, bonusUnlockedMessage, bonusImageUrl, bonusImagePosition, bonusImageWidth,
     introImageUrl, introImagePosition, introImageWidth,
-    backgroundStyle, backgroundGradient, backgroundImageUrl, introLayout, themeId,
+    backgroundStyle, backgroundGradient, backgroundImageUrl, introLayout, buttonShape, themeId,
     shareMessage, locale, sioShareTagName, status,
     fontFamily, primaryColor, bgColor, textColor, quizBrandLogoUrl, hideBrandLogo,
     slug, ogDescription, customFooterText, customFooterUrl, shareNetworks,
@@ -891,6 +894,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     if (s.background_gradient === null || typeof s.background_gradient === "string") setBackgroundGradient(s.background_gradient as string | null);
     if (s.background_image_url === null || typeof s.background_image_url === "string") setBackgroundImageUrl(s.background_image_url as string | null);
     if (s.intro_layout === "card" || s.intro_layout === "cover") setIntroLayout(s.intro_layout);
+    if (s.button_shape === "pill" || s.button_shape === "rounded" || s.button_shape === "square") setButtonShape(s.button_shape);
     if (s.theme_id === null || typeof s.theme_id === "string") setThemeId(s.theme_id as string | null);
     if (typeof s.share_message === "string") setShareMessage(s.share_message);
     if (typeof s.locale === "string") setLocale(s.locale);
@@ -1129,6 +1133,10 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
         setBackgroundGradient((q as { background_gradient?: string | null }).background_gradient ?? null);
         setBackgroundImageUrl((q as { background_image_url?: string | null }).background_image_url ?? null);
         setIntroLayout((q as { intro_layout?: string | null }).intro_layout === "cover" ? "cover" : "card");
+        {
+          const bsh = (q as { button_shape?: string | null }).button_shape;
+          setButtonShape(bsh === "rounded" || bsh === "square" ? bsh : "pill");
+        }
         setThemeId((q as { theme_id?: string | null }).theme_id ?? null);
       }
       setShareMessage(q.share_message ?? ""); setLocale(q.locale ?? "");
@@ -1697,6 +1705,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           background_gradient: backgroundStyle === "gradient" ? backgroundGradient : null,
           background_image_url: backgroundStyle === "image" ? backgroundImageUrl : null,
           intro_layout: introLayout,
+          button_shape: buttonShape,
           theme_id: themeId,
           share_message: shareMessage, locale: locale || null,
           sio_share_tag_name: sioShareTagName || null, status,
@@ -2314,6 +2323,24 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                   {introLayout === "cover" && (
                     <p className="text-[10px] text-muted-foreground">{t("designIntroLayoutCoverHint")}</p>
                   )}
+                </div>
+
+                {/* ── Forme des boutons ── */}
+                <div className="space-y-2">
+                  <Label className="text-xs">{t("designButtons")}</Label>
+                  <div className="grid grid-cols-3 gap-1 rounded-lg bg-muted p-1">
+                    {([["pill", t("designButtonPill"), "rounded-full"], ["rounded", t("designButtonRounded"), "rounded-lg"], ["square", t("designButtonSquare"), "rounded-none"]] as const).map(([val, label, radius]) => (
+                      <button
+                        key={val}
+                        type="button"
+                        onClick={() => { setButtonShape(val); setThemeId(null); }}
+                        className={`flex flex-col items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors ${buttonShape === val ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                      >
+                        <span className={`h-4 w-8 border-2 ${radius}`} style={{ borderColor: buttonShape === val ? pc : undefined }} />
+                        {label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="space-y-2">
