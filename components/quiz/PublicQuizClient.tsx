@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, ArrowLeft, Gift, CheckCircle2, Copy, Check, ChevronDown } from "lucide-react";
+import { Loader2, ArrowLeft, ArrowRight, Gift, CheckCircle2, Copy, Check, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import ToastNotificationOverlay from "@/components/widgets/ToastNotificationOverlay";
 import SocialShareOverlay from "@/components/widgets/SocialShareOverlay";
@@ -25,6 +25,8 @@ import { fireQuizPixel, newEventId } from "@/lib/clientPixels";
 import { RichParagraph } from "@/components/ui/rich-paragraph";
 import { makeInterpolator, getGenderLabels, extractResultLabel, type QuizGender } from "@/lib/quizPersonalization";
 import { ensureExternalUrl } from "@/lib/url";
+import { celebrate } from "@/lib/celebrate";
+import { generateResultCard } from "@/lib/resultCard";
 
 // Rich text fields contain raw HTML tags (<p>, <b>, <a>, …). Strings without any
 // tag are treated as legacy plain text so the old ✓/•/- bullet rendering still
@@ -158,6 +160,13 @@ type PublicQuizData = {
   ask_gender?: boolean | null;
   custom_footer_text?: string | null;
   custom_footer_url?: string | null;
+  // Fermeture du quiz (createur) : redirige ou affiche un message.
+  close_enabled?: boolean | null;
+  close_action?: string | null;
+  close_redirect_url?: string | null;
+  close_message?: string | null;
+  close_cta_text?: string | null;
+  close_cta_url?: string | null;
   // Tipote affiliate ID — surfacé par /api/quiz/[id]/public quand il
   // est posé dans Settings. Utilisé pour tracker les commissions sur
   // le footer "Ce quiz vous est proposé via Tiquiz" quand le créateur
@@ -251,6 +260,9 @@ type QuizTranslations = {
   personalizeGender: string;
   personalizeContinue: string;
   resultCtaDefault: string;
+  resultCardLabel: string;
+  resultCardShare: string;
+  quizClosedDefault: string;
   // Survey-specific copy — optional on the type so existing locale blocks
   // don't need a per-locale entry. The rendering code provides safe English
   // fallbacks for any missing key, which keeps the survey rollout small.
@@ -346,6 +358,9 @@ const translations: Record<string, QuizTranslations> = {
     personalizeGender: "Comment préfères-tu être désigné·e ?",
     personalizeContinue: "Commencer le quiz",
     resultCtaDefault: "Découvrir",
+    resultCardLabel: "Mon résultat",
+    resultCardShare: "Partager mon résultat",
+    quizClosedDefault: "Ce quiz n’est plus disponible.",
     surveyThanksHeading: "Merci pour ta participation !",
     surveyThanksBody: "Tes réponses ont bien été enregistrées. Tu peux fermer cette page ou continuer ci-dessous.",
     surveyShareCta: "Partager ce sondage",
@@ -417,6 +432,9 @@ const translations: Record<string, QuizTranslations> = {
     personalizeGender: "Comment préférez-vous être désigné·e ?",
     personalizeContinue: "Commencer le quiz",
     resultCtaDefault: "Découvrir",
+    resultCardLabel: "Mon résultat",
+    resultCardShare: "Partager mon résultat",
+    quizClosedDefault: "Ce quiz n’est plus disponible.",
     breakdownTitle: "Répartition complète de vos réponses",
     breakdownSubtitle: "La plupart des gens se reconnaissent dans plusieurs profils, voici votre profil dominant et vos traits secondaires.",
     breakdownMainBadge: "Votre résultat",
@@ -479,6 +497,9 @@ const translations: Record<string, QuizTranslations> = {
     personalizeGender: "How should we refer to you?",
     personalizeContinue: "Start the quiz",
     resultCtaDefault: "Discover",
+    resultCardLabel: "My result",
+    resultCardShare: "Share my result",
+    quizClosedDefault: "This quiz is no longer available.",
     breakdownTitle: "Full breakdown of your answers",
     breakdownSubtitle: "Most people recognise themselves in several profiles, here's your main type and your secondary traits.",
     breakdownMainBadge: "Your result",
@@ -541,6 +562,9 @@ const translations: Record<string, QuizTranslations> = {
     personalizeGender: "¿Cómo prefieres que te tratemos?",
     personalizeContinue: "Empezar el quiz",
     resultCtaDefault: "Descubrir",
+    resultCardLabel: "Mi resultado",
+    resultCardShare: "Compartir mi resultado",
+    quizClosedDefault: "Este quiz ya no está disponible.",
     breakdownTitle: "Desglose completo de tus respuestas",
     breakdownSubtitle: "La mayoría de las personas se reconocen en varios perfiles, aquí tienes tu perfil principal y tus rasgos secundarios.",
     breakdownMainBadge: "Tu resultado",
@@ -603,6 +627,9 @@ const translations: Record<string, QuizTranslations> = {
     personalizeGender: "Wie sollen wir dich ansprechen?",
     personalizeContinue: "Quiz starten",
     resultCtaDefault: "Entdecken",
+    resultCardLabel: "Mein Ergebnis",
+    resultCardShare: "Mein Ergebnis teilen",
+    quizClosedDefault: "Dieses Quiz ist nicht mehr verfügbar.",
     breakdownTitle: "Vollständige Aufschlüsselung deiner Antworten",
     breakdownSubtitle: "Die meisten erkennen sich in mehreren Profilen wieder, hier ist dein Hauptprofil und deine Nebenausprägungen.",
     breakdownMainBadge: "Dein Ergebnis",
@@ -665,6 +692,9 @@ const translations: Record<string, QuizTranslations> = {
     personalizeGender: "Como prefere que te chamemos?",
     personalizeContinue: "Começar o quiz",
     resultCtaDefault: "Descobrir",
+    resultCardLabel: "Meu resultado",
+    resultCardShare: "Partilhar o meu resultado",
+    quizClosedDefault: "Este quiz já não está disponível.",
     breakdownTitle: "Distribuição completa das tuas respostas",
     breakdownSubtitle: "A maioria das pessoas reconhece-se em vários perfis, aqui está o teu perfil principal e os teus traços secundários.",
     breakdownMainBadge: "O teu resultado",
@@ -727,6 +757,9 @@ const translations: Record<string, QuizTranslations> = {
     personalizeGender: "Come preferisci essere chiamat·a?",
     personalizeContinue: "Inizia il quiz",
     resultCtaDefault: "Scopri",
+    resultCardLabel: "Il mio risultato",
+    resultCardShare: "Condividi il mio risultato",
+    quizClosedDefault: "Questo quiz non è più disponibile.",
     breakdownTitle: "Distribuzione completa delle tue risposte",
     breakdownSubtitle: "La maggior parte delle persone si riconosce in più profili, ecco il tuo profilo principale e i tuoi tratti secondari.",
     breakdownMainBadge: "Il tuo risultato",
@@ -789,6 +822,9 @@ const translations: Record<string, QuizTranslations> = {
     personalizeGender: "كيف تُفضّل أن نخاطبك؟",
     personalizeContinue: "ابدأ الاختبار",
     resultCtaDefault: "اكتشف",
+    resultCardLabel: "نتيجتي",
+    resultCardShare: "شارك نتيجتي",
+    quizClosedDefault: "هذا الاختبار لم يعد متاحًا.",
     breakdownTitle: "التوزيع الكامل لإجاباتك",
     breakdownSubtitle: "يتعرّف معظم الأشخاص على أنفسهم في عدة ملفات, هذا هو ملفك الرئيسي وسماتك الثانوية.",
     breakdownMainBadge: "نتيجتك",
@@ -947,6 +983,68 @@ export default function PublicQuizClient({
     [],
   );
   const [expandedOtherIdx, setExpandedOtherIdx] = useState<number | null>(null);
+
+  // ─── Confetti a l'arrivee sur le resultat (profil) ──────────────────
+  // Petit moment de plaisir quand le visiteur decouvre son profil. Pas sur
+  // les sondages (pas de profil a feter). Respecte prefers-reduced-motion
+  // (gere dans celebrate()). Ne tire qu'une fois par revelation.
+  const celebratedResultRef = useRef(false);
+  useEffect(() => {
+    if (step === "result" && quiz && quiz.mode !== "survey" && !celebratedResultRef.current) {
+      celebratedResultRef.current = true;
+      celebrate({ intensity: "normal" });
+    }
+    if (step !== "result") celebratedResultRef.current = false;
+  }, [step, quiz]);
+
+  // ─── Fermeture du quiz : redirection ────────────────────────────────
+  // Si le createur a ferme le quiz en mode redirection, on envoie le
+  // visiteur vers l'URL choisie. Jamais en mode apercu (le createur doit
+  // pouvoir continuer a editer).
+  useEffect(() => {
+    if (!quiz || isPreviewMode) return;
+    if (quiz.close_enabled !== true || quiz.close_action !== "redirect") return;
+    const url = ensureExternalUrl(quiz.close_redirect_url || "");
+    if (url && typeof window !== "undefined") window.location.replace(url);
+  }, [quiz, isPreviewMode]);
+
+  // ─── Carte de resultat partageable ──────────────────────────────────
+  // Genere une image "Je suis [profil]" et la partage (fichier via
+  // navigator.share sur mobile) ou la telecharge. Sert la viralite.
+  const [sharingCard, setSharingCard] = useState(false);
+  const handleShareResultCard = async () => {
+    if (!quiz || !resultProfile) return;
+    setSharingCard(true);
+    try {
+      const resultTitle = stripHtml(interp(resultProfile.title || "")).trim();
+      const quizTitle = stripHtml(interp(quiz.title || "")).trim();
+      const blob = await generateResultCard({
+        primaryColor: branding.primaryColor,
+        logoUrl: branding.logoUrl,
+        label: t.resultCardLabel,
+        resultTitle,
+        quizTitle,
+        footer: quiz.custom_footer_text?.trim() || null,
+      });
+      if (!blob) return;
+      const file = new File([blob], "mon-resultat.png", { type: "image/png" });
+      const nav = navigator as Navigator & { canShare?: (d: { files: File[] }) => boolean };
+      if (typeof navigator.share === "function" && nav.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: quizTitle });
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "mon-resultat.png";
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+      }
+    } catch {
+      /* annulation utilisateur ou partage indisponible : silencieux */
+    } finally {
+      setSharingCard(false);
+    }
+  };
 
   // ─── Dynamic Google Font injection (WYSIWYG with editor preview) ───
   useEffect(() => {
@@ -1939,6 +2037,45 @@ export default function PublicQuizClient({
         <Card className="p-8 max-w-md text-center">
           <p className="text-muted-foreground">{error || t.quizNotFound}</p>
         </Card>
+      </div>
+    );
+  }
+
+  // ─── Quiz ferme par le createur ─────────────────────────────────────
+  // En mode apercu (createur), on ignore la fermeture. En redirection, un
+  // loader s'affiche pendant que l'effet ci-dessus renvoie le visiteur.
+  // Sinon, message de fermeture + CTA optionnel.
+  if (!isPreviewMode && quiz.close_enabled === true) {
+    const closeRedirect = ensureExternalUrl(quiz.close_redirect_url || "");
+    if (quiz.close_action === "redirect" && closeRedirect) {
+      return (
+        <div className="public-surface min-h-screen flex items-center justify-center" style={rootStyle}>
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        </div>
+      );
+    }
+    const closeCtaUrl = ensureExternalUrl(quiz.close_cta_url || "");
+    return (
+      <div className="public-surface min-h-screen flex flex-col" style={rootStyle}>
+        <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6 text-center">
+          <div className="max-w-lg w-full space-y-6 py-16 sm:py-24">
+            {branding.logoUrl && (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img src={branding.logoUrl} alt="" className="max-h-16 w-auto object-contain mx-auto" />
+            )}
+            <p className="tipote-quiz-rich text-lg leading-relaxed whitespace-pre-line">
+              {quiz.close_message?.trim() || t.quizClosedDefault}
+            </p>
+            {closeCtaUrl && (
+              <Button size="lg" className={`w-full min-h-[48px] h-auto py-3 px-6 text-base rounded-full ${btnShapeClass}`} asChild>
+                <a href={closeCtaUrl} target="_blank" rel="noopener noreferrer">
+                  {quiz.close_cta_text?.trim() || t.resultCtaDefault}
+                </a>
+              </Button>
+            )}
+          </div>
+        </div>
+        <TipoteFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} tipoteAffiliateId={quiz.tipote_affiliate_id} />
       </div>
     );
   }
@@ -3357,6 +3494,22 @@ export default function PublicQuizClient({
               </Button>
             ) : null;
           })()}
+
+          {/* Carte de resultat partageable (image) : sert la viralite, le
+              visiteur partage "Je suis [profil]" sur ses reseaux. Uniquement
+              en mode profil (resultProfile present). */}
+          {resultProfile && (
+            <Button
+              variant="outline"
+              size="lg"
+              className={`w-full min-h-[48px] h-auto py-3 px-6 text-base rounded-full ${btnShapeClass}`}
+              disabled={sharingCard}
+              onClick={handleShareResultCard}
+            >
+              {sharingCard ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ArrowRight className="w-4 h-4 mr-2" />}
+              {t.resultCardShare}
+            </Button>
+          )}
 
           {/* Confirm bonus unlock (if the visitor shared on the previous step).
               The full share UI now lives in step="bonus", so here we only

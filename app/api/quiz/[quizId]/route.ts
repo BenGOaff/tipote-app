@@ -201,6 +201,8 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       "intro_image_url", "intro_image_position", "intro_image_width",
       "background_style", "background_gradient", "background_image_url",
       "intro_layout", "button_shape", "theme_id",
+      "close_enabled", "close_action", "close_redirect_url", "close_message",
+      "close_cta_text", "close_cta_url",
     ];
 
     const patch: Record<string, any> = { updated_at: new Date().toISOString() };
@@ -225,6 +227,13 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     if ("button_shape" in patch) {
       const v = patch.button_shape;
       patch.button_shape = v === "rounded" || v === "square" ? v : "pill";
+    }
+    if ("close_action" in patch) {
+      const v = patch.close_action;
+      if (v !== "redirect" && v !== "message") patch.close_action = v == null ? null : "message";
+    }
+    if ("close_enabled" in patch) {
+      patch.close_enabled = patch.close_enabled === true;
     }
     if ("background_image_url" in patch) {
       const v = patch.background_image_url;

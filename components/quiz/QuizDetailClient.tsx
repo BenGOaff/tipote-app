@@ -660,6 +660,13 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const [introLayout, setIntroLayout] = useState<QuizIntroLayout>("card");
   const [buttonShape, setButtonShape] = useState<QuizButtonShape>("pill");
   const [themeId, setThemeId] = useState<string | null>(null);
+  // Fermeture du quiz (redirection OU message + CTA).
+  const [closeEnabled, setCloseEnabled] = useState(false);
+  const [closeAction, setCloseAction] = useState<"redirect" | "message">("message");
+  const [closeRedirectUrl, setCloseRedirectUrl] = useState("");
+  const [closeMessage, setCloseMessage] = useState("");
+  const [closeCtaText, setCloseCtaText] = useState("");
+  const [closeCtaUrl, setCloseCtaUrl] = useState("");
   const [slug, setSlug] = useState("");
   const [ogDescription, setOgDescription] = useState("");
   const [seoNoindex, setSeoNoindex] = useState(false);
@@ -800,6 +807,12 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     intro_layout: introLayout,
     button_shape: buttonShape,
     theme_id: themeId,
+    close_enabled: closeEnabled,
+    close_action: closeAction,
+    close_redirect_url: closeRedirectUrl,
+    close_message: closeMessage,
+    close_cta_text: closeCtaText,
+    close_cta_url: closeCtaUrl,
     share_message: shareMessage,
     locale,
     sio_share_tag_name: sioShareTagName,
@@ -831,6 +844,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     viralityEnabled, bonusDescription, bonusIntroText, bonusUnlockedMessage, bonusImageUrl, bonusImagePosition, bonusImageWidth,
     introImageUrl, introImagePosition, introImageWidth,
     backgroundStyle, backgroundGradient, backgroundImageUrl, introLayout, buttonShape, themeId,
+    closeEnabled, closeAction, closeRedirectUrl, closeMessage, closeCtaText, closeCtaUrl,
     shareMessage, locale, sioShareTagName, status,
     fontFamily, primaryColor, bgColor, textColor, quizBrandLogoUrl, hideBrandLogo,
     slug, ogDescription, customFooterText, customFooterUrl, shareNetworks,
@@ -896,6 +910,12 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     if (s.intro_layout === "card" || s.intro_layout === "cover") setIntroLayout(s.intro_layout);
     if (s.button_shape === "pill" || s.button_shape === "rounded" || s.button_shape === "square") setButtonShape(s.button_shape);
     if (s.theme_id === null || typeof s.theme_id === "string") setThemeId(s.theme_id as string | null);
+    if (typeof s.close_enabled === "boolean") setCloseEnabled(s.close_enabled);
+    if (s.close_action === "redirect" || s.close_action === "message") setCloseAction(s.close_action);
+    if (typeof s.close_redirect_url === "string") setCloseRedirectUrl(s.close_redirect_url);
+    if (typeof s.close_message === "string") setCloseMessage(s.close_message);
+    if (typeof s.close_cta_text === "string") setCloseCtaText(s.close_cta_text);
+    if (typeof s.close_cta_url === "string") setCloseCtaUrl(s.close_cta_url);
     if (typeof s.share_message === "string") setShareMessage(s.share_message);
     if (typeof s.locale === "string") setLocale(s.locale);
     if (typeof s.sio_share_tag_name === "string") setSioShareTagName(s.sio_share_tag_name);
@@ -1138,6 +1158,15 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           setButtonShape(bsh === "rounded" || bsh === "square" ? bsh : "pill");
         }
         setThemeId((q as { theme_id?: string | null }).theme_id ?? null);
+        {
+          const cq = q as Record<string, unknown>;
+          setCloseEnabled(cq.close_enabled === true);
+          setCloseAction(cq.close_action === "redirect" ? "redirect" : "message");
+          setCloseRedirectUrl((cq.close_redirect_url as string | null) ?? "");
+          setCloseMessage((cq.close_message as string | null) ?? "");
+          setCloseCtaText((cq.close_cta_text as string | null) ?? "");
+          setCloseCtaUrl((cq.close_cta_url as string | null) ?? "");
+        }
       }
       setShareMessage(q.share_message ?? ""); setLocale(q.locale ?? "");
       setSioShareTagName(q.sio_share_tag_name ?? ""); setStatus(q.status);
@@ -1707,6 +1736,12 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           intro_layout: introLayout,
           button_shape: buttonShape,
           theme_id: themeId,
+          close_enabled: closeEnabled,
+          close_action: closeAction,
+          close_redirect_url: closeRedirectUrl.trim() || null,
+          close_message: closeMessage.trim() || null,
+          close_cta_text: closeCtaText.trim() || null,
+          close_cta_url: closeCtaUrl.trim() || null,
           share_message: shareMessage, locale: locale || null,
           sio_share_tag_name: sioShareTagName || null, status,
           // Branding
@@ -2489,6 +2524,47 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                 </div>
               </div>)}
               {leftTab === "settings" && (<div className="space-y-6">
+                {/* ── Fermeture du quiz ── */}
+                <section className="space-y-2.5">
+                  <div>
+                    <h3 className="text-sm font-semibold">{t("closeTitle")}</h3>
+                    <p className="text-[11px] text-muted-foreground leading-snug">{t("closeHint")}</p>
+                  </div>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={closeEnabled} onChange={(e) => setCloseEnabled(e.target.checked)} className="size-4 accent-primary" />
+                    {t("closeEnableLabel")}
+                  </label>
+                  {closeEnabled && (
+                    <div className="space-y-3 rounded-lg border border-border p-3">
+                      <div className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-1">
+                        {([["message", t("closeActionMessage")], ["redirect", t("closeActionRedirect")]] as const).map(([val, label]) => (
+                          <button key={val} type="button" onClick={() => setCloseAction(val)} className={`rounded-md px-2 py-1 text-xs font-medium transition-colors ${closeAction === val ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}>{label}</button>
+                        ))}
+                      </div>
+                      {closeAction === "redirect" ? (
+                        <div className="space-y-1">
+                          <Label className="text-xs">{t("closeRedirectUrlLabel")}</Label>
+                          <Input value={closeRedirectUrl} onChange={(e) => setCloseRedirectUrl(e.target.value)} placeholder="https://..." />
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          <div className="space-y-1">
+                            <Label className="text-xs">{t("closeMessageLabel")}</Label>
+                            <Textarea value={closeMessage} onChange={(e) => setCloseMessage(e.target.value)} rows={2} placeholder={t("closeMessagePlaceholder")} />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">{t("closeCtaTextLabel")}</Label>
+                            <Input value={closeCtaText} onChange={(e) => setCloseCtaText(e.target.value)} />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">{t("closeCtaUrlLabel")}</Label>
+                            <Input value={closeCtaUrl} onChange={(e) => setCloseCtaUrl(e.target.value)} placeholder="https://..." />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </section>
                 {/* ── Langue du quiz (langue du joueur public) ──
                     Pilote quizzes.locale, qui détermine TOUTE la langue de
                     l'interface vue par le visiteur (perso, boutons, capture)
