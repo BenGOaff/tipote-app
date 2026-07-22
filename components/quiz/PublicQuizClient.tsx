@@ -15,6 +15,8 @@ import {
   googleFontHref,
   cssFontFamily,
   hexToHslTriplet,
+  quizBackgroundCss,
+  quizBackgroundIsDark,
   type QuizBranding,
 } from "@/lib/quizBranding";
 import { sanitizeRichText, stripHtml } from "@/lib/richText";
@@ -980,14 +982,22 @@ export default function PublicQuizClient({
   // Couleur des "autres textes" (réponses, corps). NULL = non choisie ->
   // aucun override, navy par défaut conservé (quiz existants inchangés).
   const hslText = branding.textColor ? hexToHslTriplet(branding.textColor) : null;
+  // Fond riche (dégradé / image). null = fond plein historique -> aucun
+  // changement pour les quiz existants.
+  const richBackground = quizBackgroundCss(branding);
+  // Un dégradé sombre demande des textes clairs pour rester lisible. On ne
+  // bascule QUE si l'user a explicitement choisi un fond sombre (jamais sur
+  // un quiz existant).
+  const bgIsDark = quizBackgroundIsDark(branding);
   const rootStyle: React.CSSProperties = {
     fontFamily: cssFontFamily(branding.font),
     backgroundColor: branding.backgroundColor,
-    color: branding.textColor ?? "hsl(231 41% 31%)",
+    ...(richBackground ? { background: richBackground } : {}),
+    color: bgIsDark ? "#ffffff" : (branding.textColor ?? "hsl(231 41% 31%)"),
     colorScheme: "light",
     isolation: "isolate",
-    ["--foreground" as string]: hslText ?? "231 41% 31%",
-    ["--muted-foreground" as string]: "236 16% 50%",
+    ["--foreground" as string]: bgIsDark ? "0 0% 100%" : (hslText ?? "231 41% 31%"),
+    ["--muted-foreground" as string]: bgIsDark ? "0 0% 100%" : "236 16% 50%",
     ...(hslPrimary ? ({ ["--primary" as string]: hslPrimary } as React.CSSProperties) : {}),
   };
 
@@ -1868,6 +1878,65 @@ export default function PublicQuizClient({
       }
     });
 
+    // Fonction de démarrage partagée entre l'accueil "carte" et "cover".
+    const onStart = () => {
+      trackEvent("start");
+      const skipPersonalize = isPreviewMode && firstName.trim().length > 0;
+      setStep(!skipPersonalize && (quiz.ask_first_name || quiz.ask_gender) ? "personalize" : (captureBefore ? "email" : "quiz"));
+    };
+
+    // Accueil "cover" (welcome screen façon Typeform) : l'image d'intro
+    // devient un fond plein cadre, titre + intro + CTA en surimpression.
+    // N'est actif que si l'user a choisi la disposition cover ET fourni une
+    // image -> sinon on garde la carte historique (aucune régression).
+    const coverMode = branding.introLayout === "cover" && !!quiz.intro_image_url;
+    if (coverMode) {
+      return (
+        <div className="public-surface min-h-screen flex flex-col" style={rootStyle}>
+          {toastOverlay}
+          {shareOverlay}
+          <div
+            className="relative flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6 text-center"
+            style={{
+              backgroundImage: `linear-gradient(rgba(15,23,42,0.55), rgba(15,23,42,0.55)), url("${quiz.intro_image_url}")`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              color: "#ffffff",
+            }}
+          >
+            <div className="max-w-2xl w-full space-y-8 py-16 sm:py-24">
+              {branding.logoUrl && (
+                <div className="flex justify-center">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={branding.logoUrl} alt="" className="max-h-16 w-auto object-contain" />
+                </div>
+              )}
+              <h1
+                className="tipote-quiz-rich tipote-quiz-rich-inline tipote-quiz-title font-bold leading-tight text-white"
+                dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(quiz.title)) }}
+              />
+              {introRich ? (
+                <div
+                  className="tipote-quiz-rich text-white/90 text-lg leading-relaxed max-w-xl mx-auto"
+                  dangerouslySetInnerHTML={{ __html: sanitizeRichText(quiz.introduction) }}
+                />
+              ) : (
+                descLines.length > 0 && (
+                  <p className="text-white/90 text-lg leading-relaxed whitespace-pre-line max-w-xl mx-auto">
+                    {descLines.join("\n")}
+                  </p>
+                )
+              )}
+              <Button size="lg" className="h-14 px-12 text-lg rounded-full shadow-lg" onClick={onStart}>
+                {quiz.start_button_text?.trim() || t.start}
+              </Button>
+            </div>
+          </div>
+          <TipoteFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} tipoteAffiliateId={quiz.tipote_affiliate_id} />
+        </div>
+      );
+    }
+
     return (
       <div
         className="public-surface min-h-screen flex flex-col"
@@ -1939,15 +2008,7 @@ export default function PublicQuizClient({
               <img src={quiz.intro_image_url} alt="" className={`h-auto rounded-xl ${quiz.intro_image_width ? "mx-auto block" : "w-full"}`} style={quiz.intro_image_width ? { width: `${quiz.intro_image_width}%` } : undefined} />
             )}
 
-            <Button size="lg" className="h-14 px-12 text-lg rounded-full shadow-lg" onClick={() => {
-              trackEvent("start");
-              // Preview mode with a pre-filled name skips the personalize
-              // screen so the creator goes straight to the questions.
-              const skipPersonalize = isPreviewMode && firstName.trim().length > 0;
-              // captureBefore : apres l'intro (et l'eventuelle perso) on va
-              // a la capture email AVANT les questions.
-              setStep(!skipPersonalize && (quiz.ask_first_name || quiz.ask_gender) ? "personalize" : (captureBefore ? "email" : "quiz"));
-            }}>
+            <Button size="lg" className="h-14 px-12 text-lg rounded-full shadow-lg" onClick={onStart}>
               {quiz.start_button_text?.trim() || t.start}
             </Button>
 

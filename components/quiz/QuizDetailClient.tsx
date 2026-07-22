@@ -93,8 +93,12 @@ import {
   googleFontHref,
   hexToHslTriplet,
   sanitizeSlug,
+  QUIZ_THEMES,
+  QUIZ_GRADIENTS,
   type BrandFontChoice,
   type ShareNetwork,
+  type QuizBackgroundStyle,
+  type QuizIntroLayout,
 } from "@/lib/quizBranding";
 
 // Types
@@ -645,6 +649,15 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   // Couleur des autres textes. NULL = non défini -> aucun override.
   const [textColor, setTextColor] = useState<string | null>(null);
   const [fontFamily, setFontFamily] = useState<BrandFontChoice>(DEFAULT_BRAND_FONT);
+  // Présentation (fonds riches + cover + thème). Valeurs par défaut =
+  // rendu historique : fond plein, accueil en carte, pas de thème.
+  const [backgroundStyle, setBackgroundStyle] = useState<QuizBackgroundStyle>("solid");
+  const [backgroundGradient, setBackgroundGradient] = useState<string | null>(null);
+  const [backgroundImageUrl, setBackgroundImageUrl] = useState<string | null>(null);
+  const [backgroundImageUploading, setBackgroundImageUploading] = useState(false);
+  const backgroundImageInputRef = useRef<HTMLInputElement>(null);
+  const [introLayout, setIntroLayout] = useState<QuizIntroLayout>("card");
+  const [themeId, setThemeId] = useState<string | null>(null);
   const [slug, setSlug] = useState("");
   const [ogDescription, setOgDescription] = useState("");
   const [seoNoindex, setSeoNoindex] = useState(false);
@@ -779,6 +792,11 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     intro_image_url: introImageUrl,
     intro_image_position: introImagePosition,
     intro_image_width: introImageWidth,
+    background_style: backgroundStyle,
+    background_gradient: backgroundGradient,
+    background_image_url: backgroundImageUrl,
+    intro_layout: introLayout,
+    theme_id: themeId,
     share_message: shareMessage,
     locale,
     sio_share_tag_name: sioShareTagName,
@@ -809,6 +827,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     askFirstName, askGender,
     viralityEnabled, bonusDescription, bonusIntroText, bonusUnlockedMessage, bonusImageUrl, bonusImagePosition, bonusImageWidth,
     introImageUrl, introImagePosition, introImageWidth,
+    backgroundStyle, backgroundGradient, backgroundImageUrl, introLayout, themeId,
     shareMessage, locale, sioShareTagName, status,
     fontFamily, primaryColor, bgColor, textColor, quizBrandLogoUrl, hideBrandLogo,
     slug, ogDescription, customFooterText, customFooterUrl, shareNetworks,
@@ -868,6 +887,11 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     if (s.intro_image_position === "top" || s.intro_image_position === "after_title" || s.intro_image_position === "after_intro" || s.intro_image_position === "bottom") {
       setIntroImagePosition(s.intro_image_position);
     }
+    if (s.background_style === "solid" || s.background_style === "gradient" || s.background_style === "image") setBackgroundStyle(s.background_style);
+    if (s.background_gradient === null || typeof s.background_gradient === "string") setBackgroundGradient(s.background_gradient as string | null);
+    if (s.background_image_url === null || typeof s.background_image_url === "string") setBackgroundImageUrl(s.background_image_url as string | null);
+    if (s.intro_layout === "card" || s.intro_layout === "cover") setIntroLayout(s.intro_layout);
+    if (s.theme_id === null || typeof s.theme_id === "string") setThemeId(s.theme_id as string | null);
     if (typeof s.share_message === "string") setShareMessage(s.share_message);
     if (typeof s.locale === "string") setLocale(s.locale);
     if (typeof s.sio_share_tag_name === "string") setSioShareTagName(s.sio_share_tag_name);
@@ -1099,6 +1123,14 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       setIntroImageUrl(q.intro_image_url ?? null);
       setIntroImageWidth(q.intro_image_width ?? null);
       setIntroImagePosition((q.intro_image_position as IntroImagePosition | null) ?? "top");
+      {
+        const bs = (q as { background_style?: string | null }).background_style;
+        setBackgroundStyle(bs === "gradient" || bs === "image" ? bs : "solid");
+        setBackgroundGradient((q as { background_gradient?: string | null }).background_gradient ?? null);
+        setBackgroundImageUrl((q as { background_image_url?: string | null }).background_image_url ?? null);
+        setIntroLayout((q as { intro_layout?: string | null }).intro_layout === "cover" ? "cover" : "card");
+        setThemeId((q as { theme_id?: string | null }).theme_id ?? null);
+      }
       setShareMessage(q.share_message ?? ""); setLocale(q.locale ?? "");
       setSioShareTagName(q.sio_share_tag_name ?? ""); setStatus(q.status);
       setEditQuestions(q.questions); setEditResults(q.results);
@@ -1369,6 +1401,45 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     }
   }
 
+  // Image de fond du quiz (présentation façon Typeform/Tally). Même pattern
+  // Storage que les autres assets (bucket public-assets, path par user).
+  async function handleBackgroundImageUpload(file: File) {
+    if (!file.type.startsWith("image/")) { toast.error(t("toastImageOnly")); return; }
+    if (file.size > 10 * 1024 * 1024) { toast.error(t("toastImageTooHeavy", { max: 10 })); return; }
+    setBackgroundImageUploading(true);
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { toast.error(t("toastNotLoggedIn")); return; }
+      const ext = file.name.split(".").pop() ?? "jpg";
+      const path = `quiz-backgrounds/${user.id}/${quizId}-${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("public-assets").upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
+      setBackgroundImageUrl(urlData.publicUrl);
+      setBackgroundStyle("image");
+      setThemeId(null);
+    } catch (err) {
+      console.error("Background image upload failed:", err);
+      const msg = err instanceof Error ? err.message : "erreur inconnue";
+      toast.error(t("toastImageUploadError", { msg }));
+    } finally {
+      setBackgroundImageUploading(false);
+    }
+  }
+
+  // Applique un thème prêt-à-l'emploi : écrit les champs de branding d'un
+  // coup. L'user peut tout ajuster ensuite (les contrôles restent actifs).
+  function applyTheme(theme: (typeof QUIZ_THEMES)[number]) {
+    setFontFamily(theme.font);
+    setPrimaryColor(theme.primaryColor);
+    setBgColor(theme.backgroundColor);
+    setBackgroundStyle(theme.backgroundStyle);
+    setBackgroundGradient(theme.backgroundGradient);
+    if (theme.backgroundStyle !== "image") setBackgroundImageUrl(null);
+    setThemeId(theme.id);
+  }
+
   // Drag-and-drop upload pour les RichTextEdit (Adeline, mai 2026 :
   // "ajoute la possibilité d'ajouter une image dans les résultats,
   // 10Mo max, gif acceptés et possible de drag and drop à l'emplacement
@@ -1621,6 +1692,12 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           intro_image_url: introImageUrl,
           intro_image_position: introImageUrl ? introImagePosition : null,
           intro_image_width: introImageUrl ? introImageWidth : null,
+          // Présentation (fonds riches + cover + thème)
+          background_style: backgroundStyle,
+          background_gradient: backgroundStyle === "gradient" ? backgroundGradient : null,
+          background_image_url: backgroundStyle === "image" ? backgroundImageUrl : null,
+          intro_layout: introLayout,
+          theme_id: themeId,
           share_message: shareMessage, locale: locale || null,
           sio_share_tag_name: sioShareTagName || null, status,
           // Branding
@@ -1920,6 +1997,15 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   // si hideBrandLogo). Utilisé dans le preview pour le WYSIWYG.
   const effectiveLogoUrl: string | null = hideBrandLogo ? null : (quizBrandLogoUrl || brandLogoUrl || null);
 
+  // Fond riche du live preview (mêmes règles que le rendu public).
+  const previewBackgroundCss: string | null =
+    backgroundStyle === "gradient" && backgroundGradient && backgroundGradient in QUIZ_GRADIENTS
+      ? QUIZ_GRADIENTS[backgroundGradient]
+      : backgroundStyle === "image" && backgroundImageUrl
+        ? `linear-gradient(rgba(255,255,255,0.55), rgba(255,255,255,0.55)), url("${backgroundImageUrl}") center/cover no-repeat`
+        : null;
+  const previewBgIsDark = backgroundStyle === "gradient" && backgroundGradient === "nuit";
+
   return (
    <SioTagsProvider quizId={quizId}>
     <UserPalettesProvider palettes={palettesWithBrand}>
@@ -2124,6 +2210,112 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                 </DndContext>
               </>)}
               {leftTab === "design" && (<div className="space-y-5">
+                {/* ── Thèmes prêts à l'emploi ── */}
+                <div className="space-y-2">
+                  <Label className="text-xs">{t("designThemes")}</Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {QUIZ_THEMES.map((th) => {
+                      const swatch = th.backgroundStyle === "gradient" && th.backgroundGradient
+                        ? QUIZ_GRADIENTS[th.backgroundGradient]
+                        : th.backgroundColor;
+                      const active = themeId === th.id;
+                      return (
+                        <button
+                          key={th.id}
+                          type="button"
+                          onClick={() => applyTheme(th)}
+                          className={`group relative rounded-lg border p-2 text-left transition-all ${active ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-primary/50"}`}
+                          title={th.name}
+                        >
+                          <span className="block h-8 w-full rounded-md" style={{ background: swatch }}>
+                            <span className="flex h-full items-center justify-center rounded-md" style={{ color: th.primaryColor }}>
+                              <span className="text-sm font-bold" style={{ fontFamily: th.font }}>Aa</span>
+                            </span>
+                          </span>
+                          <span className="mt-1 block truncate text-[10px] text-muted-foreground">{th.name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">{t("designThemesHint")}</p>
+                </div>
+
+                {/* ── Fond (couleur / dégradé / image) ── */}
+                <div className="space-y-2">
+                  <Label className="text-xs">{t("designBackground")}</Label>
+                  <div className="grid grid-cols-3 gap-1 rounded-lg bg-muted p-1">
+                    {([["solid", t("designBackgroundSolid")], ["gradient", t("designBackgroundGradient")], ["image", t("designBackgroundImage")]] as const).map(([val, label]) => (
+                      <button
+                        key={val}
+                        type="button"
+                        onClick={() => { setBackgroundStyle(val); setThemeId(null); }}
+                        className={`rounded-md px-2 py-1 text-xs font-medium transition-colors ${backgroundStyle === val ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  {backgroundStyle === "gradient" && (
+                    <div className="grid grid-cols-4 gap-2 pt-1">
+                      {Object.entries(QUIZ_GRADIENTS).map(([key, css]) => (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => { setBackgroundGradient(key); setThemeId(null); }}
+                          aria-label={key}
+                          className={`h-9 rounded-md border transition-all ${backgroundGradient === key ? "border-primary ring-2 ring-primary/30" : "border-border hover:scale-105"}`}
+                          style={{ background: css }}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  {backgroundStyle === "image" && (
+                    <div className="space-y-2 pt-1">
+                      {backgroundImageUrl && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={backgroundImageUrl} alt="" className="h-24 w-full rounded-lg object-cover" />
+                      )}
+                      <input
+                        ref={backgroundImageInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleBackgroundImageUpload(f); e.currentTarget.value = ""; }}
+                      />
+                      <div className="flex items-center gap-2">
+                        <Button type="button" variant="outline" size="sm" disabled={backgroundImageUploading} onClick={() => backgroundImageInputRef.current?.click()}>
+                          {backgroundImageUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : t("designBackgroundImageAdd")}
+                        </Button>
+                        {backgroundImageUrl && (
+                          <button type="button" onClick={() => setBackgroundImageUrl(null)} className="text-[11px] text-muted-foreground hover:text-primary hover:underline">
+                            {t("designBackgroundImageRemove")}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* ── Écran d'accueil : carte / couverture ── */}
+                <div className="space-y-2">
+                  <Label className="text-xs">{t("designIntroLayout")}</Label>
+                  <div className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-1">
+                    {([["card", t("designIntroLayoutCard")], ["cover", t("designIntroLayoutCover")]] as const).map(([val, label]) => (
+                      <button
+                        key={val}
+                        type="button"
+                        onClick={() => setIntroLayout(val)}
+                        className={`rounded-md px-2 py-1 text-xs font-medium transition-colors ${introLayout === val ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  {introLayout === "cover" && (
+                    <p className="text-[10px] text-muted-foreground">{t("designIntroLayoutCoverHint")}</p>
+                  )}
+                </div>
+
                 <div className="space-y-2">
                   <Label className="text-xs">{t("designFontLabel")}</Label>
                   <select
@@ -2571,7 +2763,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           )}
 
           {/* RIGHT: LIVE PREVIEW — all sections stacked, exactly as visitor sees it */}
-          <main ref={previewRef} className="flex-1 overflow-y-auto" style={{ backgroundColor: bgColor, fontFamily, ...(textColor ? { color: textColor, ["--foreground" as string]: hexToHslTriplet(textColor) ?? undefined } : {}) }}>
+          <main ref={previewRef} className="flex-1 overflow-y-auto" style={{ backgroundColor: bgColor, ...(previewBackgroundCss ? { background: previewBackgroundCss } : {}), fontFamily, ...(previewBgIsDark ? { color: "#ffffff", ["--foreground" as string]: "0 0% 100%" } : (textColor ? { color: textColor, ["--foreground" as string]: hexToHslTriplet(textColor) ?? undefined } : {})) }}>
             <div data-device-preview={device} className={`mx-auto transition-all duration-300 ${device === "mobile" ? "max-w-sm" : "w-full"}`}>
 
               {/* ── INTRO SECTION ── */}
