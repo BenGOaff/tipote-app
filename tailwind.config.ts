@@ -152,6 +152,16 @@ const config = {
           "0%": { opacity: "0", transform: "translateY(12px)" },
           "100%": { opacity: "1", transform: "translateY(0)" },
         },
+        // Transitions directionnelles facon Typeform : la question suivante
+        // glisse depuis la droite, la precedente depuis la gauche.
+        "quiz-slide-in-right": {
+          "0%": { opacity: "0", transform: "translateX(28px)" },
+          "100%": { opacity: "1", transform: "translateX(0)" },
+        },
+        "quiz-slide-in-left": {
+          "0%": { opacity: "0", transform: "translateX(-28px)" },
+          "100%": { opacity: "1", transform: "translateX(0)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -163,6 +173,8 @@ const config = {
         "pepite-halo": "pepite-halo 2s ease-out infinite",
         "pepite-spark": "pepite-spark 1.2s ease-out forwards",
         "quiz-step-in": "quiz-step-in 360ms cubic-bezier(0.22, 1, 0.36, 1) both",
+        "quiz-slide-in-right": "quiz-slide-in-right 320ms cubic-bezier(0.22, 1, 0.36, 1) both",
+        "quiz-slide-in-left": "quiz-slide-in-left 320ms cubic-bezier(0.22, 1, 0.36, 1) both",
       },
     },
   },

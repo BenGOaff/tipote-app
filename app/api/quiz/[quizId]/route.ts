@@ -4,7 +4,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { sanitizeRichText } from "@/lib/richText";
-import { sanitizeSlug, sanitizeShareNetworks, BRAND_FONT_CHOICES } from "@/lib/quizBranding";
+import { sanitizeSlug, sanitizeShareNetworks, BRAND_FONT_CHOICES, QUIZ_GRADIENTS } from "@/lib/quizBranding";
 import { isReservedPublicSlug } from "@/lib/publicSlug";
 import { findCrossTypeSlugConflict } from "@/lib/publicSlugServer";
 import {
@@ -199,11 +199,45 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       "brand_font", "brand_color_primary", "brand_color_background", "brand_color_text",
       "brand_logo_url", "hide_brand_logo",
       "intro_image_url", "intro_image_position", "intro_image_width",
+      "background_style", "background_gradient", "background_image_url",
+      "intro_layout", "button_shape", "theme_id",
+      "close_enabled", "close_action", "close_redirect_url", "close_message",
+      "close_cta_text", "close_cta_url",
     ];
 
     const patch: Record<string, any> = { updated_at: new Date().toISOString() };
     for (const key of allowedFields) {
       if (key in body) patch[key] = body[key];
+    }
+
+    // Présentation : on n'accepte que des valeurs connues, sinon on retombe
+    // sur le comportement historique (fond plein, accueil carte) plutôt que
+    // de stocker une valeur libre.
+    if ("background_style" in patch) {
+      const v = patch.background_style;
+      if (v !== "gradient" && v !== "image") patch.background_style = "solid";
+    }
+    if ("background_gradient" in patch) {
+      const v = patch.background_gradient;
+      if (v !== null && (typeof v !== "string" || !(v in QUIZ_GRADIENTS))) patch.background_gradient = null;
+    }
+    if ("intro_layout" in patch) {
+      patch.intro_layout = patch.intro_layout === "cover" ? "cover" : "card";
+    }
+    if ("button_shape" in patch) {
+      const v = patch.button_shape;
+      patch.button_shape = v === "rounded" || v === "square" ? v : "pill";
+    }
+    if ("close_action" in patch) {
+      const v = patch.close_action;
+      if (v !== "redirect" && v !== "message") patch.close_action = v == null ? null : "message";
+    }
+    if ("close_enabled" in patch) {
+      patch.close_enabled = patch.close_enabled === true;
+    }
+    if ("background_image_url" in patch) {
+      const v = patch.background_image_url;
+      if (v !== null && typeof v !== "string") patch.background_image_url = null;
     }
 
     for (const key of RICH_TEXT_FIELDS) {
