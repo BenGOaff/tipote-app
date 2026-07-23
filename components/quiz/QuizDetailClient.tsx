@@ -100,9 +100,14 @@ import {
   type QuizBackgroundStyle,
   type QuizIntroLayout,
   type QuizButtonShape,
+  resolvePanelMedia,
+  sanitizePanelMediaConfig,
   type QuizQuestionLayout,
   type QuizSplitSide,
+  type PanelMediaConfig,
 } from "@/lib/quizBranding";
+import { QuizPanelMedia } from "@/components/quiz/QuizPanelMedia";
+import { PanelMediaEditor } from "@/components/quiz/PanelMediaEditor";
 
 // Types
 // Un quiz (profil ou scoring) peut mélanger des types de questions, comme le
@@ -664,10 +669,14 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const [themeId, setThemeId] = useState<string | null>(null);
   // Disposition des questions (façon Tally). 'centered' = rendu historique.
   const [questionLayout, setQuestionLayout] = useState<QuizQuestionLayout>("centered");
+  // splitImageUrl : conserve pour retro-compatibilite (fallback quand
+  // panel_media est null). Plus d'UI d'upload dediee : remplacee par
+  // PanelMediaEditor. On garde la valeur chargee/persistee telle quelle.
   const [splitImageUrl, setSplitImageUrl] = useState<string | null>(null);
   const [splitSide, setSplitSide] = useState<QuizSplitSide>("left");
-  const [splitImageUploading, setSplitImageUploading] = useState(false);
-  const splitImageInputRef = useRef<HTMLInputElement>(null);
+  // Visuel du panneau decoratif (disposition split), par page. NULL = fallback
+  // historique (split_image_url puis motif mesh sur la couleur de marque).
+  const [panelMedia, setPanelMedia] = useState<PanelMediaConfig | null>(null);
   // Fermeture du quiz (redirection OU message + CTA).
   const [closeEnabled, setCloseEnabled] = useState(false);
   const [closeAction, setCloseAction] = useState<"redirect" | "message">("message");
@@ -818,6 +827,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     question_layout: questionLayout,
     split_image_url: splitImageUrl,
     split_side: splitSide,
+    panel_media: panelMedia,
     close_enabled: closeEnabled,
     close_action: closeAction,
     close_redirect_url: closeRedirectUrl,
@@ -855,7 +865,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     viralityEnabled, bonusDescription, bonusIntroText, bonusUnlockedMessage, bonusImageUrl, bonusImagePosition, bonusImageWidth,
     introImageUrl, introImagePosition, introImageWidth,
     backgroundStyle, backgroundGradient, backgroundImageUrl, introLayout, buttonShape, themeId,
-    questionLayout, splitImageUrl, splitSide,
+    questionLayout, splitImageUrl, splitSide, panelMedia,
     closeEnabled, closeAction, closeRedirectUrl, closeMessage, closeCtaText, closeCtaUrl,
     shareMessage, locale, sioShareTagName, status,
     fontFamily, primaryColor, bgColor, textColor, quizBrandLogoUrl, hideBrandLogo,
@@ -925,6 +935,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     if (s.question_layout === "centered" || s.question_layout === "left" || s.question_layout === "split") setQuestionLayout(s.question_layout);
     if (s.split_image_url === null || typeof s.split_image_url === "string") setSplitImageUrl(s.split_image_url as string | null);
     if (s.split_side === "left" || s.split_side === "right") setSplitSide(s.split_side);
+    if ("panel_media" in s) setPanelMedia(sanitizePanelMediaConfig(s.panel_media));
     if (typeof s.close_enabled === "boolean") setCloseEnabled(s.close_enabled);
     if (s.close_action === "redirect" || s.close_action === "message") setCloseAction(s.close_action);
     if (typeof s.close_redirect_url === "string") setCloseRedirectUrl(s.close_redirect_url);
@@ -1179,6 +1190,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
         }
         setSplitImageUrl((q as { split_image_url?: string | null }).split_image_url ?? null);
         setSplitSide((q as { split_side?: string | null }).split_side === "right" ? "right" : "left");
+        setPanelMedia(sanitizePanelMediaConfig((q as { panel_media?: unknown }).panel_media));
         {
           const cq = q as Record<string, unknown>;
           setCloseEnabled(cq.close_enabled === true);
@@ -1486,29 +1498,27 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     }
   }
 
-  // Image du panneau média en disposition 'split' (façon Tally). Même
-  // pattern Supabase Storage que le fond, namespace dédié.
-  async function handleSplitImageUpload(file: File) {
-    if (!file.type.startsWith("image/")) { toast.error(t("toastImageOnly")); return; }
-    if (file.size > 10 * 1024 * 1024) { toast.error(t("toastImageTooHeavy", { max: 10 })); return; }
-    setSplitImageUploading(true);
+  // Upload d'une image pour le panneau media (per-page). Renvoie l'URL
+  // publique, ou null en cas d'erreur. Meme bucket / conventions que le
+  // reste des uploads (public-assets, path namespace dedie).
+  async function uploadPanelImage(file: File): Promise<string | null> {
+    if (!file.type.startsWith("image/")) { toast.error(t("toastImageOnly")); return null; }
+    if (file.size > 10 * 1024 * 1024) { toast.error(t("toastImageTooHeavy", { max: 10 })); return null; }
     try {
       const supabase = getSupabaseBrowserClient();
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { toast.error(t("toastNotLoggedIn")); return; }
+      if (!user) { toast.error(t("toastNotLoggedIn")); return null; }
       const ext = file.name.split(".").pop() ?? "jpg";
-      const path = `quiz-split/${user.id}/${quizId}-${Date.now()}.${ext}`;
+      const path = `quiz-panel/${user.id}/${quizId}-${Date.now()}.${ext}`;
       const { error } = await supabase.storage.from("public-assets").upload(path, file, { upsert: true });
       if (error) throw error;
       const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
-      setSplitImageUrl(urlData.publicUrl);
-      setQuestionLayout("split");
+      return urlData.publicUrl;
     } catch (err) {
-      console.error("Split image upload failed:", err);
+      console.error("Panel image upload failed:", err);
       const msg = err instanceof Error ? err.message : "erreur inconnue";
       toast.error(t("toastImageUploadError", { msg }));
-    } finally {
-      setSplitImageUploading(false);
+      return null;
     }
   }
 
@@ -1788,6 +1798,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           // sinon on envoie null (pas d'image orpheline stockée).
           split_image_url: questionLayout === "split" ? splitImageUrl : null,
           split_side: splitSide,
+          panel_media: panelMedia,
           close_enabled: closeEnabled,
           close_action: closeAction,
           close_redirect_url: closeRedirectUrl.trim() || null,
@@ -2461,29 +2472,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     })}
                   </div>
                   {questionLayout === "split" && (
-                    <div className="space-y-2 rounded-lg border border-border p-2.5">
-                      {splitImageUrl && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={splitImageUrl} alt="" className="h-24 w-full rounded-lg object-contain bg-muted/40" />
-                      )}
-                      <input
-                        ref={splitImageInputRef}
-                        type="file"
-                        accept="image/*,image/gif"
-                        className="hidden"
-                        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleSplitImageUpload(f); e.currentTarget.value = ""; }}
-                      />
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Button type="button" variant="outline" size="sm" disabled={splitImageUploading} onClick={() => splitImageInputRef.current?.click()}>
-                          {splitImageUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : t("designSplitImageAdd")}
-                        </Button>
-                        <GifPickerButton label={t("designSplitImageGif")} onPick={(url) => { setSplitImageUrl(url); setQuestionLayout("split"); }} />
-                        {splitImageUrl && (
-                          <button type="button" onClick={() => setSplitImageUrl(null)} className="text-[11px] text-muted-foreground hover:text-primary hover:underline">
-                            {t("designSplitImageRemove")}
-                          </button>
-                        )}
-                      </div>
+                    <div className="space-y-2.5">
+                      {/* Cote du panneau */}
                       <div className="space-y-1.5">
                         <Label className="text-[11px] text-muted-foreground">{t("designSplitSide")}</Label>
                         <div className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-1">
@@ -2499,7 +2489,27 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                           ))}
                         </div>
                       </div>
-                      <p className="text-[10px] text-muted-foreground">{t("designSplitImageHint")}</p>
+                      {/* Editeur du visuel du panneau, par page (mockup) */}
+                      <Label className="text-xs">{t("designPanelVisual")}</Label>
+                      <PanelMediaEditor
+                        config={panelMedia}
+                        onChange={(next) => { setPanelMedia(next); setThemeId(null); }}
+                        brandColor={pc}
+                        pages={[
+                          { key: "intro", label: t("designPanelPageIntro") },
+                          { key: "capture", label: t("designPanelPageCapture") },
+                          ...editQuestions
+                            .map((q, i) => ({ q, i }))
+                            .filter(({ q }) => typeof q.id === "string" && q.id)
+                            .map(({ q, i }) => ({ key: "q:" + q.id, label: t("designPanelPageQuestion", { n: i + 1 }) })),
+                          ...editResults
+                            .filter((r) => typeof r.id === "string" && r.id)
+                            .map((r, i) => ({ key: "r:" + r.id, label: t("designPanelPageResult", { n: i + 1 }) })),
+                        ]}
+                        t={t}
+                        uploadImage={uploadPanelImage}
+                      />
+                      <p className="text-[10px] text-muted-foreground">{t("designPanelHint")}</p>
                     </div>
                   )}
                   {questionLayout !== "split" && (
@@ -3184,17 +3194,12 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     </div>
                     <div className={`flex-1 flex ${previewSplit ? (splitSide === "right" ? "flex-col md:flex-row-reverse gap-6" : "flex-col md:flex-row gap-6") : "flex-col items-center justify-center"}`}>
                       {previewSplit && (
-                        <div className="relative w-full h-40 md:h-auto md:w-2/5 shrink-0 md:self-stretch overflow-hidden rounded-2xl flex items-center justify-center" style={splitImageUrl ? { backgroundImage: `url("${splitImageUrl}")`, backgroundSize: "cover", backgroundPosition: "center" } : { background: previewBackgroundCss ?? pc }}>
-                          {!splitImageUrl && (
-                            <div className="flex flex-col items-center justify-center gap-2 p-4 text-center text-white">
-                              {effectiveLogoUrl && (
-                                /* eslint-disable-next-line @next/next/no-img-element */
-                                <img src={effectiveLogoUrl} alt="" className="max-h-12 w-auto object-contain" />
-                              )}
-                              <span className="text-base font-bold leading-tight">{title.replace(/<[^>]+>/g, "")}</span>
-                            </div>
-                          )}
-                        </div>
+                        <QuizPanelMedia
+                          item={resolvePanelMedia(panelMedia, "q:" + (q.id ?? ""), pc, splitImageUrl)}
+                          brandColor={pc}
+                          logoUrl={effectiveLogoUrl}
+                          className="w-full h-40 md:h-auto md:w-2/5 shrink-0 md:self-stretch rounded-2xl"
+                        />
                       )}
                       <div className={`${previewSplit ? "flex-1 min-w-0 flex flex-col justify-center " : ""}max-w-2xl w-full space-y-8${previewAlignText}`}>
                         <div className="flex flex-wrap items-center justify-between gap-2">

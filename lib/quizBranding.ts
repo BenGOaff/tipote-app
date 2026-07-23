@@ -107,10 +107,16 @@ export type QuizBranding = {
   // ─── Disposition des questions (façon Tally) ───
   /** Disposition de l'écran de question. 'centered' = rendu historique. */
   questionLayout: QuizQuestionLayout;
-  /** Image du panneau média en disposition 'split', sinon null. */
+  /** Image du panneau média en disposition 'split', sinon null (legacy). */
   splitImageUrl: string | null;
   /** Côté du panneau média en 'split' ('left' = défaut). */
   splitSide: QuizSplitSide;
+  /**
+   * Visuel du panneau split par page (validé/sanitisé), sinon null. NULL =
+   * fallback historique (splitImageUrl puis motif mesh sur la couleur de
+   * marque). Résolu par page côté rendu via `resolvePanelMedia`.
+   */
+  panelMedia: PanelMediaConfig | null;
 };
 
 const HEX_RE = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
@@ -165,6 +171,128 @@ function sanitizeUrlOrNull(raw: unknown): string | null {
   return t.length > 0 && /^https?:\/\//i.test(t) ? t : null;
 }
 
+// ─── Panneau media (disposition "colonnes" / split) ───────────────────
+// Le panneau decoratif du mode split peut afficher, par page : un motif
+// (dessine sur canvas a partir d'une couleur), une couleur pleine, un
+// degrade (parmi QUIZ_GRADIENTS) ou une image. Config stockee dans la
+// colonne JSONB `quizzes.panel_media`. Palette fermee, ZERO CSS/JSON libre
+// injecte : tout est valide/sanitise ici avant rendu.
+//
+// pageKey convention (source unique) :
+//   "intro"            -> ecran d'accueil (non-cover) + personalisation
+//   "capture"          -> formulaire email / capture
+//   "q:"+questionId    -> une question donnee
+//   "r:"+resultId      -> un profil resultat donne
+
+export const PANEL_MOTIFS = ["mesh", "dots", "waves", "aurora", "rings", "grain"] as const;
+export type PanelMotifKey = (typeof PANEL_MOTIFS)[number];
+
+export const PANEL_MEDIA_TYPES = ["motif", "color", "gradient", "image"] as const;
+export type PanelMediaType = (typeof PANEL_MEDIA_TYPES)[number];
+
+export type PanelMediaItem = {
+  type: PanelMediaType;
+  color?: string;
+  gradient?: QuizGradientKey;
+  motif?: PanelMotifKey;
+  motifColor?: string;
+  imageUrl?: string;
+};
+
+export type PanelMediaConfig = {
+  perPage?: boolean;
+  global?: PanelMediaItem;
+  pages?: Record<string, PanelMediaItem>;
+};
+
+function sanitizeMotifKey(raw: unknown): PanelMotifKey {
+  return typeof raw === "string" && (PANEL_MOTIFS as readonly string[]).includes(raw)
+    ? (raw as PanelMotifKey)
+    : "mesh";
+}
+
+/**
+ * Valide/sanitise un Item de panneau media. Renvoie null si l'entree n'est
+ * pas un objet exploitable. Chaque champ est verrouille sur son ensemble
+ * ferme (type/motif/gradient) ou son format (hex, url http(s)).
+ */
+export function sanitizePanelMediaItem(raw: unknown): PanelMediaItem | null {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw as Record<string, unknown>;
+  const type: PanelMediaType =
+    typeof r.type === "string" && (PANEL_MEDIA_TYPES as readonly string[]).includes(r.type)
+      ? (r.type as PanelMediaType)
+      : "motif";
+  const item: PanelMediaItem = { type };
+  const color = sanitizeHexOrNull(r.color);
+  if (color) item.color = color;
+  const gradient = sanitizeGradientKey(r.gradient);
+  if (gradient) item.gradient = gradient;
+  item.motif = sanitizeMotifKey(r.motif);
+  const motifColor = sanitizeHexOrNull(r.motifColor);
+  if (motifColor) item.motifColor = motifColor;
+  const imageUrl = sanitizeUrlOrNull(r.imageUrl);
+  if (imageUrl) item.imageUrl = imageUrl;
+  return item;
+}
+
+/**
+ * Valide/sanitise l'objet complet `panel_media`. Ne fait jamais confiance au
+ * JSON brut : perPage -> bool, global -> Item, pages -> map de clefs (string)
+ * vers Items. Renvoie null si rien d'exploitable (=> fallback historique).
+ */
+export function sanitizePanelMediaConfig(raw: unknown): PanelMediaConfig | null {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw as Record<string, unknown>;
+  const out: PanelMediaConfig = {};
+  if (typeof r.perPage === "boolean") out.perPage = r.perPage;
+  const global = sanitizePanelMediaItem(r.global);
+  if (global) out.global = global;
+  if (r.pages && typeof r.pages === "object") {
+    const pages: Record<string, PanelMediaItem> = {};
+    for (const [key, val] of Object.entries(r.pages as Record<string, unknown>)) {
+      if (typeof key !== "string" || key.length === 0 || key.length > 200) continue;
+      const item = sanitizePanelMediaItem(val);
+      if (item) pages[key] = item;
+    }
+    if (Object.keys(pages).length > 0) out.pages = pages;
+  }
+  if (out.perPage === undefined && !out.global && !out.pages) return null;
+  return out;
+}
+
+/**
+ * Item par defaut : motif "mesh" sur la couleur de marque. Sert de rendu
+ * garanti quand rien n'est configure -> jamais un panneau vide.
+ */
+export function defaultPanelMediaItem(brandColor: string): PanelMediaItem {
+  return { type: "motif", motif: "mesh", motifColor: brandColor };
+}
+
+/**
+ * Resout l'Item a rendre pour une page donnee, avec fallback retro-compatible :
+ *  - config null + ancienne image split renseignee -> image plein cadre
+ *  - config null -> motif mesh sur la couleur de marque
+ *  - config.perPage + page presente -> l'Item de cette page
+ *  - sinon -> config.global, sinon defaut.
+ */
+export function resolvePanelMedia(
+  config: PanelMediaConfig | null | undefined,
+  pageKey: string,
+  brandColor: string,
+  legacySplitImageUrl?: string | null,
+): PanelMediaItem {
+  if (!config) {
+    const legacy = sanitizeUrlOrNull(legacySplitImageUrl);
+    if (legacy) return { type: "image", imageUrl: legacy };
+    return defaultPanelMediaItem(brandColor);
+  }
+  if (config.perPage && config.pages && config.pages[pageKey]) {
+    return config.pages[pageKey];
+  }
+  return config.global ?? defaultPanelMediaItem(brandColor);
+}
+
 type QuizInput = {
   brand_font?: string | null;
   brand_color_primary?: string | null;
@@ -183,6 +311,8 @@ type QuizInput = {
   question_layout?: string | null;
   split_image_url?: string | null;
   split_side?: string | null;
+  /** Visuel du panneau split par page (JSONB). NULL = fallback historique. */
+  panel_media?: unknown;
 } | null | undefined;
 
 // Tipote stores branding on business_profiles: brand_color_base is the
@@ -224,6 +354,7 @@ export function resolveQuizBranding(quiz: QuizInput, profile: BusinessProfileInp
     questionLayout: sanitizeQuestionLayout(quiz?.question_layout),
     splitImageUrl: sanitizeUrlOrNull(quiz?.split_image_url),
     splitSide: sanitizeSplitSide(quiz?.split_side),
+    panelMedia: sanitizePanelMediaConfig(quiz?.panel_media),
   };
 }
 
