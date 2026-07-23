@@ -177,6 +177,14 @@ QUESTIONS — RÈGLES :
 - Varie les formulations : Vrai/Faux, scénarios, mises en situation.
 - Répartis les result_index de façon équilibrée parmi les options pour que chaque profil ait des chances égales.
 
+PONDÉRATION ANTI-ÉGALITÉ (déterminant, à soigner) :
+Chaque option de type choix porte un champ "points" (entier de 1 à 3) qui pondère sa contribution au profil de son result_index. Le profil révélé est celui dont la somme des points est la plus haute. Ton job : pondérer avec finesse pour qu'un vrai répondant tombe TOUJOURS sur un profil net, jamais sur une égalité, et sans que tout le monde atterrisse au même endroit.
+- Repère les 2 ou 3 questions VRAIMENT discriminantes (celles dont la réponse en dit le plus sur le profil). Donne à leur option la plus caractéristique d'un profil un poids fort (2 ou 3).
+- Les questions plus secondaires gardent un poids de 1.
+- Donne à CHAQUE profil une "signature" distincte : une combinaison de réponses qui le fait clairement ressortir. Évite que deux profils puissent finir à égalité pour un répondant cohérent.
+- N'attribue jamais le même poids partout (ça recrée des égalités et un biais vers le premier profil). Varie intelligemment, mais garde les poids modérés (1 à 3) pour qu'aucun profil n'écrase les autres d'entrée.
+- Les questions rating_scale / star_rating / free_text ne portent pas de points (elles ne déterminent pas le profil).
+
 RÉSULTATS — RÈGLES :
 - Chaque résultat doit être TRANSFORMATIF : révéler un élément caché, bloquant ou valorisant.
 - Mettre en valeur l'expertise de l'auteur du quiz.
@@ -196,10 +204,10 @@ FORMAT DE SORTIE : JSON strict uniquement. Pas de markdown, pas de commentaires,
       "question_text": "La question",
       "question_type": "multiple_choice",
       "options": [
-        { "text": "Option A", "result_index": 0 },
-        { "text": "Option B", "result_index": 1 },
-        { "text": "Option C", "result_index": 2 },
-        { "text": "Option D", "result_index": 0 }
+        { "text": "Option A", "result_index": 0, "points": 2 },
+        { "text": "Option B", "result_index": 1, "points": 1 },
+        { "text": "Option C", "result_index": 2, "points": 3 },
+        { "text": "Option D", "result_index": 0, "points": 1 }
       ]
     }
   ],
@@ -238,7 +246,7 @@ FORMAT DE SORTIE : JSON strict uniquement. Pas de markdown, pas de commentaires,
     `\nCONSIGNES STRICTES :`,
     `- Génère exactement ${questionCount} questions, en MAJORITÉ des choix (3 à 5 options).`,
     `- Génère exactement ${resultCount} profils résultat.`,
-    `- Pour les questions de type choix, chaque option a un result_index entre 0 et ${resultCount - 1}, répartis équilibré.`,
+    `- Pour les questions de type choix, chaque option a un result_index entre 0 et ${resultCount - 1}, répartis équilibré, ET un "points" (1 à 3) pondéré pour éviter toute égalité entre profils (poids fort sur les 2-3 questions les plus déterminantes, poids 1 ailleurs, une signature distincte par profil).`,
     `- Ajoute "question_type" à chaque question (défaut "multiple_choice"). Échelle/étoiles/texte libre avec parcimonie (ne déterminent pas le profil).`,
     `- Tout le contenu DOIT être en ${langLabel}.`,
     `- Les résultats doivent être TRANSFORMATIFS, pas génériques.`,
@@ -270,6 +278,7 @@ RÈGLES D'OR :
 - Détecte le type de chaque question et remplis "question_type" : "yes_no" si Oui/Non (2 options "Oui" puis "Non"), "rating_scale" si échelle numérique (ajoute "config": { "min": 0, "max": 10 }, "options": []), "star_rating" si notation en étoiles ("config": { "max": 5 }, "options": []), "free_text" si réponse ouverte ("options": []), sinon "multiple_choice".
 - Pour une question de type choix ("multiple_choice") qui a moins de 3 options dans le source, complète avec des options neutres/plausibles pour arriver à 3 ou 4 (et seulement dans ce cas). yes_no reste à 2 options.
 - Si le source n'a pas de résultats explicites, déduis 3 profils cohérents à partir du ton et des questions (ex: débutant / intermédiaire / expert).
+- Pondère les options avec un "points" (1 à 3) pour éviter les égalités entre profils : poids fort sur les réponses les plus caractéristiques d'un profil, poids 1 sur les réponses neutres. Une signature distincte par profil, jamais le même poids partout.
 - Si certains champs manquent (introduction, CTA, share_message), génère-les de façon brève et cohérente avec le contenu.
 - NE TRADUIS PAS le contenu si le source est déjà dans la bonne langue. La langue de sortie est ${langLabel}.
 - Forme d'adresse : ${formality === "vous" ? "VOUVOYER" : "TUTOYER"}. Conserve la forme du source si elle est claire.
@@ -284,10 +293,10 @@ FORMAT DE SORTIE : JSON strict uniquement, sans markdown, sans commentaires.
       "question_text": "La question",
       "question_type": "multiple_choice",
       "options": [
-        { "text": "Option A", "result_index": 0 },
-        { "text": "Option B", "result_index": 1 },
-        { "text": "Option C", "result_index": 2 },
-        { "text": "Option D", "result_index": 0 }
+        { "text": "Option A", "result_index": 0, "points": 2 },
+        { "text": "Option B", "result_index": 1, "points": 1 },
+        { "text": "Option C", "result_index": 2, "points": 3 },
+        { "text": "Option D", "result_index": 0, "points": 1 }
       ]
     }
   ],

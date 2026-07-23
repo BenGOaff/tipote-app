@@ -1509,6 +1509,12 @@ export default function PublicQuizClient({
     }
 
     const scores: number[] = new Array(quiz.results.length).fill(0);
+    // Plus forte contribution UNIQUE vers chaque profil (le poids max d'une
+    // seule reponse choisie). Sert a departager les egalites : le profil que
+    // le repondant a choisi le plus franchement l'emporte. Sur un quiz sans
+    // ponderation (tous points = 1), ce tableau est uniforme -> aucune
+    // difference avec l'ancien comportement (retro-compatible strict).
+    const strongest: number[] = new Array(quiz.results.length).fill(0);
     answers.forEach((ans, qIdx) => {
       if (!ans) return;
       const q = quiz.questions[qIdx];
@@ -1529,17 +1535,25 @@ export default function PublicQuizClient({
         // Poids de la reponse : `points` si defini (privilegier un profil,
         // retour Adeline 14 juillet 2026), sinon 1 (retro-compatible).
         const weight = typeof opt.points === "number" ? opt.points : 1;
-        if (ri >= 0 && ri < scores.length) scores[ri] += weight;
+        if (ri >= 0 && ri < scores.length) {
+          scores[ri] += weight;
+          if (weight > strongest[ri]) strongest[ri] = weight;
+        }
       }
     });
-    let maxScore = -1;
+    // Gagnant : score le plus haut. En cas d'egalite, on tranche par la
+    // contribution unique la plus forte (le profil choisi le plus nettement),
+    // puis par l'index le plus bas. Evite le biais "toujours le 1er profil"
+    // sur les egalites, sans rien changer pour les quiz non ponderes.
     let maxIdx = 0;
-    scores.forEach((s, i) => {
-      if (s > maxScore) {
-        maxScore = s;
+    for (let i = 1; i < scores.length; i++) {
+      if (
+        scores[i] > scores[maxIdx] ||
+        (scores[i] === scores[maxIdx] && strongest[i] > strongest[maxIdx])
+      ) {
         maxIdx = i;
       }
-    });
+    }
     return { profile: quiz.results[maxIdx] ?? null, scores };
   }, [quiz, answers]);
 
