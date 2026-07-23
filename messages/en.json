@@ -4517,7 +4517,7 @@
     "designSplitSide": "Visual side",
     "designSplitSideLeft": "Left",
     "designSplitSideRight": "Right",
-    "designSplitImageHint": "The visual sits beside the question on desktop, and above it on mobile.",
+    "designSplitImageHint": "The visual sits beside the question on desktop, and above it on mobile. With no image, the panel is filled with your color, logo and title, never left empty.",
     "closeTitle": "Close the quiz",
     "closeHint": "Close this quiz to visitors. Either redirect them, or show a message.",
     "closeEnableLabel": "Close this quiz",

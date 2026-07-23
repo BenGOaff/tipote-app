@@ -4814,7 +4814,7 @@
     "designSplitSide": "Lado do visual",
     "designSplitSideLeft": "Esquerda",
     "designSplitSideRight": "Direita",
-    "designSplitImageHint": "O visual aparece ao lado da pergunta no computador, e acima no celular.",
+    "designSplitImageHint": "O visual aparece ao lado da pergunta no computador, e acima no celular. Sem imagem, o painel é preenchido com sua cor, seu logo e seu título, nunca vazio.",
     "closeTitle": "Fechar o quiz",
     "closeHint": "Feche este quiz para os visitantes. Você pode redirecioná-los ou mostrar uma mensagem.",
     "closeEnableLabel": "Fechar este quiz",
