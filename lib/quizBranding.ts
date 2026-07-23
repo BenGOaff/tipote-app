@@ -77,6 +77,17 @@ export type QuizQuestionLayout = "centered" | "left" | "split";
 // Côté du panneau média en disposition 'split'. NULL/'left' = média à gauche.
 export type QuizSplitSide = "left" | "right";
 
+// ─── Disposition des réponses (colonnes vs liste) ─────────────────────
+// 'auto' (défaut/NULL) = comportement historique : multiple_choice avec >= 3
+// options -> 2 colonnes (>= sm), sinon 1 colonne. 'grid' = toujours 2
+// colonnes (>= sm). 'list' = toujours une seule colonne empilée. NULL/'auto'
+// = rendu STRICTEMENT identique aux quiz existants (dont ceux sous pub).
+export type QuizAnswerLayout = "auto" | "grid" | "list";
+
+export function sanitizeAnswerLayout(raw: unknown): QuizAnswerLayout {
+  return raw === "grid" || raw === "list" ? raw : "auto";
+}
+
 // Classe Tailwind d'arrondi correspondant à la forme choisie. Sert aux
 // boutons de réponse et aux CTA. 'pill' (défaut) renvoie une chaîne VIDE :
 // aucun override, chaque bouton garde son arrondi d'origine -> les quiz
@@ -117,6 +128,8 @@ export type QuizBranding = {
    * marque). Résolu par page côté rendu via `resolvePanelMedia`.
    */
   panelMedia: PanelMediaConfig | null;
+  /** Disposition des réponses ('auto' = rendu historique). */
+  answerLayout: QuizAnswerLayout;
 };
 
 const HEX_RE = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
@@ -313,6 +326,8 @@ type QuizInput = {
   split_side?: string | null;
   /** Visuel du panneau split par page (JSONB). NULL = fallback historique. */
   panel_media?: unknown;
+  /** Disposition des réponses ('auto'/NULL = rendu historique). */
+  answer_layout?: string | null;
 } | null | undefined;
 
 // Tipote stores branding on business_profiles: brand_color_base is the
@@ -355,6 +370,7 @@ export function resolveQuizBranding(quiz: QuizInput, profile: BusinessProfileInp
     splitImageUrl: sanitizeUrlOrNull(quiz?.split_image_url),
     splitSide: sanitizeSplitSide(quiz?.split_side),
     panelMedia: sanitizePanelMediaConfig(quiz?.panel_media),
+    answerLayout: sanitizeAnswerLayout(quiz?.answer_layout),
   };
 }
 
@@ -369,8 +385,11 @@ export function quizBackgroundCss(b: QuizBranding): string | null {
     return QUIZ_GRADIENTS[b.backgroundGradient] ?? null;
   }
   if (b.backgroundStyle === "image" && b.backgroundImageUrl) {
-    // Scrim clair sous l'image pour garder les textes lisibles.
-    return `linear-gradient(rgba(255,255,255,0.55), rgba(255,255,255,0.55)), url("${b.backgroundImageUrl}") center/cover no-repeat fixed`;
+    // Image plein cadre (façon Apple/Tally) : le texte n'est JAMAIS posé
+    // directement dessus, il vit dans une "reader surface" translucide (cf.
+    // PublicQuizClient). L'image sert donc de simple toile de fond -> plus
+    // besoin du scrim clair d'antan.
+    return `url("${b.backgroundImageUrl}") center/cover no-repeat fixed`;
   }
   return null;
 }
@@ -382,6 +401,66 @@ export function quizBackgroundIsDark(b: QuizBranding): boolean {
     b.backgroundGradient !== null &&
     DARK_GRADIENTS.has(b.backgroundGradient)
   );
+}
+
+// ─── Système de contraste (lisibilité sur n'importe quel fond) ────────
+// Un fond peut être clair (texte foncé, rendu historique) ou sombre (texte
+// clair). On calcule la luminance PERÇUE du "sol" de contenu et on bascule
+// TOUTE la palette de texte quand il est sombre. Objectif : titre, question,
+// réponses, hints, footer, résultats, TOUS lisibles, sur couleur pleine
+// sombre, dégradé sombre OU photo (via reader surface).
+
+/**
+ * Luminance perçue (0..1) d'une couleur hex, formule pondérée
+ * (0.299*R + 0.587*G + 0.114*B) / 255. Retourne 1 (clair) sur entrée
+ * invalide -> jamais de bascule accidentelle vers le thème sombre.
+ */
+export function relativeLuminance(hex: string): number {
+  if (!HEX_RE.test(hex)) return 1;
+  let h = hex.slice(1);
+  if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+}
+
+/** Une couleur est "sombre" si sa luminance perçue est < 0.55. */
+export function isColorDark(hex: string): boolean {
+  return relativeLuminance(hex) < 0.55;
+}
+
+/**
+ * Un dégradé de la palette fermée est-il sombre ? On extrait les hex de sa
+ * chaîne CSS et on moyenne leur luminance. Faux si absent/illisible.
+ */
+export function gradientIsDark(key: QuizGradientKey): boolean {
+  const css = QUIZ_GRADIENTS[key];
+  if (!css) return false;
+  const hexes = css.match(/#[0-9a-fA-F]{6}/g);
+  if (!hexes || hexes.length === 0) return false;
+  const avg = hexes.reduce((sum, h) => sum + relativeLuminance(h), 0) / hexes.length;
+  return avg < 0.55;
+}
+
+/**
+ * Le SOL DE CONTENU (là où repose le texte) est-il sombre ? Détermine la
+ * bascule de TOUTE la palette de texte en clair.
+ *  - disposition 'split' : le contenu repose sur backgroundColor (le panneau
+ *    média est décoratif) -> on juge backgroundColor.
+ *  - fond image : le texte vit dans une reader surface teintée de
+ *    backgroundColor -> on juge backgroundColor.
+ *  - fond dégradé (centered/left) : luminance moyenne du dégradé.
+ *  - fond plein : on juge backgroundColor.
+ * Fond blanc par défaut -> jamais sombre -> quiz existants inchangés.
+ */
+export function quizContentIsDark(b: QuizBranding): boolean {
+  if (b.questionLayout === "split") return isColorDark(b.backgroundColor);
+  if (b.backgroundStyle === "image") return isColorDark(b.backgroundColor);
+  if (b.backgroundStyle === "gradient" && b.backgroundGradient) {
+    return gradientIsDark(b.backgroundGradient);
+  }
+  return isColorDark(b.backgroundColor);
 }
 
 // ─── Thèmes prêts à l'emploi (Tally-quality) ──────────────────────────

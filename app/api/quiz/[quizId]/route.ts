@@ -202,6 +202,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       "background_style", "background_gradient", "background_image_url",
       "intro_layout", "button_shape", "theme_id",
       "question_layout", "split_image_url", "split_side", "panel_media",
+      "answer_layout", "show_result_insight", "show_result_projection", "show_result_share",
       "close_enabled", "close_action", "close_redirect_url", "close_message",
       "close_cta_text", "close_cta_url",
     ];
@@ -258,6 +259,17 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     // url http(s)). Resultat null -> on ecrit null (fallback historique).
     if ("panel_media" in patch) {
       patch.panel_media = sanitizePanelMediaConfig(patch.panel_media);
+    }
+    // Disposition des reponses : valeurs fermees. Inconnu -> 'auto' (rendu
+    // historique).
+    if ("answer_layout" in patch) {
+      const v = patch.answer_layout;
+      patch.answer_layout = v === "grid" || v === "list" ? v : "auto";
+    }
+    // Cartes resultat masquables + bouton de partage optionnel. Booleens
+    // stricts ; default true cote DB -> absence = comportement historique.
+    for (const key of ["show_result_insight", "show_result_projection", "show_result_share"] as const) {
+      if (key in patch) patch[key] = patch[key] !== false;
     }
 
     for (const key of RICH_TEXT_FIELDS) {
