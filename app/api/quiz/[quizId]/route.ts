@@ -201,6 +201,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       "intro_image_url", "intro_image_position", "intro_image_width",
       "background_style", "background_gradient", "background_image_url",
       "intro_layout", "button_shape", "theme_id",
+      "question_layout", "split_image_url", "split_side",
       "close_enabled", "close_action", "close_redirect_url", "close_message",
       "close_cta_text", "close_cta_url",
     ];
@@ -238,6 +239,19 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     if ("background_image_url" in patch) {
       const v = patch.background_image_url;
       if (v !== null && typeof v !== "string") patch.background_image_url = null;
+    }
+    // Disposition des questions (Tally) : valeurs fermées. Toute valeur
+    // inconnue retombe sur 'centered' = rendu historique.
+    if ("question_layout" in patch) {
+      const v = patch.question_layout;
+      patch.question_layout = v === "left" || v === "split" ? v : "centered";
+    }
+    if ("split_side" in patch) {
+      patch.split_side = patch.split_side === "right" ? "right" : "left";
+    }
+    if ("split_image_url" in patch) {
+      const v = patch.split_image_url;
+      if (v !== null && typeof v !== "string") patch.split_image_url = null;
     }
 
     for (const key of RICH_TEXT_FIELDS) {
