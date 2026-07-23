@@ -100,6 +100,8 @@ import {
   type QuizBackgroundStyle,
   type QuizIntroLayout,
   type QuizButtonShape,
+  type QuizQuestionLayout,
+  type QuizSplitSide,
 } from "@/lib/quizBranding";
 
 // Types
@@ -660,6 +662,12 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const [introLayout, setIntroLayout] = useState<QuizIntroLayout>("card");
   const [buttonShape, setButtonShape] = useState<QuizButtonShape>("pill");
   const [themeId, setThemeId] = useState<string | null>(null);
+  // Disposition des questions (façon Tally). 'centered' = rendu historique.
+  const [questionLayout, setQuestionLayout] = useState<QuizQuestionLayout>("centered");
+  const [splitImageUrl, setSplitImageUrl] = useState<string | null>(null);
+  const [splitSide, setSplitSide] = useState<QuizSplitSide>("left");
+  const [splitImageUploading, setSplitImageUploading] = useState(false);
+  const splitImageInputRef = useRef<HTMLInputElement>(null);
   // Fermeture du quiz (redirection OU message + CTA).
   const [closeEnabled, setCloseEnabled] = useState(false);
   const [closeAction, setCloseAction] = useState<"redirect" | "message">("message");
@@ -807,6 +815,9 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     intro_layout: introLayout,
     button_shape: buttonShape,
     theme_id: themeId,
+    question_layout: questionLayout,
+    split_image_url: splitImageUrl,
+    split_side: splitSide,
     close_enabled: closeEnabled,
     close_action: closeAction,
     close_redirect_url: closeRedirectUrl,
@@ -844,6 +855,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     viralityEnabled, bonusDescription, bonusIntroText, bonusUnlockedMessage, bonusImageUrl, bonusImagePosition, bonusImageWidth,
     introImageUrl, introImagePosition, introImageWidth,
     backgroundStyle, backgroundGradient, backgroundImageUrl, introLayout, buttonShape, themeId,
+    questionLayout, splitImageUrl, splitSide,
     closeEnabled, closeAction, closeRedirectUrl, closeMessage, closeCtaText, closeCtaUrl,
     shareMessage, locale, sioShareTagName, status,
     fontFamily, primaryColor, bgColor, textColor, quizBrandLogoUrl, hideBrandLogo,
@@ -910,6 +922,9 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     if (s.intro_layout === "card" || s.intro_layout === "cover") setIntroLayout(s.intro_layout);
     if (s.button_shape === "pill" || s.button_shape === "rounded" || s.button_shape === "square") setButtonShape(s.button_shape);
     if (s.theme_id === null || typeof s.theme_id === "string") setThemeId(s.theme_id as string | null);
+    if (s.question_layout === "centered" || s.question_layout === "left" || s.question_layout === "split") setQuestionLayout(s.question_layout);
+    if (s.split_image_url === null || typeof s.split_image_url === "string") setSplitImageUrl(s.split_image_url as string | null);
+    if (s.split_side === "left" || s.split_side === "right") setSplitSide(s.split_side);
     if (typeof s.close_enabled === "boolean") setCloseEnabled(s.close_enabled);
     if (s.close_action === "redirect" || s.close_action === "message") setCloseAction(s.close_action);
     if (typeof s.close_redirect_url === "string") setCloseRedirectUrl(s.close_redirect_url);
@@ -1158,6 +1173,12 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           setButtonShape(bsh === "rounded" || bsh === "square" ? bsh : "pill");
         }
         setThemeId((q as { theme_id?: string | null }).theme_id ?? null);
+        {
+          const ql = (q as { question_layout?: string | null }).question_layout;
+          setQuestionLayout(ql === "left" || ql === "split" ? ql : "centered");
+        }
+        setSplitImageUrl((q as { split_image_url?: string | null }).split_image_url ?? null);
+        setSplitSide((q as { split_side?: string | null }).split_side === "right" ? "right" : "left");
         {
           const cq = q as Record<string, unknown>;
           setCloseEnabled(cq.close_enabled === true);
@@ -1465,6 +1486,32 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     }
   }
 
+  // Image du panneau média en disposition 'split' (façon Tally). Même
+  // pattern Supabase Storage que le fond, namespace dédié.
+  async function handleSplitImageUpload(file: File) {
+    if (!file.type.startsWith("image/")) { toast.error(t("toastImageOnly")); return; }
+    if (file.size > 10 * 1024 * 1024) { toast.error(t("toastImageTooHeavy", { max: 10 })); return; }
+    setSplitImageUploading(true);
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { toast.error(t("toastNotLoggedIn")); return; }
+      const ext = file.name.split(".").pop() ?? "jpg";
+      const path = `quiz-split/${user.id}/${quizId}-${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("public-assets").upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
+      setSplitImageUrl(urlData.publicUrl);
+      setQuestionLayout("split");
+    } catch (err) {
+      console.error("Split image upload failed:", err);
+      const msg = err instanceof Error ? err.message : "erreur inconnue";
+      toast.error(t("toastImageUploadError", { msg }));
+    } finally {
+      setSplitImageUploading(false);
+    }
+  }
+
   // Applique un thème prêt-à-l'emploi : écrit les champs de branding d'un
   // coup. L'user peut tout ajuster ensuite (les contrôles restent actifs).
   function applyTheme(theme: (typeof QUIZ_THEMES)[number]) {
@@ -1736,6 +1783,11 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           intro_layout: introLayout,
           button_shape: buttonShape,
           theme_id: themeId,
+          question_layout: questionLayout,
+          // On ne persiste l'image split que si la disposition l'utilise ;
+          // sinon on envoie null (pas d'image orpheline stockée).
+          split_image_url: questionLayout === "split" ? splitImageUrl : null,
+          split_side: splitSide,
           close_enabled: closeEnabled,
           close_action: closeAction,
           close_redirect_url: closeRedirectUrl.trim() || null,
@@ -2357,6 +2409,101 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                   </div>
                   {introLayout === "cover" && (
                     <p className="text-[10px] text-muted-foreground">{t("designIntroLayoutCoverHint")}</p>
+                  )}
+                </div>
+
+                {/* ── Disposition des questions (façon Tally) ── */}
+                <div className="space-y-2">
+                  <Label className="text-xs">{t("designQuestionLayout")}</Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {([
+                      ["centered", t("designQuestionLayoutCentered")],
+                      ["left", t("designQuestionLayoutLeft")],
+                      ["split", t("designQuestionLayoutSplit")],
+                    ] as const).map(([val, label]) => {
+                      const active = questionLayout === val;
+                      return (
+                        <button
+                          key={val}
+                          type="button"
+                          onClick={() => { setQuestionLayout(val); setThemeId(null); }}
+                          className={`flex flex-col items-center gap-1.5 rounded-lg border p-2 transition-all ${active ? "border-primary ring-2 ring-primary/30 bg-primary/5" : "border-border hover:border-primary/40"}`}
+                        >
+                          <span className="flex h-11 w-full items-center justify-center overflow-hidden rounded-md bg-muted/60 p-1.5">
+                            {val === "centered" && (
+                              <span className="flex w-full flex-col items-center gap-1">
+                                <span className="h-1 w-8 rounded-full" style={{ backgroundColor: pc }} />
+                                <span className="h-1 w-10 rounded-full bg-muted-foreground/40" />
+                                <span className="h-1 w-10 rounded-full bg-muted-foreground/40" />
+                              </span>
+                            )}
+                            {val === "left" && (
+                              <span className="flex w-full flex-col items-start gap-1 pl-1">
+                                <span className="h-1 w-7 rounded-full" style={{ backgroundColor: pc }} />
+                                <span className="h-1 w-10 rounded-full bg-muted-foreground/40" />
+                                <span className="h-1 w-9 rounded-full bg-muted-foreground/40" />
+                              </span>
+                            )}
+                            {val === "split" && (
+                              <span className="flex w-full items-stretch gap-1">
+                                <span className="h-8 w-1/2 rounded-sm" style={{ backgroundColor: pc, opacity: 0.7 }} />
+                                <span className="flex w-1/2 flex-col items-start justify-center gap-1">
+                                  <span className="h-1 w-6 rounded-full" style={{ backgroundColor: pc }} />
+                                  <span className="h-1 w-8 rounded-full bg-muted-foreground/40" />
+                                  <span className="h-1 w-7 rounded-full bg-muted-foreground/40" />
+                                </span>
+                              </span>
+                            )}
+                          </span>
+                          <span className={`text-[11px] font-medium ${active ? "text-foreground" : "text-muted-foreground"}`}>{label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {questionLayout === "split" && (
+                    <div className="space-y-2 rounded-lg border border-border p-2.5">
+                      {splitImageUrl && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={splitImageUrl} alt="" className="h-24 w-full rounded-lg object-contain bg-muted/40" />
+                      )}
+                      <input
+                        ref={splitImageInputRef}
+                        type="file"
+                        accept="image/*,image/gif"
+                        className="hidden"
+                        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleSplitImageUpload(f); e.currentTarget.value = ""; }}
+                      />
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button type="button" variant="outline" size="sm" disabled={splitImageUploading} onClick={() => splitImageInputRef.current?.click()}>
+                          {splitImageUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : t("designSplitImageAdd")}
+                        </Button>
+                        <GifPickerButton label={t("designSplitImageGif")} onPick={(url) => { setSplitImageUrl(url); setQuestionLayout("split"); }} />
+                        {splitImageUrl && (
+                          <button type="button" onClick={() => setSplitImageUrl(null)} className="text-[11px] text-muted-foreground hover:text-primary hover:underline">
+                            {t("designSplitImageRemove")}
+                          </button>
+                        )}
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-[11px] text-muted-foreground">{t("designSplitSide")}</Label>
+                        <div className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-1">
+                          {([["left", t("designSplitSideLeft")], ["right", t("designSplitSideRight")]] as const).map(([val, label]) => (
+                            <button
+                              key={val}
+                              type="button"
+                              onClick={() => setSplitSide(val)}
+                              className={`rounded-md px-2 py-1 text-xs font-medium transition-colors ${splitSide === val ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">{t("designSplitImageHint")}</p>
+                    </div>
+                  )}
+                  {questionLayout !== "split" && (
+                    <p className="text-[10px] text-muted-foreground">{t("designQuestionLayoutHint")}</p>
                   )}
                 </div>
 
@@ -3021,14 +3168,25 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                 const progress = ((qi + 1) / editQuestions.length) * 100;
                 const qType: QuestionType = q.question_type ?? "multiple_choice";
                 const cfg = (q.config ?? {}) as Record<string, unknown>;
+                // WYSIWYG disposition (façon Tally). 'centered' = rendu
+                // historique du preview. 'left'/'split' alignent à gauche ;
+                // 'split' ajoute le panneau média latéral.
+                const previewSplit = questionLayout === "split" && !!splitImageUrl;
+                const previewContentAlign = questionLayout === "centered" ? "items-center" : "items-start";
                 return (
                   <div key={qi} ref={el => { questionRefs.current[qi] = el; }} className="min-h-screen flex flex-col px-6 sm:px-12 py-8">
                     {/* Progress bar */}
                     <div className="w-full max-w-2xl mx-auto mb-8">
                       <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden"><div className="h-full rounded-full" style={{ width: `${progress}%`, backgroundColor: pc }} /></div>
                     </div>
-                    <div className="flex-1 flex flex-col items-center justify-center">
-                      <div className="max-w-2xl w-full space-y-8">
+                    <div className={`flex-1 flex ${previewSplit ? (splitSide === "right" ? "flex-col md:flex-row-reverse md:items-center gap-6" : "flex-col md:flex-row md:items-center gap-6") : `flex-col ${previewContentAlign} justify-center`}`}>
+                      {previewSplit && (
+                        <div className="w-full md:w-[42%] shrink-0 flex items-center justify-center">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={splitImageUrl!} alt="" className="w-full h-auto rounded-2xl shadow-sm" />
+                        </div>
+                      )}
+                      <div className={`${previewSplit ? "flex-1 min-w-0 " : ""}max-w-2xl w-full space-y-8`}>
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <p className="text-xs font-bold uppercase tracking-widest" style={{ color: pc }}>Questions {qi + 1}/{editQuestions.length}</p>
                           <div className="flex items-center gap-2">

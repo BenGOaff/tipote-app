@@ -2591,8 +2591,25 @@ export default function PublicQuizClient({
       );
     }
 
+    // ─── Disposition (façon Tally) ───
+    // 'centered' (défaut/NULL) : rendu STRICTEMENT identique aux quiz
+    // existants (outer flex-col + colonne question items-center inchangés,
+    // aucun panneau média). 'left' : contenu aligné à gauche (items-start).
+    // 'split' : panneau média + colonne question (deux colonnes >= md,
+    // empilé sur mobile). Le panneau média n'apparaît que si une image est
+    // fournie, sinon on retombe sur le rendu simple d'une seule colonne.
+    const qLayout = branding.questionLayout;
+    const splitImg = branding.splitImageUrl;
+    const useSplit = qLayout === "split" && !!splitImg;
+    const contentAlignClass = qLayout === "centered" ? "items-center" : "items-start";
+    const questionColumnClass = `flex-1 flex flex-col ${contentAlignClass} justify-center px-4 sm:px-6 py-16`;
+    const outerSplitClass = useSplit
+      ? branding.splitSide === "right"
+        ? " md:flex-row-reverse"
+        : " md:flex-row"
+      : "";
     return (
-      <div className="public-surface min-h-screen flex flex-col" style={rootStyle}>
+      <div className={`public-surface min-h-screen flex flex-col${outerSplitClass}`} style={rootStyle}>
           {toastOverlay}
           {shareOverlay}
           {/* Progress bar fixed top */}
@@ -2600,7 +2617,17 @@ export default function PublicQuizClient({
             <Progress value={progress} className="h-1.5 rounded-none" />
           </div>
 
-          <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-16" onTouchStart={onQuizTouchStart} onTouchEnd={onQuizTouchEnd}>
+          {/* Panneau média/marque (disposition 'split'). Plein largeur en
+              mobile (empilé au-dessus), colonne latérale >= md. L'image est
+              en w-full h-auto : aucun crop object-cover (cf. pitfalls). */}
+          {useSplit && (
+            <div className="w-full md:w-[42%] lg:w-[45%] shrink-0 flex items-center justify-center p-5 sm:p-8 md:min-h-screen">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={splitImg!} alt="" className="w-full h-auto rounded-2xl shadow-sm" />
+            </div>
+          )}
+
+          <div className={questionColumnClass} onTouchStart={onQuizTouchStart} onTouchEnd={onQuizTouchEnd}>
             {/* key={currentQ} re-mounts ce bloc a chaque changement de
                 question -> la keyframe directionnelle se rejoue (glisse
                 depuis la droite en avancant, depuis la gauche en revenant),

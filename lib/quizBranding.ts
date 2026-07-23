@@ -66,6 +66,17 @@ export type QuizIntroLayout = "card" | "cover";
 // coins doux, 'square' = coins nets. NULL/'pill' = rendu historique.
 export type QuizButtonShape = "pill" | "rounded" | "square";
 
+// ─── Disposition des questions (façon Tally) ──────────────────────────
+// 'centered' = rendu historique, contenu centré. 'left' = contenu aligné à
+// gauche (épuré, type Tally). 'split' = deux colonnes sur desktop (un
+// panneau média/marque d'un côté, la question + les réponses de l'autre),
+// empilé en une seule colonne sur mobile. NULL/'centered' = rendu
+// STRICTEMENT identique aux quiz existants (dont ceux sous pub).
+export type QuizQuestionLayout = "centered" | "left" | "split";
+
+// Côté du panneau média en disposition 'split'. NULL/'left' = média à gauche.
+export type QuizSplitSide = "left" | "right";
+
 // Classe Tailwind d'arrondi correspondant à la forme choisie. Sert aux
 // boutons de réponse et aux CTA. 'pill' (défaut) renvoie une chaîne VIDE :
 // aucun override, chaque bouton garde son arrondi d'origine -> les quiz
@@ -93,6 +104,13 @@ export type QuizBranding = {
   backgroundImageUrl: string | null;
   introLayout: QuizIntroLayout;
   buttonShape: QuizButtonShape;
+  // ─── Disposition des questions (façon Tally) ───
+  /** Disposition de l'écran de question. 'centered' = rendu historique. */
+  questionLayout: QuizQuestionLayout;
+  /** Image du panneau média en disposition 'split', sinon null. */
+  splitImageUrl: string | null;
+  /** Côté du panneau média en 'split' ('left' = défaut). */
+  splitSide: QuizSplitSide;
 };
 
 const HEX_RE = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
@@ -133,6 +151,14 @@ function sanitizeButtonShape(raw: unknown): QuizButtonShape {
   return raw === "rounded" || raw === "square" ? raw : "pill";
 }
 
+function sanitizeQuestionLayout(raw: unknown): QuizQuestionLayout {
+  return raw === "left" || raw === "split" ? raw : "centered";
+}
+
+function sanitizeSplitSide(raw: unknown): QuizSplitSide {
+  return raw === "right" ? "right" : "left";
+}
+
 function sanitizeUrlOrNull(raw: unknown): string | null {
   if (typeof raw !== "string") return null;
   const t = raw.trim();
@@ -154,6 +180,9 @@ type QuizInput = {
   background_image_url?: string | null;
   intro_layout?: string | null;
   button_shape?: string | null;
+  question_layout?: string | null;
+  split_image_url?: string | null;
+  split_side?: string | null;
 } | null | undefined;
 
 // Tipote stores branding on business_profiles: brand_color_base is the
@@ -192,6 +221,9 @@ export function resolveQuizBranding(quiz: QuizInput, profile: BusinessProfileInp
     backgroundImageUrl: sanitizeUrlOrNull(quiz?.background_image_url),
     introLayout: sanitizeIntroLayout(quiz?.intro_layout),
     buttonShape: sanitizeButtonShape(quiz?.button_shape),
+    questionLayout: sanitizeQuestionLayout(quiz?.question_layout),
+    splitImageUrl: sanitizeUrlOrNull(quiz?.split_image_url),
+    splitSide: sanitizeSplitSide(quiz?.split_side),
   };
 }
 
