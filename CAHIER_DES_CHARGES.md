@@ -1,1048 +1,551 @@
-# CAHIER DES CHARGES Tipote — Version Juin 2026 (État actuel du produit)
+# CAHIER DES CHARGES Tipote
 
-Application Web SaaS multilingue (FR/EN/ES/IT/AR) pour analyse business, planification stratégique, génération de contenus IA et publication automatisée sur les réseaux sociaux.
+Application web SaaS multilingue pour l'analyse business, la planification stratégique, la génération de contenus par IA, la publication automatisée sur les réseaux sociaux, la captation de leads (quiz, sondages, popquiz, pages) et le suivi comptable des indépendants.
 
-> **Notes de version Juin 2026** — sprint fiabilité (panne 2 juin matin) + extension Boost + hotfix Opus 4.7 :
->
-> - **Bug fix Elite gate Boost** (2 juin 2026) : `GET /api/profile` retournait `business_profiles` (per-(user, project)) sans le champ `plan` → tous les Pro / Elite / Beta voyaient le gate « il faut être Pro/Elite pour accéder à Boost » dans Settings → Boost. Fix : `/api/profile` GET enrichit désormais la réponse avec `profiles.plan` via `supabaseAdmin` (cross-table lookup). **Règle d'invariant** : la source de vérité du plan reste `profiles.plan` (global par user, c'est de l'abonnement), JAMAIS `business_profiles` (per-projet). Toute lecture de plan doit passer par cette jointure.
-> - **Lien d'installation extension Chrome Tipote Boost** : avant, le panneau Settings → Boost affichait « Extension Chrome non détectée » sans aucun lien actionnable. Désormais, bouton « Installer l'extension » qui pointe vers `https://chromewebstore.google.com/detail/tipote-boost/gligkkmphgcpfghplnmknmkkgonolchg`. L'extension Tipote Boost est en cours de validation Chrome Web Store ; LinkedIn dispo en premier, autres réseaux (X / Threads / Instagram) à venir.
-> - **Fix stats analytics quiz** (2 juin 2026) : bug Gwenn « 270 leads pour 34 vues = 794 % taux de capture ». Cause : on lisait `quizzes.views_count` (compteur dénormalisé qui drift) au lieu de la source de vérité `quiz_events`. Fix : `app/api/quiz/[id]/analytics/route.ts` recompute `viewsCount` + `completionsCount` DIRECTEMENT depuis `quiz_events` à chaque requête, avec garde-fou `viewsCount = max(events.view, leadsCount)`. Conséquence : taux de capture toujours ≤ 100 %.
-> - **KPI cards cliquables dans `/leads`** : refonte du header de la page Leads. Les 4 cards (Total / Exportés / Non exportés / Ce mois) sont maintenant des `<button>` qui togglent un filtre sur la liste (2e clic = retire le filtre). Ring colorée quand actif. Nouvelle KPI « Non exportés » remplace l'ancienne « Source quiz » (plus actionnable pour l'use case principal : « qui dois-je pousser dans SIO ? »). i18n FR / EN / IT / PT / ES.
-> - **Hotfix Opus 4.7+ rejette `temperature`** (1er juin 2026) : Anthropic a retiré les params de sampling sur Opus 4.7 / 4.8 — toute requête avec `temperature` / `top_p` / `top_k` renvoie 400. Source unique de vérité : `lib/claudeRequest.ts:buildClaudeMessageBody()` qui détecte Opus 4.7+ via regex sur le model id et omet les params interdits. Tous les appels Claude doivent passer par ce helper. Tier Opus bumpé 4.7 → 4.8 dans `lib/anthropicModel.ts`.
-> - **CI GitHub Actions** : ajout de `.github/workflows/ci.yml` (typecheck + script syntax sur chaque push) et `.github/workflows/e2e.yml` (tests Playwright en schedule daily 3h UTC + `workflow_dispatch` manuel). Filet anti-panne installé après l'incident « 2 juin matin » (migration `20260603_quizzes_survey_thanks` qui avait été codée mais pas migrée en prod → toutes les pages quiz/analytics ont 500'd). Variables GitHub Actions (non-secrets) : `SMOKE_QUIZ_ID`, `SMOKE_POPQUIZ_ID`, `SMOKE_PAGE_SLUG`, `BASE_URL`.
-> - **Tests E2E Playwright** : nouveau dossier `tests/e2e/` avec `public-quiz.spec.ts` qui couvre 5 catégories sur `/q/`, `/p/`, `/pq/` : (1) headers iframe (X-Frame-Options absent, CSP `frame-ancestors *`), (2) contenu visible (titre + bouton start render côté DOM), (3) OG meta (og:title / og:description / og:image présents), (4) bouton start cliquable, (5) endpoint `/track` retourne 200 même sur payload mal formé (soft fail `{ok: false, reason}`). Run via `npm run test:e2e` ou en CI daily.
-> - **Script `check:schema`** (`scripts/check-schema.mjs`) : `npm run check:schema` vérifie que les 10 migrations Tipote critiques sont appliquées en prod (dont `20260603_quizzes_survey_thanks` qui a causé la panne 2 juin matin). Accepte plusieurs variantes d'env vars (`SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` / `SUPABASE_SERVICE_ROLE`). À lancer avant chaque déploiement et en backup manuel.
-> - **Multiprofils** documenté en détail dans la section 4.13 (Paramètres) + 6.2 (Tables). Tables `projects` (avec `accent_color` / `icon_emoji` / `use_branding_logo` / `is_default`) + `business_profiles` per-(user, project). Cookie `tipote_active_project`. `ProjectSwitcher`, `SessionResetGate`, danger-zone delete. Helpers `lib/projects/{client,activeProject,ensureDefaultProject,upsertByProject,visualIdentity}.ts`. Endpoint unique `/api/projects` (GET / POST / PATCH / DELETE).
-
-> **Notes de version 27 mai 2026** — refonte du **dashboard affilié** (`affiliate.tipote.com`, app `/affiliate`) + studio visuels IA + CMS contenus géré par l'admin :
->
-> - **Navigation simplifiée** : Vue d'ensemble · Promouvoir · Contenus · Essai gratuit · Support. Retrait de *Paiement* (géré dans Systeme.io) et *Revenus* (intégré à Vue d'ensemble). *Trial Tipote* renommé **Essai gratuit** (6 locales). Sidebar : `AffiliateSidebar` (l'ancienne nav horizontale `AffiliateNav` supprimée).
-> - **Promouvoir = liens d'affiliation éditables** : l'affilié ajoute / modifie / supprime ses liens (libellé + description + destination ; chemin tipote.fr ou URL complète ; `?sa=` ajouté auto). Persistance auto par affilié dans `affiliates.promo_overrides` sous la clé `links:custom:items` (JSON). Composant `LinksManager`.
-> - **Page Contenus** (`/affiliate/contenus`) : regroupe Emails · Posts · Articles · Visuels en onglets, organisés pour lire / éditer / copier.
-> - **Studio visuels IA** (`ImageStudio`, moteur Fabric.js v6) : l'IA **analyse le post** et décide **le format** (texte / comparatif chiffré data-viz / avant-après) **et le style d'image** (personne N&B éditorial / paysage / abstrait / spatial / minimal) en rapport avec le post. Copy anti-IA (guide vocal Béné : zéro remplissage, pas d'invention de chiffres, un seul chiffre, casse normale). Gabarits texte (centré / éditorial à barre / carte panneau), marqueur fluo sur le mot-clé, auto-fit anti-débordement (⚠️ vider `cache.clearFontCache()` après chargement webfont, cf. PITFALLS), placement du texte sur la moitié propre opposée au sujet. Copy : `/api/visual-studio/generate-copy` ; fond : `/api/visual-studio/generate-background` (OpenAI gpt-image, clé OWNER, pas de crédits côté affiliate).
-> - **Visuel généré ↔ post** : un visuel lancé depuis un post s'y **accroche automatiquement** (sans bouton sauvegarder) et s'affiche sous le post. Stockage **long terme via TUS** (le fichier persiste) ; on persiste le **chemin** (`post:<id>:visuals` JSON) — l'URL signée expire en 2 h, donc **re-signée** (`signedPlaybackUrl`) à chaque affichage côté serveur.
-> - **CMS admin — autonomie éditoriale (Béné)** : table générique `affiliate_contents` (`kind` ∈ article/email/post/visual, `locale`, `title`, `body`, `meta` jsonb, `sort_order`, `published`). Admin gaté `isAdminEmail` sur `/affiliate/admin/contenus` (lien sidebar admins only) : CRUD complet par type, **import des modèles par défaut** (seed idempotent du contenu code → base via `/affiliate/api/admin/seed`), upload des visuels via le pipeline TUS. La page Contenus côté affilié lit les contenus **publiés en base** avec **repli sur les modèles par défaut** tant que rien n'est importé (zéro régression). API CRUD : `/affiliate/api/admin/contents`. Migration `20260601_affiliate_contents`.
-
-> **Notes de version 17 mai 2026** — sprint custom-domains (cross-app Tipote + Tiquiz) :
->
-> - **Domaines personnalisés** : les créateurs payants peuvent connecter leur propre hostname (`pages.ma-marque.com`) à Tipote. Pose d'un CNAME vers `connect.tipote.com`, vérification DNS automatique (poll 30 s × 20 tentatives = 10 min), émission de certif Let's Encrypt à la première requête HTTPS (Caddy `on_demand_tls`). UI dédiée dans Settings → Domaine (`/settings?tab=domain`) avec détection automatique du registrar (Cloudflare / OVH / Gandi / GoDaddy / Namecheap / Google Domains / Route 53 / IONOS / Hetzner / Scaleway / Porkbun / Hostinger) + instructions DNS adaptées par registrar + auto-poll de vérification + bouton "Ouvrir" sur les domaines vérifiés. Plan-gated (paid only). Tables : `custom_domains` (hostname unique global, `project_id` NOT NULL → isolation par projet, RLS user-bound + lecture publique des rows verified). Helpers `lib/customDomains.ts` (edge-safe), `lib/customDomainsServer.ts` (DNS via `node:dns`), `lib/registrarDetect.ts`.
-> - **Per-profile isolation** : custom domains et préférence `default_share_domain` sont scopés au projet actif (`business_profiles.default_share_domain` per-(user, project)). Switcher de profil = switcher des domaines visibles, comme si c'étaient des comptes séparés. Le routing catch-all et les ownership checks utilisent `(user_id, project_id)`.
-> - **Sélecteur de domaine de partage** : hook `useShareDomain()` + composant `ShareDomainPicker` portés dans tous les éditeurs publics (quiz, sondage, popquiz, hosted page, link-in-bio, page builder, popquiz list, content hub). Quand le créateur a ≥1 custom domain verified, un dropdown apparaît au-dessus du champ slug ; la sélection est persistée en DB et appliquée partout (UI labels, copy-link, iframe code).
-> - **URLs propres sur custom domain** : sur un hostname custom, les URLs publiques perdent le préfixe (`mydomain.com/<slug>` au lieu de `/q/<slug>` / `/p/<slug>` / `/pq/<slug>`). Sur le main host `app.tipote.com`, les préfixes restent (multi-tenant, le root est partagé avec le dashboard). Catch-all `app/[publicSlug]/page.tsx` qui résout 3 types dans l'ordre (quiz active → popquiz published → hosted_page published), scopé `(user, project)`. Backwards-compat : les anciennes URLs `/q/...`, `/p/...`, `/pq/...` continuent de fonctionner sur les custom domains aussi.
-> - **Ownership cross-tenant** : les routes `/q/`, `/p/`, `/pq/` ajoutent un check : quand servies via un custom domain, le contenu DOIT appartenir au `(user, project)` propriétaire du hostname. Sinon 404. Empêche un créateur de pointer son domaine sur le contenu d'un autre (phishing / impersonation). No-op sur main host.
-> - **Validation slug renforcée** : `/api/quiz/[id]`, `/api/popquiz/[id]`, `/api/pages/[id]` PATCH refusent désormais `SLUG_RESERVED` (api, embed, dashboard, settings, robots.txt, _next…) et `SLUG_TAKEN` cross-type (un slug ne peut exister que sur UN des 3 types pour un `(user, project)` donné). Indispensable pour que le catch-all 3-way reste non-ambigu.
-> - **Middleware élargi** : matcher passé d'une whitelist explicite (`/app/:path*`, `/dashboard/:path*`, …) à un pattern broad (`/((?!api|_next|widgets/.*\.js|.*\..*).*)`) pour permettre au custom-domain gate d'intercepter TOUTE requête HTTPS. Header `x-tipote-custom-host` forwardé aux page handlers + au catch-all pour les ownership checks. Dormant tant que `CUSTOM_DOMAINS_ENABLED` n'est pas `true` côté env — strictement additif.
-> - **Infra dispatcher** : nouveau process `domain-dispatcher` (Node 18+ stdlib, `infra/dispatcher/server.mjs`, PM2) qui tourne sur `127.0.0.1:4000` et permet au Caddy unique du VPS de router custom-domains vers Tipote ou Tiquiz selon le hostname. 2 endpoints : `/caddy-ask` (gate de l'émission Let's Encrypt — interroge les deux apps via leur `/api/internal/caddy-ask`) et `/lookup` (appelé par `forward_auth` Caddy à chaque requête live, retourne `X-Dispatch-To: tipote|tiquiz`). Cache positif 5 min / négatif 30 s. Aucune DB credential ; chaque app reste source de vérité de son propre `custom_domains`. Configuration via `/etc/default/dispatcher.env` (3 secrets : `TIPOTE_CADDY_ASK_SECRET`, `TIQUIZ_CADDY_ASK_SECRET`, `DISPATCHER_ASK_SECRET`).
-> - **Caddyfile** : `on_demand_tls.ask` pointé sur le dispatcher (`/caddy-ask`), catchall `:443` enveloppé dans un `route { forward_auth ... ; @tipote header X-Dispatch-To tipote ; handle @tipote { reverse_proxy 127.0.0.1:3000 } ; reverse_proxy 127.0.0.1:3001 }`. Default fallback = Tiquiz (legacy + safety net : si le dispatcher est down ou pas de header, les Tiquiz custom domains existants continuent de marcher).
-> - **Hotfixes corollaires** : migration `20260517_popquizzes_autosave_columns` ajoute `draft_state` + `draft_updated_at` sur `popquizzes` (colonnes que le code sélectionnait depuis le lancement de l'autosave mais qui n'avaient jamais été migrées Tipote → la requête PostgREST failait silencieusement, `fetchOwnedPopquiz` retournait null, toutes les pages d'édition popquiz 404aient). Hook `useShareDomain` refactoré pour stocker `window.location.origin` dans un useState peuplé via useEffect (évite la mismatch SSR/CSR qui provoquait React error #418 sur l'éditeur popquiz). `PopquizEditClient` rendu via dynamic import `ssr: false` pour bypasser tous les pièges d'hydration restants (`Date.now()`, `toLocaleString()`, etc. dans `RestoreDraftDialog`).
-> - **Reserved slugs blocklist** (`lib/publicSlug.ts`) : synchronisée avec tous les dossiers top-level de `app/` (admin, analytics, automations, clients, contents, create, dashboard, leads, legal, meta, onboarding, pages, pepites, popquiz, popquizzes, quiz, quizzes, settings, strategy, support, survey, tasks, templates, webinars, widgets) + paths Next standards (api, _next, favicon.ico, robots.txt, sitemap.xml). À maintenir quand un nouveau top-level apparaît.
-
-> **Notes de version Mai 2026** — synthèse des évolutions depuis la version d'Avril :
-> - **Module Popquiz** : nouveau type de contenu (vidéo + quiz incrustés à des timestamps précis), accessible depuis `/create`. Mirror du module développé sur Tiquiz, scopé multi-projet via `project_id`. Plan gratuit limité à 1 popquiz par projet.
-> - **Sécurité** : la clé API Systeme.io est désormais **chiffrée at rest** (AES-256-GCM, DEK per-user, pipeline `lib/piiCrypto`). Migration progressive — le code lit `_enc` en priorité, retombe sur la colonne plaintext historique pendant la transition. UI : champ `type="password"` + toggle 👁.
-> - **Stratégie « live »** : flag `is_stale` posé sur `business_plan.plan_json` quand un champ profil critique change (revenue_goal, niche, has_offers…). La page `/strategy` affiche un bandeau ambré « Tes infos ont changé » avec un bouton « Recalculer maintenant » qui force la regen via `/api/strategy?force=true`.
-> - **Reset par projet** : nouveau endpoint `POST /api/profile/reset` qui wipe uniquement le projet actif (vs `/api/account/reset` qui wipe le compte entier). Refuse l'opération si l'user n'a qu'un seul projet (utiliser le reset compte). UI : bouton « Réinitialiser ce Tipote » dans Settings → Compte.
-> - **Onboarding multi-profil** : la vérif d'onboarding est désormais STRICTEMENT scopée à `(user_id, project_id)`. Plus de fallback « any project completed » qui sautait l'onboarding du 2e Tipote.
-> - **Quiz** : nouvelle colonne `bonus_intro_text` (paragraphe custom de l'étape de partage qui remplace le templeté). `hasBonusFlow` accepte désormais image bonus seule. Bouton « Recommencer » sur l'étape résultat. Fallback consent_text par locale du visiteur. Color picker dans `RichTextEdit` (palette de swatches + input couleur custom + reset). Fix contraste invisible blanc-sur-blanc en mode édition. Bandeau bonus_image fix.
-> - **Régression majeure corrigée** : le bloc `/api/strategy` qui supprimait `selected_pyramid` quand `hasOffersEffective=true` est désormais restreint aux `isAffiliate=true`. Avant : « Aucune offre trouvée » sur tous les `PostForm` une fois la stratégie générée.
-> - **Garde-fous** : `docs/INVARIANTS.md` documente les zones cassables (5 invariants : lead-safety, scope onboarding, reset par projet, typo FR, offres user-authored).
-
-> **Notes de version Mi-Mai 2026** — sprint 7-8 mai :
->
-> - **Pipeline vidéo Popquiz self-hosted** : les vidéos popquiz quittent Supabase Storage pour un serveur dédié. Stack : tus server Node (`@tus/server` + JWT HS256 par-app sur `tus.quiz.tipote.com` / `tus.tipote.com`) → stockage `/srv/popquiz-videos/<app>/raw/<userId>/<videoId>/` → lecture protégée par `nginx secure_link` sur `videos.quiz.tipote.com` / `videos.tipote.com`. Limite passée à **20 Go par vidéo** (vs 5 Go Supabase Free). Migration douce : les vidéos legacy (path `raw/...`) continuent d'être servies via Supabase signed URLs ; les nouvelles (path `<app>/raw/...`) via `secure_link`. Endpoints : `/api/popquiz/upload-token` (mint JWT), `/api/popquiz/playback-url` (signe l'URL preview), `/api/popquiz/[id]/thumbnail` (POST mint token + PATCH apply pour vignette custom).
-> - **Vignette popquiz personnalisable** : nouveau composant `ThumbnailPicker` avec **crop 16/9 intégré** (canvas natif, pas de dep). Toggle entre vignette auto-extraite à 2s de la vidéo et vignette uploadée. Le fichier auto reste sur disque, le revert est instantané (changement de pointeur DB).
-> - **Player popquiz enrichi** : ajout de la vitesse de lecture (0.5×–2×), skip ±10s, partage (Web Share API + fallback copie-lien), Picture-in-Picture. Poster YouTube en HD (maxresdefault avec fallback hqdefault). Composant `PosterOverlay` qui se masque au démarrage de la lecture (fix du poster qui restait collé sur YouTube/Vimeo).
-> - **Multi-projet UX** : nouvelle table `projects` enrichie de `accent_color` / `icon_emoji` / `use_branding_logo`. Composants `ProjectIdentityBadge`, `ProjectIdentityEditor`, `ProjectIndicatorSidebar`. Pill du header coloré, sidebar avec bloc "Projet actif" entre Aide et Langue (visible si ≥ 2 projets). **Danger zone** sur la suppression de projet : confirmation par recopie du nom + liste explicite de ce qui sera détruit. **Cascade FK alignée** : popquizzes / clients / hosted_pages / widgets passés de `SET NULL` à `CASCADE` (migration `20260507_project_delete_cascade`). **Reset session** : `SessionResetGate` ramène l'user sur son projet `is_default = true` à chaque nouvelle session browser via sessionStorage flag — l'user ferme le browser, rouvre, atterrit sur son projet principal.
-> - **Onboarding nouveau projet** : la création d'un projet via `POST /api/projects` insère un `business_profiles` vide avec `onboarding_completed = false` puis le `ProjectSwitcher` redirige explicitement vers `/onboarding`. Plus de fallback middleware qui forçait le redirect (cassait les users legacy avec un flag à false ou NULL). **Trigger Postgres auto-complete** (migration `20260508_auto_complete_onboarding_trigger`) : flag passé à `true` automatiquement dès qu'une row a niche + au moins une offre. Plus jamais le cas "user actif depuis des mois mais coincé sur l'onboarding".
-> - **Cache d'arguments de vente par offre** : nouveau champ `business_profiles.offers[i].sales_arguments` (JSONB) avec 10 puces "bénéfice + conséquence concrète + angle narratif + idée d'accroche", générées via Claude une seule fois par offre puis réutilisées dans les prompts de contenu (post / email / pages funnel / offer). Économie ~42% de tokens sur un plan 30j × 4 plateformes. UI éditable dans Settings → Mes offres avec palette de 10 angles narratifs. **1 crédit** pour générer/régénérer, **0 crédit** pour les édits manuels.
-> - **Streaming SSE pour `/api/content/strategy`** : passage de la génération de plan 30 jours en streaming Anthropic. Plus de timeout Cloudflare 100s sur les gros plans (16k tokens), idle timeout 90s par défaut au lieu de timeout total, chaque chunk Anthropic sert de heartbeat content-aware vers le client. Ajout de `AIGeneratingOverlay` (mascotte + messages rotatifs) sur `ContentStrategyForm`.
-> - **Sélecteur d'offres** : `loadAllOffers()` ne retourne plus que les offres user-saisies (`business_profiles.offers`). La pyramide IA générée par l'analyse stratégique est exclue par défaut (toujours accessible avec `{ includePyramid: true }` pour la vue stratégie). Fallback content-based si la row du projet actif est vide.
-> - **Quiz analytics par quiz** : nouvelle page `/quiz/[id]/analytics` (cards KPI + chart aire évolution leads + pie distribution résultats + funnel par question). Funnel calculé via nouvelle table `quiz_question_events` (event `view` / `answer` par session anonyme), `claim_scheduled_posts` RPC inchangée. Bouton 📊 dans la liste des quiz.
-> - **Programmation de contenu** : refonte du `ScheduleModal` + composant réutilisable `DateTimePicker` (calendar branded primary + slots 09/12/14/18 + time custom + summary lisible "vendredi 15 mai 2026, 14h00"). **Validation past dates côté client + serveur** ; le picker grise les slots passés du jour ; auto-seed today + prochain créneau quand la row n'a pas de `scheduled_date`. Le pipeline cron `/api/n8n/scheduled-posts` reste : timezone Europe/Paris, claim atomique via `FOR UPDATE SKIP LOCKED`, reset stuck >10min, refresh tokens auto, publication directe LinkedIn/Facebook.
-> - **JB feedback** : `quizzes.bonus_unlocked_message` (TEXT, optionnel) override le « Bonus unlocked! Check your inbox. » par défaut — utilité : livrer un code promo inline sans dépendre d'un tag SIO ou d'un email transactionnel. UI dans QuizDetailClient sous "Message après partage". `ALL_DEFAULT_CONSENTS` étendu : la phrase admin `"En renseignant ton email, tu acceptes notre politique de confidentialité."` (pre-fill historique du QuizForm) est désormais reconnue comme un default → fallback automatique sur la locale du viewer.
-> - **Bucket Supabase manquant** : création de `public-assets` (public, 10 Mo, mime types image whitelist + RLS read-public/write-authenticated). Avant : tous les uploads de logo + bonus image échouaient silencieusement (bucket inexistant en prod, supposition perdue lors d'une restauration projet).
-> - **Sync ventes Systeme.io → Tipote analytics** : nouveau pipeline qui pull `GET /api/sales` côté SIO via la clé API user, match chaque vente à une offre Tipote (cascade : `sio_product_id` explicite > nom exact > fuzzy nom > prix unique), agrège par offre + mois et upserts dans `offer_metrics`. Endpoint manuel `POST /api/analytics/sio-sync` (bouton "Synchroniser Systeme.io" sur `/analytics`) + cron quotidien `/api/cron/sio-sync-sales` (35 jours fenêtre, séquentiel, journalisation détaillée). Champ optionnel `business_profiles.offers[i].sio_product_id` éditable dans Settings → Mes offres pour binder une offre Tipote à un produit SIO précis. Modules : `lib/sio/salesSync.ts`, `lib/sio/syncRunner.ts`. Plan stratégique en **3 phases (Fondations / Croissance / Scaling)** — la nomenclature 90 jours / 30-60-90 a été retirée de tous les copywriting, prompts et messages utilisateur.
-
-> **Notes de version 8 mai 2026** — sprint compta + cross-app :
->
-> - **Lien d'affiliation Tiquiz** : footer permanent *« Cette vidéo vous est proposée via Tiquiz »* sur tous les popquiz publics (`/pq/[id]`) et leur version embed iframe (`/embed/pq/[id]`), redirige vers `https://www.tipote.fr/part-tiquiz?sa=<id>`. Idem côté quiz publics free / sans footer custom : *« Ce quiz vous est proposé via Tiquiz »*. Tracking commission via le paramètre `?sa=<sa…>` (format Systeme.io) que l'user pose dans Settings → Connexions → Systeme.io → champ "Mon identifiant affilié Tipote". Stocké sur `business_profiles.tipote_affiliate_id`. Migration `20260508_tipote_affiliate_id`.
-> - **Notifications de déconnexion sociale + post raté** : email Resend immédiat dès qu'un token social meurt (LinkedIn / Facebook / IG / X / TikTok / Pinterest / Threads / Reddit). Détection 401 / `invalid_grant` / "revoked" dans `lib/refreshSocialToken.ts` + `app/api/n8n/publish-callback/route.ts`. Email aussi quand un post programmé bascule définitivement en `failed` (après 5 retries) avec aperçu du contenu et lien direct vers l'éditeur. Helper unique `lib/social/notifications.ts` avec dédup 3 jours par (user, platform). Nouvelle colonne `social_connections.disconnected_at` (migration `20260508_social_disconnected_at`) reset à `null` à chaque reconnexion OAuth (modifié dans les 9 callbacks OAuth).
-> - **Module Compta complet (France uniquement)** : nouvel onglet dans Paramètres (`/settings?tab=compta`) construit en 7 commits.
->   - **1a — Country gate** : business_profiles.country existant → 3 états (vide → sélecteur, France → suite, autre → "bientôt disponible pour ce pays"). Helper `lib/compta/countries.ts`.
->   - **1b — Configuration statut + sous-type** : 3 statuts au lancement (particulier / auto-entrepreneur / SASU avec IS et TVA), chacun avec ses sous-champs (activité AE, ACRE, versement libératoire, franchise TVA / SIREN, exercice fiscal calendaire ou décalé, régime TVA réel mensuel/trimestriel/simplifié, TVA intra, dirigeant rémunéré). 14 colonnes ajoutées sur `business_profiles` (migration `20260508_compta_status_config`). Composant `ComptaConfigForm` avec sélecteur 3 cartes + sous-formulaire dynamique. Liens vers service-public.fr / urssaf.fr / annuaire-entreprises.data.gouv.fr.
->   - **1c — Connexion Stripe** : Restricted Key (lecture seule), sync initial 24 mois + cron daily `/api/cron/sync-payments` à 5h (delta depuis `last_sync_at - 1h`). 3 nouvelles tables : `payment_connections` (clé chiffrée), `transactions` (normalisée toutes sources, idempotence via `UNIQUE (user_id, provider, provider_transaction_id)`), `manual_transactions` (saisies hors PSP). RLS read-self. Migration `20260508_compta_payments_tables`. Modules : `lib/compta/syncEngine.ts`, `lib/compta/providers/stripe.ts`. Endpoints : `/api/compta/connections` (GET liste), `/api/compta/connections/stripe` (POST connect / DELETE), `/api/compta/connections/sync-now` (manual refresh), `/api/compta/connections/disconnect` (générique).
->   - **1d — PayPal + Mollie** : OAuth client_credentials pour PayPal (avec mode live/sandbox + détection feature "Transaction Search" obligatoire) et clé API simple pour Mollie (note de sécurité car pas de Restricted Key). Pagination par fenêtres de 30 jours pour PayPal (limite 31j API), curseur `_links.next.href` pour Mollie. Dédup pré-upsert par `provider_transaction_id` (Postgres rejette `ON CONFLICT DO UPDATE` sur même row 2× dans le même batch). Modules : `lib/compta/providers/paypal.ts`, `lib/compta/providers/mollie.ts`.
->   - **1e — Saisies manuelles** : CRUD complet pour les paiements hors PSP (virement / espèces / chèque / autre). UI `ComptaManualTransactions` avec liste + form édition inline. Endpoints : `/api/compta/manual-transactions` (GET + POST), `/api/compta/manual-transactions/[id]` (PATCH + DELETE).
->   - **1f — Tableau de bord business** : 4 cards (CA mois, depuis janvier, MRR estimé via heuristique description, taux de remboursement) + graph N vs N-1 sur 12 mois (recharts BarChart) + décomposition clients (nouveaux / abonnés / perdus avec churn estimé) + top 5 produits (group by description normalisée) + jauge franchise TVA pour les AE. Conversion EUR via `https://api.frankfurter.app` (open data BCE, cache 1h). Endpoint `/api/compta/dashboard`. Composant `ComptaDashboard.tsx`. **Vocabulaire 100% français normal** ("revenus récurrents" et non MRR, "depuis janvier" et non YTD, "clients perdus" et non churn).
->   - **1g — Seuils fiscaux DB-backed + admin** : nouvelle table `fiscal_thresholds` versionnée par (country, fiscal_year, category) avec seed 2026 FR (vente 85k/93,5k, services BIC/BNC 37,5k/41,25k). Migration `20260508_fiscal_thresholds`. Refactor `lib/compta/fiscal-config.ts` en async DB-read avec fallback hardcodé. Page admin `/admin/compta/fiscal-thresholds` (réservée aux `ADMIN_EMAILS`) pour éditer en ligne avec UI groupée par (pays, année). Cron quotidien `/api/cron/check-fiscal-thresholds` à 6h qui fetch chaque source_url officielle, cherche les valeurs stockées en DB normalisées (NBSP / variantes "85 000" / "85,000" / "85000"), envoie un email aux admins si une valeur a disparu de la page. Permet de mettre à jour les seuils chaque LF sans release Tipote.
->   - **1h — Catégorisation ventes vs commissions affiliation** : colonne `category` sur `transactions` et `manual_transactions` (sale / affiliate / other, défaut sale). Détection auto au sync via heuristique sur description (`affiliation`, `commission`, `kickback`). Préservation des overrides user (lecture des catégories existantes avant chaque upsert). Migration `20260508_compta_transaction_category`. UI : 3 cartes cliquables dans le form de saisie manuelle, badge "Commission" sur les rows, nouvelle card dans le dashboard "Ventes directes vs commissions" (mois courant + YTD avec barre bicolore).
->   - **1i — Calendrier fiscal personnalisé** (Mai 2026) : helper `lib/compta/fiscalCalendar.ts` qui calcule à la volée les échéances fiscales sur 12 mois selon `accounting_status` + sous-config (régime TVA SASU, périodicité URSSAF AE, exercice fiscal, dirigeant rémunéré, TVA intra). Couvre URSSAF (mensuelle / trimestrielle), TVA (CA3 mensuelle/trimestrielle, CA12 simplifiée + acomptes), IS (acomptes 15 mars/juin/sept/déc + solde 4 mois après clôture), bilan (~7 mois après clôture), 2042/2042-C-PRO, CFE (15 décembre), DSN mensuelle si dirigeant rémunéré, DES si TVA intra. Endpoint `/api/compta/fiscal-deadlines`. Composant `FiscalCalendar` (groupé par mois, badges colorés par type, dates butoir, liens directs vers le site officiel — service-public, urssaf, impots.gouv, infogreffe, douane, net-entreprises). Bouton "Marqué comme fait" persisté en localStorage. Cron quotidien `/api/cron/fiscal-reminders` à 8h qui envoie un email + notification in-app pour chaque échéance à J-7 (idempotent par deadline_id). Migration `20260509_compta_ae_urssaf_periodicity` ajoute la colonne pour distinguer mensuelle vs trimestrielle (modifiable dans le `ComptaConfigForm`).
->   - **1j — Export FEC pour les SASU** (Mai 2026) : Fichier des Écritures Comptables au format légal (article A47 A-1 du LPF) — obligatoire en cas de contrôle fiscal pour les sociétés à l'IS. Helper `lib/compta/fecExport.ts` qui génère le fichier pipe-séparé 18 colonnes (encoding UTF-8 + BOM, dates AAAAMMJJ, montants à virgule décimale). Plan comptable simplifié (411 clients, 512100 banque, 530 caisse, 706/707 ventes, 758 produits divers pour commissions affiliation, 44571 TVA collectée). Split HT / TVA 20% pour les SASU avec régime TVA configuré, sinon HT = TTC. Endpoint `/api/compta/fec-export?from=YYYY-MM-DD&to=YYYY-MM-DD` avec auto-calcul de la période = exercice fiscal courant (calendaire ou décalé). Composant `FecExportCard` (dispo uniquement statut SASU + SIREN renseigné), avec sélecteur de dates et avertissement clair sur la portée du FEC produit. Nom du fichier : `<SIREN>FEC<AAAAMMJJ>.txt` comme imposé par l'admin fiscale.
->   - **1k — Achats / charges + TVA déductible** (Mai 2026) : nouvelle table `expense_items` (migration `20260509_compta_expense_items`) avec montant TTC en cents, taux TVA français (0 / 2,1 / 5,5 / 10 / 20 %), TVA déductible auto-calculée serveur-side, catégorie, fournisseur, date, URL justificatif (pour la phase 1l OCR). RLS self-only. UI `ComptaExpenseItems` avec form de saisie (live calc TVA) + liste éditable. Card "TVA à payer" en haut de la section : TVA collectée (estimée 20% du CA YTD pour les users en TVA) − TVA déductible (somme exacte des achats) → TVA à payer ou crédit de TVA. 10 catégories de charges (achats, services, fournitures, déplacements, logiciels, loyer, communication, marketing, formation, autre), chacune mappée sur le bon compte 6XX du PCG général dans le FEC (607 / 611 / 6063 / 6251 / 6511 / 6132 / 626 / 6231 / 6311 / 658). Le FEC inclut désormais les **écritures d'achat** (journal AC) en plus des ventes (journal VT) : débit charge HT + débit 44566 TVA déductible + crédit 512100 banque. Endpoints REST : `/api/compta/expense-items` (GET liste + totaux, POST create) et `/api/compta/expense-items/[id]` (PATCH, DELETE).
->   - **Trou AE-TVA bouché** (Mai 2026) : avant, un auto-entrepreneur qui avait dépassé le seuil de franchise TVA n'avait aucune échéance TVA dans son calendrier fiscal. Nouvelle colonne `ae_vat_regime` ('reel_mensuel' | 'reel_trimestriel' | 'simplifie', défaut simplifié). Sélecteur conditionnel dans `ComptaConfigForm` (apparaît seulement si `ae_vat_franchise = false`). `tvaSASU` refactoré en `tvaDeclarations(regime, intraEnabled, from, to, idPrefix)` pour être appelable depuis les 2 statuts.
->   - **1m — EURL / SARL / SAS** (Mai 2026) : extension du sélecteur `accounting_status` à 6 valeurs (particulier / auto_entrepreneur / sasu / sas / sarl / eurl). Migration `20260509_compta_extra_legal_forms` ajoute 2 colonnes : `eurl_is_election` (true = EURL à l'IS, false = IR par défaut) et `sarl_gerant_majoritaire` (impact sur la DSN). Sémantique élargie des colonnes `sasu_*` historiques : utilisées pour TOUTES les sociétés à l'IS (sasu/sas/sarl/eurl-IS) — évite la duplication de schéma. Helpers `isCorporateAtIS()` et `dirigeantAssimileSalarie()` centralisent les règles. `fiscalCalendar.ts` factoré : un seul code path "société à l'IS" pour les 4 statuts (TVA + IS + bilan + DSN si dirigeant assimilé salarié + CFE), un cas dédié EURL-IR (liasse 2031/2035 ~5 mai + dépôt comptes + CFE + 2042 perso). DSN désactivée pour gérant majoritaire SARL (TNS) et EURL-IR (TNS). FEC étendu à toutes les sociétés. Sélecteur ConfigForm en 2 sections visuelles ("sans société dédiée" / "société à l'IS"), sous-formulaires conditionnels pour le choix IS/IR (EURL) et le statut du gérant (SARL).
->   - **1n — Suisse complète (26 cantons)** (Mai 2026) : portage du module compta côté CH. Migration `20260510_compta_switzerland` ajoute 5 colonnes (`ch_canton`, `ch_vat_assujetti`, `ch_vat_periodicity`, `ch_vat_method`, `ch_started_at`) et étend `accounting_status` à 9 valeurs (3 statuts CH : `independant_ch` / `sarl_ch` / `sa_ch`). `lib/compta/countries.ts` accepte `isSwissCountry` + helper `detectCountryCode`. Nouveau fichier `lib/compta/ch_cantons.ts` qui modélise les **26 cantons suisses** avec leur date butoir réelle de déclaration d'impôt (personne physique ET personne morale, qui peuvent différer) et l'URL de leur portail fiscal cantonal — sources : ch.ch et sites cantonaux officiels. `lib/compta/fiscalCalendarCH.ts` calcule les échéances suisses : décompte TVA selon périodicité (T1→31 mai, T2→31 août, T3→30 nov, T4→28 fév pour le trimestriel — option mensuelle / semestrielle / annuelle), acomptes AVS/AI/APG trimestriels (mars/juin/sept/déc) pour les indépendants, déclaration d'impôt cantonale + fédérale à la date du canton de l'user (avec lien vers son portail), comptes annuels Sàrl/SA dans les 6 mois après clôture (Code des Obligations art. 957a). API `/api/compta/fiscal-deadlines` et cron `/api/cron/fiscal-reminders` dispatchent FR vs CH selon `country` détecté. UI `ComptaTab` ouvre l'onglet aux users CH avec un disclaimer permanent ("Les taux d'imposition varient par canton — ton fiduciaire reste la référence"). `ComptaConfigForm` reçoit une prop `country` qui sélectionne 6 cartes FR ou 4 cartes CH (Particulier / Indépendant / Sàrl / SA), avec sous-formulaire `SuisseFields` (sélecteur des 26 cantons triés FR-DE-IT, IDE pour Sàrl/SA, exercice comptable, assujettissement TVA, périodicité, méthode effective vs TDFN). FEC reste FR-only (norme française non applicable en CH). Dashboard adapté CH : taux TVA 8.1% (vs 20% FR), jauge seuils 100k CHF avec conversion EUR→CHF via forex, copie adaptée ("Assujettissement TVA obligatoire" en CH).
->   - **1o — Portugal** (Mai 2026) : ouverture de l'onglet aux users portugais. Migration `20260510_compta_portugal` ajoute 6 colonnes (`pt_nif`, `pt_region`, `pt_iva_isento`, `pt_iva_periodicity`, `pt_tax_regime`, `pt_started_at`) et étend `accounting_status` à 14 valeurs (5 statuts PT : `trabalhador_independente_pt` / `eni_pt` / `lda_unipessoal_pt` / `lda_pt` / `sa_pt`). Nouveau `lib/compta/fiscalCalendarPT.ts` qui calcule les échéances portugaises : déclaration IVA (mensuelle ou trimestrielle, jour 25 du 2e mois suivant), IRS Modelo 3 (1er avril → 30 juin N+1), IRC Modelo 22 (31 mai N+1 pour exercice civil), 3 acomptes IRC pagamento por conta (31 juillet / 30 septembre / 15 décembre), Segurança Social mensuelle (le 20) pour les indépendants/ENI, communication e-fatura mensuelle (jour 5). 3 régions distinctes (continent / Madère / Açores) avec leurs taux IVA respectifs (23/22/16% normal). Sélecteur `PortugalFields` dans `ComptaConfigForm` (NIF 9 chiffres, région, régime fiscal simplificado vs organizada pour les indépendants, exercice comptable LDA/SA, isenção IVA + périodicité). **Règle UI explicite** : tous les libellés affichés sont en français (titres, descriptions, badges) — seuls les noms officiels des déclarations restent en portugais (NIF, IRS, IRC, Modelo 3/22, e-fatura, AT, CIVA, Segurança Social) car ce sont des termes intraduisibles. Dashboard `isVatable` étendu PT (assujetti si pas en regime de isenção), taux IVA selon région (23 continent / 22 Madère / 16 Açores).
->   - **1p — Belgique** (Mai 2026) : ouverture de l'onglet aux users belges. Migration `20260510_compta_belgium` ajoute 6 colonnes (`be_region` wallonie/flandre/bruxelles, `be_company_number` BCE 10 chiffres, `be_vat_franchise` < 25k €, `be_vat_periodicity` mens/trim, `be_intra_eu_listing` état 723, `be_started_at`) et étend `accounting_status` à 18 valeurs (4 statuts BE : `independant_principal_be` / `independant_complementaire_be` / `srl_be` / `sa_be`). Nouveau `lib/compta/fiscalCalendarBE.ts` qui couvre toutes les obligations fédérales : TVA via Intervat (mensuelle ou trimestrielle, jour 20 du mois suivant), listing client annuel (31 mars), listing intra-UE état 723 trimestriel, IPP via Tax-on-web (~15 juillet), ISoc via Biztax (~30 sept pour exercice civil), 4 versements anticipés trimestriels (10 avril / 10 juillet / 10 octobre / 20 décembre) pour IPP et ISoc, cotisations INASTI/RSVZ trimestrielles (20 mars/juin/sept/déc) avec taux réduit pour les indépendants à titre complémentaire, dépôt comptes annuels BNB pour SRL/SA dans les 7 mois après l'AG. UI `BelgiqueFields` (BCE 10 chiffres, région, exercice comptable SRL/SA, franchise TVA + périodicité, toggle listing intra-UE). FEC reste FR-only (pas d'équivalent légal en BE — les contrôles s'appuient sur le PCMN). Dashboard `isVatable` étendu BE (assujetti si pas en franchise), taux TVA 21% pour le calcul TVA collectée. Avec le portage BE, le module compta couvre 4 pays francophones (FR + CH + PT + BE).
->   - **1q — Espagne** (Mai 2026) : ouverture de l'onglet aux users espagnols. Migration `20260510_compta_spain` ajoute 7 colonnes (`es_community` 17 CCAA + 2 ciudades autónomas, `es_company_number` NIF/CIF, `es_iva_regime` general/simplificado/recargo_equivalencia/exencion, `es_iva_periodicity` mensual/trimestral, `es_redeme` boolean, `es_irpf_method` directa/objetiva, `es_started_at`) et étend `accounting_status` à 22 valeurs (4 statuts ES : `autonomo_es` / `slu_es` / `sl_es` / `sa_es`). Nouveau `lib/compta/fiscalCalendarES.ts` qui couvre toutes les obligations : IVA Modelo 303 trimestriel (T1→20/04, T2→20/07, T3→20/10, T4→30/01) ou mensuel (CA > 6 M€ ou inscrit REDEME), Modelo 390 résumé annuel (30/01), Modelo 349 opérations intra-UE trimestriel, IRPF Modelo 130/131 pagos fraccionados trimestriels pour autónomos (estimación directa ou módulos), IRPF Modelo 100 déclaration annuelle (avril-juin), IS Modelo 200 annuel (1-25 juillet pour exercice civil) + Modelo 202 acomptes (20/04, 20/10, 20/12), RETA cotisations mensuelles via TGSS (réforme 2023, basées sur revenus réels), comptes annuels Registro Mercantil dans le mois suivant l'AG. **Spécificités régionales** : País Vasco + Navarra (Régimen Foral) → portail Hacienda Foral (euskadi.eus / navarra.es) au lieu d'AEAT. Canarias → IGIC (tipo general 7%, Modelos 420/425) au lieu d'IVA. Ceuta + Melilla → IPSI (hors scope MVP, le profil affiche un disclaimer). UI `EspagneFields` (sélecteur 19 CCAA avec disclaimer Foral/IGIC/IPSI dynamique, NIF/CIF, exercice comptable SLU/SL/SA, régime IVA, périodicité, REDEME, méthode IRPF pour autónomos). Dashboard `isVatable` étendu ES (assujetti hors exencion et hors Ceuta/Melilla), taux TVA 21% (péninsule + Baléares) ou 7% (Canarias IGIC). Avec le portage ES, le module compta couvre 5 pays (FR + CH + PT + BE + ES).
->   - **1r — Canada (toutes provinces + territoires)** (Mai 2026) : ouverture de l'onglet aux users canadiens, couverture des 13 juridictions (10 provinces + YT/NT/NU). Migration `20260510_compta_canada` ajoute 8 colonnes (`ca_province` ISO 3166-2 CA-XX, `ca_business_number` BN ARC 9 chiffres ou NEQ QC 10 chiffres, `ca_gst_registered` boolean, `ca_gst_periodicity` mens/trim/annuelle, `ca_petit_fournisseur` < 30 000 $/4 trim, `ca_fiscal_year_calendar` + `ca_fiscal_year_start_month` pour les sociétés, `ca_started_at`) et étend `accounting_status` à 26 valeurs (4 statuts CA génériques car la province discrimine via `ca_province` : `travailleur_autonome_ca` / `entreprise_individuelle_ca` / `inc_provincial_ca` / `inc_federal_ca`). Nouveau `lib/compta/fiscalCalendarCA.ts` qui couvre toutes les obligations : **TPS fédérale 5 % (ARC)** commune, déclinaisons provinciales — QC TVQ 9,975 % (Revenu Québec gère TPS+TVQ ensemble via FPZ-500), TVH harmonisée ON 13 % / NB+NL+NS+PE 15 %, BC PST 7 %, SK PST 6 %, MB RST 7 %, AB+YT+NT+NU TPS seule. Périodicité TPS : mensuelle (CA > 6 M$), trimestrielle (1,5–6 M$), annuelle (< 1,5 M$ avec 4 acomptes trim aux 30 avr/juil/oct + 31 jan). Impôt particulier T1 (ARC) et TP-1 (Revenu Québec au QC) — production 30 avril (15 juin pour autonomes mais paiement dû 30 avril), 4 acomptes provisionnels trimestriels aux 15 mars/juin/sept/déc si impôt > 3 000 $/an (1 800 $ au QC). Impôt société T2 (ARC) et CO-17 (Revenu Québec au QC) — production 6 mois après clôture, paiement à 2 mois (3 mois pour SPCC admissible à la déduction accordée aux petites entreprises), acomptes mensuels au 15. DAS (retenues à la source) mensuelles le 15 du mois suivant pour les sociétés avec employés (RPC/AE/impôt fédéral à l'ARC + RRQ/RQAP/FSS/impôt provincial à Revenu Québec au QC). PST/RST séparée (BC/SK/MB) : rappel mensuel via portail provincial. Mise à jour annuelle REQ pour les entreprises individuelles immatriculées au QC. UI `CanadaFields` (sélecteur des 13 juridictions avec étiquette dynamique du régime de taxes, BN/NEQ, toggle petit fournisseur, toggle inscription TPS, périodicité, exercice comptable pour les sociétés, disclaimer REQ pour entreprise individuelle au QC). Dashboard `isVatable` étendu CA (assujetti si `ca_gst_registered=true`), `vatRateNormal` étendu avec taux total combiné par province (5 → 14,975 %), nouveau seuil "petit fournisseur" 30 000 $ CAD avec conversion EUR→CAD via forex (rate fallback 1.48). `getEurForexRates` accepte maintenant CAD. Avec le portage CA, le module compta couvre 6 pays (FR + CH + PT + BE + ES + CA) et représente la première juridiction nord-américaine, avec un système de taxes le plus fragmenté supporté à ce jour (4 régimes différents pour 13 juridictions).
->   - **1s — États-Unis (50 états + DC)** (Mai 2026) : ouverture de l'onglet en prévision des futurs acheteurs américains. Migration `20260510_compta_united_states` ajoute 7 colonnes (`us_state` ISO 3166-2 US-XX, `us_ein` Employer Identification Number XX-XXXXXXX, `us_llc_tax_classification` disregarded/partnership/s_corp/c_corp pour les LLC ayant fait une élection fiscale via Form 8832 ou Form 2553, `us_sales_tax_states` JSONB array d'inscriptions sales tax, `us_fiscal_year_calendar` + `us_fiscal_year_start_month` pour les corporations, `us_started_at`) et étend `accounting_status` à 31 valeurs (5 statuts US : `sole_proprietorship_us` / `single_member_llc_us` / `multi_member_llc_us` / `c_corp_us` / `s_corp_us`). Nouveau `lib/compta/fiscalCalendarUS.ts` qui couvre toutes les obligations fédérales : **Form 1040** (individual) due le 15 avril pour tous les pass-through (sole prop, single LLC disregarded, partners K-1, S-Corp shareholders K-1) avec extension Form 4868 → 15 octobre, **Form 1120** (C-Corp) due le 15 avril en calendar year (15e jour du 4e mois), flat 21 % depuis TCJA 2017, double taxation, **Form 1120-S** (S-Corp) due le 15 mars (15e jour du 3e mois), pass-through avec K-1, **Form 1065** (multi-member LLC partnership par défaut) idem 15 mars, **Form 1040-ES** (estimated taxes) trimestriels Q1 15/04, Q2 15/06, Q3 15/09, Q4 15/01 N+1 si dette fiscale > 1 000 $, **Form 1120-W** (C-Corp estimated tax) 15 mars/juin/sept/déc, **Form 1099-NEC** (contractors > 600 $/an) due le 31 janvier, **Self-employment tax** 15,3 % payée via 1040+1040-ES. **State income tax** : déclaration parallèle alignée sur le 15 avril fédéral, sauf 9 états sans state income tax sur business (AK, FL, NV, NH, SD, TN, TX, WA, WY). **Sales tax** modélisée par état d'inscription (`us_sales_tax_states` JSONB) — 5 états sans sales tax au niveau state (NH, OR, MT, DE, et AK qui en a au niveau local seulement). Rappel mensuel par état d'inscription au 20 du mois suivant (cas le plus courant : CA, NY, TX, FL). Pas de calcul de taux : ~10 000 juridictions locales rendent intractable la modélisation exhaustive — on délègue à Stripe Tax/TaxJar/Avalara pour le calcul exact. **Annual report** rappel approximatif au 1er trimestre auprès du Secretary of State. UI `UnitedStatesFields` (sélecteur 51 entités avec disclaimer dynamique pour state income tax / sales tax, EIN format XX-XXXXXXX validé, élection fiscale LLC en 4 boutons, grille toggle 46 états sales tax avec scroll, disclaimers spécifiques multi-member LLC + S-Corp + reasonable salary, exercice fiscal calendar/decalé pour les corps avec rappel des deadlines 1120/1120-S). Dashboard `isVatable` étendu US (assujetti si `us_sales_tax_states.length > 0`), `vatRateNormal` à 7 % pour US (taux moyen pondéré state+local US, ordre de grandeur uniquement). Helpers `usHasStateIncomeTax`, `usHasStateSalesTax`, `isUSCCorp`, `isUSSCorp`, `isUSPartnership`, `isUSDisregarded` pour les branchements en aval. Avec le portage US, le module compta couvre 7 pays (FR + CH + PT + BE + ES + CA + US), avec une couverture fiscalement la plus complexe à ce jour (5 statuts × 51 états × élection LLC × matrice sales tax × distinction federal/state).
-> - **Connexion CA réel partout dans Tipote (cross-app)** :
->   - Helper unifié `lib/compta/businessSummary.ts` → `getMonthlyRevenueSummary(userId, projectId)` qui agrège transactions PSP + saisies manuelles + fallback `offer_metrics` (pour les users SIO-only). Renvoie CA mois / YTD / comparaison N-1 / objectif / progression / jours restants.
->   - Widget `RevenueGoalProgress` (`components/business/`) affiché en haut de **Aujourd'hui** (`/app`), de la **page Stratégie** (`/strategy` — la mini-jauge utilise désormais aussi cette source) et de l'**onglet Compta** (`/settings?tab=compta`). Vocabulaire naturel : *"Plus que 4 774 € à faire en 14 jours — c'est jouable"*, couleurs adaptatives (vert si atteint, ambre si retard).
->   - **Coach IA contextualisé** : helper `lib/compta/businessContext.ts` qui formate un bloc texte injectable dans les prompts. Injecté dans `/api/coach/chat` (remplace l'ancien bloc REVENUS inline qui ne lisait que offer_metrics), `/api/coach/encouragement` (phrase quotidienne calibrée sur la progression réelle), `/api/strategy` (génération de stratégie + pyramide d'offres voient le CA réel pour proposer des paliers réalistes).
->   - **Page Mes Clients** enrichie : pour chaque client, matched par email avec les transactions PSP, on affiche le total encaissé + badge "Abonné" (paiement récurrent dans les 30j) ou "A arrêté son abo" (churn potentiel). Helper `lib/compta/clientRevenue.ts`, composant `ClientRevenueBadges`.
->   - **Page Analytics** : les "Résultats totaux" (Ventes + CA) lisent maintenant `transactions` + `manual_transactions` quand l'user a la compta configurée, avec badge "↗ Ventes & CA synchronisés depuis Stripe / PayPal / Mollie". Affiche aussi les commissions d'affiliation séparément si présentes. Endpoint `/api/analytics/compta-totals`. Visitors / signups / email stats restent sourcés depuis offer_metrics.
->   - **Cron daily milestones business** : nouveau cron `/api/cron/business-milestones` à 9h qui détecte 3 moments business utiles : 🎯 objectif atteint (≥100%), 📈 mi-parcours objectif (50-99% à partir du 10 du mois), ⚠️ alerte churn (au moins 1 abonné parti ce mois). 1 email max par (user, type, mois) — idempotence via la table `notifications` avec `meta.period`. Respecte `email_preferences.milestones` + rate-limit global.
-> - **Sécurité serveur Hostinger** : nettoyage anti-malware (cron pourri résiduel `/tmp/.est1/.b4nd1d0` lié à un compromis ancien), désactivation `PasswordAuthentication` côté SSH, rotation de la clé SSH user (la clé `id_ed25519` historique dans `~/.ssh/authorized_keys` n'était pas reconnue par Béné → remplacée par une nouvelle paire `tipote_vps` ed25519). Crons Tipote dédoublonnés (`awk '!seen[$0]++'`).
+Ce document décrit l'état courant du produit. Il s'adresse aux développeurs. Pour le brief marketing destiné à la génération de contenu de vente, voir `PRODUCT_BRIEF.md`. Pour les invariants et zones fragiles, voir `docs/INVARIANTS.md` et `CLAUDE_PITFALLS.md`.
 
 ---
 
-## 1\. PRÉSENTATION DU PRODUIT
+## 1. Présentation du produit
 
 ### 1.1. Vision
 
-Tipote® est le « pote de business » des entrepreneurs. Contrairement aux outils IA génériques qui repartent de zéro à chaque conversation, Tipote® mémorise le profil business de l'utilisateur, son audience cible et ses objectifs pour générer une stratégie solide et des contenus véritablement personnalisés.
+Tipote est le "pote de business" des entrepreneurs. Contrairement aux outils IA génériques qui repartent de zéro à chaque conversation, Tipote mémorise le profil business de l'utilisateur, son audience cible et ses objectifs pour générer une stratégie cohérente et des contenus réellement personnalisés.
 
-La "mémoire" Tipote est structurée (profil \+ diagnostic \+ persona \+ storytelling \+ plan \+ offres \+ tâches) et sert de source de vérité pour tous les prompts de génération.
+La mémoire Tipote est structurée (profil, diagnostic, persona, storytelling, plan, offres, tâches, chiffres réels) et sert de source de vérité pour tous les prompts de génération.
 
-### 1.2. Problèmes résolus
+### 1.2. Problèmes adressés
 
-- 51% des entrepreneurs n'ont pas fait leur première vente → Plan stratégique guidé  
-- 46% passent trop de temps sur la création de contenu → Génération IA automatisée \+ publication directe  
-- 52% trouvent l'IA trop générique → Personnalisation basée sur le profil mémorisé
+- Les entrepreneurs sans stratégie publient au feeling : Tipote fournit un plan d'action en 3 phases.
+- La création de contenu prend trop de temps : génération IA plus publication directe.
+- L'IA générique produit un rendu passe-partout : personnalisation via le profil mémorisé.
 
-### 1.3. Fonctionnalités clés (état actuel)
+### 1.3. Fonctionnalités clés
 
-- Onboarding intelligent qui capture le profil business complet  
-- Plan stratégique personnalisé avec offres
-- Génération de contenus (posts, emails, articles, scripts, offres, pages, quiz, stratégie éditoriale)
-- **Publication directe sur 7 réseaux sociaux** (LinkedIn, Facebook, Instagram, Threads, Twitter/X, TikTok, Pinterest)
-- **Automatisations** (auto-commentaires, comment-to-DM, comment-to-email)  
-- Calendrier éditorial centralisé  
-- Constructeur de pages (capture, vente, vitrine, link-in-bio)
-- Système de quiz avec capture de leads
-- **Module Popquiz** (Mai 2026) : vidéo (YouTube/Vimeo/upload TUS resumable jusqu'à 2 GB) avec quiz interactifs incrustés à des timestamps précis, embed iframe pour intégration externe (`/embed/pq/{id}`)
-- Gestion des leads avec chiffrement AES-256
-- Gestion des clients (suivi, notes, statuts, processus d'accompagnement)
-- Templates Systeme.io  
-- Suivi des tâches et progression  
-- Analytics avec diagnostic IA  
-- Coach IA contextuel (plans Pro/Elite)  
-- Système de pépites multilingues (insights traduits automatiquement en 5 langues)
-- Didacticiel interactif pas-à-pas  
-- Notifications en temps réel (clic pour lire, marquage lu automatique)
-- Multi-projets (chaque projet avec sa propre clé API Systeme.io nommée)
-- **Intégration Systeme.io avancée** : webhooks temps réel (ventes, annulations, contacts), auto-inscription cours/communautés, enrichissement contacts, preuve sociale
-- **Systeme.io disponible en whitelabel** sur la plateforme Tipote
-- 5 langues (FR, EN, ES, IT, AR)
+- Onboarding intelligent qui capture le profil business complet.
+- Plan stratégique personnalisé (3 phases : Fondations, Croissance, Scaling) avec pyramide d'offres.
+- Génération de contenus : posts, emails, articles, scripts vidéo, offres, pages, quiz, sondages, popquiz, stratégie éditoriale.
+- Publication directe sur 7 réseaux sociaux (LinkedIn, Facebook, Instagram, Threads, X, TikTok, Pinterest) via OAuth officiel.
+- Automatisations sociales : auto-commentaires, comment-to-DM, comment-to-email.
+- Calendrier éditorial avec programmation.
+- Constructeur de pages (capture, vente, vitrine, link-in-bio).
+- Module Quiz complet (capture de leads, résultats personnalisés, thèmes, tags Systeme.io) avec deux variantes : quiz à profils, quiz à score, et sondages (NPS, feedback).
+- Module Popquiz : vidéo avec quiz incrustés à des timestamps précis, embeddable en iframe.
+- Gestion des leads avec chiffrement AES-256 par utilisateur.
+- Gestion des clients (suivi, notes, statuts, accompagnements avec suivi financier).
+- Module Compta multi-pays (France, Suisse, Belgique, Portugal, Espagne, Canada, États-Unis).
+- Analytics avec diagnostic IA et connexion au CA réel.
+- Coach IA contextuel (plans Pro/Elite).
+- Pépites multilingues (insights traduits automatiquement).
+- Widgets embarquables (preuve sociale, boutons de partage).
+- Domaines personnalisés (plans payants).
+- Multi-projets (plan Elite).
+- Intégration Systeme.io (webhooks temps réel, sync leads, tagging, sync ventes).
+- Dashboard d'affiliation dédié sur sous-domaine.
+- Interface disponible en 7 langues (FR, EN, ES, IT, AR avec RTL, PT, PT-BR).
 
 ---
 
-## 2\. PRINCIPES FONDATEURS
+## 2. Principes fondateurs
 
-### 2.1. Publication directe (évolution majeure vs V1)
+### 2.1. Publication directe
 
-**Contrairement à la V1 qui ne proposait que le copier-coller**, Tipote publie désormais directement sur les réseaux sociaux via OAuth 2.0. L'utilisateur connecte ses comptes dans Paramètres \> Connexions, et les posts sont publiés en un clic (ou programmés).
+Tipote publie directement sur les réseaux sociaux via OAuth 2.0. L'utilisateur connecte ses comptes dans Paramètres > Connexions, et les posts sont publiés en un clic ou programmés.
 
-Plateformes supportées avec publication directe :
+Plateformes supportées :
 
-- LinkedIn (Posts \+ images)
-- Facebook Pages (Posts \+ images \+ carrousels \+ vidéos)
-- Instagram (Photos \+ vidéos \+ Reels)
-- Threads (Posts)
-- Twitter/X (Tweets \+ images)
-- TikTok (Photos \+ vidéos)
-- Pinterest (Pins avec images \+ liens)
+- LinkedIn (posts, images)
+- Facebook Pages (posts, images, carrousels, vidéos)
+- Instagram (photos, vidéos, Reels)
+- Threads (posts)
+- X / Twitter (tweets, images)
+- TikTok (photos, vidéos)
+- Pinterest (pins avec images et liens)
 
 ### 2.2. Deux niveaux d'IA
 
-**Niveau 1 — Cerveau stratégique (OpenAI GPT)**
+Niveau 1, cerveau stratégique (OpenAI GPT), clé propriétaire, appels backend uniquement :
 
-- Onboarding et diagnostic business  
-- Génération du plan stratégique  
-- Propositions d'offres (onboarding)
-- Création des tâches  
-- Coach IA  
-- Analyse analytics  
-- Recherche de ressources (embeddings) → Clé propriétaire, appels backend uniquement
+- Onboarding et diagnostic business
+- Génération du plan stratégique
+- Propositions d'offres
+- Création des tâches
+- Coach IA
+- Analyse analytics
+- Traduction des pépites et des notifications
 
-**Niveau 2 — Génération de contenu (Claude Anthropic)**
+Niveau 2, génération de contenu (Claude, Anthropic), clé propriétaire :
 
-- Posts réseaux sociaux  
-- Emails (newsletters, séquences)  
-- Articles de blog  
-- Scripts vidéo  
-- Copywriting pages
-- Quiz  
-- Stratégie éditoriale  
-- Auto-commentaires → Claude Sonnet comme provider principal, clé propriétaire
+- Posts réseaux sociaux
+- Emails (newsletters, séquences)
+- Articles de blog
+- Scripts vidéo
+- Copywriting de pages
+- Quiz et sondages
+- Stratégie éditoriale
+- Auto-commentaires
+
+Tous les appels Claude passent par un helper unique (`lib/claudeRequest.ts`) qui construit le corps des requêtes et gère la compatibilité des paramètres selon le modèle. La résolution du modèle est centralisée dans `lib/anthropicModel.ts`. L'utilisateur n'a aucune clé IA à configurer.
 
 ### 2.3. Monétisation par crédits
 
-- Crédits inclus mensuellement selon le plan (Free/Basic/Pro/Elite)  
-- Packs de crédits supplémentaires via Systeme.io  
-- Chaque génération de contenu consomme des crédits  
-- Webhook Systeme.io pour délivrer les crédits achetés  
-- L'utilisateur n'a besoin de configurer aucune clé IA
+- Crédits inclus mensuellement selon le plan.
+- Packs de crédits supplémentaires achetables via Systeme.io (sans expiration).
+- Chaque génération de contenu consomme des crédits.
+- Webhook Systeme.io pour délivrer les crédits achetés et gérer les abonnements.
 
 ---
 
-## 3\. ARCHITECTURE UX
+## 3. Architecture UX
 
-### 3.1. Navigation principale (Sidebar)
+### 3.1. Navigation principale (sidebar)
 
-**Section principale :**
+Section principale :
 
-| Menu | URL | Icône | Description |
-| :---- | :---- | :---- | :---- |
-| Aujourd'hui | /app | Sun | Dashboard : prochaine tâche \+ stats clés |
-| Ma Stratégie | /strategy | Target | Plan d'action en 3 phases \+ tâches |
-| Créer | /create | Sparkles | Hub de création (8 types de contenu) |
-| Mes Contenus | /contents | FolderOpen | Liste \+ calendrier éditorial |
-| Templates | /templates | Layout | Templates Systeme.io |
-| Automatisations | /automations | Zap | Automatisations sociales (comment-to-DM/email) |
-| Mes Leads | /leads | Users | Gestion des leads capturés |
-| Mes Clients | /clients | UserCheck | Gestion et suivi des clients |
-| Widgets | /widgets | Bell | Widgets embarquables (toast \+ partage social) |
+| Menu | URL | Description |
+| :---- | :---- | :---- |
+| Aujourd'hui | /app | Dashboard : objectif, prochaine tâche, contenus du jour, progression |
+| Ma Stratégie | /strategy | Plan d'action en 3 phases et tâches |
+| Créer | /create | Hub de création de contenu |
+| Mes Contenus | /contents | Liste et calendrier éditorial |
+| Templates | /templates | Templates Systeme.io |
+| Automatisations | /automations | Automatisations sociales |
+| Mes Leads | /leads | Leads capturés |
+| Mes Clients | /clients | Suivi des clients |
+| Widgets | /widgets | Widgets embarquables |
 
-**Section secondaire :**
+Section secondaire : Analytics (/analytics), Pépites (/pepites).
 
-| Menu | URL | Icône | Description |
-| :---- | :---- | :---- | :---- |
-| Analytics | /analytics | BarChart3 | KPIs \+ diagnostic IA |
-| Pépites | /pepites | Sparkles | Insights et pépites business |
+Footer sidebar : Support (/support).
 
-**Footer sidebar :**
-
-| Menu | URL | Icône | Description |
-| :---- | :---- | :---- | :---- |
-| Support | /support | HelpCircle | Lien vers le support (nouvel onglet) |
-
-**Note :** Les Paramètres ne sont plus dans la sidebar. Ils sont accessibles via la photo de profil (avatar) en haut à droite du header.
+Les Paramètres sont accessibles via la photo de profil (avatar) en haut à droite du header, pas dans la sidebar. Le sélecteur de projet (plan Elite) apparaît dans la sidebar lorsque l'utilisateur a plusieurs projets.
 
 ### 3.2. Workflow utilisateur
 
-ONBOARDING (une fois)
-
-    → AUJOURD'HUI (chaque connexion)
-
-        → CRÉER (production)
-
-            → PUBLIER (réseaux sociaux)
-
-                → MES CONTENUS (organisation)
-
-                    → ANALYTICS (suivi)
+Onboarding (une fois) puis, à chaque connexion : Aujourd'hui, Créer, Publier, Mes Contenus, Analytics.
 
 ---
 
-## 4\. PAGES DE L'APPLICATION
+## 4. Pages de l'application
 
 ### 4.1. Authentification
 
-- Login : email \+ mot de passe (Supabase Auth)  
-- Reset password  
-- Set password  
-- Détection automatique de la langue (user.locale)  
-- Callback OAuth pour réseaux sociaux
+- Login email plus mot de passe (Supabase Auth, PKCE, cookies httpOnly).
+- Reset password, set password.
+- Détection automatique de la langue.
+- Callbacks OAuth pour les réseaux sociaux.
 
 ### 4.2. Onboarding intelligent
 
-**Déclenchement :** Première connexion. Obligatoire avant les fonctionnalités stratégiques.
+Déclenché à la première connexion, obligatoire avant les fonctionnalités stratégiques. Format questionnaire progressif de type Typeform.
 
-**Format :** Questionnaire interactif de type Typeform (V3), étapes progressives.
+Données collectées : profil business complet, offres existantes ou absence d'offres ou profil affilié, situation réelle, freins, différenciation, preuves, positionnement, persona cible, objectifs, style et tonalité, non-négociables.
 
-**Données collectées :**
+Stockage (Supabase, sur `business_profiles`) : `diagnostic_answers` (JSONB transcript), `diagnostic_profile` (JSONB normalisé), `diagnostic_summary` (résumé coach), flags d'onboarding.
 
-- Profil business complet  
-- Offres existantes / absence d'offres / profil affilié  
-- Situation réelle, freins, contraintes  
-- Différenciation, preuves, positionnement  
-- Persona client cible  
-- Objectifs prioritaires
-- Style et tonalité  
-- Non-négociables
+Traitement backend (IA niveau 1) : génération du persona, diagnostic business, 3 propositions d'offres si l'utilisateur n'en a pas, génération du plan stratégique en 3 phases, création automatique des tâches.
 
-**Stockage (Supabase) :**
+La vérification d'onboarding est strictement scopée au couple (utilisateur, projet). Un trigger Postgres bascule le flag à complété dès qu'une ligne a une niche et au moins une offre.
 
-- `business_profiles.diagnostic_answers` (JSONB) : transcript structuré  
-- `business_profiles.diagnostic_profile` (JSONB) : normalisation exploitable  
-- `business_profiles.diagnostic_summary` (TEXT) : résumé coach  
-- `business_profiles.diagnostic_completed` (BOOLEAN)
+### 4.3. Page Aujourd'hui (/app)
 
-**Traitement backend (IA Niveau 1\) :**
+Dashboard de coaching automatique basé sur les données du profil.
 
-1. Génération persona détaillé (basé sur diagnostic\_profile)  
-2. Diagnostic business (forces/faiblesses/leviers)  
-3. Création de 3 propositions d'offres (si l'utilisateur n'en a pas encore)
-4. L'utilisateur en choisit une → ces offres sont ajoutées à ses réglages
-5. Génération du plan stratégique en 3 phases
-6. Création automatique des tâches
+- Bloc objectif : card avec l'objectif de la phase en cours, badge phase, CTA contextuel.
+- Progression vers l'objectif mensuel : jauge alimentée par le CA réel (voir module Compta), message contextuel, couleurs adaptatives.
+- Contenus programmés aujourd'hui : liste des contenus planifiés (canal, titre, horaire).
+- Coaching de la semaine : résumé des actions accomplies, prochaine étape.
+- Progression : analyse des stats analytics.
+- Lien vers la stratégie complète.
 
-### 4.3. Page « Aujourd'hui » (/app)
+### 4.4. Page Ma Stratégie (/strategy)
 
-Page d'accueil après login. Dashboard "Mode Pilote" — coaching automatique basé sur les données du profil.
+Plan d'action en 3 phases.
 
-**Composants :**
+- Header avec badges : objectif revenu (éditable), phase actuelle, progression.
+- Cards stats : tâches complétées, phase actuelle, objectif revenu.
+- Phase 1 Fondations, Phase 2 Croissance, Phase 3 Scaling : chacune avec barre de progression et tâches cochables réordonnables par drag-and-drop.
+- Archive des tâches complétées.
+- Mini-jauge de progression vers l'objectif (même source que Aujourd'hui et Compta).
 
-- **Bloc 1 — Ton objectif** : Card gradient avec objectif stratégique de la phase en cours, badge phase, bouton CTA contextuel
-- **Bloc 1b — Contenus programmés aujourd'hui** : Liste des contenus planifiés pour la journée (canal, titre, horaire), lien vers le calendrier
-- **Bloc 2 — Cette semaine : coaching** : Résumé positif des actions accomplies, dernière tâche réalisée, prochaine étape recommandée, CTA contextuel
-- **Bloc 3 — Ta progression** : Analyse intelligente des stats analytics (revenus, ventes, inscrits, taux de conversion) ou invitation à remplir les stats
-- **Bloc 4 — Lien stratégie** : Lien discret vers la page stratégie complète
+Le plan porte un flag `is_stale` posé quand un champ profil critique change (objectif revenu, niche, offres). La page affiche alors un bandeau "Tes infos ont changé" avec un bouton de recalcul qui force la régénération.
 
-### 4.4. Page « Ma Stratégie » (/strategy)
+Les offres sont gérées dans Paramètres > Profil, le persona dans Paramètres > Positionnement. Lors de l'onboarding, si l'utilisateur n'a pas d'offres, Tipote propose des pyramides d'offres ; l'utilisateur en choisit une qui devient ses offres.
 
-Page dédiée au plan d'action stratégique en 3 phases.
-
-**Header :**
-
-- Banner « Votre Vision Stratégique »
-- 3 badges : Objectif Revenue (éditable), Phase actuelle, Progression (%)
-
-**3 cards stats :**
-
-- Tâches complétées (compteur \+ barre de progression)
-- Phase actuelle
-- Objectif revenue
-
-**Plan d'action :**
-
-- Phase 1 Fondations : barre progression \+ tâches cochables (tri drag-and-drop)
-- Phase 2 Croissance : barre progression \+ tâches cochables
-- Phase 3 Scale : barre progression \+ tâches cochables
-- Archive des tâches complétées (section dépliable)
-
-**Note :** La pyramide d'offres et le persona ne sont plus affichés sur cette page. Les offres sont gérées dans Paramètres \> Profil, le persona dans Paramètres \> Positionnement.
-
-**Flux des offres :** Lors de l'onboarding, si l'utilisateur n'a pas encore d'offres, Tipote lui propose 3 pyramides d'offres. L'utilisateur en choisit une, et ces offres deviennent ses offres dans les réglages. Il doit ensuite les mettre en œuvre via les tâches générées dans le plan d'action.
-
-### 4.5. Page « Créer » (/create)
+### 4.5. Page Créer (/create)
 
 Hub unique de création de contenu IA.
 
-**8 types de contenu :**
+| Type | Description | Formulaire |
+| :---- | :---- | :---- |
+| Post | Réseaux sociaux | PostForm |
+| Email | Newsletters, séquences | EmailForm |
+| Article | Blog, guides | ArticleForm |
+| Vidéo | Scripts YouTube, Reels, TikTok | VideoForm |
+| Offre | Pages de vente, descriptions produit | OfferForm |
+| Pages | Capture, vente, vitrine, link-in-bio | PagesForm |
+| Quiz | Quiz lead-magnet, sondages | QuizForm |
+| Stratégie | Stratégie éditoriale | ContentStrategyForm |
 
-| Type | Description | Icône | Formulaire |
-| :---- | :---- | :---- | :---- |
-| Post | Réseaux sociaux (LinkedIn, Instagram, Twitter...) | MessageSquare | PostForm |
-| Email | Newsletters, séquences, campaigns | Mail | EmailForm |
-| Article | Articles de blog, guides, tutoriels | FileText | ArticleForm |
-| Vidéo | Scripts YouTube, Reels, TikTok | Video | VideoForm |
-| Offre | Pages de vente, descriptions produit | Package | OfferForm |
-| Pages | Pages de vente, de capture, sites vitrine, link-in-bio | Route | PagesForm |
-| Quiz | Quiz lead magnets | ClipboardList | QuizForm |
-| Stratégie | Stratégie de contenu éditoriale | CalendarDays | ContentStrategyForm |
+Workflow après sélection : formulaire contextuel pré-rempli depuis l'onboarding et le persona, bouton Générer (IA niveau 2, streaming SSE pour les longs formats), prévisualisation, actions (régénérer, modifier, sauvegarder, planifier, publier directement).
 
-**Workflow après sélection :**
+Posts, fonctionnalités avancées : sélection de la plateforme, upload d'images (`content-images`) et de vidéos (`content-videos`), configuration d'auto-commentaire à la publication, sélection du board Pinterest, mode édition d'un post programmé via `?edit=<id>`.
 
-1. Formulaire contextuel (pré-rempli depuis onboarding/persona)  
-2. Bouton « Générer » → appel IA Niveau 2 (Claude)  
-3. Prévisualisation du résultat  
-4. Actions : Régénérer / Modifier / Sauvegarder / Planifier / **Publier directement**
+Contexte IA : tous les prompts réinjectent le `persona_json` et les éléments du diagnostic (objections, vocabulaire, différenciation). Un cache d'arguments de vente par offre (`sales_arguments`, JSONB) est généré une fois par offre puis réutilisé dans les prompts pour réduire la consommation de tokens.
 
-**Posts réseaux sociaux — Fonctionnalités avancées :**
-
-- Sélection de la plateforme cible  
-- Upload d'images (stockage Supabase Storage `content-images`)  
-- Upload de vidéos (stockage Supabase Storage `content-videos`)  
-- Configuration auto-commentaire à la publication  
-- Sélection du board Pinterest (si Pinterest)  
-- Lien Pinterest optionnel  
-- **Mode édition** : accès via `?edit=<id>` pour modifier un post programmé existant
-
-**Contexte IA :** Tous les prompts réinjectent `persona_json` \+ éléments du diagnostic (objections, vocabulaire, différenciation).
-
-### 4.6. Page « Mes Contenus » (/contents)
+### 4.6. Page Mes Contenus (/contents)
 
 Vue centralisée de tous les contenus générés.
 
-**Deux vues :**
+- Vue Liste : onglets filtres (Tous, Posts, Emails, Articles, Vidéos, Quiz, Pages), recherche, filtres avancés (statut, canal).
+- Vue Calendrier : vue mois avec codes couleur par type, clic pour éditer.
+- Éléments : badge statut (Publié, Planifié, Brouillon), type et canal, titre et aperçu, date, menu actions.
+- Les posts programmés sont éditables (ouverture de l'éditeur complet avec images, vidéos, auto-commentaires pré-remplis).
+- Sous-sections intégrées : Mes Quiz, Mes Pages.
 
-- **Vue Liste** : Onglets filtres (Tous / Posts / Emails / Articles / Vidéos / Quiz / Pages) \+ recherche \+ filtres avancés (statut, canal)  
-- **Vue Calendrier** : Vue mois avec codes couleur par type, clic pour éditer
+La programmation utilise un `ScheduleModal` avec un `DateTimePicker` (calendrier, créneaux prédéfinis, heure custom), validation des dates passées côté client et serveur.
 
-**Éléments affichés :**
+### 4.7. Page Templates (/templates)
 
-- Badge statut (Publié, Planifié, Brouillon)  
-- Type \+ Canal  
-- Titre \+ aperçu  
-- Date/délai  
-- Menu actions (éditer, marquer comme publié, planifier/modifier date, déplanifier, supprimer)
+Bibliothèque de templates Systeme.io : prévisualisation et téléchargement direct.
 
-**Fonctionnalité clé :** Les posts programmés sont éditables. Clic sur un post → ouvre l'éditeur complet (`/create?edit=<id>`) avec images, vidéos, auto-commentaires pré-remplis.
+### 4.8. Page Automatisations (/automations)
 
-**Sous-sections intégrées :**
+Automatisations sociales.
 
-- Mes Quiz (liste des quiz créés avec stats vues/partages/leads)  
-- Mes Pages (pages hébergées avec stats vues/leads/clics)
+- Comment-to-DM : réponse automatique en DM aux commentaires contenant certains mots-clés.
+- Comment-to-Email : capture de l'email des commentateurs via DM automatique.
 
-### 4.7. Page « Templates » (/templates)
+Les auto-commentaires (commentaire automatique sur les posts publiés) sont configurés dans Paramètres > Connexions et activés à la création d'un post. Le contenu est généré par Claude.
 
-Bibliothèque de templates Systeme.io téléchargeables.
+Triggers : mots-clés configurables, variantes de réponses, logs d'exécution avec statut. Intégration n8n : webhooks pour publication asynchrone, callback pour posts programmés, health check.
 
-**Fonctionnalités :**
+### 4.9. Page Mes Leads (/leads)
 
-- Prévisualisation des templates
-- Téléchargement direct dans Systeme.io
+Gestion centralisée des leads capturés (toutes sources).
 
-### 4.8. Page « Automatisations » (/automations)
+- Tableau : email, nom, source, date de capture, statut d'export Systeme.io.
+- Recherche par email ou nom, filtre par source, pagination, sélection multiple, export CSV.
+- 4 KPI cards cliquables (Total, Exportés Systeme.io, Non exportés, Ce mois) : chaque card est un bouton qui togglent un filtre sur la liste (second clic retire le filtre), état actif matérialisé par un anneau coloré, filtre persisté en query string.
+- Panel détail latéral : avatar, nom, email, téléphone, date, source, résultat quiz et réponses, statut d'export, actions.
 
-Gestion des automatisations sociales.
+Sécurité : chiffrement AES-256-GCM par champ (email, prénom, nom, téléphone, réponses quiz), clé de chiffrement par utilisateur (DEK), index aveugle HMAC pour la recherche sur email chiffré. Sur le plan gratuit, les leads au-delà du quota mensuel visible restent capturés mais floutés, le verrou étant appliqué côté serveur (`lib/leadLock.ts`) pour ne pas fuiter la PII.
 
-**Types d'automatisations (page /automations) :**
+### 4.10. Page Mes Clients (/clients)
 
-- **Comment-to-DM** : Répondre automatiquement en DM aux commentaires contenant certains mots-clés
-- **Comment-to-Email** : Capturer l'email des commentateurs via DM automatique
+Gestion des clients pour coachs, consultants et prestataires. Complémentaire à la page Leads : un lead est un prospect capturé, un client est une personne avec qui l'utilisateur travaille.
 
-**Note :** Les auto-commentaires (commentaires automatiques sur les posts publiés) sont configurés dans Paramètres \> Connexions et activés lors de la création d'un post. Coût : 0.25 crédit par commentaire, contenu généré par Claude.
+- 4 stats : total, actifs, complétés, taux de complétion moyen.
+- Tableau : nom, email, statut (Prospect, Actif, En pause, Complété), badges d'accompagnements avec progression, date d'ajout. Recherche, filtre par statut, filtre par accompagnement, pagination.
+- Création et édition via dialog : nom, email, téléphone, statut, notes.
+- Panel détail : informations, notes, section Accompagnements (étapes cochables avec barre de progression, suivi financier par accompagnement : montant closé, montant encaissé, paiement comptant ou en tranches).
+- Section Mes accompagnements : templates de processus réutilisables (nom, description, couleur, étapes ordonnées), applicables à un client avec saisie optionnelle des infos de paiement.
 
-**Triggers :**
+Enrichissement CA : quand la compta est configurée, chaque client est matché par email avec les transactions PSP pour afficher le total encaissé et un badge d'abonnement actif ou interrompu.
 
-- Mots-clés configurables
-- Variantes de réponses
-- Logs d'exécution avec statut (success/fail)
-
-**Intégration n8n :**
-
-- Webhooks pour publication asynchrone
-- Callback pour posts programmés
-- Health check endpoint
-
-### 4.9. Page « Mes Leads » (/leads)
-
-Gestion centralisée des leads capturés.
-
-**Tableau principal :**
-
-- Colonnes : checkbox, email, nom, source, date de capture, exporté Systeme.io (oui/non)  
-- Recherche par email/nom  
-- Filtre par source (quiz, page de capture, site vitrine, manuel)  
-- Pagination (20 par page)  
-- Sélection multiple \+ export CSV
-
-**4 KPI cards cliquables (mis à jour juin 2026) :**
-
-- **Total leads** — clic = retire tous les filtres (reset)
-- **Exportés Systeme.io** — clic = filtre `exported_to_sio = true`
-- **Non exportés** — clic = filtre `exported_to_sio = false` (remplace l'ancienne KPI « Source quiz », plus actionnable pour répondre à « qui dois-je pousser dans SIO ? »)
-- **Ce mois-ci** — clic = filtre `created_at` sur le mois courant
-
-Chaque card est un `<button>` ; 2e clic sur une card active retire le filtre. Ring colorée (`ring-2 ring-primary`) quand active. Filtre persisté en query string pour permettre le partage / refresh. i18n FR / EN / IT / PT / ES.
-
-**Panel détail (Sheet latéral) :**
-
-- Avatar \+ nom \+ email  
-- Téléphone, date de capture  
-- Source et origine  
-- Résultat quiz (si applicable)  
-- Réponses aux questions du quiz  
-- Statut d'export Systeme.io  
-- Actions : éditer / supprimer
-
-**Sécurité :**
-
-- Chiffrement AES-256-GCM par champ (email, prénom, nom, téléphone, réponses quiz)  
-- Clé de chiffrement par utilisateur (DEK), wrappée par clé maître  
-- Index aveugle HMAC pour recherche sur email chiffré  
-- Badge de sécurité visible : « Vos données sont chiffrées de bout en bout (AES-256) »
-
-### 4.10. Page « Mes Clients » (/clients)
-
-Gestion centralisée des clients pour les coachs, consultants et prestataires de services.
-
-**Positionnement :** Complémentaire à la page Leads. Un lead est un prospect capturé automatiquement ; un client est une personne avec qui l'utilisateur travaille activement. Les clients sont gérés manuellement (pas de promotion automatique depuis les leads pour l'instant).
-
-**4 stats en haut de page :**
-
-- Total clients
-- Clients actifs
-- Clients complétés
-- Taux de complétion moyen
-
-**Tableau principal :**
-
-- Colonnes : nom, email, statut (Prospect / Actif / En pause / Complété), badges accompagnements avec progression (%), date d'ajout
-- Recherche par nom/email
-- Filtre par statut
-- **Filtre par accompagnement** : dropdown permettant de filtrer les clients ayant un accompagnement spécifique en cours
-- Pagination
-
-**Statuts disponibles :**
-
-| Statut | Couleur | Description |
-| :---- | :---- | :---- |
-| Prospect | Bleu | Client récemment ajouté, pas encore démarré |
-| Actif | Vert | Accompagnement en cours |
-| En pause | Jaune | Accompagnement temporairement suspendu |
-| Complété | Gris | Accompagnement terminé |
-
-**Création / Édition (Dialog modal) :**
-
-- Nom, email, téléphone (optionnel)
-- Statut
-- Notes libres (textarea)
-
-**Panel détail (Sheet latéral) :**
-
-- Informations du client (nom, email, téléphone, statut)
-- Notes
-- Section « Accompagnements » (anciennement « Processus d'accompagnement ») :
-  - Liste d'étapes personnalisables (ex : « Audit initial », « Plan d'action », « Suivi mensuel »)
-  - Chaque étape a un statut (checkbox à cocher)
-  - Barre de progression calculée automatiquement
-  - Ajout/suppression d'étapes
-  - **Suivi financier par accompagnement** :
-    - Montant closé (montant total du deal)
-    - Montant encaissé (mis à jour inline)
-    - Type de paiement : comptant ou en tranches
-    - Nombre de tranches (si paiement en tranches)
-    - Affichage résumé : « X € encaissés sur Y € »
-  - Application de « Mes accompagnements » (templates réutilisables) avec possibilité de saisir les infos de paiement lors de l'application
-- Actions : éditer / supprimer / changer statut
-
-**Section « Mes accompagnements » (anciennement « Mes Templates ») :**
-
-- Templates de processus réutilisables pour les accompagnements clients
-- Renommé "accompagnements" (FR), "programs" (EN), "programas" (ES), "programmi" (IT), "برامج" (AR)
-- Création : nom, description, couleur, liste d'étapes ordonnées
-- Application à un client : sélection du template + saisie optionnelle des informations de paiement (montant, type, nombre de tranches)
-
-**Données stockées côté client (pas de chiffrement PII pour cette V1) :**
-
-- Les clients sont des contacts gérés manuellement par l'utilisateur
-- Pas de capture automatique ni d'intégration tierce
-
-### 4.11. Page « Analytics » (/analytics)
+### 4.11. Page Analytics (/analytics)
 
 Suivi des performances business.
 
-**3 onglets :**
+- Onglet Résultats : KPIs du mois (revenus, ventes, inscrits, conversion), résumé des tendances, lien vers les métriques par offre. Quand la compta est configurée, les résultats totaux (ventes et CA) sont lus depuis les transactions PSP et manuelles, avec les commissions d'affiliation affichées séparément.
+- Onglet Saisir mes données : sélecteur de période, métriques manuelles (visiteurs, inscrits, taux d'ouverture, taux de clic, vues page de vente, ventes, CA), calculs dérivés, diagnostic IA après enregistrement.
+- Onglet Historique : historique des données par mois.
+- Métriques d'offres : suivi par offre (visiteurs, inscrits, ventes, CA, conversion), agrégation et analyse IA.
+- Bouton de synchronisation manuelle des ventes Systeme.io.
 
-**Onglet Résultats (défaut) :**
+### 4.12. Page Pépites (/pepites)
 
-- KPIs clés du mois en cours (revenus, ventes, inscrits, conversion)
-- Résumé des performances avec tendances
-- Lien vers les métriques par offre
+Repository d'insights business multilingues, délivrés progressivement.
 
-**Onglet Saisir mes données :**
+- Chaque pépite ajoutée par l'admin est traduite automatiquement dans les langues supportées (IA niveau 1).
+- Affichage dans la langue de l'interface, fallback FR.
+- Assignation par `group_key` pour ne pas servir la même pépite deux fois dans deux langues.
+- Notifications de nouvelles pépites avec badge compteur dans la sidebar.
+- Interface admin pour ajouter des pépites.
 
-- Sélecteur de période (mois \+ année)
-- Métriques manuelles :
-  - Acquisition : Visiteurs, Nouveaux inscrits, Taux d'ouverture, Taux de clic
-  - Conversion : Vues page de vente, Nombre de ventes, Chiffre d'affaires
-- Calculs automatiques dérivés
-- Boutons : Enregistrer / Enregistrer & Analyser
-- Diagnostic IA déclenché après "Enregistrer & Analyser" (résumé, priorité, points forts, points d'attention)
+Tables : `pepites` (avec `locale` et `group_key`), `user_pepites`, `user_pepites_state`.
 
-**Onglet Historique :**
+### 4.13. Page Paramètres (/settings)
 
-- Historique des données analytics par mois
+Accès via la photo de profil. Onglets de configuration.
 
-**Métriques d'offres :**
+Onglet Profil : prénom, mission, formule de niche, storytelling fondateur en 6 étapes (situation initiale, élément déclencheur, péripéties, moment critique, résolution, situation finale), gestion des offres avec liens, URLs réseaux sociaux, liens personnalisés, langue du contenu généré.
 
-- Suivi par offre (visiteurs, inscrits, ventes, CA, taux de conversion)
-- Agrégation \+ analyse IA par offre
+Onglet Connexions : OAuth des 7 réseaux, configuration de la clé API Systeme.io avec nom de connexion personnalisé (chaque projet a sa propre clé indépendante), enregistrement automatique des webhooks SIO à la sauvegarde, champ identifiant affilié Tipote (Systeme.io) pour le tracking de commission, configuration des auto-commentaires, gestion et rafraîchissement des tokens. La clé API Systeme.io est chiffrée at rest (AES-256-GCM, DEK par utilisateur).
 
-### 4.12. Page « Pépites » (/pepites)
+Onglet Réglages : email et mot de passe, paramètres du compte, langue par défaut, reset du projet actif ou reset du compte entier.
 
-Repository d'insights et de pépites business multilingues.
+Onglet Positionnement : analyse des concurrents, positionnement marché, définition de niche.
 
-**Fonctionnalités :**
+Onglet Branding : police de marque, couleurs (base et accent), logo (upload), photo auteur, ton de voix.
 
-- Collection de pépites délivrées progressivement (intervalle 2-4 jours)
-- **Traduction automatique** : chaque pépite ajoutée par l'admin est traduite automatiquement en EN, ES, IT, AR via GPT-4o-mini
-- Affichage dans la langue de l'interface utilisateur (cookie `ui_locale`)
-- Fallback sur FR si la traduction n'existe pas
-- Assignation par `group_key` (un user ne reçoit pas la même pépite dans deux langues)
-- Notifications de nouvelles pépites avec badge compteur dans la sidebar
-- Interface admin pour ajouter des pépites (auto-traduit en arrière-plan)
-- Script de backfill (`scripts/translate-pepites.cjs`) pour traduction en masse
+Onglet IA : panel crédits (consommation, solde, historique), style des auto-commentaires.
 
-**Tables :** `pepites` (avec `locale` + `group_key`), `user_pepites`, `user_pepites_state`
+Onglet Abonnement : plan actuel, crédits disponibles, tableau comparatif des plans, consommation par type, actions (acheter crédits, upgrade, gérer abonnement).
 
-### 4.13. Page « Paramètres » (/settings)
+Onglet Domaine : connexion d'un domaine personnalisé (plans payants), voir 4.22.
 
-**Accès :** Clic sur la photo de profil (avatar) en haut à droite du header. Le menu déroulant donne accès direct à chaque onglet.
+Onglet Boost : gestion de l'espace d'engagement et de l'extension Chrome, voir 4.20.
 
-7 onglets de configuration :
+Onglet Compta : suivi comptable, voir 4.19.
 
-**Onglet Profil :**
+### 4.14. Constructeur de pages (/pages)
 
-- Prénom, mission, formule de niche
-- Storytelling fondateur en 6 étapes :
-  1. Situation Initiale
-  2. Élément Déclencheur
-  3. Péripéties
-  4. Moment Critique
-  5. Résolution
-  6. Situation Finale
-- Gestion des offres (avec liens)
-- URLs réseaux sociaux (LinkedIn, Instagram, YouTube, TikTok, Pinterest, Threads, Facebook)
-- Liens personnalisés
-- Langue du contenu généré
+Constructeur de landing pages hébergées avec branding Tipote.
 
-**Onglet Connexions :**
+Types : page de capture, page de vente, site vitrine, link-in-bio.
 
-- Connexion OAuth des réseaux sociaux (7 plateformes)
-- Configuration API Systeme.io avec **nom de connexion personnalisé** (ex : "Mon projet", "Affiliation", "Client 1") — chaque projet a sa propre clé API indépendante
-- Enregistrement automatique des webhooks SIO à la sauvegarde de la clé (transparent pour l'user)
-- Configuration auto-commentaires  
-- Gestion des tokens et rafraîchissement
+Éditeur plein écran : barre supérieure (logo, toggle responsive, actions), sidebar gauche à deux onglets (Builder, Paramètres), aperçu WYSIWYG multi-device, chat IA intégré.
 
-**Onglet Réglages :**
+- Édition de texte inline dans l'aperçu (contentEditable).
+- Sélection d'éléments par clic, panneau de propriétés contextuel.
+- Sélecteur de couleurs inline (texte, fond, bordures).
+- Dégradés linéaires sur fonds de section, rangées et boutons (couleur 1, couleur 2, angle).
+- 20 polices Google pré-sélectionnées, sélecteur par élément, chargement auto.
+- 8 animations CSS applicables à tout élément.
+- Styles par élément : taille et graisse de police, alignement, marges, padding, bordures, arrondi.
+- Palette d'ajout : section, rangée, titre, texte, bouton, image, vidéo, séparateur, colonnes, lien.
+- Duplication d'éléments (clone styles plus contenu).
+- Gestion des sections : ID ancre par section pour ciblage via liens et menus, réorganisation, suppression.
+- Chat IA compact : modification par instructions naturelles, reformulation avant application, coût 0,5 crédit par modification, undo.
 
-- Email et mot de passe  
-- Paramètres du compte  
-- Langue par défaut
+Publication et configuration : slug personnalisé, tags de capture Systeme.io, OG image, meta description, pixels de tracking (Facebook Pixel, Google Tag), page de remerciement configurable pour les pages de capture.
 
-**Onglet Positionnement :**
+Exports et analytics : téléchargement HTML et PDF, analytics intégrés (vues, leads, conversion), export leads CSV, QR code de partage.
 
-- Analyse des concurrents  
-- Positionnement marché  
-- Définition de niche
+Sanitisation HTML en défense en profondeur : nettoyage serveur à chaque sauvegarde du `html_snapshot` (`lib/sanitizeHtml.ts`), nettoyage client dans le rendu public, endpoint admin de nettoyage en masse.
 
-**Onglet Branding :**
+Pages publiques : accessibles via `/p/[slug]`.
 
-- Police de marque  
-- Couleurs (base \+ accent)  
-- Logo (upload)  
-- Photo auteur (upload)  
-- Ton de voix
+### 4.15. Module Quiz (/quiz)
 
-**Onglet IA :**
+Constructeur de quiz interactifs pour capture de leads. Le module partage la table `quizzes` pour 3 modes :
 
-- Panel crédits IA (consommation, solde, historique)
-- Style des auto-commentaires
+- `quiz` : quiz à profils (chaque combinaison de réponses conduit à un profil résultat).
+- `scoring` : quiz à score (le résultat dépend d'une tranche de score).
+- `survey` : sondage (NPS, feedback), sans profil, avec analyse des réponses.
 
-**Onglet Abonnement (Pricing) :**
+Modes de création : génération par IA (avec chat d'idéation `QuizIdeaChat`), création manuelle, import d'un quiz existant, duplication, réécriture assistée.
 
-- Plan actuel avec badge  
-- Crédits disponibles / total  
-- Tableau comparatif des plans  
-- Consommation par type de contenu  
-- Actions : Acheter crédits, Upgrade/Downgrade, Gérer abonnement
+Types de questions : choix multiple, choix par image, oui/non, texte libre, échelle, notation. Le choix multiple supporte la sélection multiple.
 
-**Onglet Boost (Juin 2026) :**
+Capture : email, prénom, nom, téléphone, pays (configurable). Position de la capture avant ou après le quiz. Étape de partage bonus optionnelle (viralité) avec image bonus, texte d'intro custom et message de bonus débloqué.
 
-URL : `/settings?tab=boost`. Panneau de gestion de l'extension Chrome **Tipote Boost** (amplification automatique de la portée des publications sociales).
+Résultats personnalisés : un CTA par résultat, texte riche. La distribution des leads par résultat suit une règle unique documentée dans `AGENTS.md` (source de vérité = `quiz_results` courant, exclusion silencieuse des orphelins, pourcentages calculés sur le total matché).
 
-- **Plan gate** : Pro / Elite / Beta uniquement. Free / Basic voient un CTA upgrade. La lecture du plan passe OBLIGATOIREMENT par `profiles.plan` (jointure cross-table dans `/api/profile`) — **JAMAIS** par `business_profiles` (per-projet) car le plan est un attribut global d'abonnement.
-- **Détection extension** : tentative de ping sur `window.tipoteBoost` injecté par l'extension. Si l'extension est détectée → affiche le statut (connectée / déconnectée), les réseaux compatibles, et les réglages de boost.
-- **Si extension absente** : affichage d'un bouton « Installer l'extension » qui pointe vers `https://chromewebstore.google.com/detail/tipote-boost/gligkkmphgcpfghplnmknmkkgonolchg` (Chrome Web Store, en cours de validation). Avant juin 2026, le message « Extension non détectée » s'affichait sans aucun lien actionnable → bug fixé.
-- **Réseaux supportés** : LinkedIn (au lancement), X / Threads / Instagram (à venir). Le panneau liste explicitement la roadmap des réseaux pour gérer l'attente.
+Présentation et thèmes (rendu public `/q/[quizId]`, éditeur WYSIWYG identique) :
 
-**Onglet Compta (France uniquement, Mai 2026) :**
+- Thèmes prêts à l'emploi (`QUIZ_THEMES`) qui règlent police, couleur et fond en un clic (Indigo, Aurore, Océan, Menthe, Corail, Soleil, Rose poudré, Ardoise, Nuit).
+- Branding fin par quiz surchargé sur le branding du business profile puis sur des constantes : police (9 choix Google Fonts), couleur primaire, couleur de fond, couleur de texte, logo (override, héritage ou masquage total).
+- Fonds riches : couleur pleine, dégradé (palette fermée et validée, aucune injection CSS libre), ou image de fond (avec scrim de lisibilité). Les dégradés sombres basculent automatiquement les textes en clair.
+- Écran d'accueil (cover) : carte texte ou image plein cadre avec titre en surimpression (welcome screen).
+- Forme des boutons : pill (arrondi complet), rounded (coins doux), square (coins nets).
+- Transitions directionnelles entre questions (glissement gauche/droite selon le sens de navigation).
+- Raccourcis clavier : chiffres et lettres pour sélectionner une réponse, flèche gauche pour revenir en arrière.
+- Gestes tactiles mobile : swipe horizontal pour naviguer entre les questions.
+- Reprise de session : le visiteur qui revient reprend là où il s'était arrêté (stockage local), avec bandeau et bouton pour tout recommencer.
+- Carte résultat partageable générée à la volée (`lib/resultCard.ts`) avec partage via Web Share API sur mobile ou téléchargement, plus confettis à l'arrivée sur le résultat.
+- Fermeture du quiz : le créateur peut fermer un quiz, avec message par défaut ou redirection vers une URL (`close_redirect_url`).
 
-URL : `/settings?tab=compta`. Disponible uniquement pour les users avec `business_profiles.country` reconnu comme France (synonymes tolérés : "France", "FR", "française"…). Les autres pays voient un message "bientôt disponible".
+Automations Systeme.io par résultat (3 actions configurables) : tag SIO, inscription à une formation SIO (`sio_course_id`), ajout à une communauté SIO (`sio_community_id`). Le résultat du quiz est stocké comme champ personnalisé sur le contact (enrichissement). Les leads sont synchronisés vers Systeme.io avec prénom, nom, téléphone et pays.
 
-Bandeau permanent en haut : *"Tipote t'aide à anticiper, pas à déclarer. Cet onglet ne remplace ni un comptable ni les déclarations officielles."*
+Langues : le contenu du quiz peut être généré dans de nombreuses langues (catalogue `lib/quizLanguages.ts`, découplé de la langue d'interface). Le rendu public propose plusieurs variantes de copy (FR, FR vouvoiement, EN, ES, DE, PT, IT, AR).
 
-Composé de plusieurs sections empilées :
+Stats et analytics : vues, partages, leads. Une page d'analytics par quiz (`/quiz/[id]/analytics`) présente des KPI, l'évolution des leads dans le temps, la distribution des résultats et un funnel par question (table `quiz_question_events`). Les compteurs de vues et de complétions sont recalculés en direct depuis `quiz_events`, jamais depuis le compteur dénormalisé `quizzes.views_count`, avec un garde-fou qui garantit un taux de capture inférieur ou égal à 100%.
 
-1. **Progression vers l'objectif mensuel** (`RevenueGoalProgress`) — jauge avec montant fait / objectif, message contextuel ("plus que 4 774 € à faire en 14 jours"), couleurs adaptatives.
-2. **Tableau de bord business** (`ComptaDashboard`) — 4 cards en haut (CA mois en cours avec delta vs N-1, depuis janvier avec delta, revenus récurrents = MRR, taux de remboursement) + graph 12 mois N vs N-1 + 2 cards (Mes clients ce mois-ci avec nouveaux/abonnés/perdus, Mes meilleures ventes top 5) + jauge franchise TVA pour les AE.
-3. **Décomposition ventes directes vs commissions d'affiliation** — affichée uniquement si l'user a au moins une commission catégorisée (`category = 'affiliate'`). Split en EUR + barre de proportion bicolore mois courant + YTD.
-4. **Mes connexions** — cartes Stripe / PayPal / Mollie avec statut (synchronisé il y a Xh / synchronisation initiale en cours / erreur / déconnecté). Boutons "Synchroniser maintenant" et "Déconnecter". Form de connexion avec guide pas-à-pas pour chaque PSP. Note de sécurité spéciale pour Mollie (pas de Restricted Key — clé give read+write).
-5. **Saisies manuelles** — CRUD pour les paiements hors PSP (virement / espèces / chèque / autre). Form avec choix de catégorie (Vente / Commission affiliation / Autre).
-6. **Configuration du statut** (`ComptaConfigForm`) — sélecteur 3 cartes (Particulier / Auto-entrepreneur / SASU) avec sous-formulaire dynamique (SIREN validé 9 chiffres, exercice fiscal, régime TVA, ACRE, versement libératoire, etc.). Liens vers service-public.fr / urssaf.fr / annuaire-entreprises.data.gouv.fr.
+i18n interne : namespace `quizDetail`, classe CSS rich-text `tipote-quiz-rich`.
 
-Cron de synchronisation des transactions : `/api/cron/sync-payments` à 5h du matin (delta depuis `last_sync_at - 1h`). Cron daily milestones : `/api/cron/business-milestones` à 9h. Cron de check des seuils fiscaux : `/api/cron/check-fiscal-thresholds` à 6h.
+### 4.16. Module Popquiz (/popquiz)
 
-### 4.14. Constructeur de Pages (/pages)
+Nouveau type de contenu : une vidéo avec des quiz incrustés à des timestamps précis. Accessible depuis `/create`, scopé par projet.
 
-Constructeur complet de landing pages hébergées, inspiré de Systeme.io avec branding Tipote.
+- Source vidéo : YouTube, Vimeo, ou upload résumable via un serveur TUS dédié (JWT par app), avec lecture protégée par lien signé. Support des vidéos volumineuses.
+- Cuepoints : quiz interactifs déclenchés à des timestamps.
+- Player enrichi : vitesse de lecture, skip avant/arrière, partage (Web Share API avec fallback copie-lien), Picture-in-Picture, poster HD.
+- Vignette personnalisable : auto-extraite ou uploadée, avec crop 16/9 intégré.
+- Autosave de l'édition (colonnes `draft_state`, `draft_updated_at`).
+- Embed iframe pour intégration externe (`/embed/pq/[id]`).
+- Pages publiques : `/pq/[popquizId]`.
 
-**Types de pages :**
+### 4.17. Coach IA
 
-- Page de capture (lead generation)
-- Page de vente (conversion)
-- Site vitrine (showcase)
-- Link-in-bio (page de liens personnalisée)
+Bulle flottante de conversation avec le coach.
 
-**Éditeur plein écran (Page Builder) :**
+- Free et Basic : verrouillé (CTA upgrade).
+- Pro et Elite : inclus, illimité, sans consommation de crédits.
 
-Layout : barre supérieure (logo + responsive toggle + actions) + sidebar gauche bleu + aperçu WYSIWYG + Chat IA intégré.
+Le coach reçoit tout le contexte business : profil, persona, progression, et le contexte financier réel (CA du mois, progression vers l'objectif, abonnés perdus) formaté par `lib/compta/businessContext.ts`. Le contexte est injecté dans le chat, la phrase d'encouragement quotidienne et la génération de stratégie. Historique des conversations conservé.
 
-- Sidebar gauche thème bleu (fond `#1e3a5f`, texte blanc) avec 2 onglets : Builder & Paramètres
-- Prévisualisation multi-device (mobile, tablette, desktop) en temps réel
-- Édition de texte inline directement dans l'aperçu (contentEditable)
-- Sélection d'éléments par clic (section, titre, texte, bouton, image, liste, lien, etc.)
-- Panneau de propriétés contextuel par type d'élément sélectionné
-- Sélecteur de couleurs inline (texte, fond, bordures)
+### 4.18. Didacticiel interactif
 
-**Dégradés (Gradients) :**
+Tutoriel guidé pas-à-pas pour les nouveaux utilisateurs. Objectif : présenter chaque section puis insister sur l'importance de compléter les réglages (offres, positionnement, persona, branding) avant de créer du contenu.
 
-- Support dégradé linéaire sur fonds de section, rangées et boutons
-- Contrôle couleur 1, couleur 2 et angle (0-360°)
-- Suppression du dégradé en un clic
+Phases séquentielles couvrant : bienvenue, Aujourd'hui, Stratégie, Créer, Contenus, Templates, Crédits, Analytics, Pépites, chaque onglet des Paramètres, Coach, complétion.
 
-**Polices Google Fonts :**
+UX : tooltips avec compteur d'étapes, spotlight sur les éléments ciblés, opt-out visible, fenêtre limitée aux premiers jours, relançable via le bouton d'aide flottant. Le tutoriel et les widgets propres à Tipote sont désactivés sur le sous-domaine affilié (détection par host).
 
-- 20 polices Google pré-sélectionnées (Inter, Poppins, Montserrat, Playfair Display, etc.)
-- Sélecteur de police par élément
-- Chargement automatique des fonts dans l'aperçu
+### 4.19. Module Compta (onglet Paramètres > Compta)
 
-**Animations CSS :**
+Suivi comptable pour indépendants. Bandeau permanent : Tipote aide à anticiper, pas à déclarer, et ne remplace ni un comptable ni les déclarations officielles.
 
-- 8 animations disponibles : Fondu, Fondu+haut, Glisser gauche/droite, Zoom, Rebond, Pulsation
-- Applicable à tout élément sélectionné
+Pays couverts (le pays est déterminé par `business_profiles.country`, les autres pays voient un message d'attente) :
 
-**Styles avancés par élément :**
+| Pays | Statuts modélisés |
+| :---- | :---- |
+| France | particulier, auto-entrepreneur, SASU, SAS, SARL, EURL |
+| Suisse | indépendant, Sàrl, SA (26 cantons) |
+| Belgique | indépendant principal, indépendant complémentaire, SRL, SA |
+| Portugal | trabalhador independente, ENI, LDA unipessoal, LDA, SA |
+| Espagne | autónomo, SLU, SL, SA (communautés autonomes, régimes foraux, IGIC) |
+| Canada | travailleur autonome, entreprise individuelle, inc. provinciale, inc. fédérale (13 juridictions) |
+| États-Unis | sole proprietorship, single et multi-member LLC, C-Corp, S-Corp (50 états plus DC) |
 
-- Taille de police (10-72px), graisse (Normal, Semi, Gras, Noir)
-- Alignement texte (gauche, centre, droite)
-- Marges (haut/bas en px)
-- Padding (vertical/horizontal) pour sections et rangées
-- Bordures (épaisseur, couleur, style) pour boutons
-- Arrondi (border-radius) pour boutons, images et rangées
+Sections empilées :
 
-**Palette d'éléments (ajout) :**
+1. Progression vers l'objectif mensuel (`RevenueGoalProgress`).
+2. Tableau de bord business (`ComptaDashboard`) : CA du mois avec delta N-1, cumul annuel, revenus récurrents, taux de remboursement, graphe 12 mois N vs N-1, décomposition clients (nouveaux, abonnés, perdus), top produits, jauge de franchise TVA.
+3. Décomposition ventes directes vs commissions d'affiliation (affichée si au moins une commission catégorisée).
+4. Connexions PSP : Stripe (Restricted Key), PayPal (OAuth client_credentials), Mollie (clé API). Sync initial de plusieurs mois d'historique plus sync delta quotidien, boutons Synchroniser et Déconnecter.
+5. Saisies manuelles : CRUD pour les paiements hors PSP (virement, espèces, chèque, autre) avec catégorie (vente, commission, autre).
+6. Configuration du statut (`ComptaConfigForm`) : sélecteur adapté au pays avec sous-formulaire dynamique (numéro d'entreprise validé, exercice fiscal, régime de TVA, options spécifiques). Liens vers les sites officiels.
+7. Calendrier fiscal personnalisé (`FiscalCalendar`) : échéances calculées à la volée selon le statut et la configuration, groupées par mois, avec liens directs vers les portails officiels et suivi "fait".
+8. Export FEC pour les sociétés à l'IS en France (`lib/compta/fecExport.ts`, format légal 18 colonnes).
+9. Achats et charges avec TVA déductible, carte "TVA à payer".
 
-- Section, Rangée, Titre, Texte, Bouton, Image, Vidéo, Séparateur, Colonnes (3), Lien
-- Ajout en un clic dans la section active
+Catégorisation automatique ventes vs commissions d'affiliation via heuristique sur la description, avec override manuel. Conversion EUR automatique des transactions en devises étrangères via une source de taux open data. Les seuils fiscaux sont stockés en base (`fiscal_thresholds`), versionnés par pays, année et catégorie, éditables via l'admin, et surveillés par un cron qui alerte quand une valeur disparaît de la page officielle.
 
-**Duplication d'éléments :**
+Les vrais chiffres sont injectés dans le coach IA, le dashboard Aujourd'hui, la page Stratégie et la page Analytics via le helper unifié `lib/compta/businessSummary.ts`.
 
-- Bouton de duplication sur chaque élément sélectionné
-- Clone complet (styles + contenu) inséré après l'original
+### 4.20. Tipote Boost (onglet Paramètres > Boost, espace /boost)
 
-**Gestion des sections :**
+Deux composantes :
 
-- Liste des sections dans la sidebar avec labels auto-détectés
-- **ID ancre sur chaque section** (`id="sc-hero"`, `sc-benefits"`, `sc-program"`, `sc-about"`, `sc-testimonials"`, `sc-pricing"`, `sc-faq"`, `sc-services"`, `sc-contact"`, etc.) pour ciblage via liens et menus
-- Réorganisation (monter/descendre)
-- Suppression de section
-- Sélection de section par clic
+- Espace d'engagement (pod) : un utilisateur qui connecte LinkedIn peut être auto-joint à un pod (ex : pod FR seed). Le moteur (`lib/podBoostService.ts`) gère l'auto-join, le throttling et le matching des posts, et génère des suggestions de commentaires par IA (`lib/podAiSuggest.ts`). Tables `pods`, appartenance unique par (pod, utilisateur).
+- Extension Chrome Tipote Boost : amplification de la portée des publications. Le panneau affiche le statut de l'extension (détectée ou non via un objet injecté), un lien d'installation vers le Chrome Web Store, et les réseaux compatibles.
 
-**Chat IA intégré (compact, 180px) :**
+Plan gate : Pro, Elite ou Beta uniquement. La lecture du plan passe obligatoirement par `profiles.plan` (attribut global de l'abonnement), jamais par `business_profiles` (per-projet).
 
-- Chat conversationnel pour modifier la page par instructions naturelles
-- Reformulation IA avant application
-- Coût 0.5 crédit par modification
-- Annulation (undo) de la dernière modification
-- Suggestions contextuelles par type de page
-- Indication visuelle de l'élément sélectionné pour modifications ciblées
+### 4.21. Webinars et événements (/webinars)
 
-**Design pages publiques :**
+Liste d'événements et de webinars avec statuts (à venir, en direct, terminé) et playbook associé.
 
-- Sections alternées avec contraste visible (fond `--gray-100` pour les sections `.alt`)
-- Ombres portées sur les cards (bénéfices, témoignages, FAQ) pour une meilleure lisibilité
-- Pas d'illustrations SVG abstraites sans valeur ajoutée
+### 4.22. Domaines personnalisés (Paramètres > Domaine)
 
-**Publication & configuration :**
+Les créateurs sur plan payant peuvent connecter leur propre hostname (par exemple `pages.ma-marque.com`).
 
-- Publication avec slug personnalisé
-- Configuration Systeme.io (tags de capture)
-- OG Image uploader
-- Meta description SEO
-- Tracking pixels (Facebook Pixel, Google Tag)
-- Page de remerciement configurable (capture uniquement)
+- Setup : pose d'un CNAME vers `connect.tipote.com`, vérification DNS automatique (poll), émission d'un certificat Let's Encrypt à la première requête HTTPS via Caddy on-demand TLS.
+- Détection automatique du registrar (Cloudflare, OVH, Gandi, GoDaddy, Namecheap, Google Domains, Route 53, IONOS, Hetzner, Scaleway, Porkbun, Hostinger) avec instructions DNS adaptées.
+- URLs propres : sur un hostname custom, les URLs publiques perdent leur préfixe (`mydomain.com/<slug>` au lieu de `/q/<slug>`). Sur le host principal, les préfixes restent.
+- Une seule URL pour tous les contenus (quiz, sondages, popquiz, pages) via un catch-all (`app/[publicSlug]/page.tsx`) qui résout quiz actif, popquiz publié puis page hébergée publiée, scopé (utilisateur, projet).
+- Sélecteur de domaine de partage (`ShareDomainPicker`, hook `useShareDomain`) présent dans tous les éditeurs publics, avec persistance en base.
+- Sécurité : hostname unique global, un contenu servi via un domaine custom doit appartenir au propriétaire du hostname sinon 404 (anti-impersonation). Isolation par projet.
+- Backwards-compat : les anciennes URLs (`/q/`, `/p/`, `/pq/`) continuent de fonctionner.
 
-**Exports & analytics :**
+Tables : `custom_domains` (hostname unique, `project_id`, RLS). Helpers `lib/customDomains.ts` (edge-safe), `lib/customDomainsServer.ts` (DNS), `lib/registrarDetect.ts`. Un process `domain-dispatcher` permet au Caddy unique du VPS de router les domaines custom vers Tipote ou Tiquiz selon le hostname.
 
-- Téléchargement HTML / PDF
-- Analytics intégrés (vues, leads, taux conversion)
-- Export leads CSV
-- QR Code de partage
+### 4.23. Système de notifications
 
-**Sanitisation HTML (défense en profondeur) :**
+Types : automatiques (système), broadcast admin, personnelles, ventes Systeme.io temps réel (`sale`, `sale_canceled`), alertes business (objectif atteint, mi-parcours, churn), alertes techniques (déconnexion sociale, post échoué). Messages traduits dans les langues supportées.
 
-- Nettoyage serveur (`lib/sanitizeHtml.ts`) à chaque sauvegarde de `html_snapshot` pour supprimer les artefacts de l'éditeur (scripts injectés, overlays toolbar, highlights de sélection)
-- Nettoyage client dans `PublicPageClient.tsx` avec CSS safety net + script DOM cleanup dans l'iframe
-- Endpoint admin `/api/admin/sanitize-pages` pour nettoyage en masse des pages existantes
-- Détection par signatures (classes CSS, z-index, contenu de script) plutôt que par attributs seuls
+Interface : cloche dans le header avec compteur d'unread, panel avec deep-linking, clic pour étendre le texte complet, marquage lu automatique à la fermeture, marquage lu ou archivé manuel.
 
-**Pages publiques :** Accessibles via `/p/[slug]`
+### 4.24. Page Widgets (/widgets)
 
-### 4.15. Système de Quiz (/quiz)
+Widgets embarquables à intégrer sur des pages externes.
 
-Constructeur de quiz interactifs pour capture de leads.
+Notifications de preuve sociale (toast) :
 
-**Modes de création :**
+- Sources : visiteurs en temps réel, inscriptions récentes, achats récents, messages personnalisés.
+- Config : position (4 coins), thème (light, dark, minimal), couleur d'accent, coins arrondis ou carrés, durée d'affichage, délai entre toasts, max par session, anonymisation configurable, labels avec variables `{count}` et `{name}`.
+- Intégration : snippet script, script JS autonome hébergé (`/widgets/toast-widget.js`), communication via API Supabase.
 
-- Génération de quiz par IA
-- Création manuelle de zéro
-- Import d'un quiz existant
+Boutons de partage social (share) :
 
-**Fonctionnalités :**
+- Plateformes : Facebook, X, LinkedIn, WhatsApp, Telegram, Reddit, Pinterest, Email.
+- Modes d'affichage : inline, flottant gauche, flottant droit, barre basse.
+- Options : style de bouton (rounded, square, circle, pill), taille (small, medium, large), mode couleur (marque, mono clair, mono sombre, custom), labels, texte de partage, hashtags.
+- Intégration : snippet script avec `data-tipote-share`, script JS autonome (`/widgets/social-share.js`).
 
-- Éditeur de questions/réponses
-- Page publique de quiz (`/q/[quizId]`) — **bouton CTA adaptatif** (hauteur auto, plus de troncature)
-- Capture d'email + prénom + nom + téléphone + pays (configurable)
-- Résultats personnalisés avec CTA par résultat
-- **Automations Systeme.io par résultat** (3 actions configurables en un clic) :
-  - Tag SIO auto-appliqué
-  - Inscription auto dans une **formation SIO** (`sio_course_id`)
-  - Ajout auto à une **communauté SIO** (`sio_community_id`)
-- **Enrichissement contact SIO** : le résultat du quiz est stocké comme champ personnalisé sur le contact
-- Sync leads vers Systeme.io (**avec prénom, nom, téléphone, pays** — corrigé)
-- Stats : vues, partages, leads capturés. **Recompute en direct depuis `quiz_events` (juin 2026)** — `quizzes.views_count` est un compteur dénormalisé qui drift, on ne le lit JAMAIS pour le ratio de capture. Garde-fou serveur `viewsCount = max(events.view, leadsCount)` → impossible d'afficher un taux > 100 %.
+### 4.25. Pages légales
 
-### 4.16. Coach IA
+Pages dynamiques via `/legal/[slug]` : conditions d'utilisation, politique de confidentialité, mentions légales, CGV. Endpoint de suppression de données (`/meta/data-deletion`) pour la conformité Meta.
 
-Bulle flottante de conversation avec coach IA.
+### 4.26. Multi-projets (plan Elite)
 
-**Disponibilité :**
+Un utilisateur Elite gère plusieurs projets (marques, sub-business) dans un même compte, avec isolation totale des données.
 
-- Free/Basic : verrouillé (CTA upgrade)  
-- Pro/Elite : inclus (illimité, pas de consommation de crédits)
+Tables : `projects` (`id`, `user_id`, `name`, `is_default`, `accent_color`, `icon_emoji`, `use_branding_logo`, RLS user-bound), `business_profiles` per-(`user_id`, `project_id`).
 
-**Fonctionnalités :**
+Contexte : cookie `tipote_active_project`, helpers `lib/projects/*` (client, activeProject avec fallback sur le projet par défaut, ensureDefaultProject, upsertByProject, visualIdentity).
 
-- Accès à toutes les données du profil business  
-- Réponses personnalisées contextuelles  
-- Suggestions basées sur la progression  
-- Historique des conversations  
-- Panneau latéral avec header "Coach IA"
+Composants : `ProjectSwitcher` (sidebar, avec identité visuelle et bouton nouveau projet), badges et éditeur d'identité, `SessionResetGate` qui ramène l'utilisateur sur son projet par défaut à chaque nouvelle session navigateur.
 
-### 4.17. Didacticiel interactif
+API : `GET/POST/PATCH/DELETE /api/projects`. La création insère une ligne `projects` et un `business_profiles` vide avec onboarding non complété, et renvoie un flag qui redirige vers l'onboarding. La suppression est une danger zone (confirmation par recopie du nom, cascade FK, refus si projet unique).
 
-Système de tutorial guidé pas-à-pas pour les nouveaux utilisateurs.
+Sémantique : un nouveau projet est un profil business neuf et vide, à re-onboarder ; aucune copie depuis le projet courant. Domaines, contenus publics, leads, clients, connexions sociales et clé Systeme.io sont per-projet.
 
-**Objectif :** Présenter chaque section clairement et simplement, puis insister sur l'importance de compléter les réglages (offres, positionnement, persona, branding) AVANT de commencer à créer du contenu.
+Plan gate : `canUseMultiProjects(plan)` renvoie vrai pour Elite. Le plan d'abonnement reste un attribut global du user (`profiles.plan`), jamais per-projet.
 
-**19 phases séquentielles :**
-
-1. Welcome (modal de bienvenue — présente le tour + insiste sur l'importance des réglages)
-2. Tour Aujourd'hui — dashboard avec tâches prioritaires et progression
-3. Tour Stratégie — plan d'action personnalisé en 3 phases
-4. Tour Créer — hub de création de contenus (posts, emails, articles, etc.)
-5. Tour Contenus — organisation et calendrier éditorial
-6. Tour Templates — modèles Systeme.io téléchargeables
-7. Tour Crédits — compteur de crédits IA (en haut à droite)
-8. Tour Analytics — suivi des performances avec diagnostic IA
-9. Tour Pépites — insights et conseils business
-10. Tour Paramètres/Profil — infos perso, offres, storytelling (accès via avatar en haut à droite)
-11. Tour Paramètres/Connexions — connexion des réseaux sociaux et Systeme.io
-12. Tour Paramètres/Réglages — langue et infos clés sur l'activité
-13. Tour Paramètres/Positionnement — LE réglage le plus important pour des contenus personnalisés
-14. Tour Paramètres/Branding — couleurs, polices, logo
-15. Tour Paramètres/IA — crédits et style auto-commentaires
-16. Tour Paramètres/Abonnement — gestion du plan
-17. Tour Coach — conseiller IA personnel (Pro/Elite)
-18. Completion (modal de fin — rappelle l'importance de compléter offres, positionnement et persona)
-
-**UX :**
-
-- Tooltips avec compteur d'étapes ("3 / 17")
-- Spotlight sur les éléments ciblés (portal-based)
-- Opt-out visible (lien souligné, pas checkbox)
-- Fenêtre : 7 premiers jours seulement
-- Peut être relancé ou réactivé via le bouton d'aide flottant
-- Paramètres accessibles via la photo de profil en haut à droite (plus dans la sidebar)
-
-### 4.18. Système de Notifications
-
-**Types :**
-
-- Auto (déclenchées par le système)  
-- Admin broadcast (envoyées par l'admin à tous)  
-- Personnelles
-- **Ventes SIO temps réel** (type `sale` / `sale_canceled`) — messages traduits dans les 5 langues
-
-**Interface :**
-
-- Cloche dans le header avec compteur d'unread  
-- Panel de notifications avec deep-linking  
-- **Clic pour ouvrir** : le body s'étend pour afficher le texte complet
-- **Marquage lu automatique** à la fermeture (pas à l'ouverture, pour laisser le temps de lire)
-- Marquage lu/archivé manuel via icônes
-
-### 4.19. Page « Widgets » (/widgets)
-
-Gestion des widgets embarquables à intégrer sur les pages externes (sites, landing pages, pages Systeme.io, etc.).
-
-#### 4.19.1. Notifications de preuve sociale (Toast)
-
-Pop-ups de type « social proof » affichés sur les pages de l'utilisateur pour renforcer la confiance et l'urgence.
-
-**Sources d'événements :**
-
-- Nombre de visiteurs en temps réel (`{count} personnes consultent cette page`)
-- Inscriptions récentes (`{name} vient de s'inscrire`)
-- Achats récents (`{name} vient d'acheter`)
-- Messages personnalisés (promo, urgence, rareté — ex : « Plus que 3 places disponibles »)
-
-**Paramètres de configuration :**
-
-- **Position** : bottom-left, bottom-right, top-left, top-right
-- **Thème** : light, dark, minimal
-- **Couleur d'accent** : sélecteur de couleur personnalisé
-- **Coins** : arrondis ou carrés
-- **Durée d'affichage** : 3 à 15 secondes (configurable)
-- **Délai entre les toasts** : 5 à 60 secondes (configurable)
-- **Max par session** : 1 à 50 notifications
-- **Anonymisation** : délai configurable en heures (protection RGPD)
-- **Labels personnalisables** : texte avec variables `{count}`, `{name}` (traduits dans les 5 langues)
-
-**Intégration :**
-
-- Snippet `<script>` à copier/coller sur le site cible
-- Script JS autonome (`/widgets/toast-widget.js`) hébergé sur Tipote
-- Communication via API Supabase (événements + config)
-- Activation/désactivation par widget (toggle ON/OFF)
-
-**Interface dashboard :**
-
-- Liste des widgets toast avec badge actif/inactif
-- Vue création/édition avec aperçu en temps réel
-- Grille responsive : 1 colonne mobile, 2 colonnes tablette, 3 colonnes desktop
-- Historique des événements récents (avec badge type d'événement)
-
-#### 4.19.2. Boutons de partage social (Share)
-
-Widget de boutons de partage social embarquable, permettant aux visiteurs de partager le contenu sur leurs réseaux.
-
-**Plateformes supportées (7) :**
-
-- Facebook, X (Twitter), LinkedIn, WhatsApp, Telegram, Reddit, Pinterest, Email
-
-**Modes d'affichage :**
-
-- **Inline** : intégré dans le flux de la page
-- **Floating left** : barre flottante à gauche (masquée sur mobile < 640px)
-- **Floating right** : barre flottante à droite (masquée sur mobile < 640px)
-- **Bottom bar** : barre fixe en bas de page (labels masqués sur mobile, icônes seules)
-
-**Options de personnalisation :**
-
-- **Style de bouton** : rounded, square, circle, pill
-- **Taille** : small (32px), medium (40px), large (48px)
-- **Mode couleur** : couleurs de marque officielles, mono clair, mono sombre, couleur personnalisée (hex)
-- **Afficher/masquer les labels** (noms des plateformes)
-- **Texte de partage** : message pré-rempli pour les partages (optionnel)
-- **Hashtags** : hashtags séparés par des virgules, ajoutés automatiquement (Twitter, LinkedIn)
-
-**Intégration :**
-
-- Snippet `<script>` avec `data-tipote-share` à copier/coller
-- Script JS autonome (`/widgets/social-share.js`) hébergé sur Tipote
-- Utilise les API de partage natives de chaque plateforme (URLs d'intent)
-- `flex-wrap` + media queries pour adaptation mobile automatique
-
-**Interface dashboard :**
-
-- Liste des widgets share avec badge actif/inactif
-- Vue création/édition avec aperçu live de l'overlay
-- Sélection des plateformes via grille de checkboxes (2 col mobile, 4 col desktop)
-- Code d'intégration copiable avec bouton Copy
-
-### 4.20. Pages légales
-
-Pages dynamiques via `/legal/[slug]` :
-
-- Conditions d'utilisation  
-- Politique de confidentialité  
-- Mentions légales  
-- CGV
-
-### 4.21 bis. Multiprofils Tipote (Elite, documenté Juin 2026)
-
-Un user Elite peut gérer plusieurs « projets » (marques / sub-business) au sein d'un même compte Tipote, avec isolation totale des données.
-
-**Tables :**
-
-- `projects` — `id`, `user_id`, `name`, `is_default` (BOOLEAN, un seul projet par user à `true`), `accent_color` (HEX), `icon_emoji` (TEXT), `use_branding_logo` (BOOLEAN), `created_at`. RLS user-bound.
-- `business_profiles` — désormais per-(`user_id`, `project_id`). Toutes les colonnes business (onboarding, offres, country, accounting_*, custom domains, tipote_affiliate_id, etc.) sont scopées au projet.
-
-**Cookie & contexte :**
-
-- Cookie `tipote_active_project` (HTTP-only côté serveur, mais lu/écrit côté client via helper `lib/projects/client.ts`).
-- Helper `lib/projects/activeProject.ts` (server) résout le projet actif à chaque request handler, avec fallback sur `is_default = true` si le cookie est manquant ou pointe sur un projet supprimé.
-- Helper `lib/projects/ensureDefaultProject.ts` crée le projet `is_default = true` automatiquement à la première connexion pour les users historiques.
-- Helper `lib/projects/upsertByProject.ts` standardise les upserts dans `business_profiles` avec la clé composite `(user_id, project_id)`.
-- Helper `lib/projects/visualIdentity.ts` formate l'identité visuelle (couleur + emoji) pour les composants.
-
-**Composants UI :**
-
-- `ProjectSwitcher` (sidebar) : dropdown avec liste des projets, identité visuelle (pill couleur + emoji), bouton « + Nouveau projet ».
-- `ProjectIdentityBadge` / `ProjectIdentityEditor` / `ProjectIndicatorSidebar` : affichage de l'identité visuelle (header, sidebar).
-- `SessionResetGate` : composant top-level qui, à chaque nouvelle session navigateur (détecté via `sessionStorage` flag), redirige sur le projet `is_default = true`. Évite qu'un user qui ferme son nav sur un sous-projet rouvre directement dessus le lendemain.
-
-**API :**
-
-- `GET /api/projects` — liste des projets de l'user (avec identité visuelle).
-- `POST /api/projects` — créer un projet. Insert `projects` row + `business_profiles` vide avec `onboarding_completed = false`. Réponse inclut un flag `requires_onboarding = true` que le `ProjectSwitcher` consomme pour rediriger explicitement vers `/onboarding`.
-- `PATCH /api/projects?id=<uuid>` — rename, change accent_color / icon_emoji / use_branding_logo, marquer is_default.
-- `DELETE /api/projects?id=<uuid>` — danger zone : confirmation par recopie du nom côté UI, cascade FK alignée (popquizzes / clients / hosted_pages / widgets en `CASCADE` depuis migration `20260507_project_delete_cascade`). Refuse si c'est l'unique projet de l'user.
-
-**Plan gate :**
-
-- Helper `canUseMultiProjects(plan)` → `plan === 'elite'`. Free / Basic / Pro ne voient pas le `ProjectSwitcher` (mais leur projet implicite reste un row `projects` `is_default = true` pour homogénéiser le code).
-
-**Sémantique :**
-
-- Un nouveau projet = un profil business neuf, **VIDE**, à re-onboarder complètement. Aucune copie depuis le projet courant (l'objectif est l'isolation totale, pas le clonage).
-- Domaines personnalisés, contenus publics (quiz / popquiz / pages), leads, clients, connexions sociales, clé Systeme.io : tout est per-projet. Un autre projet du même user ne voit RIEN.
-
-**Plan (global) vs projets (per-user-project) :**
-
-- Le **plan d'abonnement** reste un attribut **global du user** (table `profiles`, colonne `plan`). Il NE varie PAS d'un projet à l'autre.
-- Toute lecture de plan doit passer par la jointure `profiles.plan` (et non `business_profiles`). Bug Juin 2026 : `/api/profile` GET retournait `business_profiles` sans le `plan`, ce qui faisait que tous les Pro/Elite/Beta voyaient le gate Boost. Fix : enrichir la réponse avec `profiles.plan` via `supabaseAdmin`.
-
-### 4.21. Backoffice Admin (/admin)
+### 4.27. Backoffice Admin (/admin)
 
 Accès restreint aux emails listés dans `lib/adminEmails.ts` (`isAdminEmail()`).
 
-**Fonctionnalités :**
+- Vue utilisateurs (recherche, filtres par plan), modification de plan, reset password, désactivation.
+- Broadcast de notifications, attribution de crédits bonus, opérations en masse.
+- Logs de changements de plan (audit trail).
+- Édition des seuils fiscaux (`/admin/compta/fiscal-thresholds`) par pays, année et catégorie.
 
-- Vue utilisateurs (search, filtres par plan)  
-- Modifier plan, reset password, désactiver  
-- Broadcast de notifications  
-- Attribution de crédits bonus  
-- Opérations en masse  
-- Logs de changements de plan (audit trail)
-- **Édition des seuils fiscaux** (`/admin/compta/fiscal-thresholds`, Mai 2026) — gestion centralisée des seuils TVA / taux IS pour les users compta, par (pays, année, catégorie). Édition inline avec URL source officielle, date d'effet, notes. Bouton "Ajouter un seuil" pour seeder 2027/2028 ou nouveau pays. L'impact est immédiat côté users (le dashboard compta relit la DB à chaque chargement). Le cron `check-fiscal-thresholds` envoie un email aux admins quand une valeur stockée n'est plus présente sur la page officielle (= changement détecté à valider).
+### 4.28. Dashboard d'affiliation (sous-domaine)
+
+Espace dédié aux affiliés qui promeuvent Tiquiz et Tipote, servi sur `affiliate.tipote.com` (rewrite vers `/affiliate/*`). Le pathname côté client n'a pas le préfixe `/affiliate`, le gating des composants Tipote se fait par host.
+
+Navigation : Vue d'ensemble, Promouvoir, Contenus, Essai gratuit, Support.
+
+- Vue d'ensemble : lien d'affiliation, gains, progression.
+- Promouvoir : liens trackés éditables par l'affilié (libellé, description, destination), le paramètre `?sa=` étant ajouté automatiquement. Persistance dans `affiliates.promo_overrides`.
+- Contenus : emails, posts réseaux, articles, visuels, tous éditables et personnalisables (le lien et le prénom de l'affilié sont injectés).
+- Studio visuels IA (`ImageStudio`, moteur Fabric.js) : l'IA lit le post et choisit le format et le style d'image, le visuel s'accroche automatiquement au post. Copy générée sans clé côté affilié.
+- Essai gratuit : accès Tipote Elite offert pour créer du contenu de promo authentique.
+- CMS admin (`affiliate_contents`) : un espace admin gaté permet d'ajouter, éditer et publier articles, emails, posts et visuels, avec import des modèles par défaut et repli sur ces modèles tant que rien n'est publié.
+
+Auth affilié : après connexion, navigation dure (`window.location.assign`) pour que le SSR du layout affilié lise le cookie de session.
 
 ---
 
-## 5\. INTERCONNEXIONS DES DONNÉES
+## 5. Interconnexions des données
 
 ### 5.1. Matrice des déclencheurs
 
 | Événement | Déclenche | Mécanisme |
 | :---- | :---- | :---- |
-| Modification des offres (réglages) | Mise à jour tâches plan d'action | IA Niveau 1 recalcule |
-| Création d'offre (hub Créer) | Ajout aux offres \+ nouvelles tâches | Insertion auto |
-| Tâche cochée | MAJ progression \+ stats dashboard | Recalcul temps réel |
-| Contenu généré | Ajout content\_item \+ consommation crédits | Insert DB \+ décrément |
-| Post publié sur réseau social | MAJ statut \+ stockage post\_id/post\_url | Callback API |
-| Modification persona | MAJ contexte génération contenu | personas.persona\_json update |
-| Lead capturé (quiz/page) | Insert leads (chiffré) \+ notification | Insert \+ trigger |
-| Étape accompagnement client cochée | MAJ progression client \+ stats | Recalcul temps réel |
-| Montant encaissé mis à jour | MAJ résumé financier accompagnement | Update inline |
-| Commentaire détecté (automation) | Auto-reply \+ log \+ consommation crédit | Webhook \+ Claude |
+| Modification des offres | Mise à jour des tâches du plan | Recalcul IA niveau 1 |
+| Création d'offre (hub Créer) | Ajout aux offres et nouvelles tâches | Insertion auto |
+| Tâche cochée | MAJ progression et stats | Recalcul temps réel |
+| Contenu généré | Insert `content_item` et décrément crédits | Insert plus décrément |
+| Post publié | MAJ statut et stockage post_id/url | Callback API |
+| Modification persona | MAJ contexte de génération | Update `personas.persona_json` |
+| Lead capturé | Insert `leads` chiffré plus notification | Insert plus trigger |
+| Étape accompagnement cochée | MAJ progression client | Recalcul temps réel |
+| Commentaire détecté | Auto-reply, log, décrément crédit | Webhook plus Claude |
 | Analytics renseignés | Diagnostic IA | Trigger analyse |
-| Clé API SIO sauvegardée | Enregistrement auto 3 webhooks SIO | Fire-and-forget async |
-| Vente SIO (webhook) | Insert sio\_sales \+ MAJ offer\_metrics \+ toast\_event \+ notification | Webhook receiver |
-| Annulation SIO (webhook) | MAJ sio\_sales \+ décrémentation offer\_metrics \+ notification | Webhook receiver |
-| Contact SIO créé (webhook) | Upsert leads | Webhook receiver |
-| Quiz résultat obtenu | Tag SIO \+ enrichissement contact \+ inscription formation \+ ajout communauté | Fire-and-forget async |
+| Clé API SIO sauvegardée | Enregistrement auto des webhooks SIO | Fire-and-forget async |
+| Vente SIO (webhook) | Insert `sio_sales`, MAJ `offer_metrics`, toast, notification | Webhook receiver |
+| Annulation SIO (webhook) | MAJ `sio_sales`, décrément `offer_metrics`, notification | Webhook receiver |
+| Contact SIO créé (webhook) | Upsert `leads` | Webhook receiver |
+| Quiz résultat obtenu | Tag SIO, enrichissement contact, inscription formation, ajout communauté | Fire-and-forget async |
+| Transaction PSP synchronisée | MAJ dashboard compta, CA réel partout | Cron plus sync manuel |
 
 ### 5.2. Flux de données
 
-Onboarding → business\_profiles → personas
+Onboarding conduit à `business_profiles` et `personas`, puis à `business_plan` (offres et tâches), puis à Créer (contexte pré-rempli), puis à `content_item` et publication sociale, puis à analytics.
 
-    → business\_plan (offres \+ tâches)
+Quiz et pages conduisent à `leads` (chiffré) puis export CSV ou Systeme.io. Un résultat de quiz déclenche tag SIO, enrichissement, inscription formation et communauté.
 
-        → Créer (contexte pré-rempli)
-
-            → content\_item → social/publish (réseaux sociaux)
-
-                → analytics
-
-Quiz/Pages → leads (chiffré) → export CSV / Systeme.io
-    Quiz résultat → tag SIO + enrichissement contact + inscription formation + communauté
-
-Systeme.io (webhooks user) → sio\_sales → offer\_metrics + toast\_events + notifications → coach IA
-
-Automatisations → auto\_comment\_logs → webhook\_logs
+Systeme.io (webhooks user) conduit à `sio_sales`, `offer_metrics`, toasts et notifications, puis alimente le coach IA. Les PSP compta conduisent à `transactions`, agrégées dans le résumé business injecté partout.
 
 ---
 
-## 6\. ARCHITECTURE TECHNIQUE
+## 6. Architecture technique
 
 ### 6.1. Stack
 
@@ -1050,331 +553,175 @@ Automatisations → auto\_comment\_logs → webhook\_logs
 | :---- | :---- |
 | Frontend | Next.js (App Router), TypeScript, Tailwind CSS |
 | UI Components | shadcn/ui |
-| Internationalisation | next-intl (5 langues) |
-| Backend | API Routes Next.js |
-| Base de données | Supabase (PostgreSQL) |
-| Auth | Supabase Auth (email/password) |
-| Stockage fichiers | Supabase Storage (images \+ vidéos) |
-| IA Stratégique | OpenAI GPT (clé propriétaire) |
-| IA Contenu | Claude Anthropic (clé propriétaire) |
-| Social OAuth | LinkedIn, Meta, Twitter, TikTok, Pinterest |
+| Internationalisation | next-intl |
+| Backend | Route handlers Next.js |
+| Base de données | Supabase (PostgreSQL, RLS) |
+| Auth | Supabase Auth (email/password, PKCE) |
+| Stockage fichiers | Supabase Storage plus serveur TUS dédié pour les vidéos popquiz |
+| IA stratégique | OpenAI GPT (clé propriétaire) |
+| IA contenu | Claude, Anthropic (clé propriétaire) |
+| Social OAuth | LinkedIn, Meta, X, TikTok, Pinterest |
 | Automatisations | n8n (webhooks) |
-| CRM / Paiement | Systeme.io (API \+ webhooks) |
-| Chiffrement | AES-256-GCM (tokens \+ PII) |
-| Hosting | Hostinger VPS |
-| Process Manager | PM2 |
+| CRM et paiement | Systeme.io (API plus webhooks) |
+| PSP compta | Stripe, PayPal, Mollie |
+| Emails transactionnels | Resend |
+| Chiffrement | AES-256-GCM (tokens et PII) |
+| Hosting | VPS, reverse proxy Caddy |
+| Process manager | PM2 |
+
+Les deux applications (Tipote et Tiquiz) tournent sur le même VPS, avec un dispatcher de domaines pour router les hostnames custom. En production, chaque app source son fichier `.env` (pas `.env.local`, qui est une convention de dev).
 
 ### 6.2. Tables Supabase principales
 
-**Profil & Auth :**
+Profil et auth : `profiles` (id, email, locale, timezone, `plan` source de vérité globale, onboarding, sio_contact_id), `projects`, `business_profiles` (per-(user, project)), `personas`.
 
-- `users` / `profiles` — id, email, locale, timezone, **plan** (source de vérité globale par user, jamais per-projet), is\_owner, onboarding\_completed, sio\_contact\_id
-- `projects` (multi-projets Elite) — id, user\_id, name, is\_default, accent\_color, icon\_emoji, use\_branding\_logo (mis à jour Juin 2026)
-- `business_profiles` — profil business, diagnostic, storytelling (JSONB), offres. **Scopé per-(user\_id, project\_id)** — chaque projet a son profil indépendant
-- `personas` — persona\_json (role \= client\_ideal)
+Stratégie : `business_plan` (plan_json), `project_tasks`.
 
-**Stratégie :**
+Contenu : `content_item` (type, title, content, status, scheduled_date, channel, tags, meta, ai_provider_used, credits_consumed).
 
-- `business_plan` — plan\_json (offres \+ phases)
-- `project_tasks` — tâches avec statut, soft delete
+Social : `social_connections` (tokens OAuth chiffrés, `disconnected_at`), `social_automations`, `auto_comment_logs`, `automation_credits`.
 
-**Contenu :**
+Pages et quiz : `hosted_pages`, `page_leads`, `page_clicks`, `quizzes` (mode quiz/scoring/survey, branding, présentation, fermeture), `quiz_results`, `quiz_leads`, `quiz_events`, `quiz_question_events`, `popquizzes`.
 
-- `content_item` — type, title, content, status, scheduled\_date, channel, tags, meta (JSONB), ai\_provider\_used, credits\_consumed
+Clients : `clients`, `client_templates`, `client_template_items`, `client_processes`, `client_process_items`.
 
-**Social :**
+Leads : `leads` (champs chiffrés, blind index HMAC), `user_encryption_keys`.
 
-- `social_connections` — tokens OAuth chiffrés (AES-256-GCM) pour 7 plateformes
-- `social_automations` — comment-to-DM/email, trigger keywords  
-- `auto_comment_logs` — logs d'exécution des auto-commentaires  
-- `automation_credits` — crédits d'automatisation
+Billing : `user_credits`, `user_credits_transactions`.
 
-**Pages & Quiz :**
+Analytics : `offer_metrics`, `analytics_entries`.
 
-- `hosted_pages` — pages hébergées (capture, vente, vitrine, link-in-bio) avec slug, analytics, pixels
-- `page_leads` — leads capturés par les pages  
-- `page_clicks` — tracking des clics  
-- `quizzes` — quiz avec questions, résultats, CTA  
-- `quiz_leads` — leads capturés par les quiz
+Compta : `payment_connections`, `transactions`, `manual_transactions`, `expense_items`, `fiscal_thresholds`, plus de nombreuses colonnes de configuration sur `business_profiles` selon le pays.
 
-**Clients :**
+Systeme.io (user) : `sio_sales`, `sio_webhook_registrations`.
 
-- `clients` — clients gérés manuellement (nom, email, téléphone, statut, notes, lead_id)
-- `client_templates` — templates d'accompagnement réutilisables (nom, description, couleur)
-- `client_template_items` — étapes d'un template (title, position)
-- `client_processes` — accompagnements appliqués à un client (name, status, template_id, due_date, amount_total, amount_collected, payment_type, installments_count)
-- `client_process_items` — étapes d'un accompagnement en cours (title, is_done, position, due_date)
+Boost : `pods` et appartenances.
 
-**Leads :**
+Affiliation : `affiliates`, `affiliate_contents`.
 
-- `leads` — leads unifiés (toutes sources), champs chiffrés (email\_encrypted, first\_name\_encrypted, etc.), blind index HMAC  
-- `user_encryption_keys` — DEK wrappées par clé maître (par utilisateur)
+Domaines : `custom_domains`.
 
-**Billing :**
+Notifications : `notifications`.
 
-- `user_credits` — balance, monthly\_allotment, total\_purchased, total\_consumed  
-- `user_credits_transactions` — historique audité des mouvements
+Widgets : `toast_widgets`, `toast_events`, `share_widgets`.
 
-**Analytics :**
+Admin : `plan_change_log`, `plan_assignments`, `webhook_logs`.
 
-- `offer_metrics` — métriques par offre par mois (alimenté auto par webhooks SIO NEW_SALE et par le sync `/api/cron/sio-sync-sales`)
-- `analytics_entries` — données analytics manuelles
+Toutes les tables utilisateur utilisent Row Level Security.
 
-**Compta (Mai 2026) :**
+### 6.3. Routes API (aperçu)
 
-- `payment_connections` — connexions PSP user (Stripe / PayPal / Mollie) ; `provider`, `api_key_encrypted` (AES-256-GCM, single string ou JSON pour PayPal multi-creds), `last_sync_at`, `initial_sync_done_at`, `last_sync_error`, `disabled_at` (soft-delete pour reconnexion). UNIQUE (user_id, project_id, provider).
-- `transactions` — encaissements normalisés toutes sources (Stripe / PayPal / Mollie). Idempotence : UNIQUE (user_id, provider, provider_transaction_id) + dédup pré-upsert pour éviter "ON CONFLICT DO UPDATE 2× même row". Champs : amount_cents, currency, status (paid / partial_refund / refunded / failed / pending), refunded_cents, customer_email, customer_name, description, paid_at, refunded_at, metadata (JSONB), category (sale / affiliate / other — auto-détectée puis éditable), synced_at. RLS read-self.
-- `manual_transactions` — saisies hors PSP (virement / espèces / chèque / autre) ; mêmes colonnes business + source_label + category. RLS self-all.
-- `fiscal_thresholds` — table source de vérité pour les seuils TVA / taux IS / cotisations par (country, fiscal_year, category). UNIQUE (country, fiscal_year, category). Seed 2026 FR (vat_franchise_vente / services_bic / services_bnc). RLS read-all (les seuils sont publics). Édité via `/admin/compta/fiscal-thresholds`, vérifié par cron `/api/cron/check-fiscal-thresholds`.
-- Colonnes ajoutées sur `business_profiles` (Mai 2026) : `country` (déjà existant, mais utilisé maintenant pour le country gate compta), `tipote_affiliate_id` (ID `sa…` Systeme.io pour le tracking commission du footer), `accounting_status` + `accounting_status_configured_at`, `particulier_revenue_type`, `ae_activity_type` + `ae_started_at` + `ae_acre` + `ae_versement_liberatoire` + `ae_vat_franchise`, `sasu_siren` + `sasu_fiscal_year_calendar` + `sasu_fiscal_year_start_month` + `sasu_vat_regime` + `sasu_vat_intra_enabled` + `sasu_dirigeant_remunere`.
-- Colonne ajoutée sur `social_connections` : `disconnected_at TIMESTAMPTZ` (Mai 2026) — marker de déconnexion détectée, reset à NULL à chaque reconnexion OAuth.
+Auth et compte : `/api/account/{delete,ensure-profile,reset}`, `GET /api/profile` (retourne `business_profiles` per-projet enrichi de `profiles.plan` global, source unique des plan gates client), callbacks OAuth.
 
-**Systeme.io (utilisateur) :**
+Projets : `GET/POST/PATCH/DELETE /api/projects`.
 
-- `sio_sales` — ventes SIO de l'user (montant, client, offre, statut, payload brut)
-- `sio_webhook_registrations` — webhooks enregistrés par user (event_type, secret_token, statut, last_received_at)
+Social : `POST /api/social/publish`, `GET /api/social/connections`, endpoints de listing par plateforme.
 
-**Notifications :**
+Contenu : `POST /api/content/generate`, `POST /api/content/refine`, `POST /api/content/strategy/generate-all`, `PATCH /api/content/[id]`, `POST /api/content/[id]/duplicate`.
 
-- `notifications` — auto, admin broadcast, personnelles, ventes SIO temps réel
+Pages : `POST /api/pages/generate`, `GET/PATCH /api/pages/[pageId]`, `POST /api/pages/[pageId]/publish`, `GET /api/pages/public/[slug]`.
 
-**Widgets :**
+Quiz : `POST /api/quiz/generate`, `GET/POST /api/quiz/[quizId]`, `GET /api/quiz/[quizId]/public`, `POST /api/quiz/[quizId]/sync-systeme`, `GET /api/quiz/[quizId]/analytics` (recompute depuis `quiz_events`), `POST /api/quiz/[quizId]/autosave`, `/api/quiz/[quizId]/survey-results`, `/api/quiz/[quizId]/survey-analysis`, `/api/quiz/[quizId]/duplicate`, `/api/quiz/[quizId]/rewrite`.
 
-- `toast_widgets` — configuration des widgets toast (position, thème, durée, sources d'événements, messages personnalisés)
-- `toast_events` — événements enregistrés (signup, purchase, visitor_count) avec anonymisation configurable
-- `share_widgets` — configuration des widgets de partage social (plateformes, style, taille, mode d'affichage, couleurs)
+Popquiz : `/api/popquiz/upload-token`, `/api/popquiz/playback-url`, `/api/popquiz/[id]/thumbnail`.
 
-**Admin :**
+Clients : `GET/POST /api/clients`, `GET/PATCH/DELETE /api/clients/[id]`, `/api/client-processes`, `/api/client-templates`.
 
-- `plan_change_log` — audit des changements de plan  
-- `plan_assignments` — attributions de crédits bonus  
-- `webhook_logs` — logs de debugging des webhooks
+Leads : `GET/POST /api/leads`, `GET/PATCH/DELETE /api/leads/[id]`, `GET /api/leads/export`.
 
-**Toutes les tables utilisent Row Level Security (RLS).**
+Analytics : `POST /api/analytics/analyze-metrics`, `/api/analytics/offer-metrics`, `POST /api/analytics/sio-sync`, `/api/analytics/compta-totals`.
 
-### 6.3. Routes API (150+ endpoints)
+Compta : `/api/compta/connections` et variantes, `/api/compta/manual-transactions`, `/api/compta/expense-items`, `/api/compta/dashboard`, `/api/compta/fiscal-deadlines`, `/api/compta/fec-export`.
 
-**Auth & Compte :**
+Automatisations : `/api/automations/{linkedin,instagram,twitter,tiktok}-comments`, `/api/automations/webhook`, `/api/n8n/{linkedin,publish-callback,scheduled-posts}`.
 
-- POST /api/account/delete, /ensure-profile, /reset
-- GET /api/profile — **enrichi Juin 2026** : retourne `business_profiles` (per-projet) + `profiles.plan` (global) via une jointure cross-table avec `supabaseAdmin`. Source unique pour les plan gates côté client (Boost, Coach IA, multi-projets, etc.)
-- GET/POST /api/auth/{linkedin,twitter,tiktok,pinterest,instagram,meta,threads}/callback
+Systeme.io : `POST /api/systeme-io/user-webhook`, `GET /api/systeme-io/{tags,courses,communities}`, `POST /api/systeme-io/webhook` (plateforme).
 
-**Projets (multi-projets Elite, Juin 2026) :**
+Billing : `POST /api/billing/subscription`, `GET /api/credits/balance`.
 
-- GET /api/projects — liste des projets de l'user (avec identité visuelle)
-- POST /api/projects — créer un projet (insert `projects` + `business_profiles` vide), retourne `requires_onboarding: true`
-- PATCH /api/projects?id=&lt;uuid&gt; — rename, accent\_color, icon\_emoji, use\_branding\_logo, is\_default
-- DELETE /api/projects?id=&lt;uuid&gt; — danger zone, cascade FK, refuse si projet unique
+Widgets : `/api/widgets/toast`, `/api/widgets/toast/events`, `/api/widgets/share`.
 
-**Social :**
+Boost : `/api/pod/{ai-suggest,auth,me,posts,tasks}`.
 
-- POST /api/social/publish — Publication directe (7 plateformes, images, vidéos, carrousels)
-- GET /api/social/connections  
-- GET /api/social/{linkedin-posts, facebook-posts, instagram-posts, twitter-tweets, tiktok-videos, pinterest-boards}
+Admin : `/api/admin/{users,notifications,bulk}`, `/api/admin/sanitize-pages`.
 
-**Contenu :**
-
-- POST /api/content/generate — Génération IA  
-- POST /api/content/refine — Raffinement  
-- POST /api/content/strategy/generate-all — Génération en masse  
-- PATCH /api/content/\[id\] — Mise à jour  
-- POST /api/content/\[id\]/duplicate
-
-**Pages :**
-
-- POST /api/pages/generate — Génération IA de page  
-- GET/PATCH /api/pages/\[pageId\]  
-- POST /api/pages/\[pageId\]/publish  
-- GET /api/pages/public/\[slug\] — Rendu public
-
-**Quiz :**
-
-- POST /api/quiz/generate  
-- GET/POST /api/quiz/\[quizId\]  
-- GET /api/quiz/\[quizId\]/public  
-- POST /api/quiz/\[quizId\]/sync-systeme
-- GET /api/quiz/\[quizId\]/analytics — **refactor Juin 2026** : recompute `viewsCount` + `completionsCount` directement depuis `quiz_events`, ne lit JAMAIS `quizzes.views_count` (compteur drift). Garde-fou `viewsCount = max(events.view, leadsCount)` → ratio ≤ 100 %.
-
-**Clients :**
-
-- GET/POST /api/clients — Liste \+ création (GET inclut process\_summaries par client)
-- GET/PATCH/DELETE /api/clients/\[id\]
-- POST /api/client-processes — Créer un accompagnement (appliquer un template à un client, avec infos de paiement)
-- PATCH /api/client-processes/\[processId\] — Mise à jour d'un accompagnement (statut, paiement, échéance)
-- PATCH /api/client-processes/\[processId\]/items/\[itemId\] — Toggle étape
-- GET/POST /api/client-templates — CRUD templates d'accompagnement
-
-**Leads :**
-
-- GET/POST /api/leads — Liste \+ création (avec chiffrement)
-- GET/PATCH/DELETE /api/leads/\[id\]
-- GET /api/leads/export — Export CSV (avec déchiffrement)
-
-**Analytics :**
-
-- POST /api/analytics/analyze-metrics — Analyse IA  
-- GET/POST /api/analytics/offer-metrics
-
-**Automatisations :**
-
-- POST /api/automations/{linkedin,instagram,twitter,tiktok}-comments  
-- POST /api/automations/webhook — Webhook Meta  
-- POST /api/n8n/{linkedin, publish-callback, scheduled-posts}
-
-**Systeme.io (utilisateur) :**
-
-- POST /api/systeme-io/user-webhook — Réception webhooks SIO (NEW\_SALE, SALE\_CANCELED, CONTACT\_CREATED)
-- GET /api/systeme-io/tags — Tags SIO de l'user
-- GET /api/systeme-io/courses — Formations SIO de l'user
-- GET /api/systeme-io/communities — Communautés SIO de l'user
-
-**Billing :**
-
-- POST /api/billing/subscription — Webhook Systeme.io  
-- GET /api/credits/balance
-
-**Widgets :**
-
-- GET/POST /api/widgets/toast — CRUD widgets toast
-- GET/POST /api/widgets/toast/events — événements de preuve sociale
-- GET/POST /api/widgets/share — CRUD widgets partage social
-
-**Admin :**
-
-- POST /api/admin/{users, notifications, bulk}
-- POST /api/admin/sanitize-pages — Nettoyage en masse des html\_snapshot (artefacts éditeur)
+Crons (auth par secret) : sync des paiements, milestones business, check des seuils fiscaux, rappels fiscaux, sync des ventes SIO, posts programmés, rafraîchissement des tokens sociaux.
 
 ### 6.4. Variables d'environnement
 
-**Supabase :**
+Supabase : `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`.
 
-- NEXT\_PUBLIC\_SUPABASE\_URL, NEXT\_PUBLIC\_SUPABASE\_ANON\_KEY, SUPABASE\_SERVICE\_ROLE\_KEY
+Application : `NEXT_PUBLIC_APP_URL`, `NODE_ENV`, `CRON_SECRET`, `CUSTOM_DOMAINS_ENABLED`.
 
-**Application :**
+IA : `ANTHROPIC_API_KEY` (Claude), `OPENAI_API_KEY` (OpenAI), plus les variables de modèle et de tokens.
 
-- NEXT\_PUBLIC\_APP\_URL, NODE\_ENV
+Chiffrement : `SOCIAL_TOKENS_ENCRYPTION_KEY`, `PII_MASTER_KEY`, `PII_HMAC_SECRET`.
 
-**IA :**
+OAuth réseaux sociaux : identifiants et secrets pour LinkedIn, Meta, Instagram, Threads, X, TikTok, Pinterest.
 
-- CLAUDE\_API\_KEY\_OWNER / ANTHROPIC\_API\_KEY — Claude Anthropic  
-- OPENAI\_API\_KEY\_OWNER / OPENAI\_API\_KEY — OpenAI  
-- TIPOTE\_CLAUDE\_MODEL, TIPOTE\_OPENAI\_MODEL, TIPOTE\_ARTICLE\_MAX\_TOKENS
-
-**Chiffrement :**
-
-- SOCIAL\_TOKENS\_ENCRYPTION\_KEY — AES-256 pour tokens OAuth  
-- PII\_MASTER\_KEY — Clé maître chiffrement PII (64 hex)  
-- PII\_HMAC\_SECRET — Secret HMAC pour blind indexes (64 hex)
-
-**OAuth Réseaux Sociaux :**
-
-- LINKEDIN\_CLIENT\_ID, LINKEDIN\_CLIENT\_SECRET  
-- META\_APP\_ID, META\_APP\_SECRET, META\_WEBHOOK\_VERIFY\_TOKEN  
-- INSTAGRAM\_APP\_ID, INSTAGRAM\_APP\_SECRET  
-- THREADS\_APP\_ID, THREADS\_APP\_SECRET  
-- TWITTER\_CLIENT\_ID, TWITTER\_CLIENT\_SECRET  
-- TIKTOK\_CLIENT\_KEY, TIKTOK\_CLIENT\_SECRET  
-- PINTEREST\_APP\_ID, PINTEREST\_APP\_SECRET
-
-**Intégrations :**
-
-- SYSTEME\_IO\_API\_KEY  
-- N8N\_WEBHOOK\_BASE\_URL, N8N\_SHARED\_SECRET  
-- MESSENGER\_PAGE\_ACCESS\_TOKEN
+Intégrations : `SYSTEME_IO_API_KEY`, base et secret n8n, token d'accès Messenger, clé Resend.
 
 ---
 
-## 6 bis. CI, TESTS & GARDE-FOUS (Juin 2026)
+## 7. CI, tests et garde-fous
 
-### 6 bis.1. GitHub Actions
-
-- `.github/workflows/ci.yml` — sur chaque push (toutes branches) : `npx tsc --noEmit` (exit 0 obligatoire) + lint syntax des scripts Node (`node --check scripts/*.mjs`). Filet anti-régression sur la base la plus chaude.
-- `.github/workflows/e2e.yml` — schedule daily 3h UTC + `workflow_dispatch` manuel. Exécute `npm run test:e2e` (Playwright) sur la prod via `BASE_URL`. Idéal pour détecter les régressions post-déploiement silencieuses.
-
-### 6 bis.2. Tests E2E Playwright
-
-- Dossier `tests/e2e/`.
-- `public-quiz.spec.ts` — 5 catégories de checks sur `/q/<SMOKE_QUIZ_ID>`, `/p/<SMOKE_PAGE_SLUG>`, `/pq/<SMOKE_POPQUIZ_ID>` :
-  1. **Headers iframe** : `X-Frame-Options` absent + CSP `frame-ancestors *` présent (les contenus publics doivent pouvoir s'embedder partout).
-  2. **Contenu visible** : titre + bouton « Commencer » render côté DOM (anti hydration mismatch).
-  3. **OG meta** : `og:title` / `og:description` / `og:image` présents (partage social).
-  4. **Bouton start** cliquable et redirige vers la première étape.
-  5. **Endpoint `/track`** retourne 200 même sur payload mal formé (soft fail `{ok: false, reason}` — voir AGENTS.md).
-- Run local : `npm run test:e2e`.
-- Variables d'environnement attendues (configurables côté GitHub Actions en tant que variables non-secrets) : `SMOKE_QUIZ_ID`, `SMOKE_POPQUIZ_ID`, `SMOKE_PAGE_SLUG`, `BASE_URL`.
-
-### 6 bis.3. Script `check:schema` (`scripts/check-schema.mjs`)
-
-- `npm run check:schema` : vérifie que 10 migrations Tipote critiques sont appliquées en prod, en interrogeant `pg_catalog` via la service role key Supabase.
-- Liste maintenue dans le script lui-même. Migration de référence : `20260603_quizzes_survey_thanks` (la non-application en prod a causé la panne du 2 juin matin — toutes les pages quiz / analytics retournaient 500).
-- Accepte plusieurs variantes d'env vars : `SUPABASE_URL` ou `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` ou `SUPABASE_SERVICE_ROLE`.
-- À lancer avant chaque déploiement et en backup manuel après une push de migration.
-
-### 6 bis.4. Helper Claude unifié (`lib/claudeRequest.ts`)
-
-- `buildClaudeMessageBody({ model, system, messages, max_tokens, temperature, ... })` — source unique pour construire le body des requêtes Anthropic.
-- **Hotfix Opus 4.7 / 4.8 (Juin 2026)** : Anthropic a retiré les params de sampling sur Opus 4.7+. Toute requête avec `temperature` / `top_p` / `top_k` renvoie 400. Le helper détecte le model id via regex et omet ces params sur Opus 4.7+. Tier Opus bumpé de 4.7 → 4.8 dans `lib/anthropicModel.ts`.
-- **Tous** les appels Claude (génération posts, emails, articles, scripts, quiz, stratégie, coach IA, auto-commentaires, etc.) doivent passer par ce helper. Ne JAMAIS construire le body en inline.
+- GitHub Actions : typecheck (`npx tsc --noEmit`, exit 0 obligatoire) et lint syntax des scripts sur chaque push ; tests E2E planifiés.
+- Tests E2E Playwright (`tests/e2e/`) sur les pages publiques `/q/`, `/p/`, `/pq/` : headers iframe (X-Frame-Options absent, CSP `frame-ancestors *`), contenu visible, OG meta, bouton start, endpoint `/track` qui retourne toujours 200 (soft fail `{ok: false, reason}`).
+- Détecteur de migrations manquantes en prod : `npm run check:migrations-pending` parse tous les `.sql` du repo et liste ce qui manque en base ; `npm run check:schema` vérifie un ensemble de migrations critiques.
+- Convention : toute migration se termine par `NOTIFY pgrst, 'reload schema';` et utilise `IF NOT EXISTS`.
 
 ---
 
-## 7\. SÉCURITÉ
+## 8. Sécurité
 
-### 7.1. Authentification
+### 8.1. Authentification
 
-- JWT tokens avec expiration (Supabase Auth)  
-- Refresh tokens  
-- OAuth 2.0 avec PKCE (Twitter/X)  
-- CSRF tokens pour tous les flux OAuth
+Supabase Auth (JWT avec expiration, refresh tokens), OAuth 2.0 avec PKCE, CSRF tokens sur les flux OAuth, cookies httpOnly.
 
-### 7.2. Chiffrement des données
+### 8.2. Chiffrement des données
 
-- **Tokens OAuth** : AES-256-GCM (env SOCIAL\_TOKENS\_ENCRYPTION\_KEY)  
-- **PII des leads** : AES-256-GCM par utilisateur avec DEK individuelle  
-  - Clé par utilisateur wrappée par clé maître  
-  - Index aveugle HMAC-SHA256 pour recherche sur champs chiffrés  
-  - Ni l'admin ni un pirate ayant accès à la DB ne peut lire les données
+- Tokens OAuth : AES-256-GCM (`SOCIAL_TOKENS_ENCRYPTION_KEY`).
+- PII des leads : AES-256-GCM par utilisateur avec DEK individuelle wrappée par une clé maître, index aveugle HMAC-SHA256 pour la recherche sur champs chiffrés. Ni l'admin ni un accès brut à la DB ne permettent de lire les données.
+- Clé API Systeme.io : chiffrée at rest.
 
-### 7.3. Row Level Security
+### 8.3. Row Level Security
 
-- RLS activé sur toutes les tables utilisateur  
-- Chaque utilisateur ne voit que ses propres données  
-- Service role pour les opérations admin
+RLS activé sur toutes les tables utilisateur, chaque utilisateur ne voit que ses données, service role réservé aux opérations admin et systèmes.
 
-### 7.4. Webhooks
+### 8.4. Webhooks
 
-- Validation signature HMAC (Meta X-Hub-Signature-256)  
-- Secret partagé pour n8n  
-- Logs de debugging
+Validation de signature HMAC (Meta X-Hub-Signature-256, Systeme.io), secret partagé pour n8n, logs de debugging. Les endpoints de tracking public retournent toujours 200.
 
 ---
 
-## 8\. MONÉTISATION
+## 9. Monétisation
 
-### 8.1. Plans et tarification
+### 9.1. Plans et tarification
 
-|  | Free | Basic | Pro | Elite |
+| | Free | Basic | Pro | Elite |
 | :---- | :---- | :---- | :---- | :---- |
-| **Prix mensuel** | 0€ | 19€ | 49€ | 99€ |
-| **Prix annuel** | — | 190€ | 490€ | 990€ |
-| **Crédits IA/mois** | 25 (one-shot) | 40 | 150 | 500 |
-| **Tous les modules** | Oui | Oui | Oui | Oui |
-| **Publication directe** | Oui | Oui | Oui | Oui |
-| **Auto-commentaires** | Non | Oui | Oui | Oui |
-| **Coach IA** | Non | Non | Oui | Oui |
-| **Multi-projets** | Non | Non | Non | Oui |
+| Prix mensuel | 0€ | 19€ | 49€ | 99€ |
+| Prix annuel | | 190€ | 490€ | 990€ |
+| Crédits IA/mois | 25 (one-shot) | 40 | 150 | 500 |
+| Connexions sociales | 1 | 2 | 4 | illimitées |
+| Tous les modules | Oui | Oui | Oui | Oui |
+| Publication directe | Oui | Oui | Oui | Oui |
+| Auto-commentaires | Non | Oui | Oui | Oui |
+| Analyse stats IA, enrichissement persona, analyse concurrence, achat de crédits | Non | Oui | Oui | Oui |
+| Coach IA | Non | Non | Oui | Oui |
+| Multi-projets | Non | Non | Non | Oui |
 
-*Note : Plan "beta" (150 crédits/mois) existe pour les early adopters lifetime.*
+Un plan `beta` existe pour les early adopters lifetime, avec les mêmes fonctionnalités que Pro (150 crédits/mois). La détection du plan payant est permissive : tout ce qui n'est pas explicitement `free` est traité comme payant.
 
-### 8.2. Système de crédits
+Plafonds du plan gratuit par projet : 1 quiz actif, 1 sondage, 1 page publiée, 1 popquiz, et un quota mensuel de leads visibles au-delà duquel les leads restent capturés mais floutés.
 
-- 1 crédit ≈ 0.01€ de coûts IA réels  
-- Renouvellement mensuel (sauf Free \= one-shot)  
-- Crédits non cumulables d'un mois à l'autre  
-- Auto-commentaires : 0.25 crédit par commentaire
+### 9.2. Système de crédits
 
-### 8.3. Packs supplémentaires (Systeme.io)
+- Renouvellement mensuel (sauf Free en one-shot), crédits mensuels non cumulables.
+- Auto-commentaire : 0,25 crédit. Modification de page via chat IA : 0,5 crédit.
+- Les packs achetés n'expirent pas et sont consommés après les crédits mensuels (FIFO).
+
+### 9.3. Packs supplémentaires (Systeme.io)
 
 | Pack | Crédits | Prix |
 | :---- | :---- | :---- |
@@ -1382,161 +729,69 @@ Automatisations → auto\_comment\_logs → webhook\_logs
 | Standard | 100 | 10€ |
 | Pro | 250 | 22€ |
 
-- Pas d'expiration  
-- S'ajoutent au solde existant  
-- Consommés après les crédits mensuels (FIFO)
-
 ---
 
-## 9\. INTÉGRATION SYSTEME.IO
+## 10. Intégration Systeme.io
 
-**Note :** Systeme.io est également disponible en whitelabel sur la plateforme Tipote.
+Systeme.io est également disponible en whitelabel sur la plateforme Tipote.
 
-### 9.1. Webhook plateforme (abonnements Tipote)
+### 10.1. Webhook plateforme (abonnements Tipote)
 
-- Réception du payload (email, plan, product\_id, sio\_contact\_id)  
-- Création de compte si inexistant  
-- Upgrade plan \+ attribution crédits  
-- Email de bienvenue
-- Webhook annulation → rétrogradation vers plan Free (conservation données 90 jours)
+Réception du payload (email, plan, product_id, sio_contact_id), création de compte si inexistant, upgrade de plan et attribution de crédits, email de bienvenue. Le webhook d'annulation rétrograde vers le plan Free.
 
-### 9.2. Clé API utilisateur (multi-projet)
+### 10.2. Clé API utilisateur (multi-projet)
 
-- Chaque projet Tipote a sa propre clé API SIO, indépendante
-- Nom de connexion personnalisable (ex: "Mon projet", "Affiliation", "Client 1")
-- La même clé API peut être utilisée dans plusieurs projets
-- Stockage dans `business_profiles.sio_user_api_key` + `sio_api_key_name`
+Chaque projet a sa propre clé API SIO indépendante, avec un nom de connexion personnalisable. Stockage chiffré sur `business_profiles`.
 
-### 9.3. Webhooks utilisateur (automatiques, transparents)
+### 10.3. Webhooks utilisateur (automatiques)
 
-À la sauvegarde de la clé API, Tipote enregistre automatiquement 3 webhooks sur le compte SIO de l'user :
+À la sauvegarde de la clé API, Tipote enregistre automatiquement les webhooks sur le compte SIO de l'utilisateur.
 
 | Événement SIO | Action Tipote |
 | :---- | :---- |
-| **NEW_SALE** | Insert `sio_sales` + MAJ `offer_metrics` (CA + ventes) + toast widget (preuve sociale) + notification i18n |
-| **SALE_CANCELED** | MAJ statut `sio_sales` + décrémentation `offer_metrics` + notification |
-| **CONTACT_CREATED** | Upsert dans `leads` (source: systeme_io) |
+| NEW_SALE | Insert `sio_sales`, MAJ `offer_metrics`, toast de preuve sociale, notification i18n |
+| SALE_CANCELED | MAJ statut `sio_sales`, décrément `offer_metrics`, notification |
+| CONTACT_CREATED | Upsert dans `leads` (source systeme_io) |
 
-**Architecture :** Chaque user a un secret token unique dans l'URL du webhook (`/api/systeme-io/user-webhook?token=<secret>`). Les webhooks plateforme (`/api/systeme-io/webhook`) et utilisateur sont séparés.
+Chaque user a un secret token unique dans l'URL de son webhook. Les webhooks plateforme et utilisateur sont séparés.
 
-### 9.4. Sync leads quiz/pages → SIO
+### 10.4. Sync leads quiz et pages vers SIO
 
-- Export leads de quiz vers Systeme.io (avec prénom, nom, téléphone, pays)
-- Tags de capture configurables par page et par résultat de quiz
-- **Enrichissement contact** : le résultat du quiz est ajouté comme champ personnalisé `tipote_quiz_result`
+Export des leads avec prénom, nom, téléphone et pays, tags de capture configurables par page et par résultat de quiz, enrichissement du contact avec le résultat du quiz comme champ personnalisé.
 
-### 9.5. Automations quiz → SIO (par résultat)
+### 10.5. Automations quiz vers SIO (par résultat)
 
-Chaque résultat de quiz peut déclencher 3 actions SIO configurables :
+Chaque résultat peut déclencher : tag, inscription à une formation SIO, ajout à une communauté SIO. Les cours et communautés disponibles sont récupérés via l'API SIO.
 
-- **Tag** : appliqué automatiquement au contact
-- **Formation** : inscription auto dans un cours SIO (`POST /school/courses/{id}/enrollments`)
-- **Communauté** : ajout auto à une communauté SIO (`POST /community/communities/{id}/memberships`)
+### 10.6. Sync ventes vers analytics
 
-Les cours et communautés disponibles sont récupérés via l'API SIO (`GET /api/systeme-io/courses`, `GET /api/systeme-io/communities`).
+Pull périodique de `GET /api/sales` (manuel via `POST /api/analytics/sio-sync`, automatique via cron). Matching produit SIO vers offre Tipote en cascade (`sio_product_id` explicite, nom exact, nom fuzzy, prix unique, sinon unmatched). Idempotence garantie par remise à zéro des couples (offre, mois) touchés avant réinsertion.
 
-### 9.6. Alimentation du coach IA
+### 10.7. Alimentation du coach IA
 
-Les 50 dernières ventes SIO sont injectées dans le contexte du coach IA :
-- CA total, nombre de ventes, ventilation par offre
-- 10 dernières transactions détaillées
-- Combiné avec `offer_metrics` pour une analyse stratégique basée sur les vrais chiffres
+Les dernières ventes SIO sont injectées dans le contexte du coach (CA total, ventilation par offre, transactions récentes), combinées avec `offer_metrics` et le résumé business compta.
 
-### 9.7. Tables SIO
+### 10.8. Lien d'affiliation Tiquiz
 
-- `sio_sales` — historique des ventes (montant, client, offre, statut)
-- `sio_webhook_registrations` — webhooks enregistrés par user (event_type, secret_token, statut)
-
-### 9.8. Sync ventes → analytics (pull périodique)
-
-Pour calculer le CA, le nombre de ventes par offre et la progression vers l'objectif `business_profiles.revenue_goal_monthly` sans demander à l'user de saisir manuellement, on pull `GET /api/sales` SIO :
-
-- **Manuel** : `POST /api/analytics/sio-sync` (bouton "Synchroniser Systeme.io" dans `/analytics`)
-- **Automatique** : cron quotidien `GET /api/cron/sio-sync-sales` (auth `X-Cron-Secret`, fenêtre 35 jours, séquentiel pour rester sous les rate-limits SIO, journalise sales/revenue/failures par user)
-
-**Matching SIO product → offre Tipote** (cascade dans `lib/sio/salesSync.ts`) :
-1. `sio_product_id` explicite renseigné dans Settings → Mes offres → binding 100% fiable
-2. Nom de produit exact (insensible à la casse, normalisation espace)
-3. Nom fuzzy (substring) — uniquement si une seule offre matche, sinon abstention
-4. Prix unique — si une seule offre Tipote a exactement ce montant
-5. Sinon → unmatched (compté dans `unmatchedRevenue` du résumé, exclu de l'agrégation par offre)
-
-**Idempotence** : avant chaque upsert, on remet à 0 `sales_count` + `revenue` pour les couples (offer, month) touchés, puis on insère les fresh totals. Les compteurs saisis manuellement (`visitors`, `signups`) sont préservés. UNIQUE `(user_id, offer_name, month)` empêche les doublons. Le free plan SIO supporte l'API depuis 2026 — fonctionnalité accessible à tous les users qui ont configuré leur clé.
+Footer permanent sur les popquiz publics et leur embed iframe, et sur les quiz publics gratuits ou sans footer custom, redirigeant vers le hub de vente avec tracking de commission via le paramètre `?sa=<id>` correspondant à l'identifiant affilié Systeme.io du créateur (`business_profiles.tipote_affiliate_id`).
 
 ---
 
-## 10\. LANGUES SUPPORTÉES
+## 11. Langues supportées
 
-| Code | Langue | Statut |
-| :---- | :---- | :---- |
-| fr | Français | Complet |
-| en | English | Complet |
-| es | Español | Complet |
-| it | Italiano | Complet |
-| ar | العربية | Complet |
+Interface (next-intl) : FR, EN, ES, IT, AR (avec support RTL), PT, PT-BR. Locale par défaut FR.
 
-Gestion via next-intl avec fichiers de messages (\~1800+ clés par langue).
+Le contenu des quiz peut être généré dans un catalogue de langues bien plus large, découplé de la langue d'interface. Le rendu public des quiz propose plusieurs variantes de copy (FR, FR vouvoiement, EN, ES, DE, PT, IT, AR).
 
 ---
 
-## 11\. DESIGN SYSTEM
+## 12. Design system
 
-### Règle de parité Lovable (Pixel-perfect)
-
-- La maquette Lovable est la source de vérité UI/UX  
-- 1 client component par page : `components/<domaine>/<PageName>LovableClient.tsx`  
-- Page server : `app/<route>/page.tsx` \= wrapper auth \+ fetch \+ return client component  
-- Composants UI : shadcn/ui (Card, Button, Badge, Input, Select, Sheet, Dialog, Table, etc.)  
-- Framework CSS : Tailwind CSS
+- Composants UI shadcn/ui, framework CSS Tailwind.
+- Un client component par page : `components/<domaine>/<PageName>Client.tsx`.
+- Page serveur `app/<route>/page.tsx` : wrapper auth, fetch, retour du client component.
+- Règle rédactionnelle sur tout contenu user-visible : aucun em-dash ni en-dash (signature stylistique d'IA bannie). Remplacer par virgule, deux-points, point ou parenthèses.
 
 ---
 
-## 12\. ROADMAP
-
-### V1 (État actuel — Juin 2026) ✅
-
-- Architecture complète (9+ pages principales)  
-- Onboarding intelligent  
-- Plan stratégique IA avec offres personnalisées  
-- Hub création unifié (8 types de contenu)  
-- **Publication directe sur 7 réseaux sociaux**
-- **Automatisations** (auto-commentaires, comment-to-DM/email)  
-- **Constructeur de pages** (capture, vente, vitrine, link-in-bio)  
-- **Système de quiz** avec capture de leads  
-- **Gestion des leads** avec chiffrement AES-256
-- **Gestion des clients** (suivi, notes, statuts, accompagnements avec suivi financier et progression) — **enrichie Mai 2026** : badge "Abonné" / "A arrêté son abo" + total encaissé par client (matché par email avec les transactions PSP)
-- **Module Compta** (Mai 2026, France) — onglet dans Paramètres avec configuration statut (particulier / auto-entrepreneur / SASU + IS + TVA), connexions Stripe / PayPal / Mollie (sync 24 mois historique + cron daily), saisies manuelles (virement / espèces / chèque), tableau de bord business (CA mois/an, MRR, churn, refund rate, top produits, jauge franchise TVA), catégorisation ventes vs commissions affiliation, calendrier fiscal personnalisé. Connecté au coach IA, à la page Aujourd'hui, à la stratégie et à la page Analytics
-- **Lien d'affiliation Tiquiz** (Mai 2026) — footer permanent sur les popquiz publics + embed iframe + quiz publics free, redirige vers `tipote.fr/part-tiquiz?sa=<id>` avec tracking commission via l'ID affilié SIO du créateur
-- **Notifications de déconnexion sociale + post raté** (Mai 2026) — email immédiat dès qu'un token social meurt (LinkedIn / FB / IG / X / TikTok / Pinterest / Threads / Reddit) ou qu'un post programmé bascule en `failed`
-- **Extension Chrome Tipote Boost** (Juin 2026) — lien d'installation direct dans Settings → Boost (`chromewebstore.google.com/detail/tipote-boost/gligkkmphgcpfghplnmknmkkgonolchg`), en cours de validation Chrome Web Store, LinkedIn d'abord, autres réseaux à venir. Plan gate Pro / Elite / Beta corrigé (lecture depuis `profiles.plan` global, plus `business_profiles`)
-- **Multiprofils Elite** (Juin 2026, documentation rétroactive) — projets avec identité visuelle (couleur + emoji), reset session sur projet par défaut, danger-zone delete, plan gate `canUseMultiProjects`
-- **KPI cards cliquables dans /leads** (Juin 2026) — Total / Exportés / Non exportés / Ce mois deviennent des filtres, i18n FR / EN / IT / PT / ES
-- **Fix analytics quiz** (Juin 2026) — recompute depuis `quiz_events` avec garde-fou ≤ 100 % de capture
-- **CI + E2E + check:schema** (Juin 2026) — GitHub Actions typecheck sur chaque push, Playwright daily, détecteur de migrations manquantes
-- Calendrier éditorial (édition des posts programmés)  
-- Système de crédits (achat \+ consommation)  
-- Templates Systeme.io  
-- Analytics avec diagnostic IA  
-- Coach IA (Pro/Elite)  
-- Pépites (insights)  
-- Didacticiel interactif complet  
-- Notifications
-- **Widgets embarquables** (notifications preuve sociale + boutons de partage social)
-- Multi-projets (Elite)  
-- Storytelling fondateur  
-- Branding personnalisé  
-- 5 langues (FR/EN/ES/IT/AR)  
-- Intégration Systeme.io (webhooks \+ sync leads)  
-- Intégration n8n  
-- Backoffice admin
-
-### V2 (Prochaines étapes)
-
-- Génération images IA  
-- Blog auto-publishing  
-- Ads Engine (création de publicités)  
-- App mobile
-
----
-
-*— Fin du cahier des charges — Juin 2026*  
+*Fin du cahier des charges.*

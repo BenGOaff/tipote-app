@@ -1,394 +1,354 @@
-# Brief produit Tipote — pour génération de contenu de vente
+# Brief produit Tipote, pour génération de contenu de vente
 
-> Ce document est destiné à un agent IA qui doit produire des landing pages, séquences emails, posts sociaux, scripts vidéo, ads ou pages de vente pour Tipote. Il est rédigé pour être consommé directement par une IA générative — structuré, factuel, sans verbiage.
->
-> Pour la documentation technique destinée aux développeurs : voir `CAHIER_DES_CHARGES.md` (ce dossier) et `docs/INVARIANTS.md`.
+Ce document est destiné à un agent IA qui doit produire des landing pages, séquences emails, posts sociaux, scripts vidéo, ads ou pages de vente pour Tipote. Il est rédigé pour être consommé directement par une IA générative : structuré, factuel, sans verbiage.
 
-> **Note de version Juin 2026** — sprint fiabilité + extension Boost + multiprofils :
->
-> - **Extension Chrome Tipote Boost** (en cours de validation Chrome Web Store) : lien d'installation direct depuis Settings → Boost (`https://chromewebstore.google.com/detail/tipote-boost/gligkkmphgcpfghplnmknmkkgonolchg`). LinkedIn dispo en premier, autres réseaux à venir. Plus de message « Extension non détectée » sans solution — bouton « Installer l'extension » disponible.
-> - **Multiprofils Tipote (Elite)** documenté en détail : chaque projet = profil business neuf VIDE à re-onboarder, identité visuelle propre (couleur accent + emoji), reset session sur projet par défaut à chaque nouvelle session navigateur, danger-zone delete avec confirmation par recopie du nom.
-> - **Fiabilité analytics quiz** : taux de capture désormais recalculé en direct depuis les événements quiz (vues + complétions), avec garde-fou ≤ 100 %. Plus jamais de « 794 % de capture » dans les stats.
-> - **KPI cards cliquables dans /leads** : les 4 cards Total / Exportés / Non exportés / Ce mois sont devenues des filtres cliquables (2e clic = retire le filtre). Nouvelle KPI « Non exportés » remplace « Source quiz » (plus actionnable).
-> - **Bug Elite gate Boost corrigé** : tous les Pro / Elite / Beta voient bien leurs fonctionnalités Boost (et non plus le gate « il faut être Pro/Elite » alors qu'ils y sont déjà).
-> - **CI + E2E** : pipeline GitHub Actions sur chaque push (typecheck + lint scripts) + tests Playwright quotidiens sur les pages publiques (/q/, /p/, /pq/) pour filet anti-régression. Script `npm run check:schema` pour détecter les migrations en retard avant qu'elles ne cassent la prod.
+Pour la documentation technique destinée aux développeurs, voir `CAHIER_DES_CHARGES.md` et `docs/INVARIANTS.md`.
 
 ---
 
 ## 1. Identité
 
-- **Nom du produit** : Tipote (avec ®)
-- **Domaine principal** : app.tipote.com
-- **Tagline courte** : « Le pote de business des entrepreneurs »
-- **Pitch en une phrase** : Tipote est l'assistant IA qui mémorise ton business, ta cible et tes objectifs pour bâtir ta stratégie, créer tes contenus et les publier directement sur tes réseaux sociaux — sans repartir de zéro à chaque fois.
-- **Pitch en trois phrases** : Les outils IA génériques (ChatGPT, Claude, etc.) sont amnésiques : tu redonnes ton contexte à chaque conversation, et le résultat reste lisse et interchangeable. Tipote mémorise une fois pour toutes ton profil business, ton audience, tes offres, ton storytelling, et s'en sert pour tout générer en cohérence avec TA stratégie. Et il publie pour toi sur LinkedIn, Facebook, Instagram, Threads, X, TikTok, Pinterest — pas de copier-coller.
+- Nom du produit : Tipote (avec ®)
+- Domaine principal (app) : app.tipote.com
+- Tagline courte : "Le pote de business des entrepreneurs"
+- Pitch en une phrase : Tipote est l'assistant IA qui mémorise ton business, ta cible et tes objectifs pour bâtir ta stratégie, créer tes contenus et les publier directement sur tes réseaux sociaux, sans repartir de zéro à chaque fois.
+- Pitch en trois phrases : Les outils IA génériques sont amnésiques, tu redonnes ton contexte à chaque conversation et le résultat reste lisse et interchangeable. Tipote mémorise une fois pour toutes ton profil business, ton audience, tes offres, ton storytelling, et s'en sert pour tout générer en cohérence avec TA stratégie. Et il publie pour toi sur LinkedIn, Facebook, Instagram, Threads, X, TikTok et Pinterest, sans copier-coller.
 
 ## 2. Public cible
 
-### 2.1. Cible principale (persona prioritaire)
+### 2.1. Cible principale
 
-- **Solopreneur ou micro-entrepreneur francophone** (FR / BE / CH / CA), 30-55 ans
-- Vend des **prestations de service** (coaching, conseil, accompagnement) ou des **produits digitaux** (formations, ebooks, programmes en ligne)
-- Niveau technique : **non-tech** ou tech-curieux. N'a pas envie de manipuler des prompts, des intégrations Zapier, des workflows complexes
-- Niveau marketing : **a fait quelques essais**, suit des formateurs, mais n'a pas de stratégie cohérente. Souvent hésite entre 3-4 offres, 2-3 plateformes, et n'a pas de plan
-- Statistiques produit (issues d'études Tipote) :
-  - 51 % n'ont pas encore fait leur première vente
-  - 46 % passent trop de temps sur la création de contenu
-  - 52 % trouvent l'IA générique trop passe-partout pour eux
+- Solopreneur ou micro-entrepreneur francophone (FR, BE, CH, CA), 30 à 55 ans.
+- Vend des prestations de service (coaching, conseil, accompagnement) ou des produits digitaux (formations, ebooks, programmes en ligne).
+- Niveau technique non-tech ou tech-curieux. N'a pas envie de manipuler des prompts, des intégrations Zapier ou des workflows complexes.
+- Niveau marketing : a fait quelques essais, suit des formateurs, mais n'a pas de stratégie cohérente.
+- Statistiques produit issues d'études Tipote :
+  - 51% n'ont pas encore fait leur première vente.
+  - 46% passent trop de temps sur la création de contenu.
+  - 52% trouvent l'IA générique trop passe-partout pour eux.
 
 ### 2.2. Cibles secondaires
 
-- **Coachs / consultants déjà en activité** qui veulent industrialiser leur communication sans perdre leur voix
-- **Affiliés Systeme.io** (Tipote est white-label disponible chez Systeme.io) qui veulent un outil intégré à leur écosystème existant
-- **Petites équipes (2-5 personnes)** dans le marketing / content : plan Elite multi-projets
+- Coachs et consultants déjà en activité qui veulent industrialiser leur communication sans perdre leur voix.
+- Affiliés Systeme.io (Tipote est disponible en white-label chez Systeme.io) qui veulent un outil intégré à leur écosystème.
+- Petites équipes (2 à 5 personnes) en marketing ou content : plan Elite multi-projets.
 
-### 2.3. Anti-cible (à NE PAS adresser dans la com)
+### 2.3. Anti-cible (à ne pas adresser)
 
-- Grandes entreprises avec une équipe marketing dédiée
-- Agences (qui revendraient à leurs clients — outil pas pensé pour ça)
-- Développeurs / makers tech qui veulent un terrain de jeu IA (Tipote est volontairement opinionated, pas un sandbox)
+- Grandes entreprises avec une équipe marketing dédiée.
+- Agences qui revendraient à leurs clients (outil pas pensé pour ça).
+- Développeurs et makers tech qui veulent un sandbox IA (Tipote est volontairement opinionated).
 
 ## 3. Promesse principale
 
-**« Tu n'as plus besoin de réfléchir à QUOI publier, NI à QUAND, NI à COMMENT. »**
+"Tu n'as plus besoin de réfléchir à QUOI publier, NI à QUAND, NI à COMMENT."
 
-Variations à utiliser selon le canal :
-- *(Email/landing)* : « Une stratégie qui ne change pas de cap chaque semaine. Du contenu qui te ressemble. Une publication qui se fait toute seule. »
-- *(Ads court)* : « L'IA qui se souvient de ton business. »
-- *(Social)* : « Tu mets ton business dedans une fois, Tipote bosse pour toi tous les jours. »
+Variations selon le canal :
+- Email ou landing : "Une stratégie qui ne change pas de cap chaque semaine. Du contenu qui te ressemble. Une publication qui se fait toute seule."
+- Ad court : "L'IA qui se souvient de ton business."
+- Social : "Tu mets ton business dedans une fois, Tipote bosse pour toi tous les jours."
 
 ## 4. Pain points résolus (à mentionner dans la copy)
 
-| Pain | Ressenti par le prospect | Réponse Tipote |
+| Pain | Ressenti | Réponse Tipote |
 |---|---|---|
-| « J'ai pas de stratégie, je publie au feeling » | Anxiété, sentiment d'éparpillement | Plan stratégique en 3 phases (Fondations, Croissance, Scaling) généré automatiquement après l'onboarding, mis à jour en live quand le profil change |
-| « Je passe 2h à écrire un post LinkedIn » | Frustration, procrastination | Génération de posts/emails/articles/scripts en moins de 30s, à partir d'un brief de 10 mots ou d'une offre existante |
-| « ChatGPT sort toujours le même style passe-partout » | Démotivation, abandon | La mémoire Tipote (profil + persona + storytelling + ton de voix) est injectée dans CHAQUE prompt → résultats personnalisés |
-| « Je sais pas QUAND publier ni À QUEL RYTHME » | Inertie | Calendrier éditorial avec planification automatique sur les meilleurs créneaux par plateforme |
-| « Je connecte Zapier / Make / Buffer et ça plante tous les 2 mois » | Fatigue technique | Publication directe via OAuth officiel sur les 7 réseaux, sans intermédiaire |
-| « J'ai des leads quelque part dans Systeme.io mais je sais pas qui c'est ni d'où ils viennent » | Opacité | Tableau leads centralisé, taggés par source (quiz, page de capture, popquiz…), avec sync auto vers Systeme.io |
-| « Ma stratégie devient obsolète après 2 mois » | Pas mesurable, pas actualisé | Flag « stratégie à jour ? » + bouton « Recalculer » qui re-génère tout en tenant compte des dernières infos profil/stats |
-| « Je dois ressaisir mes ventes manuellement pour suivre mon CA » | Saisie chronophage, oublis | Sync automatique des ventes Systeme.io chaque nuit (cron) + bouton « Synchroniser maintenant ». Tipote calcule le CA, le nombre de ventes par offre et la progression vers ton objectif revenu mensuel à partir de la vraie donnée business |
-| « Je sais pas où j'en suis côté compta : seuils TVA, échéances URSSAF, calendrier fiscal… » | Anxiété fiscale, peur de l'oubli | Onglet **Compta** complet (Mai 2026) : configuration statut (auto-entrepreneur / SASU / particulier), connexions Stripe / PayPal / Mollie avec sync 24 mois d'historique, jauge franchise TVA, calendrier fiscal personnalisé. Les vrais chiffres sont injectés dans le coach IA, le dashboard Aujourd'hui, la stratégie. Disclaimer permanent : Tipote ne remplace pas un comptable |
-| « Je touche des commissions d'affiliation mais je ne sais pas comment les distinguer de mes ventes » | Mélange CA réel vs commissions | Auto-détection des commissions (heuristique sur description PayPal / Stripe) + saisie manuelle pour les virements bancaires. Le dashboard Compta sépare visuellement « Ventes directes » et « Commissions affiliation » |
-| « Mon coach IA me sort toujours les mêmes conseils génériques alors qu'il pourrait voir mes vrais chiffres » | Frustration, confiance érodée | Le coach Tipote (chat + encouragement quotidien + génération stratégie) reçoit automatiquement le contexte business : CA mois en cours, progression vers l'objectif, abonnés perdus, comparaison N-1. Conseils calibrés sur les chiffres |
-| « Mon compte LinkedIn s'est déconnecté il y a 3 semaines, j'ai perdu 5 posts programmés sans le savoir » | Sentiment de trahison, perte de visibilité | Email d'alerte immédiat dès la détection d'un token révoqué (sur n'importe quel réseau). Email aussi quand un post programmé finit en échec après 5 retries — avec lien direct vers l'éditeur pour le reprogrammer |
+| "J'ai pas de stratégie, je publie au feeling" | Anxiété, éparpillement | Plan stratégique en 3 phases (Fondations, Croissance, Scaling) généré automatiquement après l'onboarding, mis à jour en live quand le profil change |
+| "Je passe 2h à écrire un post LinkedIn" | Frustration, procrastination | Génération de posts, emails, articles et scripts en quelques secondes, à partir d'un brief court ou d'une offre existante |
+| "ChatGPT sort toujours le même style passe-partout" | Démotivation | La mémoire Tipote (profil, persona, storytelling, ton de voix) est injectée dans chaque prompt, donc des résultats personnalisés |
+| "Je sais pas QUAND publier ni à quel rythme" | Inertie | Calendrier éditorial avec programmation sur les créneaux choisis |
+| "Je connecte Zapier ou Buffer et ça plante" | Fatigue technique | Publication directe via OAuth officiel sur 7 réseaux, sans intermédiaire |
+| "J'ai des leads quelque part dans Systeme.io mais je sais pas d'où ils viennent" | Opacité | Tableau leads centralisé, taggé par source (quiz, page, popquiz), avec sync auto vers Systeme.io |
+| "Ma stratégie devient obsolète après 2 mois" | Pas actualisé | Flag "stratégie à jour ?" plus bouton "Recalculer" qui régénère en tenant compte des dernières infos |
+| "Je dois ressaisir mes ventes pour suivre mon CA" | Saisie chronophage | Sync automatique des ventes (Systeme.io et PSP). Tipote calcule le CA, les ventes par offre et la progression vers ton objectif à partir de la vraie donnée |
+| "Je sais pas où j'en suis côté compta : seuils TVA, échéances URSSAF" | Anxiété fiscale | Onglet Compta complet : configuration du statut, connexions Stripe, PayPal, Mollie, jauge franchise TVA, calendrier fiscal personnalisé. Disclaimer permanent : Tipote ne remplace pas un comptable |
+| "Je touche des commissions d'affiliation mais je les distingue mal de mes ventes" | Mélange CA réel vs commissions | Auto-détection des commissions plus saisie manuelle. Le dashboard Compta sépare ventes directes et commissions |
+| "Mon coach IA me sort des conseils génériques" | Confiance érodée | Le coach reçoit ton CA réel du mois, ta progression vers l'objectif, tes abonnés perdus. Conseils calibrés sur les chiffres |
+| "Mon compte LinkedIn s'est déconnecté, j'ai perdu des posts programmés" | Perte de visibilité | Email d'alerte immédiat dès la détection d'un token révoqué, et quand un post programmé finit en échec, avec lien direct pour le reprogrammer |
 
-## 5. Différenciateurs (à mettre en avant vs concurrents)
+## 5. Différenciateurs (vs concurrents)
 
-### vs ChatGPT / Claude / Gemini (IA généralistes)
-- **Mémoire persistante structurée** vs amnésie + redéfinir le contexte à chaque chat
-- **Output cohérent dans le temps** : tes posts d'aujourd'hui restent dans la lignée de ton storytelling de la semaine dernière
-- **Publication directe** : Tipote publie sur tes réseaux, ChatGPT ne fait pas
+### vs ChatGPT, Claude, Gemini (IA généralistes)
+- Mémoire persistante structurée vs amnésie et redéfinition du contexte à chaque chat.
+- Output cohérent dans le temps : tes posts d'aujourd'hui restent dans la lignée de ton storytelling.
+- Publication directe : Tipote publie sur tes réseaux, ChatGPT ne le fait pas.
 
-### vs Buffer / Hootsuite / Later (planners de réseaux sociaux)
-- Tipote **génère** le contenu, pas seulement le programmer
-- Tipote a **une stratégie** derrière : pas juste « publier 3 fois par semaine » mais « publier sur cet axe parce qu'on est en phase Fondations de ton plan »
-- Tipote intègre **leads + clients + Systeme.io** dans le même outil
+### vs Buffer, Hootsuite, Later (planners)
+- Tipote génère le contenu, pas seulement le programme.
+- Tipote a une stratégie derrière (publier sur cet axe parce que tu es en phase Fondations).
+- Tipote intègre leads, clients et Systeme.io dans le même outil.
 
-### vs Notion AI / Jasper / Copy.ai (générateurs de contenu)
-- Tipote est **opinionated** : il ne te demande pas de choisir entre 50 templates, il sait ce que tu dois publier
-- Tipote **publie** sur tes réseaux, pas juste un copier-coller
-- Tipote gère **le post-clic** : capture leads, automatisations Systeme.io, suivi des clients
+### vs Notion AI, Jasper, Copy.ai (générateurs)
+- Tipote est opinionated : il sait ce que tu dois publier.
+- Tipote publie sur tes réseaux.
+- Tipote gère le post-clic : capture leads, automatisations Systeme.io, suivi des clients.
 
-### vs Systeme.io (la plateforme tout-en-un)
-- Tipote n'est PAS un concurrent — c'est un **complément**. Tipote pousse les leads vers Systeme.io via webhooks officiels
-- Tipote est **disponible en white-label DANS Systeme.io** : un user Systeme.io peut activer Tipote en un clic depuis sa marketplace
-- Tipote apporte la couche stratégie + génération + publication réseaux que Systeme.io n'a pas
+### vs Systeme.io (plateforme tout-en-un)
+- Tipote n'est pas un concurrent, c'est un complément : il pousse les leads vers Systeme.io via webhooks officiels.
+- Tipote est disponible en white-label dans Systeme.io.
+- Tipote apporte la couche stratégie, génération et publication réseaux que Systeme.io n'a pas.
 
 ## 6. Workflow utilisateur (storytelling produit)
 
-### Jour 1 — Onboarding
-1. L'user se connecte (Google / email magic-link)
-2. Onboarding type Typeform de 10-15 minutes : niche, mission, audience cible, offres existantes, objectif de revenu mensuel, blocage principal, temps disponible par semaine
-3. Tipote génère **automatiquement** : un persona client, une « storytelling » de marque (axes narratifs), un plan d'action en 3 phases (Fondations, Croissance, Scaling) — sans durée fixe, chaque phase dure le temps nécessaire à atteindre ses jalons —, une pyramide d'offres si l'user n'en a pas, et 30+ tâches concrètes à cocher
+### Onboarding
+1. Connexion (Google ou email).
+2. Onboarding type Typeform : niche, mission, audience cible, offres existantes, objectif de revenu mensuel, blocage principal, temps disponible.
+3. Tipote génère automatiquement : un persona client, un storytelling de marque, un plan d'action en 3 phases (chaque phase dure le temps nécessaire à ses jalons), une pyramide d'offres si l'user n'en a pas, et des tâches concrètes.
 
-### Jour 1 (suite) — Première création
-1. L'user va sur `/create`
-2. Choix : Post réseau social / Email / Article / Script vidéo / Page de capture / Quiz / Popquiz vidéo / Stratégie de contenu
-3. Tipote pose 3-5 questions ciblées (objectif, plateforme, ton, offre liée si pertinent)
-4. Génération en 20-30 secondes via streaming
-5. L'user édite inline, ajuste avec le coach IA si besoin
-6. Publication directe (LinkedIn / FB / IG / Threads / X / TikTok / Pinterest) — un clic ou programmé
+### Première création
+1. Direction `/create`.
+2. Choix : post réseau social, email, article, script vidéo, offre, page, quiz, sondage, popquiz, stratégie de contenu.
+3. Tipote pose quelques questions ciblées.
+4. Génération en quelques secondes (streaming).
+5. Édition inline, ajustement avec le coach IA.
+6. Publication directe (LinkedIn, FB, IG, Threads, X, TikTok, Pinterest), un clic ou programmé.
 
-### Semaine 2 — Capture de leads
-1. L'user crée un quiz lead-magnet (ou un popquiz vidéo)
-2. Le partage : URL courte, embed iframe pour son site, partage social
-3. À chaque lead capturé : tag automatique dans Systeme.io, déclenchement de campagnes email
-4. Tipote affiche les 10 premiers leads sur le plan free, les suivants débloqués en payant
+### Capture de leads
+1. Création d'un quiz lead-magnet, d'un sondage ou d'un popquiz vidéo.
+2. Partage : URL courte, embed iframe, partage social, ou domaine personnalisé sur les plans payants.
+3. À chaque lead capturé : tag automatique dans Systeme.io, déclenchement de campagnes.
+4. Sur le plan Free, les premiers leads sont visibles, les suivants restent capturés mais floutés jusqu'à l'upgrade.
 
-### Mois 2 — Automatisation
-1. L'user active les auto-commentaires (un commentaire IA personnalisé sur chaque post LinkedIn de leurs prospects)
-2. L'user configure comment-to-DM ou comment-to-email (« commente "MOI" sous ce post pour recevoir le guide »)
-3. Tipote détecte les commentaires, envoie un DM ou email avec le bon contenu, tagge le contact dans Systeme.io
+### Automatisation
+1. Auto-commentaires : un commentaire IA personnalisé sur les posts de prospects.
+2. Comment-to-DM ou comment-to-email : commente un mot-clé pour recevoir un contenu.
+3. Tipote détecte les commentaires, envoie un DM ou email, tagge le contact dans Systeme.io.
 
-### Mois 3 — Pilotage
-1. L'user regarde l'analytics : quels posts ont performé, taux de conversion par offre, comparaison période
-2. Coach IA répond aux questions stratégiques contextuellement
-3. Quand le profil/diag change, bandeau « Tes infos ont changé » → bouton « Recalculer ma stratégie »
-4. La stratégie évolue avec le business
+### Pilotage
+1. Analytics : quels posts ont performé, conversion par offre, CA réel synchronisé.
+2. Coach IA qui connaît tout ton business et tes chiffres.
+3. Quand le profil change, bandeau puis bouton "Recalculer ma stratégie".
 
 ## 7. Catalogue de fonctionnalités (organisé par bénéfice)
 
 ### 7.1. Stratégie
-- **Plan 90 jours** auto-généré, en 3 phases (Fondations → Croissance → Scale)
-- **Persona client** détaillé avec douleurs / désirs / canaux
-- **Storytelling de marque** : axes narratifs, message clé, mission
-- **Pyramide d'offres** générée par IA (lead magnet → low ticket → middle ticket → high ticket) ou import des offres existantes
-- **Tâches actionnables** synchronisées avec le calendrier
-- **Recalcul live** quand les infos profil ou stats évoluent
+- Plan d'action auto-généré en 3 phases (Fondations, Croissance, Scaling).
+- Persona client détaillé (douleurs, désirs, canaux).
+- Storytelling de marque (axes narratifs, message clé, mission).
+- Pyramide d'offres générée par IA ou import des offres existantes.
+- Tâches actionnables synchronisées avec la progression.
+- Recalcul live quand les infos profil ou les stats évoluent.
 
 ### 7.2. Génération de contenus
-- **Posts réseaux sociaux** (LinkedIn, FB, IG, Threads, X, TikTok, Pinterest) — adaptés au format de chaque plateforme
-- **Emails marketing** (séquences d'onboarding, newsletters, promos)
-- **Articles de blog** (longs, structurés, SEO-aware)
-- **Scripts vidéo** (TikTok, Reels, YouTube short)
-- **Offres** (page produit, promesse, deliverables, tarification)
-- **Pages** (capture, vente, vitrine, link-in-bio) via constructeur visuel
-- **Quiz lead-magnet** (avec capture, résultats personnalisés, tags Systeme.io)
-- **Popquiz vidéo** (vidéo + quiz incrustés à des timestamps précis, embeddable)
-- **Stratégie éditoriale** (calendrier 7/14/30 jours)
+- Posts réseaux sociaux adaptés au format de chaque plateforme.
+- Emails marketing (séquences, newsletters, promos).
+- Articles de blog (longs, structurés).
+- Scripts vidéo (TikTok, Reels, YouTube short).
+- Offres (page produit, promesse, deliverables, tarification).
+- Pages (capture, vente, vitrine, link-in-bio) via constructeur visuel.
+- Quiz lead-magnet, quiz à score et sondages.
+- Popquiz vidéo (vidéo avec quiz incrustés à des timestamps).
+- Stratégie éditoriale (calendrier).
 
-### 7.3. Publication & Automatisations
-- **Publication directe** sur 7 réseaux (LinkedIn, FB, IG, Threads, X, TikTok, Pinterest) via OAuth officiel
-- **Programmation** sur le calendrier éditorial
-- **Auto-commentaires** (commentaire IA personnalisé sur les posts de prospects)
-- **Comment-to-DM** : déclencheur sur un mot-clé en commentaire → envoi DM
-- **Comment-to-email** : idem mais email via Systeme.io
+### 7.3. Publication et automatisations
+- Publication directe sur 7 réseaux via OAuth officiel.
+- Programmation sur le calendrier éditorial.
+- Auto-commentaires (commentaire IA personnalisé sur les posts de prospects).
+- Comment-to-DM et comment-to-email.
 
-### 7.4. Captation & relation client
-- **Quiz** : ultra simple à créer, capture email + tags, viralité (étape de partage), résultats personnalisés avec CTA
-- **Popquiz vidéo** (Mai 2026) : vidéo YouTube/Vimeo/upload (jusqu'à 2 GB) avec quiz incrustés à des timestamps précis. Embed iframe pour intégrer sur n'importe quel site
-- **Pages de capture** drag-and-drop avec branding cohérent
-- **Tableau leads** centralisé avec tags, source, statut. **KPI cards cliquables** (Total / Exportés / Non exportés / Ce mois) qui filtrent la liste en un clic (juin 2026)
-- **Module clients** : suivi des prospects qui ont acheté, notes, statuts, processus d'accompagnement
+### 7.4. Captation et relation client
+- Quiz : simple à créer, capture email plus tags, étape de partage pour la viralité, résultats personnalisés avec CTA. Thèmes prêts à l'emploi, fonds riches (dégradé ou image), écran d'accueil en cover, transitions directionnelles, raccourcis clavier, swipe mobile, formes de boutons, carte résultat partageable avec confettis, fermeture du quiz avec redirection.
+- Sondages (NPS, feedback) avec analyse des réponses.
+- Popquiz vidéo (YouTube, Vimeo ou upload), embeddable en iframe.
+- Pages de capture drag-and-drop avec branding cohérent.
+- Tableau leads centralisé avec tags, source, statut, et KPI cards cliquables qui filtrent la liste.
+- Module clients : suivi des prospects qui ont acheté, notes, statuts, accompagnements avec suivi financier.
 
-### 7.5. Intégration Systeme.io (pivot stratégique)
-- **Webhooks temps réel** : ventes, annulations, contacts ajoutés
-- **Auto-tagging** des leads à la conversion (par quiz / page / popquiz)
-- **Auto-inscription** aux formations / communautés Systeme.io
-- **Enrichissement contacts** : données enrichies poussées dans Systeme.io
-- **Whitelabel disponible** dans la marketplace Systeme.io
-- **Clé API chiffrée at rest** (AES-256-GCM, DEK per-user) — sécurité bancaire
+### 7.5. Intégration Systeme.io
+- Webhooks temps réel (ventes, annulations, contacts ajoutés).
+- Auto-tagging des leads à la conversion.
+- Auto-inscription aux formations et communautés Systeme.io.
+- Enrichissement des contacts.
+- Whitelabel disponible dans la marketplace Systeme.io.
+- Clé API chiffrée at rest (AES-256-GCM, DEK par utilisateur).
 
-### 7.6. Pilotage & insight
-- **Analytics** par contenu, plateforme, période, offre — alimentés par les vraies ventes synchronisées (cf. 7.7). Stats quiz recalculées en direct depuis les événements (vues + complétions), avec garde-fou taux de capture ≤ 100 % (mis à jour juin 2026)
-- **Diagnostic IA** : analyse statistique avec recommandations (Basic+)
-- **Coach IA contextuel** (Pro/Elite) : pose des questions, le coach connaît TOUT ton business — y compris ton CA réel du mois, ton avancée vers ton objectif, le nombre d'abonnés perdus, etc. Conseils calibrés sur les chiffres, pas génériques
-- **Pépites** : insights traduits automatiquement en 5 langues, multi-format
-- **Notifications temps réel** — incluant alertes business (50% / 100% objectif mensuel atteint, abonnés perdus à recontacter)
-- **Email de mi-parcours** automatique quand on est en retard sur l'objectif (≤10 jours restants et <50% atteint)
+### 7.6. Pilotage et insight
+- Analytics par contenu, plateforme, période, offre, alimentés par les vraies ventes synchronisées.
+- Diagnostic IA avec recommandations.
+- Coach IA contextuel (Pro et Elite) qui connaît ton CA réel, ta progression, tes abonnés perdus.
+- Pépites : insights traduits automatiquement, multi-format.
+- Notifications temps réel, dont alertes business (objectif atteint, mi-parcours, abonnés à recontacter).
 
-### 7.7. Compta + Suivi business (Mai 2026)
-- **Onglet Compta** dans Paramètres avec configuration du statut (particulier / auto-entrepreneur / SASU avec IS et TVA), incluant SIREN, régime TVA, ACRE, versement libératoire, TVA intra
-- **Connexions Stripe / PayPal / Mollie** avec une Restricted Key (Stripe) ou OAuth client_credentials (PayPal) ou clé API (Mollie). **Sync 24 mois d'historique** au premier branchement + sync delta quotidien
-- **Saisies manuelles** pour les paiements hors PSP (virement, espèces, chèque)
-- **Catégorisation automatique** ventes directes vs commissions d'affiliation (heuristique sur description + override manuel)
-- **Tableau de bord business** : CA mensuel/annuel, comparaison N vs N-1, MRR (revenus récurrents), abonnés actifs / nouveaux / perdus, taux de remboursement, top produits du mois, jauge franchise TVA pour les auto-entrepreneurs (vente / services BIC / services BNC / mixte)
-- **Jauge "objectif mensuel"** affichée sur le dashboard Aujourd'hui, sur la page Stratégie ET dans l'onglet Compta — 1 source unique partout
-- **Calendrier fiscal personnalisé** avec liens directs vers urssaf.fr et impots.gouv.fr
-- **Conversion EUR automatique** des transactions en USD/GBP/CHF/CAD via Frankfurter (open data BCE)
-- **Mise à jour annuelle automatique des seuils fiscaux** : un cron checke chaque jour service-public.fr / urssaf.fr — si les seuils ont changé, alerte email à l'admin Tipote pour validation manuelle
-- **Disclaimer permanent** : Tipote aide à anticiper, ne remplace ni un comptable ni les déclarations officielles
-- **Pour le moment dispo en France uniquement** ; pour les autres pays (Belgique, Suisse, Québec, Portugal, Espagne…), un message "bientôt disponible" + on les prévient dès l'ouverture
+### 7.7. Compta et suivi business
+- Onglet Compta avec configuration du statut selon le pays.
+- Pays couverts : France, Suisse, Belgique, Portugal, Espagne, Canada, États-Unis.
+- Connexions Stripe, PayPal, Mollie, avec sync de l'historique puis sync delta quotidien.
+- Saisies manuelles pour les paiements hors PSP.
+- Catégorisation automatique ventes directes vs commissions d'affiliation.
+- Tableau de bord business : CA mensuel et annuel, comparaison N vs N-1, revenus récurrents, abonnés actifs, nouveaux et perdus, taux de remboursement, top produits, jauge franchise TVA.
+- Jauge "objectif mensuel" affichée sur Aujourd'hui, sur Stratégie et dans Compta (une seule source de vérité).
+- Calendrier fiscal personnalisé avec liens vers les sites officiels.
+- Export FEC pour les sociétés françaises à l'IS.
+- Disclaimer permanent : Tipote aide à anticiper, ne remplace ni un comptable ni les déclarations.
 
-### 7.8. Lien d'affiliation Tiquiz / Tipote
-- **Footer "Cette vidéo vous est proposée via Tiquiz"** sur tous les popquiz publics (sauf si l'user a configuré un footer custom — paid plans)
-- **Footer "Ce quiz vous est proposé via Tiquiz"** sur les quiz publics free / sans footer custom
-- **Auto-tracking de la commission** via le paramètre `?sa=<id>` quand l'user a posé son ID affilié Systeme.io dans Settings → Connexions
-- **Embed iframe** des popquiz inclut aussi le footer (visible chez les hôtes externes — vraie portée Tiquiz)
+### 7.8. Domaines personnalisés (plans payants)
+- Connecte ton propre domaine (par exemple `quiz.mon-business.fr`).
+- Setup en quelques minutes : un enregistrement CNAME, vérification DNS automatique, certificat SSL émis sans action supplémentaire.
+- URLs propres sur ton domaine (`ma-marque.com/mon-quiz`), sans préfixe technique.
+- Une seule URL pour tous tes contenus : quiz, sondages, popquiz, pages.
+- Multi-marque natif : sur le plan Elite, chaque projet a ses propres domaines.
+- Les anciennes URLs continuent de fonctionner.
 
-### 7.8 bis. Dashboard du programme d'affiliation (`affiliate.tipote.com`)
-Espace dédié aux affiliés qui promeuvent Tiquiz / Tipote. Pensé pour qu'un affilié soit **autonome et opérationnel en quelques minutes**, sans rien rédiger lui-même.
-- **Vue d'ensemble** : lien d'affiliation, gains, progression.
-- **Promouvoir** : liens trackés **éditables** (l'affilié ajoute / modifie / supprime ses propres destinations ; le `?sa=` est ajouté automatiquement).
-- **Contenus** prêts à copier-coller : **emails**, **posts réseaux** (Instagram / LinkedIn / X), **articles**, **visuels** — tout est éditable et personnalisable par l'affilié (son lien et son prénom sont injectés automatiquement).
-- **Studio visuels IA intégré** : depuis chaque post, l'affilié génère en 1 clic un visuel pro. L'IA **lit le post**, choisit le bon angle, le bon format (texte, comparatif chiffré, avant/après) et l'image qui collent au contenu. Le visuel **s'accroche automatiquement au post** — l'affilié voit son contenu et ses visuels associés au même endroit.
-- **Essai gratuit** : 1 mois Tipote Elite offert pour tester l'outil et créer du contenu de promo authentique.
-- **Gestion 100 % autonome côté éditeur (Béné)** : un espace admin permet d'ajouter / éditer / publier articles, emails, posts et visuels à tout moment, sans dépendre du code. Les affiliés voient le contenu mis à jour automatiquement.
+### 7.9. Multi-projets (plan Elite)
+- Une instance Tipote par projet, marque ou sub-business.
+- Chaque projet a sa propre clé Systeme.io, son onboarding, ses contenus, ses domaines et son catalogue public.
+- Identité visuelle par projet (couleur d'accent, emoji).
+- Switch d'un clic depuis le sélecteur de projet.
+- Reset par session : à chaque nouvelle session navigateur, Tipote ramène sur le projet par défaut.
+- Suppression de projet en danger zone (confirmation par recopie du nom).
+- Un nouveau projet est un profil business neuf et vide, à re-onboarder.
 
-### 7.9. Sécurité & alertes connexions sociales
-- **Email immédiat** quand un compte social (LinkedIn / Facebook / IG / X / TikTok / Pinterest / Threads) se déconnecte (token révoqué, expiré, mot de passe changé)
-- **Email** quand un post programmé bascule en échec après 5 tentatives — avec aperçu du post et lien direct vers l'éditeur pour le reprogrammer
-- **Détection automatique** de "token mort" pendant la publication (détection 401/invalid_grant) — pas d'attente du cron quotidien
-- **Dédup 3 jours** par compte pour ne pas spammer en cas d'échecs en cascade
+### 7.10. Tipote Boost
+- Espace d'engagement (pod) : un utilisateur qui connecte LinkedIn peut rejoindre un pod, avec suggestions de commentaires par IA.
+- Extension Chrome Tipote Boost qui amplifie la portée des publications.
+- Réservé aux plans Pro, Elite et Beta.
 
-### 7.9 bis. Extension Chrome Tipote Boost (Juin 2026)
-- **Tipote Boost** : extension de navigateur Chrome qui amplifie la portée des publications sociales de l'user (auto-engagement intelligent, monitoring, signaux faibles). En cours de validation Chrome Web Store
-- **Plan-gated** : Pro / Elite / Beta uniquement. L'onglet Settings → Boost affiche le statut de l'extension (installée ou non), un lien direct vers le Chrome Web Store (`chromewebstore.google.com/detail/tipote-boost/gligkkmphgcpfghplnmknmkkgonolchg`), et les réseaux compatibles
-- **LinkedIn** disponible en premier, autres réseaux (X / Threads / Instagram) à venir
-- Plus de message « Extension non détectée » sans solution — le bouton « Installer l'extension » est désormais proposé dès qu'on ouvre Settings → Boost
+### 7.11. Sécurité et alertes
+- Email immédiat quand un compte social se déconnecte (token révoqué, expiré).
+- Email quand un post programmé bascule en échec, avec lien direct vers l'éditeur.
+- Détection automatique de token mort pendant la publication.
+- Dédup pour ne pas spammer en cas d'échecs en cascade.
 
-### 7.10. Multi-projets (Elite) — (mis à jour juin 2026)
-- Une instance Tipote par projet/marque/sub-business
-- Chaque projet a sa propre clé Systeme.io, son onboarding, ses contenus
-- **Identité visuelle par projet** : couleur d'accent + emoji icône (pill colorée dans le header, bloc « Projet actif » dans la sidebar), option « utiliser le logo de mon branding » par projet
-- **Switch d'un clic** depuis le `ProjectSwitcher` (sidebar). Le cookie `tipote_active_project` mémorise le projet courant côté navigateur
-- **Reset par session** : à chaque nouvelle session navigateur, Tipote ramène automatiquement l'user sur son projet « par défaut » (flag `is_default`). L'user ferme son navigateur, le rouvre, atterrit sur son projet principal — pas sur un sous-projet ouvert la veille
-- **Reset par projet** sans toucher aux autres (refusé si l'user n'a qu'un seul projet — utiliser le reset compte)
-- **Suppression projet — danger zone** : confirmation par recopie du nom du projet + liste explicite de ce qui sera détruit (contenus, leads, quiz, popquiz, pages, clients, domaines)
-- **Sémantique d'un nouveau projet** : c'est un profil business neuf, VIDE, à re-onboarder de zéro. Tipote redirige automatiquement vers `/onboarding` à la création
-- **Chaque projet a aussi ses propres domaines personnalisés et son propre catalogue de contenus publics** — isolation totale, comme si c'étaient des comptes séparés (voir 7.11)
+### 7.12. Dashboard d'affiliation (affiliate.tipote.com)
+- Espace dédié aux affiliés qui promeuvent Tiquiz et Tipote, opérationnel en quelques minutes.
+- Vue d'ensemble : lien d'affiliation, gains, progression.
+- Promouvoir : liens trackés éditables (le paramètre de suivi est ajouté automatiquement).
+- Contenus prêts à copier-coller : emails, posts réseaux, articles, visuels, tous personnalisables (lien et prénom injectés).
+- Studio visuels IA : depuis chaque post, l'affilié génère un visuel pro qui s'accroche au post.
+- Essai gratuit : accès Tipote Elite offert pour créer du contenu de promo authentique.
 
-### 7.11. Domaines personnalisés (Pro+)
-- **Connecte ton propre domaine** à Tipote : `pages.ma-marque.com`, `quiz.mon-business.fr`, ou n'importe quel sous-domaine que tu contrôles
-- **Setup en 2 minutes** : tu poses un seul enregistrement CNAME chez ton registrar (Cloudflare, OVH, GoDaddy, Namecheap, Gandi… détecté automatiquement avec instructions sur-mesure), Tipote vérifie le DNS dans la foulée et émet ton certificat SSL Let's Encrypt sans qu'aucune action de plus soit nécessaire
-- **URLs propres** sur ton domaine : `ma-marque.com/mon-quiz` au lieu de `app.tipote.com/q/mon-quiz` — sans préfixe technique, sans paraître "hébergé chez Tipote"
-- **Une seule URL, tous tes contenus** : quiz, sondages, popquiz, pages de capture, pages de vente, link in bio — tout est servi depuis ton domaine. L'éditeur de chaque contenu te laisse choisir entre tes domaines via un menu déroulant (le custom est sélectionné par défaut puisque tu as payé pour ça)
-- **Sécurité par défaut** : un autre créateur ne peut pas réclamer un domaine déjà connecté chez toi. Et même si quelqu'un connaît l'ID d'un de tes contenus, il ne peut pas l'afficher via son propre domaine — Tipote vérifie systématiquement que le contenu appartient bien au propriétaire du domaine
-- **Multi-marque natif** : si tu as 2 projets (Elite), chacun peut avoir SES propres domaines, indépendants. Le projet A ne voit pas les domaines du projet B, et vice-versa
-- **Backwards-compat** : les URLs existantes (`app.tipote.com/q/...`, `/p/...`, `/pq/...`) continuent de fonctionner. Personne ne perd l'accès à un lien déjà partagé
+## 8. Plans et tarification
 
-## 8. Plans & tarification
+### Free, 0€
+- Tous les modules accessibles.
+- 25 crédits IA en one-shot (pas de renouvellement).
+- 1 connexion sociale.
+- 1 quiz, 1 sondage, 1 page, 1 popquiz par projet.
+- Quota mensuel de leads visibles (les suivants restent capturés mais floutés jusqu'à l'upgrade).
+- Idéal pour tester.
 
-### Free — 0€
-- Tous les modules accessibles
-- 25 crédits IA en one-shot (pas de renouvellement)
-- 1 connexion sociale max
-- 1 quiz / 1 sondage / 1 page / 1 popquiz max
-- 10 leads visibles par mois (les suivants restent capturés mais en flou jusqu'à upgrade)
-- **Idéal pour** : tester, voir si l'outil correspond
+### Basic, 19€/mois ou 190€/an
+- Tout le Free, plus : 40 crédits IA/mois, 2 connexions sociales, auto-commentaires, analyse statistique IA, enrichissement persona IA, analyse concurrentielle IA, achat de packs de crédits.
+- Idéal pour un solo qui veut publier régulièrement et automatiser.
 
-### Basic — 19€/mois ou 190€/an
-- Tout le Free, plus :
-- 40 crédits IA / mois renouvelés
-- 2 connexions sociales
-- Auto-commentaires activés
-- Analyse statistique IA
-- Enrichissement persona IA
-- Analyse concurrentielle IA
-- Achat de packs de crédits supplémentaires
-- **Idéal pour** : un solo qui veut publier régulièrement et automatiser
+### Pro, 49€/mois ou 490€/an
+- Tout le Basic, plus : 150 crédits IA/mois, 4 connexions sociales, coach IA illimité.
+- Idéal pour un coach ou consultant en croissance.
 
-### Pro — 49€/mois ou 490€/an
-- Tout le Basic, plus :
-- 150 crédits IA / mois
-- 4 connexions sociales
-- Coach IA illimité
-- **Idéal pour** : un coach / consultant en croissance, avec une stratégie claire à exécuter
-
-### Elite — 99€/mois ou 990€/an
-- Tout le Pro, plus :
-- 500 crédits IA / mois
-- Connexions sociales illimitées
-- **Multi-projets** (gérer plusieurs marques avec une seule connexion)
-- **Idéal pour** : un solo qui pivote / a 2-3 activités, ou une petite équipe
+### Elite, 99€/mois ou 990€/an
+- Tout le Pro, plus : 500 crédits IA/mois, connexions sociales illimitées, multi-projets.
+- Idéal pour un solo qui a 2 ou 3 activités, ou une petite équipe.
 
 ### Packs de crédits supplémentaires (sans expiration)
-- Starter : 25 crédits — 3€
-- Standard : 100 crédits — 10€
-- Pro : 250 crédits — 22€
+- Starter : 25 crédits, 3€.
+- Standard : 100 crédits, 10€.
+- Pro : 250 crédits, 22€.
 
 ### Économie de crédits (transparence)
-- 1 crédit ≈ 0.01€ de coûts IA réels
-- Génération d'un post : 0.5 à 2 crédits
-- Génération d'un article : 3 à 5 crédits
-- Auto-commentaire : 0.25 crédit
+- 1 crédit vaut environ 0,01€ de coûts IA réels.
+- Génération d'un post : 0,5 à 2 crédits.
+- Génération d'un article : 3 à 5 crédits.
+- Auto-commentaire : 0,25 crédit.
+- Modification de page via chat IA : 0,5 crédit.
 
-## 9. Voix de marque & ton
+## 9. Voix de marque et ton
 
-### Vocabulaire Tipote
-- **Mots-clés à utiliser** : pote, mémoire, ton, stratégie, vraiment, pas en l'air, concrètement, en live, en un clic
-- **Mots à BANNIR** : disruptif, révolutionnaire, leader, solution, expertise (trop corporate), best-in-class, scaling, growth-hacking
-- **Tutoiement obligatoire** sur la copy grand public (pas vouvoiement). Le tutoiement EST la marque
-- **Métaphores** : Tipote comme un pote qui te connaît, comme un copilote, comme un co-fondateur silencieux. Pas comme un outil, pas comme un assistant
+### Vocabulaire
+- Mots à utiliser : pote, mémoire, ton, stratégie, vraiment, concrètement, en live, en un clic.
+- Mots à bannir : disruptif, révolutionnaire, leader, solution, expertise (trop corporate), best-in-class, scaling, growth-hacking.
+- Tutoiement obligatoire sur la copy grand public. Le tutoiement est la marque.
+- Métaphores : Tipote comme un pote qui te connaît, un copilote, un co-fondateur silencieux. Pas comme un outil, pas comme un assistant.
 
 ### Ton
-- **Direct, sans flagornerie** : pas de « parce que vous êtes incroyable », pas de promesse magique
-- **Concret** : toujours un exemple, un chiffre, un cas d'usage
-- **Empathique mais lucide** : on comprend la galère du solopreneur, on n'enrobe pas
-- **Drôle quand c'est juste** : un peu d'humour bienvenue, mais jamais forcé. Pas de meme overdose
-- **Pédagogue** : on explique le pourquoi, pas juste le quoi
+- Direct, sans flagornerie.
+- Concret : toujours un exemple, un chiffre, un cas d'usage.
+- Empathique mais lucide.
+- Drôle quand c'est juste, jamais forcé.
+- Pédagogue : on explique le pourquoi.
 
 ### Exemples de phrases dans la voix
-- ✅ « Ton plan 90 jours est prêt en 5 minutes. Tes posts du mois suivent. Et oui, c'est vraiment toi qu'on lit. »
-- ✅ « Tu n'as pas le temps de lire un livre de marketing. Tipote l'a lu pour toi et applique ce qui marche pour TON business. »
-- ❌ « Notre solution révolutionnaire utilise les dernières innovations en IA pour transformer votre business. »
-- ❌ « Découvrez la puissance de l'intelligence artificielle pour votre marketing. »
+- "Ton plan est prêt en quelques minutes. Tes posts du mois suivent. Et oui, c'est vraiment toi qu'on lit."
+- "Tu n'as pas le temps de lire un livre de marketing. Tipote l'a lu pour toi et applique ce qui marche pour TON business."
+- À éviter : "Notre solution révolutionnaire utilise les dernières innovations en IA pour transformer votre business."
+- À éviter : "Découvrez la puissance de l'intelligence artificielle pour votre marketing."
 
-## 10. Preuves & garanties
+## 10. Preuves et garanties
 
 ### Sécurité
-- **Auth Supabase PKCE** avec cookies httpOnly — standard bancaire
-- **Chiffrement AES-256-GCM par-user** pour les leads PII (email, téléphone, nom)
-- **Clé API Systeme.io chiffrée at rest** (Mai 2026) — même un dump de DB ne révèle pas les clés
-- **RLS Postgres** sur toutes les tables : isolation par user garantie au niveau DB
+- Auth Supabase PKCE avec cookies httpOnly.
+- Chiffrement AES-256-GCM par utilisateur pour les leads (email, téléphone, nom).
+- Clé API Systeme.io chiffrée at rest.
+- RLS Postgres sur toutes les tables : isolation par user au niveau DB.
 
 ### Fiabilité produit
-- 5 langues UI (FR / EN / ES / IT / AR avec support RTL)
-- 8 variantes pour les quiz publics (FR / FR-vous / EN / ES / IT / DE / PT / AR)
-- Tests de non-régression documentés (`docs/INVARIANTS.md`)
-- **CI GitHub Actions** sur chaque push : typecheck + lint des scripts (juin 2026)
-- **Tests E2E Playwright** quotidiens sur les pages publiques (/q/, /p/, /pq/) — headers iframe, contenu visible, OG meta, tracking 200
-- **Détecteur de migrations manquantes** en prod (`npm run check:schema`) — évite les pannes type « la colonne existe en code mais pas en DB »
+- 7 langues d'interface (FR, EN, ES, IT, AR avec RTL, PT, PT-BR).
+- Le contenu des quiz peut être généré dans un large catalogue de langues, avec plusieurs variantes de rendu public.
+- Tests de non-régression documentés et tests E2E sur les pages publiques.
+- Détecteur de migrations manquantes en prod.
 
 ### Service client
-- Support FR par chatbot IA + tickets
-- Aide centralisée à `app.tipote.com/support`
-- Mises à jour produit mensuelles documentées
+- Support FR par chatbot IA et tickets.
+- Aide centralisée à app.tipote.com/support.
 
-## 11. Objections fréquentes + réponses
+## 11. Objections fréquentes et réponses
 
 | Objection | Réponse type |
 |---|---|
-| « Encore un outil IA, j'en ai marre » | Tipote n'est pas un IA-de-plus. C'est UN outil avec UNE mémoire. Tu donnes ton contexte une fois, pas 50. |
-| « C'est cher 19€/mois, je peux faire pareil avec ChatGPT à 20€ » | ChatGPT te demande ton contexte à chaque session. Tipote l'a en mémoire. Et il PUBLIE pour toi sur 7 réseaux. ChatGPT ne le fait pas. |
-| « Je vais perdre ma voix, ça va parler comme un robot » | La voix Tipote part de TON storytelling renseigné à l'onboarding. Tu peux modifier chaque output inline. Et chaque génération s'imprègne plus de ton style avec l'usage. |
-| « Je suis pas tech, je vais pas y arriver » | Onboarding guidé en 15 min. Pas de prompts à écrire. Pas d'API à configurer. Le SAV est en français. |
-| « Mes données vont être utilisées pour entraîner l'IA » | Non. Les données utilisateurs ne sont jamais envoyées en clair à Anthropic — uniquement des prompts contextualisés, sans PII. Les leads sont chiffrés. |
-| « Et si vous fermez ? » | Export complet de toutes tes données possible à tout moment (CSV, JSON). Tu emportes tes leads, tes contenus, ta stratégie. Aucun lock-in. |
-| « Pourquoi pas Make / Zapier ? » | Make/Zapier connectent des trucs entre eux. Tipote crée le contenu en plus. Tu n'as pas besoin de connecter LinkedIn à un outil de génération à un planner — c'est tout dans Tipote. |
+| "Encore un outil IA, j'en ai marre" | Tipote n'est pas un IA-de-plus. C'est un outil avec une mémoire. Tu donnes ton contexte une fois, pas cinquante. |
+| "C'est cher 19€/mois, je fais pareil avec ChatGPT" | ChatGPT te redemande ton contexte à chaque session. Tipote l'a en mémoire. Et il publie pour toi sur 7 réseaux. |
+| "Je vais perdre ma voix, ça va parler comme un robot" | La voix part de TON storytelling renseigné à l'onboarding. Tu modifies chaque output inline. |
+| "Je suis pas tech, je vais pas y arriver" | Onboarding guidé. Pas de prompts à écrire, pas d'API à configurer. Le SAV est en français. |
+| "Mes données vont entraîner l'IA" | Non. Les données ne sont jamais envoyées en clair, uniquement des prompts contextualisés sans PII. Les leads sont chiffrés. |
+| "Et si vous fermez ?" | Export complet de tes données à tout moment (CSV). Tu emportes tes leads, tes contenus, ta stratégie. Aucun lock-in. |
+| "Pourquoi pas Make ou Zapier ?" | Make et Zapier connectent des trucs. Tipote crée le contenu en plus. Tout est dans Tipote. |
 
-## 12. CTAs (call-to-action) à utiliser
+## 12. CTAs
 
-### CTAs primaires (haut d'entonnoir)
-- « Essayer Tipote gratuitement » (vers `/signup`)
-- « Tester l'onboarding » (15 min, gratuit, sans CB)
-- « Voir un exemple de stratégie générée »
+### Primaires (haut d'entonnoir)
+- "Essayer Tipote gratuitement"
+- "Tester l'onboarding" (gratuit, sans CB)
+- "Voir un exemple de stratégie générée"
 
-### CTAs secondaires (mi-entonnoir)
-- « Découvrir comment Tipote publie sur LinkedIn pour toi »
-- « Voir les 7 modules en 90 secondes » (vidéo démo)
-- « Regarder un quiz lead-magnet en action »
+### Secondaires (mi-entonnoir)
+- "Découvrir comment Tipote publie sur LinkedIn pour toi"
+- "Regarder un quiz lead-magnet en action"
 
-### CTAs bas d'entonnoir
-- « Démarrer mon plan 90 jours » (post-onboarding)
-- « Connecter mes réseaux sociaux »
-- « Activer mes automatisations »
+### Bas d'entonnoir
+- "Démarrer mon plan d'action"
+- "Connecter mes réseaux sociaux"
+- "Activer mes automatisations"
 
-### CTAs upsell
-- « Débloquer le coach IA » (vers Pro)
-- « Activer le multi-projet » (vers Elite)
-- « Acheter 100 crédits »
+### Upsell
+- "Débloquer le coach IA" (vers Pro)
+- "Activer le multi-projet" (vers Elite)
+- "Acheter 100 crédits"
 
 ## 13. Données chiffrées à mentionner
 
-- 51 % des entrepreneurs n'ont pas fait leur première vente
-- 46 % passent trop de temps sur la création de contenu
-- 52 % trouvent l'IA trop générique
-- 7 réseaux sociaux supportés en publication directe
-- 5 langues UI
-- 8 variantes pour les quiz publics
-- Plan 90 jours en 3 phases
-- Onboarding en ~15 min
-- Génération d'un post en 20-30 secondes
-- Plan free : 1 quiz / 1 sondage / 1 page / 1 popquiz / 25 crédits one-shot
+- 51% des entrepreneurs n'ont pas fait leur première vente.
+- 46% passent trop de temps sur la création de contenu.
+- 52% trouvent l'IA trop générique.
+- 7 réseaux sociaux supportés en publication directe.
+- 7 langues d'interface.
+- Plan d'action en 3 phases.
+- Module Compta couvrant 7 pays.
+- Plan Free : 1 quiz, 1 sondage, 1 page, 1 popquiz, 25 crédits one-shot.
 
-## 14. Slogans / accroches déjà utilisées (réutilisables)
+## 14. Slogans et accroches (réutilisables)
 
-- « Le pote de business des entrepreneurs »
-- « L'IA qui se souvient de ton business »
-- « Une stratégie qui ne change pas de cap chaque semaine »
-- « Tu n'as plus besoin de réfléchir à QUOI publier »
-- « Tu mets ton business dedans une fois, Tipote bosse pour toi tous les jours »
-- « De l'onboarding à la vente, sans changer d'outil »
+- "Le pote de business des entrepreneurs"
+- "L'IA qui se souvient de ton business"
+- "Une stratégie qui ne change pas de cap chaque semaine"
+- "Tu n'as plus besoin de réfléchir à QUOI publier"
+- "Tu mets ton business dedans une fois, Tipote bosse pour toi tous les jours"
+- "De l'onboarding à la vente, sans changer d'outil"
 
-## 15. Ce qu'il NE FAUT PAS faire dans la com
+## 15. Ce qu'il ne faut pas faire dans la com
 
-- ❌ Comparer frontalement à ChatGPT par nom (positionnement « complémentaire » plutôt qu'agressif)
-- ❌ Promettre des revenus garantis (« +10K/mois en 30 jours »)
-- ❌ Afficher des témoignages bidons / non vérifiables
-- ❌ Vendre Tipote comme « tous-en-un magique » — Tipote a des limites (pas de pub Meta/Google native, pas de SMS marketing, pas d'invoicing)
-- ❌ Vouvoyer le prospect dans la com B2C
-- ❌ Mettre en avant les crédits IA comme l'argument #1 — les crédits sont un mécanisme de pricing, pas une promesse
-- ❌ Utiliser des screenshots de l'app Tipote sans la dernière version (UI évolue vite)
+- Comparer frontalement à ChatGPT par nom (positionnement complémentaire plutôt qu'agressif).
+- Promettre des revenus garantis.
+- Afficher des témoignages non vérifiables.
+- Vendre Tipote comme un tout-en-un magique : Tipote a des limites (pas de pub Meta ou Google native, pas de SMS marketing, pas d'invoicing).
+- Vouvoyer le prospect dans la com B2C.
+- Mettre en avant les crédits IA comme argument numéro un : les crédits sont un mécanisme de pricing, pas une promesse.
+- Utiliser des captures d'écran de l'app qui ne reflètent pas la version actuelle.
+- Utiliser des em-dash ou en-dash dans le contenu produit : ils trahissent un texte généré par IA.
