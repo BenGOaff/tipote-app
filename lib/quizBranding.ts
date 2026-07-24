@@ -184,6 +184,48 @@ function sanitizeUrlOrNull(raw: unknown): string | null {
   return t.length > 0 && /^https?:\/\//i.test(t) ? t : null;
 }
 
+// ─── Modele de design PAR PROJET ──────────────────────────────────────
+// A la creation d'un quiz/sondage, on estampille la mise en forme preferee
+// du projet (colonnes business_profiles.default_*) sur la nouvelle ligne
+// quizzes. On ne renvoie QUE les champs explicitement choisis : un default_*
+// NULL/absent laisse la colonne du quiz a NULL -> rendu historique, quiz
+// existants intacts. Le fond ne propose que solid|gradient comme modele
+// (image = trop couplee a un asset precis).
+export type ProjectDesignDefaults = {
+  default_question_layout?: string | null;
+  default_intro_layout?: string | null;
+  default_button_shape?: string | null;
+  default_answer_layout?: string | null;
+  default_background_style?: string | null;
+  default_background_gradient?: string | null;
+};
+
+export function designDefaultsToQuizColumns(
+  bp: ProjectDesignDefaults | null | undefined,
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (!bp) return out;
+  const ql = bp.default_question_layout;
+  if (ql === "left" || ql === "split" || ql === "centered") out.question_layout = ql;
+  const il = bp.default_intro_layout;
+  if (il === "card" || il === "cover") out.intro_layout = il;
+  const bs = bp.default_button_shape;
+  if (bs === "pill" || bs === "rounded" || bs === "square") out.button_shape = bs;
+  const al = bp.default_answer_layout;
+  if (al === "auto" || al === "grid" || al === "list") out.answer_layout = al;
+  if (bp.default_background_style === "solid") {
+    out.background_style = "solid";
+  } else if (
+    bp.default_background_style === "gradient" &&
+    typeof bp.default_background_gradient === "string" &&
+    bp.default_background_gradient in QUIZ_GRADIENTS
+  ) {
+    out.background_style = "gradient";
+    out.background_gradient = bp.default_background_gradient;
+  }
+  return out;
+}
+
 // ─── Panneau media (disposition "colonnes" / split) ───────────────────
 // Le panneau decoratif du mode split peut afficher, par page : un motif
 // (dessine sur canvas a partir d'une couleur), une couleur pleine, un

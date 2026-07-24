@@ -6,6 +6,7 @@ import { ChevronDown, Pencil, Plus, Trash2, X, Check, Palette as PaletteIcon } f
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { generateBrandPalette } from "@/lib/brandPalette";
 import {
   Dialog,
   DialogContent,
@@ -150,6 +151,23 @@ export function UserPalettePicker({
     await Promise.resolve(onChangePalettes(next));
   }, [currentColor, selected, palettes, onChangePalettes, persistSelected, t]);
 
+  // Brique 2 : genere une palette harmonieuse a partir de la couleur
+  // courante (couleur de marque) et l'enregistre comme nouvelle palette.
+  // 100% deterministe cote client (lib/brandPalette), zero LLM.
+  const generateFromColor = useCallback(async () => {
+    if (palettes.length >= MAX_PALETTES) return;
+    const colors = generateBrandPalette(currentColor);
+    if (colors.length === 0) return;
+    const fresh: Palette = {
+      id: newPaletteId(),
+      name: t("generatedPaletteName"),
+      colors: colors.slice(0, MAX_COLORS),
+    };
+    const next = [...palettes, fresh];
+    await Promise.resolve(onChangePalettes(next));
+    persistSelected(fresh.id);
+  }, [currentColor, palettes, onChangePalettes, persistSelected, t]);
+
   return (
     <div ref={wrapRef} className={`relative ${className ?? ""}`}>
       <div className="flex items-center gap-1.5 flex-wrap">
@@ -195,6 +213,18 @@ export function UserPalettePicker({
           <Plus className="w-3 h-3" />
           {t("saveCurrent")}
         </button>
+
+        {palettes.length < MAX_PALETTES && (
+          <button
+            type="button"
+            onClick={generateFromColor}
+            className="text-[11px] text-primary hover:underline inline-flex items-center gap-1"
+            title={t("generateFromColorTitle")}
+          >
+            <PaletteIcon className="w-3 h-3" />
+            {t("generateFromColor")}
+          </button>
+        )}
 
         {palettes.length === 0 && (
           <button

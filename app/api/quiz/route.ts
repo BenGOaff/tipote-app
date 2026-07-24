@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { isPaidPlan, FREE_LIMITS } from "@/lib/planLimits";
+import { designDefaultsToQuizColumns } from "@/lib/quizBranding";
 
 export const dynamic = "force-dynamic";
 
@@ -70,10 +71,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "title is required" }, { status: 400 });
     }
 
-    // Fetch profile for privacy_url and address_form
+    // Fetch profile for privacy_url, address_form and the project's design
+    // model (default_* -> estampille sur le nouveau quiz a la creation).
     let bpQuery = supabase
       .from("business_profiles")
-      .select("privacy_url, address_form")
+      .select(
+        "privacy_url, address_form, default_question_layout, default_intro_layout, default_button_shape, default_answer_layout, default_background_style, default_background_gradient",
+      )
       .eq("user_id", user.id);
     if (projectId) bpQuery = bpQuery.eq("project_id", projectId);
     const { data: bpProfile } = await bpQuery.maybeSingle();
@@ -136,6 +140,10 @@ export async function POST(req: NextRequest) {
       .insert({
         user_id: user.id,
         ...(projectId ? { project_id: projectId } : {}),
+        // Modele de design du projet : estampille la mise en forme preferee
+        // (disposition, forme boutons, fond...) sur ce nouveau quiz/sondage.
+        // Vide si le projet n'a rien defini -> colonnes NULL = rendu historique.
+        ...designDefaultsToQuizColumns(bpProfile as Record<string, unknown> | null),
         mode,
         title,
         introduction: body.introduction ?? null,
