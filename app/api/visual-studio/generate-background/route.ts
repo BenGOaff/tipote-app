@@ -18,12 +18,14 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 
 const IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL?.trim() || "gpt-image-1";
-// Qualité de génération. Par défaut "high" (visages nettement meilleurs,
-// retour Catherine). Surchargeable par env OPENAI_IMAGE_QUALITY pour dial
-// le rapport qualité/coût (low | medium | high | auto). Valeur inconnue -> high.
+// Qualité de génération. Défaut "medium" : "high" fait dépasser les ~100s de
+// timeout Cloudflare (erreur 524, aucune image). "medium" reste rapide ET
+// gpt-image-2 medium est deja bien meilleur que gpt-image-1. Surchargeable
+// via OPENAI_IMAGE_QUALITY (low | medium | high | auto) pour ceux qui ont une
+// infra sans ce plafond. Valeur inconnue -> medium.
 const IMAGE_QUALITY = ((): "low" | "medium" | "high" | "auto" => {
   const q = process.env.OPENAI_IMAGE_QUALITY?.trim().toLowerCase();
-  return q === "low" || q === "medium" || q === "high" || q === "auto" ? q : "high";
+  return q === "low" || q === "medium" || q === "high" || q === "auto" ? q : "medium";
 })();
 
 export async function POST(req: NextRequest) {
@@ -60,15 +62,22 @@ export async function POST(req: NextRequest) {
 
     const prompt = buildBackgroundPrompt({ intent, styleId, brandColors });
 
-    const res = await client.images.generate({
-      model: IMAGE_MODEL,
-      prompt,
-      size,
-      n: 1,
-      // gpt-image-1/2 : low | medium | high | auto. Défaut "high" (visages),
-      // surchargeable via OPENAI_IMAGE_QUALITY.
-      quality: IMAGE_QUALITY,
-    } as Parameters<typeof client.images.generate>[0]);
+    const res = await client.images.generate(
+      {
+        model: IMAGE_MODEL,
+        prompt,
+        size,
+        n: 1,
+        // gpt-image-1/2 : low | medium | high | auto. Défaut "medium",
+        // surchargeable via OPENAI_IMAGE_QUALITY.
+        quality: IMAGE_QUALITY,
+      } as Parameters<typeof client.images.generate>[0],
+      // Echec RAPIDE et PROPRE : on coupe a 90s (< ~100s Cloudflare) et on
+      // desactive les retries du SDK qui, en s'empilant, depassaient le
+      // plafond -> 524 opaque. Ici, un modele indisponible ou une generation
+      // trop lente renvoie une vraie erreur JSON exploitable, jamais un 524.
+      { timeout: 90_000, maxRetries: 0 },
+    );
 
     const b64 = res.data?.[0]?.b64_json;
     if (!b64) {
