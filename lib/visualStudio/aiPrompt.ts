@@ -24,7 +24,7 @@ export const AI_STYLES: Array<{ id: AiStyleId; labelKey: string; fragment: strin
     id: "photoPerson",
     labelKey: "aiStylePhotoPerson",
     fragment:
-      "authentic candid editorial photograph of a real person, composed OFF-CENTER (subject to one side or in the lower third) leaving a large clean uncluttered area for text; a natural REALISTIC face with correct human proportions, symmetric eyes, in sharp focus, glancing slightly away (not staring straight at the camera), genuine relaxed expression, natural skin texture and pores, soft flattering natural light, shallow depth of field, 50mm lens, documentary feel",
+      "authentic candid editorial photograph of a real person, composed OFF-CENTER (subject to one side or in the lower third) leaving a large clean uncluttered area for text; a natural REALISTIC face with correct human proportions, symmetric eyes, in sharp focus, with a warm genuine natural smile, relaxed and approachable, quietly confident, positive and engaged (never sad, gloomy or blank); natural skin texture and pores, soft flattering natural light, shallow depth of field, 50mm lens, uplifting editorial lifestyle feel",
   },
   {
     id: "landscape",
@@ -54,6 +54,76 @@ export const AI_STYLES: Array<{ id: AiStyleId; labelKey: string; fragment: strin
 
 const STYLE_BY_ID: Record<AiStyleId, (typeof AI_STYLES)[number]> =
   Object.fromEntries(AI_STYLES.map((s) => [s.id, s])) as Record<AiStyleId, (typeof AI_STYLES)[number]>;
+
+// ─── Variété par génération (anti "2 fois la même image") ─────────────
+// gpt-image-1 n'a PAS de paramètre seed : deux prompts identiques donnent
+// une image quasi identique. On injecte donc à CHAQUE appel une variante
+// de scène + une variante d'ambiance tirées de ces pools. L'espace combiné
+// (scène x ambiance) rend une répétition très improbable, même en cliquant
+// "nouvelle image" plusieurs fois. Chaque scène reste cohérente avec le
+// style choisi et garde une zone propre pour le texte.
+const SCENE_VARIETY: Record<AiStyleId, string[]> = {
+  photoPerson: [
+    "in a bright airy modern interior near a large window",
+    "outdoors in soft morning light with a gently blurred background",
+    "in a warm minimal studio with soft directional light",
+    "on a sunlit urban street, candid and in motion",
+    "at a wooden desk in a cozy well-lit workspace",
+    "against a soft neutral backdrop with a warm rim light",
+    "in a natural outdoor setting with greenery softly out of focus",
+    "relaxed in a warm-toned lifestyle scene",
+  ],
+  landscape: [
+    "a misty mountain range at dawn",
+    "a serene coastline with soft waves at golden hour",
+    "rolling green hills under a wide open sky",
+    "a calm forest lake with morning reflections",
+    "desert dunes at sunset with long soft shadows",
+    "an alpine valley wrapped in low clouds",
+    "a tranquil field with warm backlight",
+    "quiet cliffs meeting a calm sea",
+  ],
+  abstract: [
+    "flowing liquid-like ribbons of light",
+    "soft layered waves of colour",
+    "organic blurred bokeh orbs",
+    "gentle silk-like folds",
+    "smooth swirling mist",
+    "delicate faceted gradient planes",
+  ],
+  space: [
+    "a violet-blue nebula",
+    "a distant spiral galaxy",
+    "a soft starfield with a faint aurora glow",
+    "a serene cosmic horizon with a far-off planet",
+    "drifting clouds of stardust",
+    "a calm deep-space vista with subtle colour bands",
+  ],
+  minimal: [
+    "with a soft diagonal light sweep",
+    "with a gentle central glow",
+    "with a smooth corner-to-corner gradient",
+    "with layered pastel bands",
+    "with a subtle radial bloom",
+    "with a calm two-tone blend",
+  ],
+};
+
+const MOOD_VARIETY = [
+  "with a fresh, uplifting mood",
+  "with a calm, premium mood",
+  "with a warm, inviting mood",
+  "with a crisp, energetic mood",
+  "with a soft, elegant mood",
+];
+
+function pick<T>(pool: readonly T[], seed?: number): T {
+  const i =
+    seed != null
+      ? ((seed % pool.length) + pool.length) % pool.length
+      : Math.floor(Math.random() * pool.length);
+  return pool[i];
+}
 
 /** Police de TITRE (+ accent) adaptée au thème/style choisi. Demande Béné :
  *  personne→Montserrat, minimaliste→Roboto, spatial→Anton, etc. Stacks CSS
@@ -88,15 +158,26 @@ type BuildArgs = {
   styleId: AiStyleId;
   /** Couleurs de marque (hex) pour orienter l'ambiance colorimétrique. */
   brandColors?: string[];
+  /** Graine de variété (facultative) : force un tirage scène/ambiance
+   *  déterministe (tests, ou pour garantir 2 générations différentes en
+   *  passant un compteur). Absent → tirage aléatoire par appel. */
+  variationSeed?: number;
 };
 
 /**
- * Construit le prompt de génération du fond. On compose : style + intention +
- * ambiance couleurs de marque + zone propre pour le texte + directives qualité.
+ * Construit le prompt de génération du fond. On compose : style + variété de
+ * scène/ambiance (anti-doublon) + intention + ambiance couleurs de marque +
+ * zone propre pour le texte + directives qualité.
  */
-export function buildBackgroundPrompt({ intent, styleId, brandColors }: BuildArgs): string {
+export function buildBackgroundPrompt({ intent, styleId, brandColors, variationSeed }: BuildArgs): string {
   const style = STYLE_BY_ID[styleId] ?? STYLE_BY_ID.minimal;
   const subject = (intent ?? "").trim().slice(0, 400);
+
+  // Variété par appel : une scène + une ambiance. Deux graines dérivées d'une
+  // seule pour que scène et ambiance ne bougent pas en bloc.
+  const scene = pick(SCENE_VARIETY[styleId] ?? SCENE_VARIETY.minimal, variationSeed);
+  const mood = pick(MOOD_VARIETY, variationSeed != null ? variationSeed + 3 : undefined);
+  const varietyHint = `This specific image: ${scene}, ${mood}.`;
 
   const colors = (brandColors ?? [])
     .filter((c) => /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(c))
@@ -107,6 +188,7 @@ export function buildBackgroundPrompt({ intent, styleId, brandColors }: BuildArg
 
   return [
     `A high-quality background visual for a social media post. Style: ${style.fragment}.`,
+    varietyHint,
     subject ? `Theme/subject: ${subject}.` : "",
     colorHint,
     // Lisibilité : zone propre + contraste pour le texte superposé ensuite.
