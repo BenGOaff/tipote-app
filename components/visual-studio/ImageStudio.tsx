@@ -538,8 +538,19 @@ export function ImageStudio({
 
       const h = handleRef.current;
       if (copy?.ok && h) {
+        // Variété de mise en page (mode texte) : centré → éditorial → carte.
+        // L'ACCENT du titre varie AVEC la mise en page (retour Béné) : un seul
+        // point de couleur, jamais l'arc-en-ciel. centré = surligneur d'accent,
+        // éditorial = mot en gras + trait de marque, carte = surligneur ton
+        // primaire + 1 emoji sobre en tête. Moderne, chic, lisible.
+        const tIdx = (gen - 1) % 3;
+        const EMOJIS = ["✨", "🎯", "💡", "🔥", "👀", "🚀"];
         h.setLayerText("kicker", copy.kicker ? String(copy.kicker).toUpperCase() : "");
-        if (copy.headline) h.setLayerText("headline", String(copy.headline));
+        if (copy.headline) {
+          const base = String(copy.headline);
+          // 1 seul emoji, en tête, UNIQUEMENT sur la variante carte.
+          h.setLayerText("headline", tIdx === 2 ? `${EMOJIS[(gen - 1) % EMOJIS.length]} ${base}` : base);
+        }
         h.setLayerText("accent", copy.accent ? String(copy.accent) : "");
         if (copy.subtitle) h.setLayerText("subline", String(copy.subtitle));
         if (copy.cta) h.setLayerText("cta", String(copy.cta));
@@ -554,8 +565,8 @@ export function ImageStudio({
         } else {
           h.setTemplate("auto");
         }
-        // Variété de mise en page (mode texte) : centré → éditorial → carte.
-        h.setAlign((["center", "left", "card"] as const)[(gen - 1) % 3]);
+        h.setHeadlineTreatment((["marker", "bar", "markerPrimary"] as const)[tIdx]);
+        h.setAlign((["center", "left", "card"] as const)[tIdx]);
         h.setHeadingFont(STYLE_HEADING_FONT[chosenStyle]);
         h.highlightHeadline(copy.accent ? "" : copy.accentWord ? String(copy.accentWord) : "");
         anyOk = true;

@@ -96,6 +96,11 @@ export interface StudioCanvasHandle {
   /** Surligne un extrait du titre dans la couleur de marque (mot d'accent).
    *  `word` doit être un sous-texte exact du titre ; "" enlève le surlignage. */
   highlightHeadline: (word: string) => void;
+  /** Traitement d'accent du titre, varie selon la mise en page : "marker"
+   *  (surligneur couleur d'accent, texte foncé), "markerPrimary" (surligneur
+   *  couleur primaire, texte blanc), "bar" (mot en gras + filet d'accent sous
+   *  le titre). Défaut "marker". Le mot ciblé reste celui de highlightHeadline. */
+  setHeadlineTreatment: (kind: "marker" | "markerPrimary" | "bar") => void;
   /** Gabarit de rendu : "auto" = texte, "data" = barres comparatives,
    *  "beforeAfter" = deux panneaux avant/après, "carousel" = slide flat de marque. */
   setTemplate: (template: "auto" | "data" | "beforeAfter" | "carousel") => void;
@@ -379,6 +384,10 @@ export function StudioCanvas({
     // (color-blocks : pilule de rubrique, badge d'accent) reconstruits à chaque
     // mise en page.
     let headlineAccentWord = "";
+    // Traitement d'accent du titre, varie selon la mise en page (piloté par la
+    // génération). marker = surligneur accent ; markerPrimary = surligneur ton
+    // primaire (texte blanc) ; bar = mot en gras + filet d'accent sous le titre.
+    let headlineTreatment: "marker" | "markerPrimary" | "bar" = "marker";
     let decorObjs: FabricObject[] = [];
 
     // Surligne le mot d'accent DANS le titre via un BLOC couleur de marque +
@@ -397,11 +406,21 @@ export function StudioCanvas({
       if (w) {
         const idx = text.toLowerCase().indexOf(w.toLowerCase());
         if (idx >= 0) {
-          // Marqueur VIF (couleur d'accent de marque) + texte FONCÉ, comme un
-          // surligneur jaune/fluo sur les réfs (Claude/Insta). Plus fort que le
-          // bloc bleu+blanc d'avant.
-          const marker = brand.accentColor || brand.primaryColor;
-          o.setSelectionStyles({ textBackgroundColor: marker, fill: "#0f172a" }, idx, idx + w.length);
+          if (headlineTreatment === "bar") {
+            // "Trait" : le mot reste dans la couleur du titre (lisible sur
+            // n'importe quel fond), en graisse forte. La touche de couleur
+            // vient du filet d'accent dessiné sous le titre (cf. layout).
+            o.setSelectionStyles({ fontWeight: "900" }, idx, idx + w.length);
+          } else if (headlineTreatment === "markerPrimary") {
+            // Surligneur ton PRIMAIRE + texte blanc (variante couleur).
+            o.setSelectionStyles({ textBackgroundColor: brand.primaryColor, fill: "#ffffff" }, idx, idx + w.length);
+          } else {
+            // Surligneur VIF (couleur d'accent) + texte FONCÉ, façon marqueur.
+            // Un bloc plutôt qu'une couleur de texte : garantit le contraste sur
+            // n'importe quel fond (couleur de marque sur fond de marque = illisible).
+            const marker = brand.accentColor || brand.primaryColor;
+            o.setSelectionStyles({ textBackgroundColor: marker, fill: "#0f172a" }, idx, idx + w.length);
+          }
         }
       }
     };
@@ -729,6 +748,38 @@ export function StudioCanvas({
         (panel as { layerId?: string }).layerId = undefined;
         cc.add(panel);
         decorObjs.push(panel);
+      }
+
+      // Traitement "trait" : filet d'accent couleur de marque sous le titre,
+      // posé AU MILIEU de l'espace titre / bloc suivant (comme le filet du mode
+      // carte -> jamais de collision avec le sous-titre). Le mot reste lisible ;
+      // la couleur vient de ce filet. Ajouté aux decorObjs (nettoyé + reculé à
+      // chaque layout). Pas en mode carte (qui a déjà son propre filet).
+      if (headlineTreatment === "bar" && !isCard) {
+        const hIdxBar = blocks.findIndex((b) => b.id === "headline");
+        if (hIdxBar >= 0 && blocks[hIdxBar + 1]) {
+          const hbBar = blocks[hIdxBar].o;
+          const nextTopBar = blocks[hIdxBar + 1].o.top ?? 0;
+          const ruleYBar = ((hbBar.top ?? 0) + hbBar.getScaledHeight() + nextTopBar) / 2;
+          const ruleWBar = 0.14 * W;
+          const ruleHBar = Math.max(3, 0.013 * W);
+          const ruleXBar = leftAligned ? textLeft : W / 2 - ruleWBar / 2;
+          const barRule = new Rect({
+            left: ruleXBar,
+            top: ruleYBar - ruleHBar / 2,
+            width: ruleWBar,
+            height: ruleHBar,
+            rx: ruleHBar / 2,
+            ry: ruleHBar / 2,
+            fill: brand.accentColor || brand.primaryColor,
+            selectable: false,
+            evented: false,
+            objectCaching: false,
+          });
+          (barRule as { layerId?: string }).layerId = undefined;
+          cc.add(barRule);
+          decorObjs.push(barRule);
+        }
       }
 
       // Surlignage du mot d'accent dans le titre (bloc marque + texte blanc).
@@ -1405,6 +1456,10 @@ export function StudioCanvas({
       },
       setAlign(align) {
         curAlign = align === "left" || align === "card" ? align : "center";
+        layoutNow();
+      },
+      setHeadlineTreatment(kind) {
+        headlineTreatment = kind === "bar" || kind === "markerPrimary" ? kind : "marker";
         layoutNow();
       },
     };
