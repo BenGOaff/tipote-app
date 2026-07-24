@@ -36,6 +36,19 @@ import { generateResultCard } from "@/lib/resultCard";
 const HTML_TAG_RE = /<\/?[a-zA-Z][^>]*>/;
 const isHtml = (s: string | null | undefined) => !!s && HTML_TAG_RE.test(s);
 
+// Alignement horizontal choisi par le créateur DANS le titre (bouton aligner
+// de l'éditeur rich → style inline text-align). On le lit pour que l'intro /
+// la description / le CTA suivent EXACTEMENT le même bord que le titre. Sans
+// ça, un titre aligné à gauche dans une disposition "centrée" laissait l'intro
+// centrée (donc décalée à droite). null = aucun alignement explicite.
+const richTextAlign = (
+  html: string | null | undefined,
+): "left" | "right" | "center" | null => {
+  if (!html) return null;
+  const m = /text-align:\s*(left|right|center)/i.exec(html);
+  return m ? (m[1].toLowerCase() as "left" | "right" | "center") : null;
+};
+
 
 
 type QuizOption = { text: string; result_index: number; image_url?: string | null; points?: number | null; image_width?: number | null };
@@ -2302,6 +2315,19 @@ export default function PublicQuizClient({
       );
     }
 
+    // Le titre, l'intro et le CTA partagent le MÊME bord. On prend l'alignement
+    // que le créateur a posé sur son titre (gauche/droite/centre) ; à défaut on
+    // suit la disposition (centrée -> centre, gauche/split -> gauche). Corrige
+    // le cas "titre à gauche mais intro centrée décalée" des quiz en centré.
+    const introAlign: "left" | "right" | "center" =
+      richTextAlign(quiz.title) ?? (qLayout === "centered" ? "center" : "left");
+    const introTextClass =
+      introAlign === "center" ? "text-center" : introAlign === "right" ? "text-right" : "text-left";
+    const introBlockMargin =
+      introAlign === "center" ? "mx-auto" : introAlign === "right" ? "ml-auto" : "mr-auto";
+    const introJustify =
+      introAlign === "center" ? "justify-center" : introAlign === "right" ? "justify-end" : "justify-start";
+
     return (
       <div
         className={`public-surface min-h-screen flex flex-col${layoutOuterClass}`}
@@ -2313,9 +2339,9 @@ export default function PublicQuizClient({
         <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6">
         {/* Un seul conteneur pour titre + intro + bouton : memes bornes et
             meme alignement, donc l'intro est TOUJOURS calee sur le titre. */}
-        <div className={`max-w-2xl w-full space-y-8 ${layoutAlignText} py-16 sm:py-24`} style={readerSurfaceStyle}>
+        <div className={`max-w-2xl w-full space-y-8 ${introTextClass} py-16 sm:py-24`} style={readerSurfaceStyle}>
             {branding.logoUrl && (
-              <div className={`flex ${qLayout === "centered" ? "justify-center" : "justify-start"}`}>
+              <div className={`flex ${introJustify}`}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={branding.logoUrl}
@@ -2346,19 +2372,19 @@ export default function PublicQuizClient({
 
             {introRich ? (
               <div
-                className={`tipote-quiz-rich text-muted-foreground text-lg leading-relaxed ${qLayout === "centered" ? "max-w-xl mx-auto" : ""}`}
+                className={`tipote-quiz-rich text-muted-foreground text-lg leading-relaxed max-w-xl ${introBlockMargin} ${introTextClass}`}
                 dangerouslySetInnerHTML={{ __html: sanitizeRichText(quiz.introduction) }}
               />
             ) : (
               <>
                 {descLines.length > 0 && (
-                  <p className={`text-muted-foreground text-lg leading-relaxed whitespace-pre-line ${qLayout === "centered" ? "max-w-xl mx-auto" : ""}`}>
+                  <p className={`text-muted-foreground text-lg leading-relaxed whitespace-pre-line max-w-xl ${introBlockMargin} ${introTextClass}`}>
                     {descLines.join("\n")}
                   </p>
                 )}
 
                 {bulletLines.length > 0 && (
-                  <ul className={`space-y-3 text-left max-w-md ${qLayout === "centered" ? "mx-auto" : ""}`}>
+                  <ul className={`space-y-3 text-left max-w-md ${introBlockMargin}`}>
                     {bulletLines.map((line, i) => (
                       <li key={i} className="flex items-start gap-3">
                         <CheckCircle2 className="w-5 h-5 text-primary mt-0.5 shrink-0" />
