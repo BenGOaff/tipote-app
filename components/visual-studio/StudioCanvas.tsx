@@ -1495,10 +1495,17 @@ export function StudioCanvas({
             left: (displayWidth - img.width * scale) / 2,
             top: (displayHeight - img.height * scale) / 2,
           });
-          // N&B éditorial (réf TDAH) : grayscale + léger contraste sur les
-          // photos de personne → look premium et cohérent, texte plus lisible.
+          // N&B CINEMATOGRAPHIQUE (réf TDAH) : grayscale + fort contraste +
+          // léger lift de luminosité → look chic, premium et contrasté facon
+          // couverture de magazine (retour Bene : "cinematographique, pas
+          // dramatique triste ; gros contrastes, tres chic et pro"). Le lift
+          // evite les noirs bouches/ternes qui rendaient l'image maussade.
           if (bgTreatment === "mono") {
-            img.filters = [new filters.Grayscale(), new filters.Contrast({ contrast: 0.12 })];
+            img.filters = [
+              new filters.Grayscale(),
+              new filters.Contrast({ contrast: 0.3 }),
+              new filters.Brightness({ brightness: 0.05 }),
+            ];
             img.applyFilters();
           }
           place(img);

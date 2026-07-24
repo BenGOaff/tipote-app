@@ -18,6 +18,13 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 
 const IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL?.trim() || "gpt-image-1";
+// Qualité de génération. Par défaut "high" (visages nettement meilleurs,
+// retour Catherine). Surchargeable par env OPENAI_IMAGE_QUALITY pour dial
+// le rapport qualité/coût (low | medium | high | auto). Valeur inconnue -> high.
+const IMAGE_QUALITY = ((): "low" | "medium" | "high" | "auto" => {
+  const q = process.env.OPENAI_IMAGE_QUALITY?.trim().toLowerCase();
+  return q === "low" || q === "medium" || q === "high" || q === "auto" ? q : "high";
+})();
 
 export async function POST(req: NextRequest) {
   try {
@@ -58,8 +65,9 @@ export async function POST(req: NextRequest) {
       prompt,
       size,
       n: 1,
-      // gpt-image-1 : low | medium | high | auto. "medium" = bon rapport qualité/coût.
-      quality: "medium",
+      // gpt-image-1/2 : low | medium | high | auto. Défaut "high" (visages),
+      // surchargeable via OPENAI_IMAGE_QUALITY.
+      quality: IMAGE_QUALITY,
     } as Parameters<typeof client.images.generate>[0]);
 
     const b64 = res.data?.[0]?.b64_json;
