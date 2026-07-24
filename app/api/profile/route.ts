@@ -12,6 +12,7 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { upsertByProject } from "@/lib/projects/upsertByProject";
+import { QUIZ_GRADIENTS } from "@/lib/quizBranding";
 
 export const dynamic = "force-dynamic";
 
@@ -141,6 +142,22 @@ const UpdateSchema = z.object({
   // <title> sur les routes publiques servies via un custom domain
   // (Adeline, 19 mai 2026). Cf. migration 20260519_business_profiles_share_site_name.
   share_site_name: z.string().trim().max(60).nullable().optional(),
+
+  // Modele de design PAR PROJET (Brique 1) — estampille la mise en forme
+  // preferee sur les nouveaux quiz/sondages. Sets fermes ; le degrade est
+  // valide contre QUIZ_GRADIENTS (valeur inconnue -> null, jamais de 400).
+  default_question_layout: z.enum(["centered", "left", "split"]).nullable().optional(),
+  default_intro_layout: z.enum(["card", "cover"]).nullable().optional(),
+  default_button_shape: z.enum(["pill", "rounded", "square"]).nullable().optional(),
+  default_answer_layout: z.enum(["auto", "grid", "list"]).nullable().optional(),
+  default_background_style: z.enum(["solid", "gradient"]).nullable().optional(),
+  default_background_gradient: z
+    .string()
+    .trim()
+    .max(30)
+    .nullable()
+    .optional()
+    .transform((v) => (v == null ? v : v in QUIZ_GRADIENTS ? v : null)),
 
   custom_links: z.array(z.object({
     label: z.string().trim().max(100),
