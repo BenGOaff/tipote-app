@@ -36,6 +36,46 @@ export function useAutosave<T>({
   // Cf. rapport Adeline (16 mai 2026).
   const baselineSetRef = useRef(false);
 
+  // Refs "toujours à jour" pour pouvoir flusher la DERNIÈRE valeur au
+  // démontage (navigation interne Next.js) sans re-souscrire un effet à
+  // chaque frappe.
+  const stateRef = useRef(state);
+  stateRef.current = state;
+  const endpointRef = useRef(endpoint);
+  endpointRef.current = endpoint;
+  const enabledRef = useRef(enabled);
+  enabledRef.current = enabled;
+
+  // Flush best-effort d'un brouillon en attente (sendBeacon, sinon fetch
+  // keepalive qui survit à la navigation / fermeture). Ne pousse QUE s'il y a
+  // une modif non sauvée (diff avec le dernier snapshot confirmé). Stable
+  // (useCallback []) : lit tout via refs, donc utilisable au démontage.
+  const flushNow = useCallback(() => {
+    if (!enabledRef.current) return;
+    let serialized: string;
+    try {
+      serialized = JSON.stringify(stateRef.current);
+    } catch {
+      return;
+    }
+    if (lastSerializedRef.current === serialized) return; // rien à sauver
+    try {
+      const body = JSON.stringify({ state: stateRef.current });
+      const beaconOk =
+        navigator.sendBeacon?.(endpointRef.current, new Blob([body], { type: "application/json" })) ?? false;
+      if (!beaconOk) {
+        fetch(endpointRef.current, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body,
+          keepalive: true,
+        }).catch(() => {});
+      }
+    } catch {
+      // best-effort
+    }
+  }, []);
+
   useEffect(() => {
     if (!enabled) {
       // Si on désactive (loading remonte à true, ou pendingDraft ouvre),
@@ -167,41 +207,20 @@ export function useAutosave<T>({
     return () => window.removeEventListener("online", onOnline);
   }, [endpoint, state, enabled]);
 
-  // Best-effort flush before unload — the timer might still be holding
-  // a queued snapshot. Using keepalive=true lets the browser send the
-  // body even if the tab is closing.
+  // Flush avant fermeture d'onglet / rechargement (beforeunload).
   useEffect(() => {
-    if (!enabled) return;
-    function flush() {
-      if (!timerRef.current) return;
-      let serialized: string;
-      try {
-        serialized = JSON.stringify(state);
-      } catch {
-        return;
-      }
-      if (lastSerializedRef.current === serialized) return;
-      try {
-        const data = new Blob(
-          [JSON.stringify({ state })],
-          { type: "application/json" },
-        );
-        const beaconOk = navigator.sendBeacon?.(endpoint, data) ?? false;
-        if (!beaconOk) {
-          fetch(endpoint, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ state }),
-            keepalive: true,
-          }).catch(() => {});
-        }
-      } catch {
-        // Ignore — sendBeacon spec is best-effort already.
-      }
-    }
-    window.addEventListener("beforeunload", flush);
-    return () => window.removeEventListener("beforeunload", flush);
-  }, [endpoint, state, enabled]);
+    window.addEventListener("beforeunload", flushNow);
+    return () => window.removeEventListener("beforeunload", flushNow);
+  }, [flushNow]);
+
+  // Flush au DÉMONTAGE = navigation interne Next.js (clic sur un autre menu,
+  // router.push). beforeunload ne se déclenche PAS sur une navigation SPA :
+  // sans ça, une modif encore dans la fenêtre de debounce (2s) était perdue
+  // en changeant de page dans l'app. Effet monté une seule fois (flushNow
+  // stable) → son cleanup ne tourne qu'au démontage réel du composant.
+  useEffect(() => {
+    return () => flushNow();
+  }, [flushNow]);
 
   return { savingDraft, lastSavedAt, clearDraft };
 }
