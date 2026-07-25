@@ -129,6 +129,44 @@ export function useAutosave<T>({
     }
   }, [endpoint]);
 
+  // Retry au RETOUR EN LIGNE : si une sauvegarde a échoué pendant une coupure
+  // réseau (le PUT a jeté, lastSerializedRef reste sur l'ancien état), on
+  // repousse le snapshot dès que la connexion revient, SANS attendre une
+  // nouvelle édition. Corrige "je viens de me reconnecter et je n'avais pas
+  // enregistré" (retour Fabienne) : avant, un draft non sauvé pendant la
+  // coupure n'était jamais renvoyé si l'user ne retouchait rien.
+  useEffect(() => {
+    if (!enabled) return;
+    async function onOnline() {
+      let serialized: string;
+      try {
+        serialized = JSON.stringify(state);
+      } catch {
+        return;
+      }
+      if (lastSerializedRef.current === serialized) return; // rien de neuf à sauver
+      if (timerRef.current) clearTimeout(timerRef.current);
+      setSavingDraft(true);
+      try {
+        const res = await fetch(endpoint, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ state }),
+        });
+        if (res.ok) {
+          lastSerializedRef.current = serialized;
+          setLastSavedAt(Date.now());
+        }
+      } catch {
+        // Réessaiera au prochain online / à la prochaine édition.
+      } finally {
+        setSavingDraft(false);
+      }
+    }
+    window.addEventListener("online", onOnline);
+    return () => window.removeEventListener("online", onOnline);
+  }, [endpoint, state, enabled]);
+
   // Best-effort flush before unload — the timer might still be holding
   // a queued snapshot. Using keepalive=true lets the browser send the
   // body even if the tab is closing.

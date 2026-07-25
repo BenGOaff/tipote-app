@@ -21,6 +21,7 @@ import {
   ArrowLeft, ArrowUp, Copy, Eye, CheckCircle, Share2,
   Loader2, Plus, Trash2, Monitor, Smartphone, Pencil, X, Save, GripVertical,
   Gift, Sparkles, Shuffle, ChevronUp, ChevronDown, Wand2, ImagePlus, Menu, Crop, Star, Settings2,
+  Link2,
 } from "lucide-react";
 import QuizResultsAnalytics from "@/components/quiz/QuizResultsAnalytics";
 import QuizInsightsPanel from "@/components/quiz/QuizInsightsPanel";
@@ -3591,6 +3592,19 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                                     </div>
                                   ) : (
                                     <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                                      {/* Nombre de points attribuable AUSSI sur oui/non (retour
+                                          Fabienne : l'input manquait ici, seul le résultat
+                                          était choisissable). Même contrôle que les QCM. */}
+                                      <span className="text-xs" style={{ color: `${pc}99` }}>Attribue</span>
+                                      <input
+                                        type="number"
+                                        min={0}
+                                        max={99}
+                                        value={typeof opt.points === "number" ? opt.points : 1}
+                                        onChange={(e) => updateOptPoints(qi, oi, Math.max(0, Math.min(99, Math.round(Number(e.target.value) || 0))))}
+                                        className="w-14 text-xs border rounded px-1.5 py-0.5 bg-background text-center"
+                                        style={{ color: pc }}
+                                      />
                                       <span className="text-xs" style={{ color: `${pc}99` }}>point(s) au</span>
                                       <select value={opt.result_index} onChange={(e) => updateOptResult(qi, oi, Number(e.target.value))} className="text-xs border rounded px-1.5 py-0.5 bg-background font-medium cursor-pointer" style={{ color: pc }}>
                                         {editResults.map((_, ri) => <option key={ri} value={ri}>Résultat {ri + 1}</option>)}
@@ -4313,7 +4327,15 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                       <button className="w-full px-8 py-4 rounded-full text-white font-semibold text-lg" style={{ backgroundColor: pc }}>
                         <InlineEdit value={r.cta_text ?? ctaText ?? ""} onChange={(v) => updateR(ri, "cta_text", v || null)} onGenderize={genderize} previewTransform={previewInterpolate} availableVars={personalizationVars} className="text-white font-semibold text-center" placeholder={t("ctaTextInlinePh")} />
                       </button>
-                      <InlineEdit value={r.cta_url ?? ctaUrl ?? ""} onChange={(v) => updateR(ri, "cta_url", v || null)} className="text-xs text-muted-foreground text-center" placeholder={t("ctaUrlInlinePh")} />
+                      {/* Lien du bouton : champ EXPLICITE sous le CTA. Avant, ce
+                          n'etait qu'un petit texte gris centre, et les users ne
+                          comprenaient pas que c'est LA qu'on met l'URL du bouton
+                          (retour Fabienne). On l'encadre + label + icone lien. */}
+                      <div className="flex items-center gap-1.5 rounded-lg border border-dashed border-input px-2.5 py-1.5">
+                        <Link2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                        <span className="text-[11px] font-medium text-muted-foreground shrink-0">{t("ctaUrlInlineLabel")}</span>
+                        <InlineEdit value={r.cta_url ?? ctaUrl ?? ""} onChange={(v) => updateR(ri, "cta_url", v || null)} className="text-xs text-foreground text-left flex-1 min-w-0" placeholder={t("ctaUrlInlinePh")} />
+                      </div>
                     </div>
                     <div className="p-4 rounded-xl bg-muted/40 border border-dashed">
                       <div className="text-xs font-semibold text-foreground mb-1">{t("resultSioTagTitle")}</div>
