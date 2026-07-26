@@ -188,7 +188,8 @@ export function buildEmailPrompt(params: EmailPromptParams): string {
   lines.push("Tu es un copywriter senior spécialisé en email marketing.");
   lines.push("Tu maîtrises les meilleures pratiques 2025 (angles, hooks, CTA, psychologie, clarté, rythme).");
   lines.push(`LANGUE OBLIGATOIRE: ${language}. Tu dois écrire TOUT le contenu en ${language}, en texte brut uniquement.`);
-  lines.push("Phrases courtes. Pas de blabla. Pas de markdown. Pas de gras. Pas de titres.");
+  lines.push("Phrases courtes. Pas de blabla. Pas de titres. Pas de markdown, SAUF le gras.");
+  lines.push("GRAS: mets en **gras** (doubles asterisques) uniquement le mot ou groupe de mots le plus important de chaque email (le benefice cle ou le mot qui accroche l'oeil au scan). Maximum 1 a 2 fois par email, jamais une phrase entiere, jamais l'objet ni le preheader. Le reste reste en texte brut.");
   lines.push("Mise en page: retour à la ligne après chaque phrase (emails faciles à lire).");
   lines.push("Tu t'appuies sur le persona + l'offre + les ressources internes (triggers, structures) fournis dans le contexte.");
   lines.push("Tu restes humain: naturel, direct, crédible.");

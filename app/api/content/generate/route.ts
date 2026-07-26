@@ -2662,7 +2662,10 @@ export async function POST(req: Request) {
             title = pickTitleFromContentData(contentData) ?? null;
           } else {
             // Default: keep existing behavior for non-funnel or funnel without template
-            const keepBold = type === "article";
+            // Emails : on conserve le **gras** sur les mots-cles (rendu dans
+            // le preview, le PDF et l'export Word). La copie presse-papier le
+            // retire pour un texte propre a coller dans un outil d'emailing.
+            const keepBold = type === "article" || type === "email";
             const txt = keepBold ? toPlainTextKeepBold(raw) : toPlainText(raw);
             finalContent = txt;
 

@@ -775,7 +775,11 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
                 variant="outline"
                 size="sm"
                 onClick={async () => {
-                  const ok = await copyToClipboard(generatedContent);
+                  // On retire les marqueurs de gras **...** pour coller un
+                  // texte propre dans un outil d'emailing (le gras reste dans
+                  // l'export Word et le PDF).
+                  const plain = generatedContent.replace(/\*\*(.*?)\*\*/g, "$1");
+                  const ok = await copyToClipboard(plain);
                   if (ok) { setCopied(true); setTimeout(() => setCopied(false), 1600); }
                 }}
                 disabled={!generatedContent}

@@ -39,6 +39,19 @@ export default async function AdminPage() {
         </div>
       </div>
 
+      {/* Raccourcis admin (slugs faciles a retrouver). */}
+      <div className="flex flex-wrap gap-2">
+        <a
+          href="/admin/support"
+          className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium hover:bg-muted transition-colors"
+        >
+          Admin du centre d&apos;aide
+          <code className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+            /admin/support
+          </code>
+        </a>
+      </div>
+
       <AdminUsersPageClient adminEmail={userEmail} />
     </AppShell>
   );

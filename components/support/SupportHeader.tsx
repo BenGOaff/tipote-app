@@ -55,16 +55,29 @@ export default function SupportHeader({ locale }: { locale: string }) {
             ))}
           </div>
 
-          <Link
-            href="/"
-            className="text-sm text-primary hover:text-primary/80 font-medium hidden sm:block"
-          >
-            {locale === "fr" ? "Aller sur Tipote" :
-             locale === "es" ? "Ir a Tipote" :
-             locale === "it" ? "Vai a Tipote" :
-             locale === "ar" ? "الذهاب إلى Tipote" :
-             "Go to Tipote"} →
-          </Link>
+          <div className="hidden sm:flex items-center gap-3">
+            <Link
+              href="/"
+              className="text-sm text-primary hover:text-primary/80 font-medium"
+            >
+              {locale === "fr" ? "Aller sur Tipote" :
+               locale === "es" ? "Ir a Tipote" :
+               locale === "it" ? "Vai a Tipote" :
+               locale === "ar" ? "الذهاب إلى Tipote" :
+               "Go to Tipote"} →
+            </Link>
+            <span className="text-border" aria-hidden="true">|</span>
+            <a
+              href="https://quiz.tipote.com/"
+              className="text-sm text-primary hover:text-primary/80 font-medium"
+            >
+              {locale === "fr" ? "Aller sur Tiquiz" :
+               locale === "es" ? "Ir a Tiquiz" :
+               locale === "it" ? "Vai a Tiquiz" :
+               locale === "ar" ? "الذهاب إلى Tiquiz" :
+               "Go to Tiquiz"} →
+            </a>
+          </div>
         </div>
       </div>
     </header>
