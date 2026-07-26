@@ -11,6 +11,7 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { resolveAnthropicModel } from "@/lib/anthropicModel";
+import { cachedSystem } from "@/lib/claudeRequest";
 import { sanitizeAiText } from "@/lib/aiTextSanitizer";
 import { ensureUserCredits, consumeCredits } from "@/lib/credits";
 import { buildPage } from "@/lib/pageBuilder";
@@ -44,7 +45,8 @@ function resolveClaudeModel(): string {
 
 async function callClaude(args: {
   apiKey: string;
-  system: string;
+  // `system` accepte une string OU des blocs (pour le prompt caching).
+  system: string | Array<Record<string, unknown>>;
   user: string;
   maxTokens?: number;
   temperature?: number;
@@ -107,6 +109,15 @@ async function callClaude(args: {
   }
 
   const json = (await res.json()) as any;
+  // Trace du prompt caching (cf. email Anthropic sur le hit rate) : write au
+  // 1er appel, read aux suivants (prefixe stable partage entre generations de
+  // meme pageType dans la fenetre de 5 min).
+  const u = json?.usage;
+  if (u && (u.cache_creation_input_tokens || u.cache_read_input_tokens)) {
+    console.log(
+      `[pages/generate] cache write=${u.cache_creation_input_tokens ?? 0} read=${u.cache_read_input_tokens ?? 0} input=${u.input_tokens ?? 0}`,
+    );
+  }
   const parts = Array.isArray(json?.content) ? json.content : [];
   const text = parts
     .map((p: any) => (p?.type === "text" ? String(p?.text ?? "") : ""))
@@ -459,7 +470,8 @@ export async function POST(req: NextRequest) {
           "copy", copyLabel,
           () => callClaude({
             apiKey: claudeApiKey,
-            system: systemPrompt,
+            // Prefixe stable cache (cache_control), variables non cachees.
+            system: cachedSystem(systemPrompt.stable, systemPrompt.variable),
             user: userPrompt,
             maxTokens: 8000,
             temperature: 0.7,
@@ -808,7 +820,7 @@ function buildPageSystemPrompt(params: {
   brandColorBase?: string;
   brandColorAccent?: string;
   authorName?: string;
-}): string {
+}): { stable: string; variable: string } {
   const lines: string[] = [];
 
   lines.push("Tu es Tipote, un copywriter direct-response expert de niveau mondial.");
@@ -935,6 +947,13 @@ function buildPageSystemPrompt(params: {
   // ---- KNOWLEDGE ----
   lines.push(params.copywritingKnowledge);
   lines.push("");
+
+  // Breakpoint du prompt caching : tout ce qui precede est STABLE par
+  // pageType (persona + structure + frameworks + copywritingKnowledge fixe)
+  // et depasse le minimum de 1024 tokens. Ce qui suit (RAG, niche, ton,
+  // schema) VARIE par requete et reste hors cache. Aucun reordonnancement :
+  // la sortie du modele est identique.
+  const cacheSplit = lines.length;
 
   if (params.knowledgeSnippets.length > 0) {
     lines.push("RESSOURCES ADDITIONNELLES (extraits de la base de connaissances) :");
@@ -1069,7 +1088,10 @@ function buildPageSystemPrompt(params: {
 
   lines.push(params.schemaPrompt);
 
-  return lines.join("\n");
+  return {
+    stable: lines.slice(0, cacheSplit).join("\n"),
+    variable: lines.slice(cacheSplit).join("\n"),
+  };
 }
 
 function buildPageUserPrompt(params: {

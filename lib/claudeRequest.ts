@@ -27,6 +27,32 @@ export function modelDeprecatesSamplingParams(modelId: string | null | undefined
   return OPUS_47_PLUS_RE.test(modelId.trim());
 }
 
+/**
+ * Construit un `system` en blocs pour le PROMPT CACHING Anthropic. Le bloc
+ * `stable` (strictement identique d'un appel a l'autre) porte le
+ * cache_control ephemeral : facture ~10% et lu depuis le cache apres le
+ * premier appel. Le bloc `variable` (specifique a la requete) vient APRES le
+ * breakpoint et n'est jamais cache.
+ *
+ * REGLE D'OR (erreur n1 de la doc) : ne mettre dans `stable` QUE ce qui ne
+ * change pas d'une requete a l'autre. Toute interpolation specifique doit
+ * aller dans `variable`, sinon le prefixe change a chaque appel et le cache
+ * ne prend jamais. Le cache s'active si `stable` depasse le minimum du modele
+ * (1024 tokens Sonnet 4.x). En dessous, cache_control est ignore sans erreur.
+ */
+export function cachedSystem(
+  stable: string,
+  variable?: string | null,
+): Array<Record<string, unknown>> {
+  const blocks: Array<Record<string, unknown>> = [
+    { type: "text", text: stable, cache_control: { type: "ephemeral" } },
+  ];
+  if (variable && variable.trim()) {
+    blocks.push({ type: "text", text: variable });
+  }
+  return blocks;
+}
+
 export interface BuildClaudeBodyInput {
   model: string;
   max_tokens: number;
