@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Loader2, Wand2, RefreshCw, Save, CalendarDays, X, Copy, Check, FileDown } from "lucide-react";
 import { AIContent } from "@/components/ui/ai-content";
-import { copyToClipboard, downloadAsPdf } from "@/lib/content-utils";
+import { copyToClipboard, downloadAsPdf, downloadAsDocx } from "@/lib/content-utils";
 import { ScheduleModal } from "@/components/content/ScheduleModal";
 import { loadAllOffers, levelLabel, formatPriceRange } from "@/lib/offers";
 import type { OfferOption } from "@/lib/offers";
@@ -792,6 +792,16 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
               >
                 <FileDown className="w-4 h-4 mr-1" />
                 PDF
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => { void downloadAsDocx(generatedContent, title || "Email"); }}
+                disabled={!generatedContent}
+              >
+                <FileDown className="w-4 h-4 mr-1" />
+                Word
               </Button>
             </div>
           )}

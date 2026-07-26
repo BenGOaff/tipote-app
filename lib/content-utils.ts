@@ -1,5 +1,5 @@
 /**
- * Shared utilities for content actions (copy to clipboard, download PDF).
+ * Shared utilities for content actions (copy to clipboard, download PDF, download Word).
  */
 
 /**
@@ -211,4 +211,160 @@ export function downloadAsPdf(content: string, title?: string): void {
       try { document.body.removeChild(iframe); } catch { /* ignore */ }
     }, 1000);
   }, 300);
+}
+
+// ---------------------------------------------------------------------------
+// Word (.docx) export
+// ---------------------------------------------------------------------------
+
+/**
+ * Decoupe le contenu genere en blocs (1 par email). Gere le format reel
+ * (emails separes par une ligne "-----") ET un fallback JSON (tableau
+ * d'objets {subject/objet, preheader, body, cta}) au cas ou la sortie
+ * arriverait structuree.
+ */
+function parseEmailBlocks(text: string): string[] {
+  try {
+    const j = JSON.parse(text);
+    if (Array.isArray(j) && j.length && typeof j[0] === "object") {
+      return j
+        .map((e: Record<string, unknown>) => {
+          const pick = (...keys: string[]): string => {
+            for (const k of keys) {
+              const v = e[k];
+              if (typeof v === "string" && v.trim()) return v.trim();
+            }
+            return "";
+          };
+          const subj = pick("subject", "objet", "object", "title", "titre");
+          const pre = pick("preheader", "preheadr", "preview", "preheadeur");
+          const body = pick("body", "content", "text", "corps", "message");
+          const cta = pick("cta", "call_to_action", "callToAction");
+          const parts: string[] = [];
+          if (subj) parts.push(`Objet : ${subj}`);
+          if (pre) parts.push(`Préheader : ${pre}`);
+          if (body) parts.push(body);
+          if (cta) parts.push(cta);
+          return parts.join("\n");
+        })
+        .filter((b: string) => b.trim());
+    }
+  } catch {
+    /* pas du JSON : on retombe sur le format texte "-----" */
+  }
+  return text
+    .split(/\n\s*-{3,}\s*\n/g)
+    .map((b) => b.trim())
+    .filter(Boolean);
+}
+
+/** Nom de fichier sur (ascii, tirets), borne a 60 caracteres. */
+function slugifyForFile(s: string): string {
+  return (
+    s
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 60) || "sequence-email"
+  );
+}
+
+/**
+ * Telecharge le contenu au format Word (.docx), propre et exploitable par un
+ * utilisateur non technique. Chaque email devient une section : titre "Email
+ * N", "Objet :" + objet en gras, "Préheader :" en gras, corps, et le CTA
+ * final en gras. Le markdown **gras** eventuel est respecte. La librairie
+ * docx est chargee a la demande (hors bundle principal) au moment du clic.
+ */
+export async function downloadAsDocx(content: string, title?: string): Promise<void> {
+  const trimmed = (content ?? "").trim();
+  if (!trimmed) return;
+
+  const { Document, Packer, Paragraph, TextRun, HeadingLevel } = await import("docx");
+  const safeTitle =
+    (title ?? "Contenu Tipote").replace(/[<>"]/g, "").trim() || "Contenu Tipote";
+
+  // Transforme une ligne en runs, en gerant le **gras** inline et un gras
+  // force optionnel (utilise pour le CTA final).
+  const inlineRuns = (line: string, forceBold: boolean) => {
+    const runs: InstanceType<typeof TextRun>[] = [];
+    const re = /\*\*(.+?)\*\*/g;
+    let last = 0;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(line)) !== null) {
+      if (m.index > last) {
+        runs.push(new TextRun({ text: line.slice(last, m.index), bold: forceBold }));
+      }
+      runs.push(new TextRun({ text: m[1], bold: true }));
+      last = re.lastIndex;
+    }
+    if (last < line.length) {
+      runs.push(new TextRun({ text: line.slice(last), bold: forceBold }));
+    }
+    if (runs.length === 0) runs.push(new TextRun({ text: line, bold: forceBold }));
+    return runs;
+  };
+
+  const blocks = parseEmailBlocks(trimmed);
+  const children: InstanceType<typeof Paragraph>[] = [];
+  children.push(new Paragraph({ text: safeTitle, heading: HeadingLevel.HEADING_1 }));
+
+  blocks.forEach((block, idx) => {
+    if (blocks.length > 1) {
+      children.push(new Paragraph({ text: `Email ${idx + 1}`, heading: HeadingLevel.HEADING_2 }));
+    }
+    const lines = block.split("\n");
+    let lastNonEmpty = -1;
+    for (let i = lines.length - 1; i >= 0; i--) {
+      if (lines[i].trim()) {
+        lastNonEmpty = i;
+        break;
+      }
+    }
+    lines.forEach((rawLine, i) => {
+      const line = rawLine.replace(/\s+$/, "");
+      if (!line.trim()) {
+        children.push(new Paragraph({ text: "" }));
+        return;
+      }
+      const objet = line.match(/^\s*(Objet|Subject|Asunto|Oggetto|Betreff)\s*:\s*(.*)$/i);
+      const pre = line.match(/^\s*(Pré-?header|Preheader|Vista previa|Anteprima)\s*:\s*(.*)$/i);
+      if (objet) {
+        children.push(
+          new Paragraph({
+            children: [
+              new TextRun({ text: `${objet[1]} : `, bold: true }),
+              new TextRun({ text: objet[2], bold: true }),
+            ],
+          }),
+        );
+      } else if (pre) {
+        children.push(
+          new Paragraph({
+            children: [
+              new TextRun({ text: `${pre[1]} : `, bold: true }),
+              new TextRun({ text: pre[2] }),
+            ],
+          }),
+        );
+      } else {
+        // Le CTA est la derniere ligne non vide du bloc : on la met en gras.
+        children.push(new Paragraph({ children: inlineRuns(line, i === lastNonEmpty) }));
+      }
+    });
+    if (idx < blocks.length - 1) children.push(new Paragraph({ text: "" }));
+  });
+
+  const doc = new Document({ sections: [{ children }] });
+  const blob = await Packer.toBlob(doc);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${slugifyForFile(safeTitle)}.docx`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

@@ -22,18 +22,18 @@ type EscalationStep = "none" | "ask_email" | "submitting" | "submitted";
 
 const T: Record<string, Record<string, string>> = {
   title: {
-    fr: "Aide Tipote",
-    en: "Tipote Help",
-    es: "Ayuda Tipote",
-    it: "Aiuto Tipote",
-    ar: "مساعدة Tipote",
+    fr: "Aide Tipote + Tiquiz",
+    en: "Tipote + Tiquiz Help",
+    es: "Ayuda Tipote + Tiquiz",
+    it: "Aiuto Tipote + Tiquiz",
+    ar: "مساعدة Tipote + Tiquiz",
   },
   subtitle: {
-    fr: "Posez vos questions sur Tipote",
-    en: "Ask your questions about Tipote",
-    es: "Haz tus preguntas sobre Tipote",
-    it: "Fai le tue domande su Tipote",
-    ar: "اطرح أسئلتك حول Tipote",
+    fr: "Posez vos questions sur Tipote et Tiquiz",
+    en: "Ask your questions about Tipote and Tiquiz",
+    es: "Haz tus preguntas sobre Tipote y Tiquiz",
+    it: "Fai le tue domande su Tipote e Tiquiz",
+    ar: "اطرح أسئلتك حول Tipote و Tiquiz",
   },
   placeholder: {
     fr: "Comment fonctionne... ?",
@@ -43,11 +43,11 @@ const T: Record<string, Record<string, string>> = {
     ar: "كيف يعمل...؟",
   },
   greeting: {
-    fr: "Bonjour ! Je suis l'assistant du centre d'aide Tipote. Posez-moi toutes vos questions sur les fonctionnalités, les abonnements, ou le fonctionnement de Tipote. Je suis là pour vous aider !",
-    en: "Hello! I'm the Tipote help center assistant. Ask me anything about features, subscriptions, or how Tipote works. I'm here to help!",
-    es: "¡Hola! Soy el asistente del centro de ayuda Tipote. Pregúntame lo que quieras sobre las funcionalidades, suscripciones o cómo funciona Tipote.",
-    it: "Ciao! Sono l'assistente del centro assistenza Tipote. Chiedimi qualsiasi cosa sulle funzionalità, gli abbonamenti o come funziona Tipote.",
-    ar: "مرحبًا! أنا مساعد مركز مساعدة Tipote. اسألني أي شيء عن الميزات أو الاشتراكات أو كيفية عمل Tipote.",
+    fr: "Bonjour ! Je suis l'assistant du centre d'aide Tipote et Tiquiz. Posez-moi toutes vos questions sur les fonctionnalités, les abonnements, ou le fonctionnement de Tipote et Tiquiz. Je suis là pour vous aider !",
+    en: "Hello! I'm the Tipote and Tiquiz help center assistant. Ask me anything about features, subscriptions, or how Tipote and Tiquiz work. I'm here to help!",
+    es: "¡Hola! Soy el asistente del centro de ayuda de Tipote y Tiquiz. Pregúntame lo que quieras sobre las funcionalidades, suscripciones o cómo funcionan Tipote y Tiquiz.",
+    it: "Ciao! Sono l'assistente del centro assistenza Tipote e Tiquiz. Chiedimi qualsiasi cosa sulle funzionalità, gli abbonamenti o come funzionano Tipote e Tiquiz.",
+    ar: "مرحبًا! أنا مساعد مركز مساعدة Tipote و Tiquiz. اسألني أي شيء عن الميزات أو الاشتراكات أو كيفية عمل Tipote و Tiquiz.",
   },
   error: {
     fr: "Désolé, une erreur est survenue. Réessayez dans quelques instants.",

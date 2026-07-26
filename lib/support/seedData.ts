@@ -1,5 +1,5 @@
 // lib/support/seedData.ts
-// Comprehensive help center content — 10 categories, 60+ articles
+// Comprehensive help center content - 10 categories, 60+ articles
 // Each article has FR/EN/ES/IT/AR translations
 
 export type SeedCategory = {
@@ -236,11 +236,11 @@ export const SEED_CATEGORIES: SeedCategory[] = [
     icon: "ClipboardList",
     sort_order: 12,
     title: {
-      fr: "Tiquiz — Quiz & Leads",
-      en: "Tiquiz — Quiz & Leads",
-      es: "Tiquiz — Quiz y Leads",
-      it: "Tiquiz — Quiz e Lead",
-      ar: "Tiquiz — اختبارات وعملاء",
+      fr: "Tiquiz - Quiz & Leads",
+      en: "Tiquiz - Quiz & Leads",
+      es: "Tiquiz - Quiz y Leads",
+      it: "Tiquiz - Quiz e Lead",
+      ar: "Tiquiz - اختبارات وعملاء",
     },
     description: {
       fr: "Créez des quiz interactifs, capturez des leads et synchronisez avec Systeme.io",
@@ -291,14 +291,14 @@ Chaque contenu généré est **réellement personnalisé** pour votre business.
 
 ### Les grandes fonctionnalités
 
-1. **Onboarding intelligent** — Un questionnaire complet qui crée votre profil business
-2. **Plan stratégique IA** — Un plan d'action en 3 phases (Fondations / Croissance / Scaling) avec pyramide d'offres
-3. **Création de contenu IA** — Posts, emails, articles, vidéos, quiz, pages et plus
-4. **Publication directe** — Publiez sur LinkedIn, Facebook, Instagram, Threads, Twitter/X, TikTok et Pinterest en un clic
-5. **Automatisations** — Auto-commentaires, comment-to-DM, comment-to-email
-6. **Pages & Quiz** — Créez des landing pages et des quiz lead magnet hébergés
-7. **Gestion des leads** — Centralisez et exportez vos prospects (chiffrement AES-256)
-8. **Analytics IA** — Suivez vos KPIs et recevez un diagnostic business
+1. **Onboarding intelligent** - Un questionnaire complet qui crée votre profil business
+2. **Plan stratégique IA** - Un plan d'action en 3 phases (Fondations / Croissance / Scaling) avec pyramide d'offres
+3. **Création de contenu IA** - Posts, emails, articles, vidéos, quiz, pages et plus
+4. **Publication directe** - Publiez sur LinkedIn, Facebook, Instagram, Threads, Twitter/X, TikTok et Pinterest en un clic
+5. **Automatisations** - Auto-commentaires, comment-to-DM, comment-to-email
+6. **Pages & Quiz** - Créez des landing pages et des quiz lead magnet hébergés
+7. **Gestion des leads** - Centralisez et exportez vos prospects (chiffrement AES-256)
+8. **Analytics IA** - Suivez vos KPIs et recevez un diagnostic business
 
 ### Disponible en 5 langues
 
@@ -327,14 +327,14 @@ Every generated content is **truly personalized** for your business.
 
 ### Main features
 
-1. **Smart onboarding** — A complete questionnaire that creates your business profile
-2. **AI strategic plan** — A 3-phase action plan (Foundations / Growth / Scaling) with offer pyramid
-3. **AI content creation** — Posts, emails, articles, videos, quizzes, pages and more
-4. **Direct publishing** — Publish on LinkedIn, Facebook, Instagram, Threads, Twitter/X, TikTok and Pinterest in one click
-5. **Automations** — Auto-comments, comment-to-DM, comment-to-email
-6. **Pages & Quizzes** — Create hosted landing pages and lead magnet quizzes
-7. **Lead management** — Centralize and export your prospects (AES-256 encryption)
-8. **AI Analytics** — Track your KPIs and get a business diagnosis
+1. **Smart onboarding** - A complete questionnaire that creates your business profile
+2. **AI strategic plan** - A 3-phase action plan (Foundations / Growth / Scaling) with offer pyramid
+3. **AI content creation** - Posts, emails, articles, videos, quizzes, pages and more
+4. **Direct publishing** - Publish on LinkedIn, Facebook, Instagram, Threads, Twitter/X, TikTok and Pinterest in one click
+5. **Automations** - Auto-comments, comment-to-DM, comment-to-email
+6. **Pages & Quizzes** - Create hosted landing pages and lead magnet quizzes
+7. **Lead management** - Centralize and export your prospects (AES-256 encryption)
+8. **AI Analytics** - Track your KPIs and get a business diagnosis
 
 ### Available in 5 languages
 
@@ -357,14 +357,14 @@ A diferencia de herramientas genéricas, **Tipote memoriza todo tu perfil de neg
 
 ### Funcionalidades principales
 
-1. **Onboarding inteligente** — Cuestionario completo que crea tu perfil
-2. **Plan estratégico IA** — Plan de acción en 3 fases (Cimientos / Crecimiento / Escalado)
-3. **Creación de contenido IA** — Posts, emails, artículos, vídeos y más
-4. **Publicación directa** — Publica en 7 redes sociales en un clic
-5. **Automatizaciones** — Auto-comentarios, comment-to-DM
-6. **Páginas y Quiz** — Landing pages y quizzes alojados
-7. **Gestión de leads** — Centraliza y exporta tus prospectos
-8. **Analytics IA** — KPIs y diagnóstico de negocio
+1. **Onboarding inteligente** - Cuestionario completo que crea tu perfil
+2. **Plan estratégico IA** - Plan de acción en 3 fases (Cimientos / Crecimiento / Escalado)
+3. **Creación de contenido IA** - Posts, emails, artículos, vídeos y más
+4. **Publicación directa** - Publica en 7 redes sociales en un clic
+5. **Automatizaciones** - Auto-comentarios, comment-to-DM
+6. **Páginas y Quiz** - Landing pages y quizzes alojados
+7. **Gestión de leads** - Centraliza y exporta tus prospectos
+8. **Analytics IA** - KPIs y diagnóstico de negocio
 
 > **Siguiente paso:** [Crear tu cuenta y completar el onboarding](/support/article/create-account)`,
       it: `## Tipote, il tuo amico di business
@@ -373,14 +373,14 @@ Tipote® è un'applicazione web SaaS tutto-in-uno progettata per imprenditori ch
 
 ### Le funzionalità principali
 
-1. **Onboarding intelligente** — Questionario completo che crea il tuo profilo
-2. **Piano strategico IA** — Piano d'azione in 3 fasi (Fondamenta / Crescita / Scaling)
-3. **Creazione contenuti IA** — Post, email, articoli, video e altro
-4. **Pubblicazione diretta** — Pubblica su 7 social network in un clic
-5. **Automazioni** — Auto-commenti, comment-to-DM
-6. **Pagine e Quiz** — Landing page e quiz lead magnet ospitati
-7. **Gestione lead** — Centralizza e esporta i tuoi contatti
-8. **Analytics IA** — KPI e diagnosi di business
+1. **Onboarding intelligente** - Questionario completo che crea il tuo profilo
+2. **Piano strategico IA** - Piano d'azione in 3 fasi (Fondamenta / Crescita / Scaling)
+3. **Creazione contenuti IA** - Post, email, articoli, video e altro
+4. **Pubblicazione diretta** - Pubblica su 7 social network in un clic
+5. **Automazioni** - Auto-commenti, comment-to-DM
+6. **Pagine e Quiz** - Landing page e quiz lead magnet ospitati
+7. **Gestione lead** - Centralizza e esporta i tuoi contatti
+8. **Analytics IA** - KPI e diagnosi di business
 
 > **Prossimo passo:** [Crea il tuo account e completa l'onboarding](/support/article/create-account)`,
       ar: `## Tipote، رفيقك في الأعمال
@@ -389,14 +389,14 @@ Tipote® هو تطبيق ويب SaaS متكامل مصمم لرواد الأعم
 
 ### الميزات الرئيسية
 
-1. **إعداد ذكي** — استبيان كامل ينشئ ملفك التجاري
-2. **خطة استراتيجية بالذكاء الاصطناعي** — خطة عمل من 3 مراحل (الأسس / النمو / التوسع)
-3. **إنشاء محتوى بالذكاء الاصطناعي** — منشورات ورسائل ومقالات وفيديوهات
-4. **نشر مباشر** — انشر على 7 شبكات اجتماعية بنقرة واحدة
-5. **أتمتة** — تعليقات تلقائية
-6. **صفحات واختبارات** — صفحات هبوط واختبارات مستضافة
-7. **إدارة العملاء المحتملين** — مركزة وتصدير العملاء المحتملين
-8. **تحليلات بالذكاء الاصطناعي** — مؤشرات الأداء وتشخيص الأعمال`,
+1. **إعداد ذكي** - استبيان كامل ينشئ ملفك التجاري
+2. **خطة استراتيجية بالذكاء الاصطناعي** - خطة عمل من 3 مراحل (الأسس / النمو / التوسع)
+3. **إنشاء محتوى بالذكاء الاصطناعي** - منشورات ورسائل ومقالات وفيديوهات
+4. **نشر مباشر** - انشر على 7 شبكات اجتماعية بنقرة واحدة
+5. **أتمتة** - تعليقات تلقائية
+6. **صفحات واختبارات** - صفحات هبوط واختبارات مستضافة
+7. **إدارة العملاء المحتملين** - مركزة وتصدير العملاء المحتملين
+8. **تحليلات بالذكاء الاصطناعي** - مؤشرات الأداء وتشخيص الأعمال`,
     },
     related_slugs: ["create-account", "onboarding-guide", "plans-overview"],
     tags: ["introduction", "overview", "features"],
@@ -708,11 +708,11 @@ The **"Today"** dashboard is the first page you see on each login. It gives you 
 
 ### What you'll find
 
-1. **Priority action banner** — Your next recommended action with quick action buttons
-2. **Key stats** (4 cards) — Published content, completed tasks, engagement, next deadline
-3. **Week progress** — Progress bars for weekly goals
-4. **Quick actions** — Fast access to content creation, content list, and strategy
-5. **Coming this week** — List of scheduled content
+1. **Priority action banner** - Your next recommended action with quick action buttons
+2. **Key stats** (4 cards) - Published content, completed tasks, engagement, next deadline
+3. **Week progress** - Progress bars for weekly goals
+4. **Quick actions** - Fast access to content creation, content list, and strategy
+5. **Coming this week** - List of scheduled content
 
 > **See also:** [Navigate Tipote](/support/article/navigation-guide) • [Create content](/support/article/create-content-overview)`,
       es: `## Tu página principal
@@ -791,18 +791,18 @@ Lors de vos **7 premiers jours**, un tutoriel guidé vous accompagne page par pa
 The **sidebar** on the left is your main access point to all features.
 
 ### Main menu
-- **Today** — Dashboard with stats and next action
-- **My Strategy** — Action plan, offer pyramid, persona
-- **Create** — Creation hub (8 content types)
-- **My Content** — List + editorial calendar
-- **Templates** — Systeme.io templates
-- **Automations** — Auto-comments and webhooks
-- **My Leads** — Prospect management
+- **Today** - Dashboard with stats and next action
+- **My Strategy** - Action plan, offer pyramid, persona
+- **Create** - Creation hub (8 content types)
+- **My Content** - List + editorial calendar
+- **Templates** - Systeme.io templates
+- **Automations** - Auto-comments and webhooks
+- **My Leads** - Prospect management
 
 ### Secondary menu
-- **Analytics** — KPIs + AI diagnosis
-- **Insights** — Business insights
-- **Settings** — 7 configuration tabs
+- **Analytics** - KPIs + AI diagnosis
+- **Insights** - Business insights
+- **Settings** - 7 configuration tabs
 
 ### Header bar
 Credits remaining, project switcher (Elite), notification bell, avatar menu.
@@ -844,31 +844,31 @@ Dès votre première connexion (après l'onboarding), un **didacticiel interacti
 
 ### Les 18 phases du tutoriel
 
-1. **Bienvenue** — Modal d'introduction avec 4 étapes prévisualisées
-2. **Tour Aujourd'hui** — Découverte du dashboard
-3. **Tour Stratégie** — Plan d'action et pyramide
-4. **Tour Créer** — Hub de création
-5. **Tour Contenus** — Liste et calendrier
-6. **Tour Templates** — Bibliothèque de templates
-7. **Tour Crédits** — Comprendre les crédits IA
-8. **Tour Analytics** — Suivi des performances
-9. **Tour Pépites** — Les insights business
-10. **Tour Paramètres Profil** — Configuration du profil
-11. **Tour Connexions** — Connecter les réseaux sociaux
-12. **Tour Réglages** — Email, mot de passe, langue
-13. **Tour Positionnement** — Analyse concurrentielle
-14. **Tour Branding** — Identité visuelle
-15. **Tour IA** — Gestion des crédits et paramètres IA
-16. **Tour Abonnement** — Plans et facturation
-17. **Tour Coach** — Le coach IA
-18. **Complétion** — Félicitations et prochaines étapes
+1. **Bienvenue** - Modal d'introduction avec 4 étapes prévisualisées
+2. **Tour Aujourd'hui** - Découverte du dashboard
+3. **Tour Stratégie** - Plan d'action et pyramide
+4. **Tour Créer** - Hub de création
+5. **Tour Contenus** - Liste et calendrier
+6. **Tour Templates** - Bibliothèque de templates
+7. **Tour Crédits** - Comprendre les crédits IA
+8. **Tour Analytics** - Suivi des performances
+9. **Tour Pépites** - Les insights business
+10. **Tour Paramètres Profil** - Configuration du profil
+11. **Tour Connexions** - Connecter les réseaux sociaux
+12. **Tour Réglages** - Email, mot de passe, langue
+13. **Tour Positionnement** - Analyse concurrentielle
+14. **Tour Branding** - Identité visuelle
+15. **Tour IA** - Gestion des crédits et paramètres IA
+16. **Tour Abonnement** - Plans et facturation
+17. **Tour Coach** - Le coach IA
+18. **Complétion** - Félicitations et prochaines étapes
 
 ### Fonctionnement UX
 
 - **Tooltips** avec compteur d'étapes (ex: "3 / 18")
 - **Spotlight** sur l'élément ciblé (le reste est assombri)
 - **Opt-out** possible via un lien discret en bas du tooltip
-- **Fenêtre de 7 jours** — Le tutoriel n'apparaît que pendant vos 7 premiers jours
+- **Fenêtre de 7 jours** - Le tutoriel n'apparaît que pendant vos 7 premiers jours
 
 ### Relancer le tutoriel
 
@@ -1184,12 +1184,12 @@ Le **storytelling fondateur** est un outil puissant pour humaniser votre marque.
 
 ### Les 6 étapes de votre histoire
 
-1. **Situation Initiale** — Où étiez-vous avant ? Quel était votre quotidien ?
-2. **Élément Déclencheur** — Qu'est-ce qui a tout changé ? Le déclic ?
-3. **Péripéties** — Les obstacles rencontrés, les essais, les erreurs
-4. **Moment Critique** — Le point de bascule, la plus grande difficulté
-5. **Résolution** — Comment vous avez surmonté et trouvé la solution
-6. **Situation Finale** — Où vous en êtes aujourd'hui et votre mission
+1. **Situation Initiale** - Où étiez-vous avant ? Quel était votre quotidien ?
+2. **Élément Déclencheur** - Qu'est-ce qui a tout changé ? Le déclic ?
+3. **Péripéties** - Les obstacles rencontrés, les essais, les erreurs
+4. **Moment Critique** - Le point de bascule, la plus grande difficulté
+5. **Résolution** - Comment vous avez surmonté et trouvé la solution
+6. **Situation Finale** - Où vous en êtes aujourd'hui et votre mission
 
 ### Comment c'est utilisé ?
 
@@ -1245,13 +1245,13 @@ Le plan stratégique est généré par l'IA après l'onboarding. Il est accessib
 
 Le plan est divisé en **3 phases** :
 
-#### Phase 1 — Fondations (Jours 1-30)
+#### Phase 1 - Fondations (Jours 1-30)
 Mise en place des bases : profil optimisé, premiers contenus, audience initiale.
 
-#### Phase 2 — Croissance (Jours 31-60)
+#### Phase 2 - Croissance (Jours 31-60)
 Accélération : plus de contenu, premières offres, nurturing.
 
-#### Phase 3 — Scale (Jours 61-90)
+#### Phase 3 - Scale (Jours 61-90)
 Optimisation et montée en puissance : automatisations, conversion, scaling.
 
 ### Les tâches
@@ -1264,9 +1264,9 @@ Chaque phase contient des **tâches cochables** concrètes. Quand vous cochez un
 ### Header de la page Stratégie
 
 3 badges vous donnent une vue rapide :
-- 💰 **Objectif Revenue** — votre objectif financier à 90 jours
-- ⏳ **Horizon** — jours restants
-- 📊 **Progression** — pourcentage global d'avancement
+- 💰 **Objectif Revenue** - votre objectif financier à 90 jours
+- ⏳ **Horizon** - jours restants
+- 📊 **Progression** - pourcentage global d'avancement
 
 ### Modifier le plan
 
@@ -1386,12 +1386,12 @@ Le **persona** est un portrait détaillé de votre client idéal, généré par 
 
 ### Ce que contient le persona
 
-- **Profil démographique** — Âge, profession, situation
-- **Problèmes principaux** — Les frustrations et douleurs de votre cible
-- **Objectifs** — Ce qu'ils veulent accomplir
-- **Objections** — Ce qui les empêche d'acheter
-- **Vocabulaire** — Les mots et expressions qu'ils utilisent
-- **Canaux préférés** — Où ils consomment du contenu
+- **Profil démographique** - Âge, profession, situation
+- **Problèmes principaux** - Les frustrations et douleurs de votre cible
+- **Objectifs** - Ce qu'ils veulent accomplir
+- **Objections** - Ce qui les empêche d'acheter
+- **Vocabulaire** - Les mots et expressions qu'ils utilisent
+- **Canaux préférés** - Où ils consomment du contenu
 
 ### Pourquoi c'est crucial ?
 
@@ -1469,7 +1469,7 @@ Le hub de création (**✨ Créer** dans la sidebar) est votre atelier de produc
 
 1. **Choisissez le type** de contenu
 2. **Remplissez le formulaire** (pré-rempli avec votre persona et profil)
-3. **Cliquez sur "Générer"** — L'IA (Claude) crée le contenu
+3. **Cliquez sur "Générer"** - L'IA (Claude) crée le contenu
 4. **Prévisualisez** le résultat
 5. **Affinez** : régénérer, modifier manuellement
 6. **Agissez** : sauvegarder en brouillon, planifier, ou publier directement
@@ -1527,10 +1527,10 @@ L'hub di creazione permette di creare: Post, Email, Articoli, Video, Offerte, Fu
 
 ### Étape 2 : Configurez votre post
 
-- **Plateforme cible** — Choisissez : LinkedIn, Facebook, Instagram, Threads, Twitter/X, TikTok ou Pinterest
-- **Sujet** — De quoi parle le post (l'IA s'adapte à la plateforme)
-- **Tonalité** — Pré-remplie depuis vos paramètres
-- **Longueur** — Court, moyen ou long
+- **Plateforme cible** - Choisissez : LinkedIn, Facebook, Instagram, Threads, Twitter/X, TikTok ou Pinterest
+- **Sujet** - De quoi parle le post (l'IA s'adapte à la plateforme)
+- **Tonalité** - Pré-remplie depuis vos paramètres
+- **Longueur** - Court, moyen ou long
 
 ### Étape 3 : Générez
 
@@ -1540,7 +1540,7 @@ Cliquez sur **"Générer"**. L'IA Claude crée un post optimisé pour la platefo
 
 - 📸 **Ajoutez une image** (upload depuis votre appareil)
 - 🎬 **Ajoutez une vidéo** (pour Instagram Reels, TikTok, Facebook)
-- 💬 **Auto-commentaire** — Programmez un commentaire automatique sous votre post (plan Basic+)
+- 💬 **Auto-commentaire** - Programmez un commentaire automatique sous votre post (plan Basic+)
 
 ### Options Pinterest spécifiques
 - Sélection du **board** Pinterest
@@ -1548,9 +1548,9 @@ Cliquez sur **"Générer"**. L'IA Claude crée un post optimisé pour la platefo
 
 ### Étape 5 : Publiez ou planifiez
 
-- **Publier maintenant** — Publication directe via OAuth
-- **Planifier** — Choisissez date et heure (calendrier éditorial)
-- **Sauvegarder en brouillon** — Pour y revenir plus tard
+- **Publier maintenant** - Publication directe via OAuth
+- **Planifier** - Choisissez date et heure (calendrier éditorial)
+- **Sauvegarder en brouillon** - Pour y revenir plus tard
 
 ### Modifier un post programmé
 
@@ -1562,7 +1562,7 @@ Allez dans **Mes Contenus** (vue calendrier ou liste), cliquez sur le post → v
 1. Go to **Create > Post**
 2. Choose platform (LinkedIn, Facebook, Instagram, Threads, Twitter/X, TikTok, Pinterest)
 3. Set topic, tone, length
-4. Click **Generate** — AI creates an optimized post
+4. Click **Generate** - AI creates an optimized post
 5. Add images/videos, configure auto-comment
 6. **Publish now**, **Schedule**, or **Save as draft**
 
@@ -1596,17 +1596,17 @@ Crea > Post → scegli piattaforma → configura argomento/tono → Genera → a
 
 ### Types d'emails disponibles
 
-- **Newsletter** — Actualités, valeur, engagement
-- **Séquence de bienvenue** — Onboarding de vos nouveaux abonnés
-- **Email de vente** — Promotion d'une offre
-- **Séquence de nurturing** — Éducation progressive
+- **Newsletter** - Actualités, valeur, engagement
+- **Séquence de bienvenue** - Onboarding de vos nouveaux abonnés
+- **Email de vente** - Promotion d'une offre
+- **Séquence de nurturing** - Éducation progressive
 
 ### Comment créer ?
 
 1. **Créer > Email**
 2. Choisissez le **type** d'email
 3. Indiquez le **sujet** et le **contexte**
-4. **Générez** — L'IA crée l'email avec objet, corps et CTA
+4. **Générez** - L'IA crée l'email avec objet, corps et CTA
 5. **Copiez** le résultat dans votre outil d'emailing (Systeme.io, Mailchimp, etc.)
 
 ### Personnalisation
@@ -1654,7 +1654,7 @@ Crea > Email → scegli tipo → indica argomento → Genera → Copia nel tuo s
 1. **Créer > Article**
 2. Indiquez le **sujet** et les **mots-clés** SEO
 3. Choisissez le **format** : tutoriel, guide, article d'opinion, étude de cas
-4. **Générez** — L'IA crée un article complet avec titres, sous-titres, introduction et conclusion
+4. **Générez** - L'IA crée un article complet avec titres, sous-titres, introduction et conclusion
 5. **Modifiez** si nécessaire, puis sauvegardez ou copiez
 
 ### Optimisation SEO
@@ -1700,16 +1700,16 @@ Crea > Articolo → argomento e parole chiave → formato → Genera.`,
 
 ### Formats supportés
 
-- **YouTube** — Scripts longs avec chapitres
-- **Reels / TikTok** — Scripts courts et percutants
-- **Stories** — Scripts de stories séquentielles
+- **YouTube** - Scripts longs avec chapitres
+- **Reels / TikTok** - Scripts courts et percutants
+- **Stories** - Scripts de stories séquentielles
 
 ### Comment créer ?
 
 1. **Créer > Vidéo**
 2. Choisissez le **format** et la **plateforme**
 3. Indiquez le **sujet** et l'**angle**
-4. **Générez** — L'IA crée un script structuré avec intro hook, développement et CTA
+4. **Générez** - L'IA crée un script structuré avec intro hook, développement et CTA
 5. **Tournez** en suivant le script !
 
 > **Voir aussi :** [Hub de création](/support/article/create-content-overview) • [Créer un post](/support/article/create-post)`,
@@ -1749,7 +1749,7 @@ Crea > Video → formato → argomento → Genera.`,
 
 1. **Créer > Offre**
 2. Décrivez votre **offre** (nom, prix, bénéfices)
-3. **Générez** — L'IA crée un descriptif complet avec headline, bénéfices, preuves sociales, prix et CTA
+3. **Générez** - L'IA crée un descriptif complet avec headline, bénéfices, preuves sociales, prix et CTA
 4. Utilisez-le sur votre **page de vente**, **email** ou **site**
 
 ### Lien avec la pyramide
@@ -1795,7 +1795,7 @@ Un **funnel** (tunnel de vente) est une séquence de pages et emails qui guide u
 
 1. **Créer > Funnel**
 2. Décrivez votre **offre cible** et votre **objectif**
-3. **Générez** — L'IA crée le copywriting complet du funnel :
+3. **Générez** - L'IA crée le copywriting complet du funnel :
    - Page de capture
    - Séquence d'emails
    - Page de vente
@@ -1863,9 +1863,9 @@ La vue liste offre :
 
 ### Badges de statut
 
-- 🟢 **Publié** — Déjà publié sur un réseau
-- 🔵 **Planifié** — Programmé pour une date future
-- ⚪ **Brouillon** — Sauvegardé mais non planifié
+- 🟢 **Publié** - Déjà publié sur un réseau
+- 🔵 **Planifié** - Programmé pour une date future
+- ⚪ **Brouillon** - Sauvegardé mais non planifié
 
 > **Voir aussi :** [Créer un post](/support/article/create-post) • [Hub de création](/support/article/create-content-overview)`,
       en: `## Visualize and manage your scheduled content
@@ -1925,7 +1925,7 @@ Tipote peut publier directement sur **7 plateformes** via OAuth 2.0. Aucune API 
 2. Cliquez sur le bouton **"Connecter"** à côté du réseau souhaité
 3. Vous êtes redirigé vers la page de **login du réseau** (ex: LinkedIn)
 4. **Autorisez** Tipote à publier en votre nom
-5. Vous êtes redirigé vers Tipote — le réseau est maintenant **connecté** ✅
+5. Vous êtes redirigé vers Tipote - le réseau est maintenant **connecté** ✅
 
 ### Sécurité des tokens
 
@@ -1980,13 +1980,13 @@ Tokens are **AES-256 encrypted** and auto-refreshed.
 Après avoir généré un post, vous avez 3 choix :
 
 ### 1. Publier maintenant
-Cliquez sur **"Publier"** — Le post est envoyé immédiatement sur le réseau connecté. Vous recevez une **notification** de confirmation avec le lien vers le post publié.
+Cliquez sur **"Publier"** - Le post est envoyé immédiatement sur le réseau connecté. Vous recevez une **notification** de confirmation avec le lien vers le post publié.
 
 ### 2. Planifier
-Cliquez sur **"Planifier"** — Choisissez une **date et heure** de publication. Le post apparaît dans votre **calendrier éditorial** avec le statut "Planifié". Tipote publie automatiquement à l'heure prévue.
+Cliquez sur **"Planifier"** - Choisissez une **date et heure** de publication. Le post apparaît dans votre **calendrier éditorial** avec le statut "Planifié". Tipote publie automatiquement à l'heure prévue.
 
 ### 3. Sauvegarder en brouillon
-Cliquez sur **"Sauvegarder"** — Le post est sauvegardé dans **Mes Contenus** avec le statut "Brouillon". Vous pourrez y revenir, le modifier et le publier plus tard.
+Cliquez sur **"Sauvegarder"** - Le post est sauvegardé dans **Mes Contenus** avec le statut "Brouillon". Vous pourrez y revenir, le modifier et le publier plus tard.
 
 ### Suivi des publications
 
@@ -2212,21 +2212,21 @@ Le constructeur de pages vous permet de créer des **pages professionnelles héb
 | Type | Usage | Exemple |
 |------|-------|---------|
 | 📥 **Page de capture** | Collecter des emails | "Téléchargez mon guide gratuit" |
-| 💰 **Page de vente** | Vendre un produit/service | "Formation XYZ — 297€" |
+| 💰 **Page de vente** | Vendre un produit/service | "Formation XYZ - 297€" |
 | 🏪 **Site vitrine** | Présenter votre activité | "Découvrez mon expertise" |
 
 ### Fonctionnalités de l'éditeur
 
-- **Prévisualisation multi-device** — Mobile, tablette, desktop
-- **Édition de texte inline** — Cliquez et modifiez directement
-- **Sélecteur de couleurs** — Personnalisez chaque élément
-- **Upload d'illustrations** — Ajoutez vos visuels
-- **Chat IA** — Demandez à l'IA de modifier la page par conversation
-- **OG Image** — Uploadez l'image de partage social
-- **Meta description** — Pour le SEO
-- **Tracking pixels** — Facebook Pixel et Google Tag Manager
-- **URL de paiement** — Lien vers votre page de paiement (Systeme.io, Stripe...)
-- **Mentions légales** — Auto-générées
+- **Prévisualisation multi-device** - Mobile, tablette, desktop
+- **Édition de texte inline** - Cliquez et modifiez directement
+- **Sélecteur de couleurs** - Personnalisez chaque élément
+- **Upload d'illustrations** - Ajoutez vos visuels
+- **Chat IA** - Demandez à l'IA de modifier la page par conversation
+- **OG Image** - Uploadez l'image de partage social
+- **Meta description** - Pour le SEO
+- **Tracking pixels** - Facebook Pixel et Google Tag Manager
+- **URL de paiement** - Lien vers votre page de paiement (Systeme.io, Stripe...)
+- **Mentions légales** - Auto-générées
 
 ### Publication
 
@@ -2528,10 +2528,10 @@ En cliquant sur un lead, un panel latéral s'ouvre avec :
 
 ### Statistiques (4 cartes)
 
-- 📊 **Total leads** — Nombre total
-- ❓ **Leads quiz** — Provenant des quiz
-- 🔄 **Exportés Systeme.io** — Synchronisés
-- 📅 **Ce mois-ci** — Nouveaux ce mois
+- 📊 **Total leads** - Nombre total
+- ❓ **Leads quiz** - Provenant des quiz
+- 🔄 **Exportés Systeme.io** - Synchronisés
+- 📅 **Ce mois-ci** - Nouveaux ce mois
 
 ### Sécurité des données
 
@@ -2585,8 +2585,8 @@ Tutti i lead catturati sono centralizzati in **I miei Lead**. Ricerca, filtri, e
 ### Ce que vous pouvez faire
 
 - **Exporter les leads** de vos quiz et pages vers Systeme.io
-- **Tags de capture** — Ajoutez des tags spécifiques par quiz/page
-- **Synchronisation automatique** — Les nouveaux leads sont envoyés automatiquement
+- **Tags de capture** - Ajoutez des tags spécifiques par quiz/page
+- **Synchronisation automatique** - Les nouveaux leads sont envoyés automatiquement
 - **Acheter des crédits** supplémentaires via Systeme.io
 
 ### Templates Systeme.io
@@ -2634,9 +2634,9 @@ Vai in **Impostazioni > Connessioni**, inserisci la tua API key Systeme.io. Espo
 
 - **Prévisualisation** des templates avant téléchargement
 - **Téléchargement direct** dans votre compte Systeme.io
-- **Itération IA** — Demandez à l'IA de modifier le contenu
-- **Reformulation** — Adaptez le texte à votre tonalité
-- **Personnalisation** — Le contenu est adapté à votre profil business
+- **Itération IA** - Demandez à l'IA de modifier le contenu
+- **Reformulation** - Adaptez le texte à votre tonalité
+- **Personnalisation** - Le contenu est adapté à votre profil business
 
 > **Voir aussi :** [Intégration Systeme.io](/support/article/systemeio-integration) • [Hub de création](/support/article/create-content-overview)`,
       en: `## Ready-to-use templates
@@ -2679,7 +2679,7 @@ Accedi da **Templates** nella sidebar. Anteprima, scarica e personalizza con l'I
 | | Free | Basic | Pro | Elite |
 |---|---|---|---|---|
 | **Prix/mois** | 0€ | 19€ | 49€ | 99€ |
-| **Prix/an** | — | 190€ | 490€ | 990€ |
+| **Prix/an** | - | 190€ | 490€ | 990€ |
 | **Crédits IA/mois** | 25 (one-shot) | 40 | 150 | 500 |
 | **Tous les modules** | ✅ | ✅ | ✅ | ✅ |
 | **Publication directe** | ✅ | ✅ | ✅ | ✅ |
@@ -2695,19 +2695,19 @@ Accedi da **Templates** nella sidebar. Anteprima, scarica e personalizza con l'I
 - Publication directe sur les réseaux sociaux
 - Idéal pour **tester** Tipote
 
-#### 💙 Basic — 19€/mois
+#### 💙 Basic - 19€/mois
 - **40 crédits/mois** (renouvelés automatiquement)
 - Auto-commentaires débloqués
 - Parfait pour les **débutants** qui publient régulièrement
 
-#### ⭐ Pro — 49€/mois (Populaire)
+#### ⭐ Pro - 49€/mois (Populaire)
 - **150 crédits/mois**
 - **Coach IA** inclus (conversations illimitées)
 - Idéal pour les **entrepreneurs actifs** qui produisent beaucoup de contenu
 
-#### 💎 Elite — 99€/mois
+#### 💎 Elite - 99€/mois
 - **500 crédits/mois**
-- **Multi-projets** — Gérez plusieurs business depuis un compte
+- **Multi-projets** - Gérez plusieurs business depuis un compte
 - Pour les **entrepreneurs avancés** et **agences**
 
 ### Économisez avec l'abonnement annuel
@@ -2837,9 +2837,9 @@ Check balance in the header or **Settings > AI**.
 
 ### Caractéristiques
 
-- **Pas d'expiration** — Les crédits achetés ne périment pas
-- **Cumulables** — Ils s'ajoutent à votre solde existant
-- **Consommation FIFO** — Les crédits mensuels sont utilisés en premier, puis les crédits achetés
+- **Pas d'expiration** - Les crédits achetés ne périment pas
+- **Cumulables** - Ils s'ajoutent à votre solde existant
+- **Consommation FIFO** - Les crédits mensuels sont utilisés en premier, puis les crédits achetés
 
 ### Comment acheter ?
 
@@ -3149,10 +3149,10 @@ Les **toast widgets** sont des petites notifications pop-up qui s'affichent sur 
 
 ### Types de notifications
 
-- 👥 **Visiteurs en temps réel** — "15 personnes consultent cette page"
-- ✅ **Inscriptions récentes** — "Marie vient de s'inscrire"
-- 💰 **Achats récents** — "Thomas vient d'acheter"
-- 📢 **Messages personnalisés** — "Plus que 3 places disponibles"
+- 👥 **Visiteurs en temps réel** - "15 personnes consultent cette page"
+- ✅ **Inscriptions récentes** - "Marie vient de s'inscrire"
+- 💰 **Achats récents** - "Thomas vient d'acheter"
+- 📢 **Messages personnalisés** - "Plus que 3 places disponibles"
 
 ### Configuration
 
@@ -3216,9 +3216,9 @@ Facebook, X (Twitter), LinkedIn, WhatsApp, Telegram, Reddit, Pinterest, Email.
 
 ### Modes d'affichage
 
-- **Inline** — Intégré dans le flux de la page
-- **Floating left/right** — Barre flottante sur le côté
-- **Bottom bar** — Barre fixe en bas de page
+- **Inline** - Intégré dans le flux de la page
+- **Floating left/right** - Barre flottante sur le côté
+- **Bottom bar** - Barre fixe en bas de page
 
 ### Personnalisation
 
@@ -3470,7 +3470,7 @@ Rendez-vous sur **Créer un quiz** dans la sidebar. Tu as 3 options :
 - Décris ton **public cible** et le **ton** souhaité
 - Choisis le **format** (court : 3-5 questions, long : 6-10)
 - Choisis le type de **segmentation** (par profil ou par niveau)
-- Clique sur **Générer** — l'IA crée tout en temps réel !
+- Clique sur **Générer** - l'IA crée tout en temps réel !
 
 ### Option 3 : Importer depuis un fichier
 - Tu as déjà un quiz rédigé ailleurs ? Importe-le en **.txt** (max 50 000 caractères).
@@ -3479,6 +3479,19 @@ Rendez-vous sur **Créer un quiz** dans la sidebar. Tu as 3 options :
 - Astuce : structure ton .txt avec des sections claires (questions numérotées, options A/B/C/D, résultats nommés) → l'IA respectera mieux ta structure.
 
 > Tu peux toujours modifier le quiz généré ou importé avant de le publier.
+
+---
+
+## Publier ton quiz pour le voir en ligne
+
+Un quiz fraîchement créé est en **brouillon** : il n'est PAS encore accessible en ligne. Si tu ouvres son lien public avant de l'avoir publié, tu tombes sur une page **404** (c'est normal, personne d'autre que toi ne peut y accéder tant qu'il est en brouillon).
+
+Pour le mettre en ligne :
+1. Ouvre ton quiz dans l'éditeur.
+2. Clique sur **Publier** (bouton en haut à droite). Le statut passe de "brouillon" à "actif".
+3. Ton lien public devient accessible : \`https://quiz.tipote.com/q/ton-slug\` (ou \`https://ton-domaine/ton-slug\` si tu as connecté ton propre domaine).
+
+**Pas besoin d'API ni de réglage par quiz.** Tu peux créer autant de quiz que tu veux sur le même domaine, chacun avec son propre slug. Il suffit de **publier chaque quiz** pour qu'il soit accessible. Un quiz non publié renverra toujours une 404, même si le slug est correct : dans ce cas, retourne dans l'éditeur et clique sur Publier.
 
 ---
 
@@ -3509,7 +3522,7 @@ Go to **Create a quiz** in the sidebar. You have 3 options:
 - Describe your **target audience** and desired **tone**
 - Pick the **format** (short: 3-5 questions, long: 6-10)
 - Choose **segmentation** type (by profile or by level)
-- Click **Generate** — AI creates everything in real time!
+- Click **Generate** - AI creates everything in real time!
 
 ### Option 3: Import from a file
 - Already have a quiz drafted elsewhere? Import it as **.txt** (max 10,000 characters).
@@ -3518,6 +3531,19 @@ Go to **Create a quiz** in the sidebar. You have 3 options:
 - Tip: structure your .txt with clear sections (numbered questions, A/B/C/D options, named results) so the AI respects your structure.
 
 > You can always edit the generated or imported quiz before publishing.
+
+---
+
+## Publish your quiz to see it online
+
+A freshly created quiz is a **draft**: it is NOT reachable online yet. If you open its public link before publishing, you get a **404** page (this is expected, nobody but you can access a draft).
+
+To make it live:
+1. Open your quiz in the editor.
+2. Click **Publish** (button top right). The status changes from "draft" to "active".
+3. Your public link becomes reachable: \`https://quiz.tipote.com/q/your-slug\` (or \`https://your-domain/your-slug\` if you connected your own domain).
+
+**No API or per-quiz setup needed.** You can create as many quizzes as you want on the same domain, each with its own slug. Just **publish each quiz** to make it reachable. An unpublished quiz always returns a 404, even if the slug is correct: go back to the editor and click Publish.
 
 ---
 
@@ -3536,6 +3562,8 @@ Enable **"Ask for first name"** and/or **"Ask for gender"** in the sidebar to di
 
 Ve a **Crear un quiz**. Tienes 3 opciones: **Manual** (añade preguntas y resultados tú mismo), **IA** (elige un objetivo, público y tono, la IA genera todo), o **Importar** un archivo .txt (la IA estructura tu contenido existente). Para PDF/DOCX, copia el texto a .txt antes de importar. Puedes editar el quiz antes de publicar.
 
+**Publica tu quiz para verlo en línea:** un quiz recién creado está en **borrador** y no es accesible. Su enlace público devuelve un **404** hasta que hagas clic en **Publicar** en el editor. No necesitas ninguna API: crea todos los quiz que quieras en el mismo dominio, cada uno con su slug, y publica cada uno para que sea accesible.
+
 ---
 
 ## Personalización dinámica (nombre y género)
@@ -3547,6 +3575,8 @@ Activa **"Pedir el nombre"** y/o **"Pedir el género"** en la barra lateral para
 
 Vai su **Crea un quiz**. Hai 3 opzioni: **Manuale** (aggiungi domande e risultati), **IA** (scegli obiettivo, pubblico e tono, l'IA genera tutto), o **Importa** un file .txt (l'IA struttura i tuoi contenuti). Per PDF/DOCX, copia il testo in .txt prima dell'import. Puoi modificare il quiz prima di pubblicare.
 
+**Pubblica il tuo quiz per vederlo online:** un quiz appena creato è in **bozza** e non è accessibile. Il suo link pubblico restituisce un **404** finché non clicchi su **Pubblica** nell'editor. Non serve alcuna API: crea tutti i quiz che vuoi sullo stesso dominio, ognuno con il suo slug, e pubblica ciascuno per renderlo accessibile.
+
 ---
 
 ## Personalizzazione dinamica (nome e genere)
@@ -3557,6 +3587,8 @@ Attiva **"Chiedi il nome"** e/o **"Chiedi il genere"** nella barra laterale per 
       ar: `## إنشاء اختبار على Tiquiz
 
 اذهب إلى **إنشاء اختبار**. لديك 3 خيارات: **يدوي**، **ذكاء اصطناعي**، أو **استيراد** ملف .txt (يقوم الذكاء الاصطناعي بهيكلة محتواك). بالنسبة لـ PDF/DOCX، انسخ النص إلى .txt قبل الاستيراد. يمكنك تعديل الاختبار قبل النشر.
+
+**انشر اختبارك لرؤيته على الإنترنت:** الاختبار المُنشأ حديثًا يكون في وضع **المسودة** وغير متاح. يُرجع رابطه العام خطأ **404** حتى تنقر على **نشر** في المحرر. لا تحتاج إلى أي واجهة برمجية (API): أنشئ كل الاختبارات التي تريدها على نفس النطاق، لكل منها الـ slug الخاص به، وانشر كل واحد ليصبح متاحًا.
 
 ---
 
@@ -3652,13 +3684,13 @@ Va dans **Paramètres → Systeme.io** et colle ta **clé API Systeme.io** (Syst
 
 Tiquiz pose le **tag**. Ce tag peut déclencher n'importe quelle automatisation Systeme.io.
 
-**Étape 1 — Crée tes tags dans Systeme.io AVANT de créer ton quiz**
+**Étape 1 - Crée tes tags dans Systeme.io AVANT de créer ton quiz**
 
 Dans Systeme.io > **Contacts > Tags**, crée un tag par résultat : \`quiz-visionnaire\`, \`quiz-strategique\`, \`quiz-partage\`, etc.
 
 Puis, en créant ton quiz dans Tiquiz, associe chaque résultat à son tag dans l'onglet **Systeme.io** du quiz.
 
-**Étape 2 — Crée une règle d'automatisation dans Systeme.io**
+**Étape 2 - Crée une règle d'automatisation dans Systeme.io**
 
 Dans Systeme.io > **Automatisations > Règles** → *Créer une règle* :
 
@@ -3670,7 +3702,7 @@ Dans Systeme.io > **Automatisations > Règles** → *Créer une règle* :
   - **Envoyer un email** unique (bienvenue, bonus…)
   - Ajouter un autre tag, déclencher un webhook, etc.
 
-**Étape 3 — C'est tout.** Le participant entre son email → Tiquiz pose le tag → Systeme.io déclenche toutes les actions. Zéro clic de ta part.
+**Étape 3 - C'est tout.** Le participant entre son email → Tiquiz pose le tag → Systeme.io déclenche toutes les actions. Zéro clic de ta part.
 
 ### ⚠️ Tester ton quiz : retire le tag avant chaque test
 
@@ -3685,7 +3717,7 @@ Sinon : le contact sera bien mis à jour mais l'automatisation **ne partira pas*
 ### Sync en masse
 Dans l'onglet **Leads** d'un quiz, clique sur **Synchroniser avec Systeme.io** pour forcer la sync de tous les leads en attente (retry après erreur API, changement de clé, etc.).
 
-> **En savoir plus :** [Guide officiel Systeme.io — workflows & automatisations](https://aide.systeme.io/article/1214-comment-fonctionne-le-workflow-de-systemeio)`,
+> **En savoir plus :** [Guide officiel Systeme.io - workflows & automatisations](https://aide.systeme.io/article/1214-comment-fonctionne-le-workflow-de-systemeio)`,
       en: `## Systeme.io Integration
 
 ### Set up your API key
@@ -3702,17 +3734,17 @@ When a lead submits your quiz:
 
 Tiquiz applies the **tag**. The tag can trigger any Systeme.io automation.
 
-**Step 1** — In Systeme.io > **Contacts > Tags**, create one tag per quiz result *before* creating the quiz. Then map each tag to a result in your quiz's **Systeme.io** tab.
+**Step 1** - In Systeme.io > **Contacts > Tags**, create one tag per quiz result *before* creating the quiz. Then map each tag to a result in your quiz's **Systeme.io** tab.
 
-**Step 2** — In Systeme.io > **Automations > Rules** → *Create rule*:
+**Step 2** - In Systeme.io > **Automations > Rules** → *Create rule*:
 - **Trigger**: \`Tag added to contact\` → pick your tag
 - **Actions**: subscribe to email campaign, enroll in course, add to community, send an email, add another tag, fire a webhook…
 
-**Step 3** — Done. Lead submits → Tiquiz tags → Systeme.io fires all actions.
+**Step 3** - Done. Lead submits → Tiquiz tags → Systeme.io fires all actions.
 
 ### ⚠️ Testing your quiz: remove the tag before each test
 
-Systeme.io **won't re-fire** a rule if the tag is already on the contact. Before each re-test with the same email, go to **Contacts**, open your test contact, and **manually remove the tag** — otherwise the automation won't trigger and you'll think it's broken.
+Systeme.io **won't re-fire** a rule if the tag is already on the contact. Before each re-test with the same email, go to **Contacts**, open your test contact, and **manually remove the tag** - otherwise the automation won't trigger and you'll think it's broken.
 
 ### Bulk sync
 In a quiz's **Leads** tab, click **Sync with Systeme.io** to force-sync pending leads.

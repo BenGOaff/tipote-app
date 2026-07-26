@@ -29,7 +29,7 @@ export default function SupportHeader({ locale }: { locale: string }) {
             <span className="text-white text-sm font-bold">T</span>
           </div>
           <span className="font-semibold text-foreground">
-            Tipote <span className="text-muted-foreground font-normal">|</span>{" "}
+            Tipote + Tiquiz <span className="text-muted-foreground font-normal">|</span>{" "}
             <span className="text-foreground/70 font-normal">{TITLES[locale] ?? TITLES.fr}</span>
           </span>
         </Link>

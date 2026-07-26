@@ -13,7 +13,7 @@ export function buildSupportKnowledgeBase(locale: string): string {
   const sections: string[] = [];
 
   // ── 1. Product overview ──
-  sections.push(`### Tipote — Présentation
+  sections.push(`### Tipote - Présentation
 Tipote® est une application web SaaS tout-en-un pour les entrepreneurs. Elle permet de structurer son business, créer du contenu personnalisé avec l'IA, et publier directement sur les réseaux sociaux.
 
 Contrairement aux outils IA génériques, Tipote mémorise le profil business complet de l'utilisateur (diagnostic, persona, offres, objectifs, storytelling) pour générer du contenu véritablement personnalisé.
@@ -24,11 +24,11 @@ URL : https://app.tipote.com`);
   // ── 2. Features ──
   sections.push(`### Fonctionnalités principales
 
-1. **Onboarding intelligent** — Questionnaire interactif qui capture le profil business complet (offres, persona, objectifs, style, tonalité). Obligatoire à la première connexion.
+1. **Onboarding intelligent** - Questionnaire interactif qui capture le profil business complet (offres, persona, objectifs, style, tonalité). Obligatoire à la première connexion.
 
-2. **Plan stratégique IA** — Plan d'action en 3 phases généré par IA avec pyramide d'offres (Lead Magnet → Low/Middle Ticket → High Ticket). 3 phases : Fondations, Croissance, Scale.
+2. **Plan stratégique IA** - Plan d'action en 3 phases généré par IA avec pyramide d'offres (Lead Magnet → Low/Middle Ticket → High Ticket). 3 phases : Fondations, Croissance, Scale.
 
-3. **Création de contenu IA** — 8 types de contenu :
+3. **Création de contenu IA** - 8 types de contenu :
    - Posts réseaux sociaux (LinkedIn, Instagram, Twitter, etc.)
    - Emails (newsletters, séquences)
    - Articles de blog / guides / tutoriels
@@ -55,7 +55,7 @@ URL : https://app.tipote.com`);
    - Comment-to-Email : capture d'email via DM automatique
    Disponible à partir du plan Basic.
 
-6. **Constructeur de pages** — Créer des landing pages hébergées :
+6. **Constructeur de pages** - Créer des landing pages hébergées :
    - Pages de capture, de vente, ou vitrine
    - Édition inline, preview multi-device
    - Chat IA pour modifier par conversation
@@ -63,7 +63,7 @@ URL : https://app.tipote.com`);
    - Tracking pixels (Facebook Pixel, GTM)
    - URL publique : /p/[slug]
 
-7. **Quiz builder** — Créer des quiz lead magnets :
+7. **Quiz builder** - Créer des quiz lead magnets :
    - Génération par IA
    - Capture email + prénom
    - Résultats personnalisés avec CTA
@@ -71,37 +71,37 @@ URL : https://app.tipote.com`);
    - Sync vers Systeme.io
    - URL publique : /q/[quizId]
 
-8. **Gestion des leads** — Base de données unifiée :
+8. **Gestion des leads** - Base de données unifiée :
    - Sources multiples (quiz, page de capture, site, manuel)
    - Chiffrement AES-256 de bout en bout
    - Recherche par email/nom
    - Export CSV ou vers Systeme.io
 
-9. **Calendrier éditorial** — Vue calendrier + liste de tous les contenus, filtrable par type/statut/canal. Édition des posts programmés.
+9. **Calendrier éditorial** - Vue calendrier + liste de tous les contenus, filtrable par type/statut/canal. Édition des posts programmés.
 
-10. **Analytics + diagnostic IA** — Saisie manuelle des KPIs (visiteurs, inscrits, ventes, CA). Diagnostic IA avec forces, faiblesses et recommandations.
+10. **Analytics + diagnostic IA** - Saisie manuelle des KPIs (visiteurs, inscrits, ventes, CA). Diagnostic IA avec forces, faiblesses et recommandations.
 
-11. **Coach IA** — Bulle flottante de coaching business :
+11. **Coach IA** - Bulle flottante de coaching business :
     - Disponible uniquement sur les plans Pro et Elite (inclus, pas de crédits)
     - Free/Basic : limité à 3 messages/mois (mode teaser)
     - Accès au profil business complet pour des réponses contextuelles
 
-12. **Templates Systeme.io** — Bibliothèque de templates téléchargeables et personnalisables.
+12. **Templates Systeme.io** - Bibliothèque de templates téléchargeables et personnalisables.
 
-13. **Pépites (insights)** — Tips et insights business avec badge de notification.
+13. **Pépites (insights)** - Tips et insights business avec badge de notification.
 
-14. **Didacticiel interactif** — 19 étapes guidées pour les nouveaux utilisateurs (actif les 7 premiers jours, relanceable).
+14. **Didacticiel interactif** - 19 étapes guidées pour les nouveaux utilisateurs (actif les 7 premiers jours, relanceable).
 
-15. **Notifications** — Automatiques, admin broadcast, personnelles. Cloche dans le header.
+15. **Notifications** - Automatiques, admin broadcast, personnelles. Cloche dans le header.
 
-16. **Multi-projets** — Gérer plusieurs projets avec profils séparés (plan Elite uniquement).
+16. **Multi-projets** - Gérer plusieurs projets avec profils séparés (plan Elite uniquement).
 
 17. **Widgets embarquables** :
     - Toast de preuve sociale (visiteurs en temps réel, inscriptions, achats)
     - Boutons de partage social (8 plateformes)
     - Script JS à intégrer sur son site
 
-18. **Paramètres** — 7 onglets :
+18. **Paramètres** - 7 onglets :
     - Profil : nom, mission, niche, storytelling (6 étapes), offres, URLs réseaux sociaux
     - Connexions : OAuth réseaux sociaux, API Systeme.io, auto-commentaires
     - Réglages : email, mot de passe, langue
@@ -116,7 +116,7 @@ URL : https://app.tipote.com`);
 | | Free | Basic | Pro | Elite |
 |---|---|---|---|---|
 | **Prix mensuel** | 0€ | 19€/mois | 49€/mois | 99€/mois |
-| **Prix annuel** | — | 190€/an | 490€/an | 990€/an |
+| **Prix annuel** | - | 190€/an | 490€/an | 990€/an |
 | **Crédits IA/mois** | 25 (unique, non renouvelable) | 40 | 150 | 500 |
 | **Tous les modules** | Oui | Oui | Oui | Oui |
 | **Publication directe** | Oui | Oui | Oui | Oui |
@@ -146,29 +146,29 @@ Les crédits supplémentaires n'expirent pas et sont consommés après les créd
   sections.push(`### Navigation de l'application
 
 **Section principale (sidebar) :**
-- Aujourd'hui (/app) — Dashboard avec prochaine tâche + stats
-- Ma Stratégie (/strategy) — Pyramide d'offres + plan en 3 phases (Fondations / Croissance / Scaling) + persona
-- Créer (/create) — Hub de création (8 types de contenu)
-- Mes Contenus (/contents) — Liste + calendrier éditorial
-- Templates (/templates) — Templates Systeme.io
-- Automatisations (/automations) — Auto-commentaires et webhooks
-- Mes Leads (/leads) — Gestion des leads capturés
+- Aujourd'hui (/app) - Dashboard avec prochaine tâche + stats
+- Ma Stratégie (/strategy) - Pyramide d'offres + plan en 3 phases (Fondations / Croissance / Scaling) + persona
+- Créer (/create) - Hub de création (8 types de contenu)
+- Mes Contenus (/contents) - Liste + calendrier éditorial
+- Templates (/templates) - Templates Systeme.io
+- Automatisations (/automations) - Auto-commentaires et webhooks
+- Mes Leads (/leads) - Gestion des leads capturés
 
 **Section secondaire :**
-- Analytics (/analytics) — KPIs + diagnostic IA
-- Pépites (/pepites) — Insights et pépites
-- Aide (/support) — Centre d'aide
+- Analytics (/analytics) - KPIs + diagnostic IA
+- Pépites (/pepites) - Insights et pépites
+- Aide (/support) - Centre d'aide
 
 **Workflow typique :** Onboarding → Aujourd'hui → Créer → Publier → Mes Contenus → Analytics`);
 
   // ── 5. Two-level AI ──
   sections.push(`### Architecture IA (deux niveaux)
 
-**Niveau 1 — Cerveau stratégique (OpenAI GPT) :**
+**Niveau 1 - Cerveau stratégique (OpenAI GPT) :**
 Onboarding, diagnostic, plan stratégique, pyramide d'offres, tâches, coach IA, analytics.
 Clé propriétaire Tipote (l'utilisateur n'a rien à configurer).
 
-**Niveau 2 — Génération de contenu (Claude Anthropic) :**
+**Niveau 2 - Génération de contenu (Claude Anthropic) :**
 Posts, emails, articles, scripts vidéo, funnels, quiz, stratégie éditoriale, auto-commentaires.
 Clé propriétaire Tipote (l'utilisateur n'a rien à configurer).
 
@@ -181,7 +181,7 @@ L'utilisateur n'a JAMAIS besoin de fournir sa propre clé API.`);
 - OAuth 2.0 avec PKCE pour les réseaux sociaux
 - Chiffrement AES-256-GCM pour les tokens OAuth et les données personnelles des leads
 - Chaque utilisateur a sa propre clé de chiffrement (DEK)
-- Row Level Security (RLS) sur toutes les tables — chaque utilisateur ne voit que ses propres données
+- Row Level Security (RLS) sur toutes les tables - chaque utilisateur ne voit que ses propres données
 - Index aveugle HMAC pour la recherche sur les champs chiffrés`);
 
   // ── 7. Integrations ──
@@ -190,6 +190,11 @@ L'utilisateur n'a JAMAIS besoin de fournir sa propre clé API.`);
 - **Systeme.io** : facturation (webhooks achat/abonnement/annulation), export de leads avec tags, templates
 - **n8n** : webhooks pour automatisations (publication asynchrone, callbacks)
 - **8 réseaux sociaux** : LinkedIn, Facebook, Instagram, Threads, Twitter/X, TikTok, Pinterest, Reddit (OAuth 2.0)`);
+
+  // ── 7bis. Tiquiz : publication (confusion fréquente) ──
+  sections.push(`### Tiquiz : publier un quiz pour le voir en ligne
+Un quiz Tiquiz fraîchement créé est en BROUILLON et n'est PAS accessible en ligne : son lien public renvoie une 404 tant qu'il n'est pas publié (seul le créateur connecté peut le prévisualiser). Pour le mettre en ligne : ouvrir le quiz dans l'éditeur et cliquer sur "Publier" (le statut passe de brouillon à actif), le lien public devient alors accessible (https://quiz.tipote.com/q/[slug], ou https://[domaine]/[slug] avec un domaine connecté).
+Il n'y a AUCUNE API ni configuration à faire par quiz. On peut créer autant de quiz que l'on veut sur le même domaine, chacun avec son propre slug. Il suffit de publier chaque quiz individuellement. Si un 2e quiz renvoie une 404 alors que le slug est correct, c'est qu'il n'est pas encore publié : retourner dans l'éditeur et cliquer sur "Publier".`);
 
   // ── 8. FAQ from seed articles (titles as index) ──
   const articleIndex = SEED_CATEGORIES.map((cat) => {
