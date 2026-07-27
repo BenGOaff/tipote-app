@@ -2348,6 +2348,12 @@ export default function PublicQuizClient({
         {toastOverlay}
         {shareOverlay}
         {renderMediaPanel("intro")}
+        {/* Colonne contenu + footer. INDISPENSABLE en disposition split :
+            l'exterieur passe en md:flex-row, et sans cette colonne le footer
+            devenait une 3e colonne collee en haut a droite au lieu de rester
+            un pied de page. Facon Tally : le footer vit en bas de la colonne
+            de contenu. */}
+        <div className="flex-1 flex flex-col min-w-0">
         <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6 py-10 sm:py-16">
         {/* Un seul conteneur pour titre + intro + bouton : memes bornes et
             meme alignement, donc l'intro est TOUJOURS calee sur le titre. */}
@@ -2426,6 +2432,7 @@ export default function PublicQuizClient({
         </div>
         </div>
         <TipoteFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} tipoteAffiliateId={quiz.tipote_affiliate_id} hidden={quiz.hide_branding} />
+        </div>
       </div>
     );
   }
@@ -2927,6 +2934,12 @@ export default function PublicQuizClient({
         {toastOverlay}
         {shareOverlay}
         {renderMediaPanel("capture")}
+        {/* Colonne contenu + footer. INDISPENSABLE en disposition split :
+            l'exterieur passe en md:flex-row, et sans cette colonne le footer
+            devenait une 3e colonne collee en haut a droite au lieu de rester
+            un pied de page. Facon Tally : le footer vit en bas de la colonne
+            de contenu. */}
+        <div className="flex-1 flex flex-col min-w-0">
         <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6 py-10 sm:py-16">
         <div className="max-w-lg w-full space-y-6" style={readerSurfaceStyle}>
             {/* Heading et subtitle de la page capture = champs COURTS.
@@ -3133,6 +3146,7 @@ export default function PublicQuizClient({
           </div>
         </div>
         <TipoteFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} tipoteAffiliateId={quiz.tipote_affiliate_id} hidden={quiz.hide_branding} />
+        </div>
       </div>
     );
   }
@@ -3447,6 +3461,12 @@ export default function PublicQuizClient({
         {toastOverlay}
         {shareOverlay}
         {renderMediaPanel("r:" + (resultProfile?.id ?? ""))}
+        {/* Colonne contenu + footer. INDISPENSABLE en disposition split :
+            l'exterieur passe en md:flex-row, et sans cette colonne le footer
+            devenait une 3e colonne collee en haut a droite au lieu de rester
+            un pied de page. Facon Tally : le footer vit en bas de la colonne
+            de contenu. */}
+        <div className="flex-1 flex flex-col min-w-0">
         <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6 py-10 sm:py-16">
         <div className="max-w-2xl w-full space-y-8" style={readerSurfaceStyle}>
             {/* Score (mode scoring) : "Tu as obtenu X / Y" + pourcentage. */}
@@ -3800,6 +3820,7 @@ export default function PublicQuizClient({
           </div>
         </div>
         <TipoteFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} tipoteAffiliateId={quiz.tipote_affiliate_id} hidden={quiz.hide_branding} />
+        </div>
       </div>
     );
   }
