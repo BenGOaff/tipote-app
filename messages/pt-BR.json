@@ -722,7 +722,9 @@
     "rteFontSizeForMobile": "📱 Para mobile",
     "rteFontSizeForDesktop": "💻 Para PC",
     "rteImageSize": "Tamanho da imagem:",
-    "rteImageSizeReset": "100%"
+    "rteImageSizeReset": "100%",
+    "rteImageCrop": "Recortar a imagem",
+    "rteImageRemove": "Remover a imagem"
   },
   "auth": {
     "login": "Entrar",
@@ -4962,7 +4964,12 @@
     "optionSioTagLabel": "Tag Systeme.io para esta resposta",
     "quizLanguageLabel": "Idioma do quiz",
     "quizLanguageHint": "O idioma da interface que seus visitantes veem (botões, tela de personalização, formulário). Independente do idioma da sua conta.",
-    "quizLanguagePick": "Escolher o idioma"
+    "quizLanguagePick": "Escolher o idioma",
+    "mustPublishHint": "Este link só funciona quando o quiz está publicado. Clique em Publicar no topo.",
+    "previewCaptureDisableHint": "Etapa de captura de email. Para ocultá-la, desative a captura em Configurações.",
+    "introCoverHint": "Layout capa: esta imagem é o fundo em tela cheia (ajustável em Design)",
+    "hideBrandingLabel": "Ocultar o link completamente",
+    "hideBrandingHint": "Não mostrar nada no final do quiz (nem Tipote, nem link personalizado)."
   },
   "contentStrategy": {
     "title": "Estratégia de conteúdo",

@@ -576,7 +576,9 @@
     "rteFontSizeForMobile": "📱 للجوال",
     "rteFontSizeForDesktop": "💻 لسطح المكتب",
     "rteImageSize": "حجم الصورة:",
-    "rteImageSizeReset": "100%"
+    "rteImageSizeReset": "100%",
+    "rteImageCrop": "قص الصورة",
+    "rteImageRemove": "حذف الصورة"
   },
   "auth": {
     "login": "تسجيل الدخول",
@@ -4657,7 +4659,12 @@
     "optionSioTagLabel": "وسم Systeme.io لهذه الإجابة",
     "quizLanguageLabel": "لغة الاختبار",
     "quizLanguageHint": "لغة الواجهة التي يراها زوّارك (الأزرار، شاشة التخصيص، النموذج). مستقلة عن لغة حسابك.",
-    "quizLanguagePick": "اختر اللغة"
+    "quizLanguagePick": "اختر اللغة",
+    "mustPublishHint": "يعمل هذا الرابط فقط بعد نشر الاختبار. انقر على نشر في أعلى الصفحة.",
+    "previewCaptureDisableHint": "خطوة جمع البريد الإلكتروني. لإخفائها، عطّل الجمع من علامة تبويب الإعدادات.",
+    "introCoverHint": "تخطيط الغلاف: هذه الصورة هي خلفية الشاشة الكاملة (يُضبط في التصميم)",
+    "hideBrandingLabel": "إخفاء الرابط تمامًا",
+    "hideBrandingHint": "عدم إظهار أي شيء أسفل الاختبار (لا Tipote ولا رابط مخصص)."
   },
   "contentStrategy": {
     "title": "استراتيجية المحتوى",

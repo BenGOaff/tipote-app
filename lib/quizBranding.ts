@@ -431,7 +431,12 @@ export function quizBackgroundCss(b: QuizBranding): string | null {
     // directement dessus, il vit dans une "reader surface" translucide (cf.
     // PublicQuizClient). L'image sert donc de simple toile de fond -> plus
     // besoin du scrim clair d'antan.
-    return `url("${b.backgroundImageUrl}") center/cover no-repeat fixed`;
+    // Pas de `fixed` : l'image doit couvrir toute la boite du conteneur (qui
+    // fait au moins la hauteur de l'ecran, cf. rootStyle minHeight 100dvh) et
+    // grandir avec le contenu. Avec `fixed`, l'image etait dimensionnee sur le
+    // viewport et laissait du blanc sous la carte quand le conteneur depassait
+    // ou que le device calculait mal la hauteur.
+    return `url("${b.backgroundImageUrl}") center/cover no-repeat`;
   }
   return null;
 }

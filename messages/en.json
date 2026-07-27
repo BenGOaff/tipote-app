@@ -583,7 +583,9 @@
     "rteFontSizeForMobile": "📱 For mobile",
     "rteFontSizeForDesktop": "💻 For desktop",
     "rteImageSize": "Image size:",
-    "rteImageSizeReset": "100%"
+    "rteImageSizeReset": "100%",
+    "rteImageCrop": "Crop image",
+    "rteImageRemove": "Remove image"
   },
   "auth": {
     "login": "Sign in",
@@ -4665,7 +4667,12 @@
     "optionSioTagLabel": "Systeme.io tag for this answer",
     "quizLanguageLabel": "Quiz language",
     "quizLanguageHint": "The language of the interface your visitors see (buttons, personalization screen, form). Independent from your account language.",
-    "quizLanguagePick": "Choose a language"
+    "quizLanguagePick": "Choose a language",
+    "mustPublishHint": "This link only works once the quiz is published. Click Publish at the top of the page.",
+    "previewCaptureDisableHint": "Email capture step. To hide it, turn off capture in the Settings tab.",
+    "introCoverHint": "Cover layout: this image is the full-screen background (set in Design)",
+    "hideBrandingLabel": "Hide the link entirely",
+    "hideBrandingHint": "Show nothing at the bottom of the quiz (no Tipote, no custom link)."
   },
   "contentStrategy": {
     "title": "Content strategy",

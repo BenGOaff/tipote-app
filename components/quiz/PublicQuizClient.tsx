@@ -184,6 +184,7 @@ type PublicQuizData = {
   ask_first_name?: boolean | null;
   ask_gender?: boolean | null;
   custom_footer_text?: string | null;
+  hide_branding?: boolean | null;
   custom_footer_url?: string | null;
   // Fermeture du quiz (createur) : redirige ou affiche un message.
   close_enabled?: boolean | null;
@@ -1134,6 +1135,12 @@ export default function PublicQuizClient({
         boxShadow: "0 20px 60px rgba(0,0,0,0.22)",
         paddingLeft: "clamp(1rem, 4vw, 2rem)",
         paddingRight: "clamp(1rem, 4vw, 2rem)",
+        // Padding vertical INTERNE de la carte (le py Tailwind est retire des
+        // cartes pour unifier le centrage vertical facon Tally : l'espace
+        // "hors carte" vient desormais du bloc de centrage, l'espace "dans la
+        // carte" vient d'ici).
+        paddingTop: "clamp(1.5rem, 5vw, 2.75rem)",
+        paddingBottom: "clamp(1.5rem, 5vw, 2.75rem)",
       }
     : undefined;
   // Backing translucide clair pour les cartes de réponse NON sélectionnées sur
@@ -1148,6 +1155,11 @@ export default function PublicQuizClient({
   const rootStyle: React.CSSProperties = {
     fontFamily: cssFontFamily(branding.font),
     backgroundColor: branding.backgroundColor,
+    // Le conteneur (et donc son fond image/degrade) couvre TOUJOURS au moins
+    // toute la hauteur de l'ecran, quel que soit le device. 100dvh gere la
+    // barre d'URL mobile ; repli sur la classe min-h-screen (100vh) si un vieux
+    // navigateur ignore dvh.
+    minHeight: "100dvh",
     ...(richBackground ? { background: richBackground } : {}),
     color: contentIsDark ? "#ffffff" : (branding.textColor ?? "hsl(231 41% 31%)"),
     colorScheme: contentIsDark ? "dark" : "light",
@@ -2177,7 +2189,7 @@ export default function PublicQuizClient({
     return (
       <div className="public-surface min-h-screen flex flex-col" style={rootStyle}>
         <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6 text-center">
-          <div className="max-w-lg w-full space-y-6 py-16 sm:py-24" style={readerSurfaceStyle}>
+          <div className="max-w-lg w-full space-y-6" style={readerSurfaceStyle}>
             {branding.logoUrl && (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img src={branding.logoUrl} alt="" className="max-h-16 w-auto object-contain mx-auto" />
@@ -2194,7 +2206,7 @@ export default function PublicQuizClient({
             )}
           </div>
         </div>
-        <TipoteFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} tipoteAffiliateId={quiz.tipote_affiliate_id} />
+        <TipoteFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} tipoteAffiliateId={quiz.tipote_affiliate_id} hidden={quiz.hide_branding} />
       </div>
     );
   }
@@ -2274,7 +2286,7 @@ export default function PublicQuizClient({
           {toastOverlay}
           {shareOverlay}
           <div
-            className="relative flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6 text-center"
+            className="relative flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6 py-10 sm:py-16 text-center"
             style={{
               backgroundImage: `linear-gradient(rgba(15,23,42,0.55), rgba(15,23,42,0.55)), url("${quiz.intro_image_url}")`,
               backgroundSize: "cover",
@@ -2282,7 +2294,7 @@ export default function PublicQuizClient({
               color: "#ffffff",
             }}
           >
-            <div className="max-w-2xl w-full space-y-8 py-16 sm:py-24">
+            <div className="max-w-2xl w-full space-y-8">
               {branding.logoUrl && (
                 <div className="flex justify-center">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -2310,7 +2322,7 @@ export default function PublicQuizClient({
               </Button>
             </div>
           </div>
-          <TipoteFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} tipoteAffiliateId={quiz.tipote_affiliate_id} />
+          <TipoteFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} tipoteAffiliateId={quiz.tipote_affiliate_id} hidden={quiz.hide_branding} />
         </div>
       );
     }
@@ -2336,10 +2348,10 @@ export default function PublicQuizClient({
         {toastOverlay}
         {shareOverlay}
         {renderMediaPanel("intro")}
-        <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6">
+        <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6 py-10 sm:py-16">
         {/* Un seul conteneur pour titre + intro + bouton : memes bornes et
             meme alignement, donc l'intro est TOUJOURS calee sur le titre. */}
-        <div className={`max-w-2xl w-full space-y-8 ${introTextClass} py-16 sm:py-24`} style={readerSurfaceStyle}>
+        <div className={`max-w-2xl w-full space-y-8 ${introTextClass}`} style={readerSurfaceStyle}>
             {branding.logoUrl && (
               <div className={`flex ${introJustify}`}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -2413,7 +2425,7 @@ export default function PublicQuizClient({
             )}
         </div>
         </div>
-        <TipoteFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} tipoteAffiliateId={quiz.tipote_affiliate_id} />
+        <TipoteFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} tipoteAffiliateId={quiz.tipote_affiliate_id} hidden={quiz.hide_branding} />
       </div>
     );
   }
@@ -2426,7 +2438,7 @@ export default function PublicQuizClient({
     return (
       <div className={`public-surface min-h-screen flex flex-col${layoutOuterClass}`} style={rootStyle}>
         {renderMediaPanel("capture")}
-        <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6 py-16">
+        <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6 py-10 sm:py-16">
         <div className={`max-w-md w-full space-y-6 ${layoutAlignText}`} style={readerSurfaceStyle}>
           {/* L'écran respecte la charte du quiz : couleur primaire sur
               le titre (comme la page de résultats), font-family héritée
@@ -2822,7 +2834,7 @@ export default function PublicQuizClient({
           {/* Colonne contenu : le bloc reste CENTRE sur la page (items-center),
               seul le texte s'aligne selon la disposition. En 'left', pas de
               demi-écran vide : marges équilibrées, texte à gauche (façon Tally). */}
-          <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-16" onTouchStart={onQuizTouchStart} onTouchEnd={onQuizTouchEnd}>
+          <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-10 sm:py-16" onTouchStart={onQuizTouchStart} onTouchEnd={onQuizTouchEnd}>
             {/* key={currentQ} re-mounts ce bloc a chaque changement de
                 question -> la keyframe directionnelle se rejoue (glisse
                 depuis la droite en avancant, depuis la gauche en revenant),
@@ -2915,8 +2927,8 @@ export default function PublicQuizClient({
         {toastOverlay}
         {shareOverlay}
         {renderMediaPanel("capture")}
-        <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6">
-        <div className="max-w-lg w-full space-y-6 py-16 sm:py-24" style={readerSurfaceStyle}>
+        <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6 py-10 sm:py-16">
+        <div className="max-w-lg w-full space-y-6" style={readerSurfaceStyle}>
             {/* Heading et subtitle de la page capture = champs COURTS.
                 On AJOUTE `tipote-quiz-rich-inline` à `tipote-quiz-rich`
                 pour neutraliser les block-levels parasites (<p>, <div>,
@@ -2975,7 +2987,7 @@ export default function PublicQuizClient({
                         type="text"
                         value={firstName}
                         onChange={(e) => setFirstName(e.target.value)}
-                        className="h-11"
+                        className="h-11 bg-white text-slate-900 border-slate-300 placeholder:text-slate-400 dark:bg-white dark:text-slate-900 dark:border-slate-300"
                         required={!!quiz.first_name_required}
                       />
                     </div>
@@ -2990,7 +3002,7 @@ export default function PublicQuizClient({
                         type="text"
                         value={lastName}
                         onChange={(e) => setLastName(e.target.value)}
-                        className="h-11"
+                        className="h-11 bg-white text-slate-900 border-slate-300 placeholder:text-slate-400 dark:bg-white dark:text-slate-900 dark:border-slate-300"
                         required={!!quiz.last_name_required}
                       />
                     </div>
@@ -3009,7 +3021,7 @@ export default function PublicQuizClient({
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && (captureBefore ? handleCaptureContinue() : handleSubmitEmail())}
-                  className="h-11"
+                  className="h-11 bg-white text-slate-900 border-slate-300 placeholder:text-slate-400 dark:bg-white dark:text-slate-900 dark:border-slate-300"
                   required
                 />
               </div>
@@ -3024,7 +3036,7 @@ export default function PublicQuizClient({
                     type="tel"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    className="h-11"
+                    className="h-11 bg-white text-slate-900 border-slate-300 placeholder:text-slate-400 dark:bg-white dark:text-slate-900 dark:border-slate-300"
                     required={!!quiz.phone_required}
                   />
                 </div>
@@ -3040,7 +3052,7 @@ export default function PublicQuizClient({
                     type="text"
                     value={country}
                     onChange={(e) => setCountry(e.target.value)}
-                    className="h-11"
+                    className="h-11 bg-white text-slate-900 border-slate-300 placeholder:text-slate-400 dark:bg-white dark:text-slate-900 dark:border-slate-300"
                     required={!!quiz.country_required}
                   />
                 </div>
@@ -3120,7 +3132,7 @@ export default function PublicQuizClient({
                 (see <ConsentText>). Product decision 2026-05-17. */}
           </div>
         </div>
-        <TipoteFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} tipoteAffiliateId={quiz.tipote_affiliate_id} />
+        <TipoteFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} tipoteAffiliateId={quiz.tipote_affiliate_id} hidden={quiz.hide_branding} />
       </div>
     );
   }
@@ -3150,7 +3162,7 @@ export default function PublicQuizClient({
       >
         {toastOverlay}
         {shareOverlay}
-        <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6">
+        <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6 py-10 sm:py-16">
         <div className="max-w-lg w-full py-16 sm:py-20 space-y-10" style={readerSurfaceStyle}>
           {/* Image bonus — positionnée selon `bonus_image_position`
               (top / after_heading / after_intro / bottom). Si pas
@@ -3347,6 +3359,7 @@ export default function PublicQuizClient({
           customUrl={quiz.custom_footer_url}
           logoUrl={branding.logoUrl}
           tipoteAffiliateId={quiz.tipote_affiliate_id}
+          hidden={quiz.hide_branding}
         />
       </div>
     );
@@ -3365,8 +3378,8 @@ export default function PublicQuizClient({
       >
         {toastOverlay}
         {shareOverlay}
-        <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6">
-        <div className="max-w-lg w-full py-16 sm:py-24 space-y-6 text-center" style={readerSurfaceStyle}>
+        <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6 py-10 sm:py-16">
+        <div className="max-w-lg w-full space-y-6 text-center" style={readerSurfaceStyle}>
           <h2
             className="tipote-quiz-rich text-3xl sm:text-4xl font-bold leading-tight"
             dangerouslySetInnerHTML={{
@@ -3434,8 +3447,8 @@ export default function PublicQuizClient({
         {toastOverlay}
         {shareOverlay}
         {renderMediaPanel("r:" + (resultProfile?.id ?? ""))}
-        <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6">
-        <div className="max-w-2xl w-full py-16 sm:py-24 space-y-8" style={readerSurfaceStyle}>
+        <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6 py-10 sm:py-16">
+        <div className="max-w-2xl w-full space-y-8" style={readerSurfaceStyle}>
             {/* Score (mode scoring) : "Tu as obtenu X / Y" + pourcentage. */}
             {quiz.mode === "scoring" && resultScore && resultScore.max > 0 && (
               <div className="text-center space-y-2">
@@ -3786,7 +3799,7 @@ export default function PublicQuizClient({
           )}
           </div>
         </div>
-        <TipoteFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} tipoteAffiliateId={quiz.tipote_affiliate_id} />
+        <TipoteFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} tipoteAffiliateId={quiz.tipote_affiliate_id} hidden={quiz.hide_branding} />
       </div>
     );
   }
@@ -3919,7 +3932,10 @@ function tiquizDiscoveryUrl(affiliateId: string | null | undefined): string {
   return `${base}?sa=${encodeURIComponent(affiliateId)}`;
 }
 
-function TipoteFooter({ locale, customText, customUrl, logoUrl, tipoteAffiliateId }: { locale?: string | null; customText?: string | null; customUrl?: string | null; logoUrl?: string | null; tipoteAffiliateId?: string | null }) {
+function TipoteFooter({ locale, customText, customUrl, logoUrl, tipoteAffiliateId, hidden }: { locale?: string | null; customText?: string | null; customUrl?: string | null; logoUrl?: string | null; tipoteAffiliateId?: string | null; hidden?: boolean | null }) {
+  // Plan payant qui a choisi de masquer completement le pied de page : on
+  // n'affiche rien (ni Tipote, ni footer perso).
+  if (hidden) return null;
   // Paid plans avec footer custom : on respecte le choix du créateur
   // tel quel — pas de mention Tiquiz, pas de tracking. Il a payé pour
   // brander son footer, on dégage.

@@ -20,7 +20,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft, ArrowUp, Copy, Eye, CheckCircle, Share2,
   Loader2, Plus, Trash2, Monitor, Smartphone, Pencil, X, Save, GripVertical,
-  Gift, Sparkles, Shuffle, ChevronUp, ChevronDown, Wand2, ImagePlus, Menu, Crop, Star, Settings2,
+  Gift, Sparkles, Shuffle, ChevronUp, ChevronDown, Wand2, ImagePlus, Menu, Crop, Star, Settings2, AlertCircle,
   Link2,
 } from "lucide-react";
 import QuizResultsAnalytics from "@/components/quiz/QuizResultsAnalytics";
@@ -178,6 +178,7 @@ type QuizData = {
   share_networks: string[] | null; og_description: string | null; og_image_url: string | null;
   seo_noindex: boolean | null;
   custom_footer_text: string | null; custom_footer_url: string | null;
+  hide_branding: boolean | null;
   status: string; views_count: number; starts_count: number;
   completions_count: number; shares_count: number;
   questions: QuizQuestion[]; results: QuizResult[];
@@ -717,6 +718,9 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const [uploadingOgImage, setUploadingOgImage] = useState(false);
   const [customFooterText, setCustomFooterText] = useState("");
   const [customFooterUrl, setCustomFooterUrl] = useState("");
+  // Masquer completement le pied de page Tipote (payants). Miroir du pattern
+  // hide_brand_logo (etat + snapshot + apply + fetch + payload + UI).
+  const [hideBranding, setHideBranding] = useState(false);
   const [shareNetworks, setShareNetworks] = useState<ShareNetwork[]>([]);
   // Tipote widgets (toast notification + social share) attachable per quiz.
   const [toastWidgets, setToastWidgets] = useState<{ id: string; name: string; enabled: boolean }[]>([]);
@@ -906,6 +910,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     og_image_url: ogImageUrl,
     custom_footer_text: customFooterText,
     custom_footer_url: customFooterUrl,
+    hide_branding: hideBranding,
     share_networks: shareNetworks,
     toast_widget_id: selectedToastWidget,
     share_widget_id: selectedShareWidget,
@@ -927,7 +932,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     closeEnabled, closeAction, closeRedirectUrl, closeMessage, closeCtaText, closeCtaUrl,
     shareMessage, locale, sioShareTagName, status,
     fontFamily, primaryColor, bgColor, textColor, quizBrandLogoUrl, hideBrandLogo,
-    slug, ogDescription, customFooterText, customFooterUrl, shareNetworks,
+    slug, ogDescription, customFooterText, customFooterUrl, hideBranding, shareNetworks,
     selectedToastWidget, selectedShareWidget,
     editQuestions, editResults,
   ]);
@@ -1023,6 +1028,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     if (typeof s.seo_noindex === "boolean") setSeoNoindex(s.seo_noindex);
     if (typeof s.custom_footer_text === "string") setCustomFooterText(s.custom_footer_text);
     if (typeof s.custom_footer_url === "string") setCustomFooterUrl(s.custom_footer_url);
+    if (typeof s.hide_branding === "boolean") setHideBranding(s.hide_branding);
     if (Array.isArray(s.share_networks)) setShareNetworks(s.share_networks as ShareNetwork[]);
     if (typeof s.toast_widget_id === "string") setSelectedToastWidget(s.toast_widget_id);
     if (typeof s.share_widget_id === "string") setSelectedShareWidget(s.share_widget_id);
@@ -1283,6 +1289,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       setSeoNoindex(!!(q as { seo_noindex?: boolean }).seo_noindex);
       setCustomFooterText(q.custom_footer_text ?? "");
       setCustomFooterUrl(q.custom_footer_url ?? "");
+      setHideBranding((q as { hide_branding?: boolean | null }).hide_branding === true);
       setShareNetworks(Array.isArray(q.share_networks) ? (q.share_networks as ShareNetwork[]) : []);
       setSelectedToastWidget(((q as Record<string, unknown>).toast_widget_id as string | null) ?? "");
       setSelectedShareWidget(((q as Record<string, unknown>).share_widget_id as string | null) ?? "");
@@ -1896,6 +1903,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           share_networks: shareNetworks,
           // Custom footer — ignored server-side for free plan but we still send it
           custom_footer_text: customFooterText.trim() || null,
+          hide_branding: hideBranding,
           custom_footer_url: customFooterUrl.trim() || null,
           // Per-quiz widget overrides (empty string => fall back to first-enabled)
           toast_widget_id: selectedToastWidget || null,
@@ -3259,7 +3267,20 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
             <div data-device-preview={device} className={`mx-auto transition-all duration-300 ${device === "mobile" ? "max-w-sm" : "w-full"}`}>
 
               {/* ── INTRO SECTION ── */}
-              <div ref={introRef} className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-16 text-center">
+              {/* WYSIWYG couverture : quand la disposition d'accueil est
+                  "cover" (Design) ET qu'une image d'intro est posee, le public
+                  rend l'image en FOND plein ecran avec scrim sombre + texte
+                  clair. L'apercu doit montrer EXACTEMENT ca. */}
+              <div
+                ref={introRef}
+                className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-16 text-center"
+                style={introLayout === "cover" && introImageUrl ? {
+                  backgroundImage: `linear-gradient(rgba(15,23,42,0.55), rgba(15,23,42,0.55)), url("${introImageUrl}")`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                  color: "#ffffff",
+                } : undefined}
+              >
                 <div className="max-w-2xl w-full space-y-6">
                   {/* Hidden file input partagé pour le picker intro image */}
                   <input
@@ -3311,9 +3332,36 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                       />
                     </div>
                   )}
+                  {/* Mode couverture : l'image est le fond, pas un bloc. On
+                      remplace les slots par une barre de gestion compacte. */}
+                  {introLayout === "cover" && introImageUrl && (
+                    <div className="flex items-center justify-center gap-2">
+                      <span className="text-[11px] text-white/80 bg-black/30 rounded-full px-3 py-1">
+                        {t("introCoverHint")}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setCropTarget({ url: introImageUrl, apply: (u) => setIntroImageUrl(u) })}
+                        className="bg-background/90 hover:bg-primary hover:text-white rounded-full p-1.5 shadow"
+                        aria-label="Recadrer l'image"
+                        title="Recadrer l'image"
+                      >
+                        <Crop className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={clearIntroImage}
+                        className="bg-background/90 hover:bg-destructive hover:text-white rounded-full p-1.5 shadow"
+                        aria-label="Retirer l'image"
+                        title="Retirer l'image"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
                   {/* Largeur de l'image d'intro (agrandir / retrecir). 100% =
-                      pleine largeur (defaut). */}
-                  {introImageUrl && (
+                      pleine largeur (defaut). Sans objet en couverture. */}
+                  {introLayout !== "cover" && introImageUrl && (
                     <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
                       <span>Taille de l&apos;image</span>
                       <input
@@ -3337,7 +3385,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                   )}
 
                   {/* slot TOP — entre logo et titre */}
-                  {introImageUrl && (introImagePosition ?? "top") === "top" && (
+                  {introLayout !== "cover" && introImageUrl && (introImagePosition ?? "top") === "top" && (
                     <ResultDraggableImage url={introImageUrl} ri={-1}
                       onDragStart={() => setDraggingIntroImage(true)}
                       onDragEnd={() => setDraggingIntroImage(false)}
@@ -3352,7 +3400,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                   <InlineEdit value={title} onChange={setTitle} onAIRewrite={aiRewriteTitle} multiline className="tipote-quiz-title font-bold leading-tight" placeholder="Titre du quiz…" />
 
                   {/* slot AFTER_TITLE — entre titre et intro text */}
-                  {introImageUrl && introImagePosition === "after_title" && (
+                  {introLayout !== "cover" && introImageUrl && introImagePosition === "after_title" && (
                     <ResultDraggableImage url={introImageUrl} ri={-1}
                       onDragStart={() => setDraggingIntroImage(true)}
                       onDragEnd={() => setDraggingIntroImage(false)}
@@ -3367,7 +3415,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                   <RichTextEdit value={introduction} onChange={setIntroduction} onAIRewrite={aiRewriteIntro} onImageUpload={handleRichTextImageUpload} previewTransform={previewInterpolate} className="text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto" placeholder="Texte d'introduction…" />
 
                   {/* slot AFTER_INTRO — entre intro text et bouton */}
-                  {introImageUrl && introImagePosition === "after_intro" && (
+                  {introLayout !== "cover" && introImageUrl && introImagePosition === "after_intro" && (
                     <ResultDraggableImage url={introImageUrl} ri={-1}
                       onDragStart={() => setDraggingIntroImage(true)}
                       onDragEnd={() => setDraggingIntroImage(false)}
@@ -3391,7 +3439,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                   </div>
 
                   {/* slot BOTTOM — sous le bouton */}
-                  {introImageUrl && introImagePosition === "bottom" && (
+                  {introLayout !== "cover" && introImageUrl && introImagePosition === "bottom" && (
                     <ResultDraggableImage url={introImageUrl} ri={-1}
                       onDragStart={() => setDraggingIntroImage(true)}
                       onDragEnd={() => setDraggingIntroImage(false)}
@@ -3786,6 +3834,12 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
               {captureEnabled && (
               <div ref={captureRef} className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-16">
                 <div className="max-w-lg w-full space-y-6">
+                  {/* Indice editeur uniquement (n'apparait pas cote visiteur) :
+                      beaucoup d'users ne trouvent pas comment retirer l'email. */}
+                  <p className="text-[11px] text-muted-foreground flex items-center justify-center gap-1.5 border border-dashed rounded-lg px-3 py-1.5">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    {t("previewCaptureDisableHint")}
+                  </p>
                   <RichTextEdit singleLine value={captureHeading || (quiz?.address_form === "vous" ? t("captureHeadingDefaultFormal") : t("captureHeadingDefault"))} onChange={setCaptureHeading} onImageUpload={handleRichTextImageUpload} className="text-2xl sm:text-4xl font-bold text-center" placeholder={t("captureTitlePlaceholder")} />
                   <RichTextEdit value={captureSubtitle || (quiz?.address_form === "vous" ? t("captureSubtitleDefaultFormal") : t("captureSubtitleDefault"))} onChange={setCaptureSubtitle} onImageUpload={handleRichTextImageUpload} className="text-muted-foreground text-center text-base" placeholder={t("captureSubtitlePlaceholder")} />
                   <div className="space-y-3 max-w-md mx-auto">
@@ -4535,6 +4589,12 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                 {copied ? <CheckCircle className="w-4 h-4 text-green-500 dark:text-green-400" /> : <Copy className="w-4 h-4" />}
               </Button>
             </div>
+            {status !== "active" && (
+              <p className="text-xs text-amber-600 dark:text-amber-500 flex items-start gap-1.5">
+                <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                <span>{t("mustPublishHint")}</span>
+              </p>
+            )}
             <div className="relative">
               <pre className="text-xs font-mono bg-muted rounded-lg p-3 pr-24 overflow-x-auto border mt-3">{iframeCode}</pre>
               <Button
@@ -4687,8 +4747,21 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                 onChange={(e) => setCustomFooterUrl(e.target.value)}
                 placeholder="https://monsite.com"
                 className="text-sm"
-                disabled={!isPaidPlan}
+                disabled={!isPaidPlan || hideBranding}
               />
+              <label className={`flex items-start gap-2 pt-1 ${isPaidPlan ? "cursor-pointer" : "opacity-60 cursor-not-allowed"}`}>
+                <input
+                  type="checkbox"
+                  checked={hideBranding}
+                  onChange={(e) => setHideBranding(e.target.checked)}
+                  disabled={!isPaidPlan}
+                  className="mt-0.5"
+                />
+                <div className="flex-1">
+                  <div className="text-sm font-medium">{t("hideBrandingLabel")}</div>
+                  <p className="text-xs text-muted-foreground">{t("hideBrandingHint")}</p>
+                </div>
+              </label>
             </CardContent>
           </Card>
 

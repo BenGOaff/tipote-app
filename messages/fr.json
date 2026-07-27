@@ -583,7 +583,9 @@
     "rteImageSizeReset": "100%",
     "customColor": "Couleur personnalisée",
     "genderizeTitle": "Générer les variantes de genre (Il / Elle / Iel)",
-    "noPostsFound": "Aucun post trouvé."
+    "noPostsFound": "Aucun post trouvé.",
+    "rteImageCrop": "Rogner l'image",
+    "rteImageRemove": "Supprimer l'image"
   },
   "auth": {
     "login": "Se connecter",
@@ -4665,7 +4667,12 @@
     "optionSioTagLabel": "Tag Systeme.io pour cette réponse",
     "quizLanguageLabel": "Langue du quiz",
     "quizLanguageHint": "Langue de l'interface vue par tes visiteurs (boutons, écran de personnalisation, formulaire). Indépendante de la langue de ton compte.",
-    "quizLanguagePick": "Choisir la langue"
+    "quizLanguagePick": "Choisir la langue",
+    "mustPublishHint": "Ce lien ne fonctionnera qu'une fois le quiz publié. Clique sur Publier en haut de la page.",
+    "previewCaptureDisableHint": "Étape de capture email. Pour la masquer, désactive la capture dans l'onglet Paramètres.",
+    "introCoverHint": "Disposition couverture : cette image sert de fond plein écran (réglable dans Design)",
+    "hideBrandingLabel": "Masquer complètement le lien",
+    "hideBrandingHint": "Ne rien afficher en bas du quiz (ni Tipote, ni lien personnalisé)."
   },
   "contentStrategy": {
     "title": "Stratégie de contenu",

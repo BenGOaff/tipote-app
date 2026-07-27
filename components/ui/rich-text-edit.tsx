@@ -31,7 +31,9 @@ import {
   Link as LinkIcon, Image as ImageIcon, Pencil,
   Sparkles, Loader2,
   Palette, Eraser, Wand2,
+  Crop as CropIcon, X as XIcon,
 } from "lucide-react";
+import { ImageCropDialog } from "@/components/quiz/ImageCropDialog";
 import { sanitizeRichText, isSafeUrl } from "@/lib/richText";
 import { HexColorPicker } from "react-colorful";
 import { QuizVarInserter, type QuizVarFlags } from "@/components/quiz/QuizVarInserter";
@@ -328,22 +330,6 @@ export function RichTextEdit({
     { hex: "#0ea5e9", label: "Cyan" },
   ];
 
-  // Applique une largeur (en %) a l'image actuellement selectionnee.
-  // Drame Christelle 8 juin 2026 : impossible de redimensionner le GIF.
-  // Le sanitizer accepte width sur <img> en px ou % (cf. richText.ts).
-  // Le commit du nouveau HTML se fait au prochain onBlur (commit paresseux).
-  const applyImageWidth = useCallback(
-    (widthPct: string | null) => {
-      if (!selectedImg) return;
-      if (widthPct === null) {
-        selectedImg.style.width = "";
-      } else {
-        selectedImg.style.width = widthPct;
-      }
-    },
-    [selectedImg],
-  );
-
   // Commit IMMEDIAT (live) : sanitize l'innerHTML courant et remonte au
   // parent sans attendre le blur. Utilise par la taille de police pour
   // que le changement soit persiste en WYSIWYG des le clic.
@@ -352,6 +338,90 @@ export function RichTextEdit({
     const clean = sanitizeRichText(ref.current.innerHTML);
     if (clean !== value) onChange(clean);
   }, [onChange, value]);
+
+  // Insertion d'image ROBUSTE. `document.execCommand("insertImage")` est
+  // deprecie et ne fait RIEN quand le focus revient d'une boite de dialogue OS
+  // (le champ editable a pu etre demonte le temps du picker). On insere donc le
+  // noeud <img> directement dans le DOM du champ, a la selection sauvegardee
+  // (ou a la fin), puis on commit tout de suite pour persister l'image.
+  const insertImageNode = useCallback((url: string) => {
+    const el = ref.current;
+    if (!el) return;
+    restoreSelection();
+    const img = document.createElement("img");
+    img.src = url;
+    img.style.maxWidth = "100%";
+    img.style.height = "auto";
+    const sel = typeof window !== "undefined" ? window.getSelection() : null;
+    if (sel && sel.rangeCount > 0 && el.contains(sel.getRangeAt(0).commonAncestorContainer)) {
+      const range = sel.getRangeAt(0);
+      range.collapse(false);
+      range.insertNode(img);
+      range.setStartAfter(img);
+      range.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    } else {
+      el.appendChild(img);
+    }
+    commitNow();
+  }, [restoreSelection, commitNow]);
+
+  // ── Controles d'image : MEME UX que partout ailleurs dans l'app ────────
+  // (images d'intro, de resultat, GIF bonus) : au clic sur l'image, boutons
+  // superposes en haut a droite (rogner via ImageCropDialog, supprimer) +
+  // slider de largeur 25-100% comme le GIF bonus.
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [imgBox, setImgBox] = useState<{ left: number; top: number; width: number; height: number; pct: number } | null>(null);
+  const [cropOpen, setCropOpen] = useState(false);
+
+  const updateImgBox = useCallback(() => {
+    if (!selectedImg || !wrapRef.current || !ref.current) { setImgBox(null); return; }
+    const ir = selectedImg.getBoundingClientRect();
+    const wr = wrapRef.current.getBoundingClientRect();
+    const editorW = ref.current.clientWidth || ir.width;
+    setImgBox({
+      left: ir.left - wr.left,
+      top: ir.top - wr.top,
+      width: ir.width,
+      height: ir.height,
+      pct: Math.max(25, Math.min(100, Math.round((ir.width / editorW) * 100))),
+    });
+  }, [selectedImg]);
+
+  useEffect(() => {
+    updateImgBox();
+    if (!selectedImg) return;
+    const on = () => updateImgBox();
+    window.addEventListener("scroll", on, true);
+    window.addEventListener("resize", on);
+    return () => {
+      window.removeEventListener("scroll", on, true);
+      window.removeEventListener("resize", on);
+    };
+  }, [selectedImg, updateImgBox]);
+
+  const setSelectedImgWidth = useCallback((pct: number) => {
+    if (!selectedImg) return;
+    if (pct >= 100) selectedImg.style.width = "";
+    else selectedImg.style.width = `${pct}%`;
+    updateImgBox();
+  }, [selectedImg, updateImgBox]);
+
+  const removeSelectedImg = useCallback(() => {
+    if (!selectedImg) return;
+    selectedImg.remove();
+    setSelectedImg(null);
+    commitNow();
+  }, [selectedImg, commitNow]);
+
+  const openImageCrop = useCallback(() => {
+    if (!selectedImg) return;
+    // Meme pause que les dialogs lien/image : le Dialog Radix vole le focus,
+    // sans la pause le blur committerait et demonterait le champ editable.
+    dialogPausedRef.current = true;
+    setCropOpen(true);
+  }, [selectedImg]);
 
   // ─── Taille de police FIELD-LEVEL, INDEPENDANTE MOBILE/DESKTOP ─────
   // Drame Bene 8 juin 2026 : "je veux pouvoir editer la taille mobile
@@ -517,20 +587,16 @@ export function RichTextEdit({
         range.collapse(true);
         const sel = window.getSelection();
         if (sel) { sel.removeAllRanges(); sel.addRange(range); }
+        // Sauvegarde le point de drop : insertImageNode restaure cette
+        // selection pour inserer l'image pile a l'emplacement du drop.
+        saveSelection();
       }
     }
     setUploadingDrop(true);
     try {
       const url = await onImageUpload(image);
       if (!url) return;
-      exec("insertImage", url);
-      const el = ref.current;
-      if (el) {
-        el.querySelectorAll("img").forEach((img) => {
-          img.style.maxWidth = "100%";
-          img.style.height = "auto";
-        });
-      }
+      insertImageNode(url);
     } finally {
       setUploadingDrop(false);
     }
@@ -584,6 +650,16 @@ export function RichTextEdit({
   const onInsertImage = () => {
     saveSelection();
     if (onImageUpload) {
+      // Le picker OS fait blur du contentEditable -> commit -> setEditing(false)
+      // -> le champ editable est DEMONTE, et l'insertion tombait dans un noeud
+      // detache : l'image n'apparaissait jamais. Meme pause que le dialog URL,
+      // levee au retour du focus fenetre (couvre pick ET annulation).
+      dialogPausedRef.current = true;
+      const release = () => {
+        window.removeEventListener("focus", release);
+        window.setTimeout(() => { dialogPausedRef.current = false; }, 0);
+      };
+      window.addEventListener("focus", release);
       fileInputRef.current?.click();
       return;
     }
@@ -602,17 +678,10 @@ export function RichTextEdit({
     try {
       const url = await onImageUpload(file);
       if (!url) return;
-      restoreSelection();
-      exec("insertImage", url);
-      const el = ref.current;
-      if (el) {
-        el.querySelectorAll("img").forEach((img) => {
-          img.style.maxWidth = "100%";
-          img.style.height = "auto";
-        });
-      }
+      insertImageNode(url);
     } finally {
       setUploadingDrop(false);
+      dialogPausedRef.current = false;
     }
   };
 
@@ -622,15 +691,7 @@ export function RichTextEdit({
     if (!isSafeUrl(url)) { setImageError(t("rteUrlInvalid")); return; }
     setImageDialogOpen(false);
     dialogPausedRef.current = false;
-    restoreSelection();
-    exec("insertImage", url);
-    const el = ref.current;
-    if (el) {
-      el.querySelectorAll("img").forEach((img) => {
-        img.style.maxWidth = "100%";
-        img.style.height = "auto";
-      });
-    }
+    insertImageNode(url);
   };
 
   const baseCls = `${className || ""} cursor-text rounded-lg px-2 py-1 transition-all min-h-[1.2em]`;
@@ -699,6 +760,26 @@ export function RichTextEdit({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Rognage : MEME dialog que les images de slot et les GIF (crop
+          serveur via sharp, animations preservees). */}
+      <ImageCropDialog
+        open={cropOpen}
+        onOpenChange={(o) => {
+          setCropOpen(o);
+          if (!o) {
+            dialogPausedRef.current = false;
+            ref.current?.focus({ preventScroll: true });
+          }
+        }}
+        srcUrl={selectedImg?.src ?? null}
+        onCropped={(url) => {
+          if (!selectedImg) return;
+          selectedImg.src = url;
+          selectedImg.onload = () => updateImgBox();
+          commitNow();
+        }}
+      />
     </>
   );
 
@@ -915,35 +996,9 @@ export function RichTextEdit({
           <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); onInsertLink(); }} title={t("rteInsertLink")}><LinkIcon className="w-3.5 h-3.5" /></ToolbarBtn>
           {!singleLine && <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); onInsertImage(); }} title={onImageUpload ? t("rteUploadImage") : t("rteInsertImage")}>{uploadingDrop ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ImageIcon className="w-3.5 h-3.5" />}</ToolbarBtn>}
           <input ref={fileInputRef} type="file" accept="image/*,image/gif" className="sr-only" onChange={onPickedImageFile} />
-          {/* Resize image popover - apparait UNIQUEMENT quand une <img>
-              est selectionnee. 5 tailles curees (25/40/60/80/100%) +
-              reset. Drame Christelle 8 juin 2026 : "impossible de
-              redimensionner le GIF d'intro". */}
-          {selectedImg && !singleLine && (
-            <>
-              <span className="w-px h-4 bg-border mx-0.5" />
-              <span className="text-[10px] text-muted-foreground">{t("rteImageSize")}</span>
-              {["25%", "40%", "60%", "80%", "100%"].map((pct) => (
-                <button
-                  key={pct}
-                  type="button"
-                  onMouseDown={(e) => { e.preventDefault(); applyImageWidth(pct); }}
-                  className="text-[10px] px-1.5 py-0.5 rounded hover:bg-muted border border-border/50"
-                  title={pct}
-                >
-                  {pct}
-                </button>
-              ))}
-              <button
-                type="button"
-                onMouseDown={(e) => { e.preventDefault(); applyImageWidth(null); }}
-                className="text-[10px] px-1.5 py-0.5 rounded hover:bg-muted text-muted-foreground"
-                title={t("rteImageSizeReset")}
-              >
-                {t("rteReset")}
-              </button>
-            </>
-          )}
+          {/* Les controles d'image (rogner, supprimer, largeur) sont
+              superposes sur l'image selectionnee, comme partout ailleurs
+              (images d'intro/resultat, GIF bonus). Rien dans la toolbar. */}
           {hasVars && (
             <>
               <span className="w-px h-4 bg-border mx-0.5" />
@@ -958,6 +1013,7 @@ export function RichTextEdit({
             </>
           )}
         </div>
+        <div ref={wrapRef} className="relative">
         <div
           ref={ref}
           contentEditable
@@ -999,6 +1055,66 @@ export function RichTextEdit({
           style={{ ...(style ?? {}), color: (style?.color as string | undefined) ?? "hsl(var(--foreground))" }}
           data-placeholder={placeholder}
         />
+        {selectedImg && imgBox && !singleLine && (
+          <>
+            {/* Boutons superposes haut-droite, identiques aux images de
+                slot : rogner + supprimer. */}
+            <div
+              className="absolute flex gap-1.5 z-30"
+              style={{ left: imgBox.left + imgBox.width - 8, top: imgBox.top + 8, transform: "translateX(-100%)" }}
+            >
+              <button
+                type="button"
+                onMouseDown={(e) => { e.preventDefault(); openImageCrop(); }}
+                className="bg-background/90 hover:bg-primary hover:text-white rounded-full p-1.5 shadow"
+                aria-label={t("rteImageCrop")}
+                title={t("rteImageCrop")}
+              >
+                <CropIcon className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onMouseDown={(e) => { e.preventDefault(); removeSelectedImg(); }}
+                className="bg-background/90 hover:bg-destructive hover:text-white rounded-full p-1.5 shadow"
+                aria-label={t("rteImageRemove")}
+                title={t("rteImageRemove")}
+              >
+                <XIcon className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            {/* Slider de largeur 25-100%, comme le GIF bonus. Le mousedown
+                pose la pause commit (le blur ne doit pas demonter le champ
+                pendant le glisser) ; au mouseup on committe, on refocus
+                l'editeur et on leve la pause. */}
+            <div
+              className="absolute z-30 flex items-center gap-2 rounded-full bg-background/95 border shadow px-2.5 py-1"
+              style={{ left: imgBox.left + imgBox.width / 2, top: imgBox.top + imgBox.height - 6, transform: "translate(-50%, -100%)" }}
+              onMouseDown={() => {
+                dialogPausedRef.current = true;
+                const up = () => {
+                  window.removeEventListener("mouseup", up);
+                  commitNow();
+                  ref.current?.focus({ preventScroll: true });
+                  window.setTimeout(() => { dialogPausedRef.current = false; }, 0);
+                };
+                window.addEventListener("mouseup", up);
+              }}
+            >
+              <input
+                type="range"
+                min={25}
+                max={100}
+                step={5}
+                value={imgBox.pct}
+                onChange={(e) => setSelectedImgWidth(Number(e.target.value))}
+                className="w-28 cursor-pointer accent-primary"
+                aria-label={t("rteImageSize")}
+              />
+              <span className="text-[10px] tabular-nums text-muted-foreground w-7 text-right">{imgBox.pct}%</span>
+            </div>
+          </>
+        )}
+        </div>
       </div>
       {dialogs}
       </>
