@@ -1127,7 +1127,18 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       const res = await fetch(`/api/quiz/${quizId}/rebalance`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ targetResultIndex: rebalanceTarget, intent: rebalanceIntent }),
+        body: JSON.stringify({
+          targetResultIndex: rebalanceTarget,
+          intent: rebalanceIntent,
+          // Instantane de l'ETAT COURANT de l'editeur : un resultat ajoute
+          // (ou des options retouchees) sans enregistrer doit etre visible
+          // du rebalance, sinon 400 "out of range" sur le nouveau resultat.
+          questions: editQuestions.map((q) => ({
+            question_text: q.question_text,
+            options: (q.options ?? []).map((o) => ({ text: o.text, result_index: o.result_index })),
+          })),
+          results: editResults.map((r) => ({ title: r.title, description: r.description })),
+        }),
       });
       const data = await res.json();
       if (!res.ok || !data?.ok) {
@@ -1143,7 +1154,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     } finally {
       setRebalanceLoading(false);
     }
-  }, [quizId, rebalanceTarget, rebalanceIntent, rebalanceLoading]);
+  }, [quizId, rebalanceTarget, rebalanceIntent, rebalanceLoading, editQuestions, editResults]);
 
   const applyRebalance = useCallback(() => {
     if (!rebalanceProposal || rebalanceProposal.changes.length === 0) return;

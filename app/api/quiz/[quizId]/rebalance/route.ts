@@ -91,12 +91,40 @@ export async function POST(
     );
   }
 
-  let body: { targetResultIndex?: number; intent?: string };
+  let body: { targetResultIndex?: number; intent?: string; questions?: unknown; results?: unknown };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
   }
+
+  // Instantane de l'EDITEUR (etat courant, potentiellement NON enregistre).
+  // Le createur peut avoir ajoute un resultat ou retouche des options sans
+  // enregistrer : le rebalance doit raisonner sur ce qu'il VOIT a l'ecran,
+  // pas sur la base (sinon "targetResultIndex out of range" des qu'un
+  // resultat n'existe que dans l'editeur). Fallback : la base. L'instantane
+  // ne sert QU'A construire le prompt, aucune ecriture n'en derive.
+  const cap = (v: unknown, n: number) => String(v ?? "").slice(0, n);
+  const snapshotQuestions = Array.isArray(body.questions)
+    ? body.questions.slice(0, 60).map((q) => {
+        const qq = (q ?? {}) as Record<string, unknown>;
+        return {
+          question_text: cap(qq.question_text, 600),
+          options: Array.isArray(qq.options)
+            ? qq.options.slice(0, 10).map((o) => {
+                const oo = (o ?? {}) as Record<string, unknown>;
+                return { text: cap(oo.text, 400), result_index: Number(oo.result_index ?? 0) };
+              })
+            : [],
+        };
+      })
+    : null;
+  const snapshotResults = Array.isArray(body.results)
+    ? body.results.slice(0, 12).map((r) => {
+        const rr = (r ?? {}) as Record<string, unknown>;
+        return { title: cap(rr.title, 400), description: cap(rr.description, 600) };
+      })
+    : null;
 
   const targetResultIndex = Number(body.targetResultIndex);
   if (!Number.isInteger(targetResultIndex) || targetResultIndex < 0) {
@@ -119,7 +147,7 @@ export async function POST(
     return NextResponse.json({ ok: false, error: "Quiz not found" }, { status: 404 });
   }
 
-  const [{ data: questions }, { data: results }] = await Promise.all([
+  const [{ data: dbQuestions }, { data: dbResults }] = await Promise.all([
     supabaseAdmin
       .from("quiz_questions")
       .select("question_text, options, sort_order")
@@ -131,6 +159,11 @@ export async function POST(
       .eq("quiz_id", quizId)
       .order("sort_order"),
   ]);
+
+  // Priorite a l'instantane editeur quand il est exploitable.
+  const questions =
+    snapshotQuestions && snapshotQuestions.length > 0 ? snapshotQuestions : dbQuestions;
+  const results = snapshotResults && snapshotResults.length >= 2 ? snapshotResults : dbResults;
 
   if (!questions || questions.length === 0) {
     return NextResponse.json({ ok: false, error: "Quiz has no questions to rebalance" }, { status: 400 });

@@ -194,3 +194,11 @@ Checklist minimum :
 - Endpoints `/track` retournent 200 toujours (`{ok: false, reason}` pour soft fail).
 - CSS classes rich-text : **Tipote `tipote-quiz-rich`** (différent de Tiquiz `tiquiz-rich`).
 - Typecheck `npx tsc --noEmit` avant chaque commit, exit 0 obligatoire.
+
+## Tests visuels design/UX — RÈGLE (demande Béné 27 juillet 2026)
+
+Tout changement design/UX du module quiz doit passer par le filet visuel
+Playwright. Le harness vit dans le repo TIQUIZ (`npm run test:visual`,
+`tests/visual/`) : les deux viewers étant jumeaux, un changement porté ici
+doit être validé là-bas. Porter le harness dans ce repo au prochain gros
+chantier design du module quiz.
