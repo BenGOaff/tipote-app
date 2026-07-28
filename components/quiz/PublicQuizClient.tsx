@@ -126,6 +126,9 @@ type PublicQuizData = {
   intro_image_position?: "top" | "after_title" | "after_intro" | "bottom" | null;
   // Largeur d'affichage en % (NULL = pleine largeur). Resize image/GIF intro.
   intro_image_width?: number | null;
+  // Titre custom de l'ecran bonus (retour Jocelyne 28 juillet 2026).
+  // NULL = defaut localise bonusStepHeading, qui respecte address_form.
+  bonus_heading?: string | null;
   bonus_intro_text?: string | null;
   // Override for the "Bonus unlocked!" message shown after the share
   // step. NULL = use t.bonusUnlocked (locale default). Lets a creator
@@ -319,6 +322,7 @@ type QuizTranslations = {
 // dans chaque bloc de traduction.
 const RESUME_COPY: Record<string, { resumeNotice: string; resumeRestart: string }> = {
   fr: { resumeNotice: "Tu reprends là où tu t'étais arrêté.", resumeRestart: "Tout recommencer" },
+  fr_vous: { resumeNotice: "Vous reprenez là où vous vous étiez arrêté.", resumeRestart: "Tout recommencer" },
   en: { resumeNotice: "Picking up where you left off.", resumeRestart: "Start over" },
   es: { resumeNotice: "Retomas donde lo dejaste.", resumeRestart: "Empezar de nuevo" },
   de: { resumeNotice: "Du machst da weiter, wo du aufgehört hast.", resumeRestart: "Neu starten" },
@@ -863,7 +867,7 @@ function getT(locale: string | null | undefined, addressForm?: string | null): Q
   // For French locale: use "fr_vous" variant when creator prefers vouvoiement
   const resume = RESUME_COPY[locale ?? "fr"] ?? RESUME_COPY.fr;
   if ((locale ?? "fr") === "fr" && addressForm === "vous") {
-    return { ...translations.fr_vous, ...resume };
+    return { ...translations.fr_vous, ...RESUME_COPY.fr_vous };
   }
   return { ...(translations[locale ?? "fr"] ?? translations.fr), ...resume };
 }
@@ -3160,6 +3164,8 @@ export default function PublicQuizClient({
     // strip pour l'injection dans la template, sanitize-render pour
     // le custom intro (préserve gras/italique/couleurs du créateur).
     const bonusText = stripHtml(quiz.bonus_description);
+    const customBonusHeadingHtml = sanitizeRichText(quiz.bonus_heading);
+    const hasCustomHeading = stripHtml(quiz.bonus_heading).length > 0;
     const customBonusIntroHtml = sanitizeRichText(quiz.bonus_intro_text);
     const hasCustomIntro = stripHtml(quiz.bonus_intro_text).length > 0;
     const allowedNetworks = (quiz.share_networks && quiz.share_networks.length > 0)
@@ -3213,9 +3219,16 @@ export default function PublicQuizClient({
                   </div>
                 ) : null}
 
-                <h2 className="text-2xl sm:text-3xl font-bold leading-tight">
-                  {t.bonusStepHeading}
-                </h2>
+                {hasCustomHeading ? (
+                  <h2
+                    className="tipote-quiz-rich tipote-quiz-rich-inline text-2xl sm:text-3xl font-bold leading-tight"
+                    dangerouslySetInnerHTML={{ __html: customBonusHeadingHtml }}
+                  />
+                ) : (
+                  <h2 className="text-2xl sm:text-3xl font-bold leading-tight">
+                    {t.bonusStepHeading}
+                  </h2>
+                )}
 
                 {/* slot AFTER_HEADING — entre titre et intro */}
                 {bonusImg && bonusPos === "after_heading" ? bonusImg : null}
@@ -3972,6 +3985,21 @@ function TipoteFooter({ locale, customText, customUrl, logoUrl, tipoteAffiliateI
             {customText}
           </a>
         </p>
+      </div>
+    );
+  }
+  // Texte perso SANS URL : on respecte quand meme le choix du createur
+  // (mention remplacee, simplement non cliquable). Texte seul ne doit pas
+  // retomber sur le footer par defaut (piege "j'ai change le texte et rien
+  // ne change").
+  if (customText) {
+    return (
+      <div className="text-center mt-6 pb-6 px-4 space-y-2">
+        {logoUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={logoUrl} alt="" className="max-h-10 w-auto object-contain mx-auto" />
+        )}
+        <p className="text-xs text-muted-foreground/60">{customText}</p>
       </div>
     );
   }

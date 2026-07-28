@@ -628,6 +628,16 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   const [restoring, setRestoring] = useState(false);
   const isPaidPlan = (profile?.plan ?? "free") !== "free";
   const [saving, setSaving] = useState(false);
+
+  // Verrou scroll fenetre : l'editeur est une app plein ecran, seuls les
+  // panneaux internes scrollent. Sans ce verrou, un element qui gonfle le
+  // body fait apparaitre un grand vide sous l'editeur.
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, []);
   const { shareDomain, shareDomainOptions, shareOrigin, setShareDomain, isCustomDomain, buildPublicUrl } = useShareDomain();
   const [copied, setCopied] = useState(false);
 
@@ -1439,7 +1449,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
         onDiscard={onDiscardDraft}
         locale={locale || "fr"}
       />
-      <div className="h-screen flex w-full">
+      <div className="h-screen flex w-full overflow-hidden">
         <main className="flex-1 flex flex-col bg-background min-w-0 overflow-hidden">
       {/* First-visit onboarding banner */}
       {showOnboarding && (

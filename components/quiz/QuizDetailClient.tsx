@@ -168,6 +168,7 @@ type QuizData = {
   phone_required?: boolean | null; first_name_required?: boolean | null; last_name_required?: boolean | null; country_required?: boolean | null;
   virality_enabled: boolean; bonus_description: string | null; bonus_image_url: string | null; bonus_image_position: BonusImagePosition | null; bonus_image_width?: number | null;
   intro_image_url: string | null; intro_image_position: IntroImagePosition | null; intro_image_width?: number | null;
+  bonus_heading: string | null;
   bonus_intro_text: string | null;
   bonus_unlocked_message: string | null;
   share_message: string | null; locale: string | null;
@@ -624,6 +625,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const [askGender, setAskGender] = useState(false);
   const [viralityEnabled, setViralityEnabled] = useState(false);
   const [bonusDescription, setBonusDescription] = useState("");
+  const [bonusHeading, setBonusHeading] = useState("");
   const [bonusIntroText, setBonusIntroText] = useState("");
   const [bonusUnlockedMessage, setBonusUnlockedMessage] = useState("");
   const [bonusImageUrl, setBonusImageUrl] = useState<string | null>(null);
@@ -804,6 +806,16 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const [restoring, setRestoring] = useState(false);
   const isPaidPlan = (profile?.plan ?? "free") !== "free";
   const [saving, setSaving] = useState(false);
+
+  // Verrou scroll fenetre : l'editeur est une app plein ecran, seuls les
+  // panneaux internes scrollent. Sans ce verrou, un element qui gonfle le
+  // body fait apparaitre un grand vide sous l'editeur.
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, []);
   const [copied, setCopied] = useState(false);
   const [copiedIframe, setCopiedIframe] = useState(false);
   const { shareDomain, shareDomainOptions, shareOrigin, setShareDomain, isCustomDomain, buildPublicUrl } = useShareDomain();
@@ -867,6 +879,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     ask_gender: askGender,
     virality_enabled: viralityEnabled,
     bonus_description: bonusDescription,
+    bonus_heading: bonusHeading,
     bonus_intro_text: bonusIntroText,
     bonus_unlocked_message: bonusUnlockedMessage,
     bonus_image_url: bonusImageUrl,
@@ -924,7 +937,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     showConsentCheckbox, showResultsBreakdown, showOtherResults, hideResponseCounts, notifyResponses,
     metaPixelId, ga4MeasurementId, googleAdsConversionId, googleAdsConversionLabel,
     askFirstName, askGender,
-    viralityEnabled, bonusDescription, bonusIntroText, bonusUnlockedMessage, bonusImageUrl, bonusImagePosition, bonusImageWidth,
+    viralityEnabled, bonusDescription, bonusHeading, bonusIntroText, bonusUnlockedMessage, bonusImageUrl, bonusImagePosition, bonusImageWidth,
     introImageUrl, introImagePosition, introImageWidth,
     backgroundStyle, backgroundGradient, backgroundImageUrl, introLayout, buttonShape, themeId,
     questionLayout, splitImageUrl, splitSide, panelMedia,
@@ -978,6 +991,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     if (typeof s.ask_gender === "boolean") setAskGender(s.ask_gender);
     if (typeof s.virality_enabled === "boolean") setViralityEnabled(s.virality_enabled);
     if (typeof s.bonus_description === "string") setBonusDescription(s.bonus_description);
+    if (typeof s.bonus_heading === "string") setBonusHeading(s.bonus_heading);
     if (typeof s.bonus_intro_text === "string") setBonusIntroText(s.bonus_intro_text);
     if (typeof s.bonus_unlocked_message === "string") setBonusUnlockedMessage(s.bonus_unlocked_message);
     if (s.bonus_image_url === null || typeof s.bonus_image_url === "string") setBonusImageUrl(s.bonus_image_url);
@@ -1246,6 +1260,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       setAskFirstName(Boolean((q as unknown as Record<string, unknown>).ask_first_name));
       setAskGender(Boolean((q as unknown as Record<string, unknown>).ask_gender));
       setViralityEnabled(q.virality_enabled); setBonusDescription(q.bonus_description ?? "");
+      setBonusHeading(q.bonus_heading ?? "");
       setBonusIntroText(q.bonus_intro_text ?? "");
       setBonusUnlockedMessage(q.bonus_unlocked_message ?? "");
       setBonusImageUrl(q.bonus_image_url ?? null);
@@ -1870,6 +1885,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           phone_required: phoneRequired, country_required: countryRequired,
           ask_first_name: askFirstName, ask_gender: askGender,
           virality_enabled: viralityEnabled, bonus_description: bonusDescription,
+          bonus_heading: bonusHeading.trim() || null,
           bonus_intro_text: bonusIntroText.trim() || null,
           bonus_unlocked_message: bonusUnlockedMessage.trim() || null,
           bonus_image_url: bonusImageUrl,
@@ -2251,7 +2267,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
         onDiscard={onDiscardDraft}
         locale={locale || "fr"}
       />
-      <div className="h-screen flex w-full">
+      <div className="h-screen flex w-full overflow-hidden">
         <main className="flex-1 flex flex-col bg-background min-w-0 overflow-hidden">
       {/* First-visit onboarding banner */}
       {showOnboarding && (
@@ -3988,9 +4004,18 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                         onDrop={() => { setBonusImagePosition("top"); setDraggingBonusImage(false); }} />
                     )}
 
-                    <h2 className="text-2xl sm:text-4xl font-bold leading-tight">
-                      {quiz?.address_form === "vous" ? t("bonusGiftTitleFormal") : t("bonusGiftTitle")}
-                    </h2>
+                    {/* Retour Jocelyne 28 juillet 2026 : titre et phrase de
+                        partage editables EN PLACE (pattern ecran email), et
+                        defauts alignes sur ce que voit vraiment le visiteur,
+                        vouvoiement respecte via address_form. */}
+                    <RichTextEdit
+                      value={bonusHeading || (quiz?.address_form === "vous" ? t("bonusGiftTitleFormal") : t("bonusGiftTitle"))}
+                      onChange={setBonusHeading}
+                      onImageUpload={handleRichTextImageUpload}
+                      singleLine
+                      className="text-2xl sm:text-4xl font-bold leading-tight text-center"
+                      placeholder={t("captureTitlePlaceholder")}
+                    />
 
                     {/* slot AFTER_HEADING — entre titre et intro */}
                     {bonusImageUrl && bonusImagePosition === "after_heading" && (
@@ -4005,9 +4030,15 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                         onDrop={() => { setBonusImagePosition("after_heading"); setDraggingBonusImage(false); }} />
                     )}
 
-                    <p className="text-muted-foreground text-base leading-relaxed">
-                      {quiz?.address_form === "vous" ? t("bonusShareTextFormal") : t("bonusShareText")}
-                    </p>
+                    <RichTextEdit
+                      value={bonusIntroText || (quiz?.address_form === "vous"
+                        ? t("bonusShareTextFormal", { bonus: stripHtml(bonusDescription).trim() || t("bonusShareFallbackFormal") })
+                        : t("bonusShareText", { bonus: stripHtml(bonusDescription).trim() || t("bonusShareFallback") }))}
+                      onChange={setBonusIntroText}
+                      onImageUpload={handleRichTextImageUpload}
+                      className="text-muted-foreground text-base leading-relaxed text-center"
+                      placeholder={t("bonusShareText", { bonus: t("bonusShareFallback") })}
+                    />
 
                     {/* slot AFTER_INTRO — entre intro et bonus card */}
                     {bonusImageUrl && bonusImagePosition === "after_intro" && (
@@ -4033,23 +4064,6 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                         className="text-sm font-medium"
                         placeholder={t("bonusDescPlaceholder")}
                       />
-                      {/* JB feedback 2026-05-02: optional override that
-                          replaces the templated "Partage le quiz pour
-                          recevoir <bonus> avec tes résultats" with a fully
-                          custom paragraph. Empty = keep the default. */}
-                      <div className="text-left space-y-1 pt-1">
-                        <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-                          {t("bonusIntroLabel")}
-                        </p>
-                        <textarea
-                          value={bonusIntroText}
-                          onChange={(e) => setBonusIntroText(e.target.value)}
-                          placeholder={t("bonusIntroPh")}
-                          rows={3}
-                          className="w-full text-sm bg-background border rounded-lg px-3 py-2 resize-y"
-                        />
-                      </div>
-
                       {/* JB feedback 2026-05-07: override the
                           "Bonus unlocked! Check your inbox" line so a
                           creator can deliver the bonus inline (e.g.

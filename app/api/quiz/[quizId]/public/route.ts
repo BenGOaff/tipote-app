@@ -309,7 +309,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
     }
 
     const [quizRes, questionsRes, resultsRes] = await Promise.all([
-      admin.from("quizzes").select("id,user_id,project_id,status,title,slug,introduction,cta_text,cta_url,privacy_url,consent_text,virality_enabled,bonus_description,bonus_intro_text,bonus_image_url,bonus_image_position,bonus_image_width,bonus_unlocked_message,share_message,share_networks,locale,views_count,capture_heading,capture_subtitle,capture_submit_text,capture_before_questions,survey_thanks_heading,survey_thanks_body,capture_first_name,capture_last_name,capture_phone,capture_country,phone_required,first_name_required,last_name_required,country_required,ask_first_name,ask_gender,start_button_text,og_description,og_image_url,custom_footer_text,custom_footer_url,hide_branding,result_insight_heading,result_projection_heading,capture_enabled,brand_font,brand_color_primary,brand_color_background,brand_color_text,brand_logo_url,hide_brand_logo,toast_widget_id,share_widget_id,show_consent_checkbox,show_results_breakdown,show_other_results,meta_pixel_id,ga4_measurement_id,google_ads_conversion_id,google_ads_conversion_label,mode,intro_image_url,intro_image_position,intro_image_width,background_style,background_gradient,background_image_url,intro_layout,button_shape,question_layout,split_image_url,split_side,panel_media,answer_layout,show_result_insight,show_result_projection,show_result_share,close_enabled,close_action,close_redirect_url,close_message,close_cta_text,close_cta_url").eq("id", quizId).maybeSingle(),
+      admin.from("quizzes").select("id,user_id,project_id,status,title,slug,introduction,cta_text,cta_url,privacy_url,consent_text,virality_enabled,bonus_description,bonus_heading,bonus_intro_text,bonus_image_url,bonus_image_position,bonus_image_width,bonus_unlocked_message,share_message,share_networks,locale,address_form,views_count,capture_heading,capture_subtitle,capture_submit_text,capture_before_questions,survey_thanks_heading,survey_thanks_body,capture_first_name,capture_last_name,capture_phone,capture_country,phone_required,first_name_required,last_name_required,country_required,ask_first_name,ask_gender,start_button_text,og_description,og_image_url,custom_footer_text,custom_footer_url,hide_branding,result_insight_heading,result_projection_heading,capture_enabled,brand_font,brand_color_primary,brand_color_background,brand_color_text,brand_logo_url,hide_brand_logo,toast_widget_id,share_widget_id,show_consent_checkbox,show_results_breakdown,show_other_results,meta_pixel_id,ga4_measurement_id,google_ads_conversion_id,google_ads_conversion_label,mode,intro_image_url,intro_image_position,intro_image_width,background_style,background_gradient,background_image_url,intro_layout,button_shape,question_layout,split_image_url,split_side,panel_media,answer_layout,show_result_insight,show_result_projection,show_result_share,close_enabled,close_action,close_redirect_url,close_message,close_cta_text,close_cta_url").eq("id", quizId).maybeSingle(),
       admin.from("quiz_questions").select("id,question_text,options,sort_order,question_type,config").eq("quiz_id", quizId).order("sort_order"),
       admin.from("quiz_results").select("id,title,description,insight,projection,insight_heading,projection_heading,cta_text,cta_url,sort_order,image_url,image_position,image_width,min_score,max_score").eq("quiz_id", quizId).order("sort_order"),
     ]);
@@ -368,7 +368,12 @@ export async function GET(_req: NextRequest, context: RouteContext) {
     // Fetch creator's address_form + privacy_url + branding fallback from business_profiles
     const quizUserId = (quizRes.data as any).user_id as string | undefined;
     const quizProjectId = (quizRes.data as any).project_id as string | null | undefined;
-    let addressForm = "tu";
+    // Le reglage PAR QUIZ (quizzes.address_form, migration 20260427) gagne
+    // sur celui du profil. Il etait ignore ici : un quiz regle "vous" avec
+    // un profil "tu" tutoyait quand meme le visiteur (retour Jocelyne
+    // 28 juillet 2026, meme famille de faute que le titre bonus).
+    const quizAddressForm = (quizRes.data as any).address_form as string | null | undefined;
+    let addressForm = quizAddressForm === "tu" || quizAddressForm === "vous" ? quizAddressForm : "tu";
     let fallbackPrivacyUrl = "";
     let brandFallback: { brand_font: string | null; brand_color_base: string | null; brand_logo_url: string | null } = { brand_font: null, brand_color_base: null, brand_logo_url: null };
     // Branding profil pour le fallback footer (Gwenn 12 juillet 2026 :
@@ -388,7 +393,9 @@ export async function GET(_req: NextRequest, context: RouteContext) {
         .eq("user_id", quizUserId);
       if (quizProjectId) bpQuery = bpQuery.eq("project_id", quizProjectId);
       const { data: bp } = await bpQuery.maybeSingle();
-      addressForm = (bp as any)?.address_form === "vous" ? "vous" : "tu";
+      if (!quizAddressForm) {
+        addressForm = (bp as any)?.address_form === "vous" ? "vous" : "tu";
+      }
       fallbackPrivacyUrl = String((bp as any)?.privacy_url ?? "").trim();
       ownerUiLocale = String((bp as any)?.ui_locale ?? "").trim();
       brandWebsiteUrl = String((bp as any)?.brand_website_url ?? "").trim();
@@ -558,6 +565,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
           cta_text: fr(quizPublic.cta_text),
           consent_text: fr(quizPublic.consent_text),
           bonus_description: fr(quizPublic.bonus_description),
+          bonus_heading: fr(quizPublic.bonus_heading),
           bonus_intro_text: fr(quizPublic.bonus_intro_text),
           share_message: fr(quizPublic.share_message),
           start_button_text: fr(quizPublic.start_button_text),
