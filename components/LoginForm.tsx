@@ -58,6 +58,14 @@ export default function LoginForm() {
   // --- Message d'erreur global venant du callback ---
   const authError = searchParams.get('auth_error');
 
+  // Destination apres login. Utilisee par le pont Atelier du Quiz
+  // (/connect/formaquiz?state=... renvoie ici si pas connecte). On
+  // n'accepte qu'un chemin INTERNE ("/...") : jamais d'URL absolue,
+  // pour eviter les redirections ouvertes.
+  const redirectParam = searchParams.get('redirect') || '';
+  const postLoginPath =
+    redirectParam.startsWith('/') && !redirectParam.startsWith('//') ? redirectParam : '/app';
+
   const bannerMessage = useMemo(() => {
     return authError === 'missing_code'
       ? t('bannerMissingCode')
@@ -132,7 +140,7 @@ export default function LoginForm() {
       // Reset au projet par défaut à la connexion (le middleware/serveur résoudra le default)
       document.cookie = 'tipote_active_project=;path=/;max-age=0;samesite=lax';
 
-      router.push('/app');
+      router.push(postLoginPath);
     } catch (err) {
       console.error('[LoginForm] unexpected error (password login)', err);
       setErrorPassword(t('errUnexpected'));
