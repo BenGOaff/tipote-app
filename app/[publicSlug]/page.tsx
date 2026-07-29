@@ -45,6 +45,10 @@ import { buildCanonicalUrl, fetchOwnerBranding } from "@/lib/publicUrl";
 
 export const dynamic = "force-dynamic";
 
+// App Facebook de Bene (facultatif) : quand FACEBOOK_APP_ID est pose,
+// on emet fb:app_id et le debogueur FB n'affiche plus d'avertissement.
+const FB_APP_ID = (process.env.FACEBOOK_APP_ID ?? "").trim();
+
 const CUSTOM_HOST_HEADER = "x-tipote-custom-host";
 
 type Props = { params: Promise<{ publicSlug: string }>; searchParams?: Promise<{ rp?: string }> };
@@ -206,6 +210,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
     const meta: Metadata = {
       title: titleOverride,
       description,
+      ...(FB_APP_ID ? { other: { "fb:app_id": FB_APP_ID } } : {}),
       ...(siteName ? { applicationName: siteName } : {}),
       ...(canonical ? { alternates: { canonical } } : {}),
       ...(branding?.faviconUrl
