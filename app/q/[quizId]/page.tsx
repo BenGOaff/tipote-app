@@ -47,6 +47,10 @@ type RouteContext = {
   searchParams?: Promise<{ compact?: string; rp?: string }>;
 };
 
+// App Facebook de Bene (facultatif) : quand FACEBOOK_APP_ID est pose,
+// on emet fb:app_id et le debogueur FB n'affiche plus d'avertissement.
+const FB_APP_ID = (process.env.FACEBOOK_APP_ID ?? "").trim();
+
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // "J'ai obtenu : <profil>" dans la langue du quiz, pour l'og:title des
@@ -171,6 +175,7 @@ export async function generateMetadata({ params, searchParams }: RouteContext): 
     const meta: Metadata = {
       title: titleOverride,
       description,
+      ...(FB_APP_ID ? { other: { "fb:app_id": FB_APP_ID } } : {}),
       ...(noindex ? { robots: { index: false, follow: false, googleBot: { index: false, follow: false } } } : {}),
       ...(siteName ? { applicationName: siteName } : {}),
       ...(canonical ? { alternates: { canonical } } : {}),
