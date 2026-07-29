@@ -175,7 +175,7 @@ export async function generateMetadata({ params, searchParams }: RouteContext): 
     const meta: Metadata = {
       title: titleOverride,
       description,
-      ...(FB_APP_ID ? { other: { "fb:app_id": FB_APP_ID } } : {}),
+      ...(FB_APP_ID ? { facebook: { appId: FB_APP_ID } } : {}),
       ...(noindex ? { robots: { index: false, follow: false, googleBot: { index: false, follow: false } } } : {}),
       ...(siteName ? { applicationName: siteName } : {}),
       ...(canonical ? { alternates: { canonical } } : {}),
@@ -201,7 +201,13 @@ export async function generateMetadata({ params, searchParams }: RouteContext): 
       },
     };
 
-    const ogImage = resultShare?.imageUrl ?? data.og_image_url ?? null;
+    // og:image TOUJOURS explicite : vignette du createur, sinon carte
+    // generee aux couleurs du quiz (sans balise, le debogueur FB alerte
+    // "propriete deduite", retour Bene 28 juillet 2026).
+    const defaultOgImage =
+      (await buildCanonicalUrl(`/api/quiz/${quizRowId}/result-og`)) ??
+      `https://app.tipote.com/api/quiz/${quizRowId}/result-og`;
+    const ogImage = resultShare?.imageUrl ?? (String(data.og_image_url ?? "").trim() || defaultOgImage);
     if (ogImage) {
       meta.openGraph!.images = [{ url: ogImage, width: 1200, height: 630 }];
     }
