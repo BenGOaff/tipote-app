@@ -704,6 +704,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const [showResultInsight, setShowResultInsight] = useState<boolean>(true);
   const [showResultProjection, setShowResultProjection] = useState<boolean>(true);
   const [showResultShare, setShowResultShare] = useState<boolean>(true);
+  const [shareResultPage, setShareResultPage] = useState<boolean>(true);
   // Fermeture du quiz (redirection OU message + CTA).
   const [closeEnabled, setCloseEnabled] = useState(false);
   const [closeAction, setCloseAction] = useState<"redirect" | "message">("message");
@@ -902,6 +903,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     show_result_insight: showResultInsight,
     show_result_projection: showResultProjection,
     show_result_share: showResultShare,
+    share_result_page: shareResultPage,
     close_enabled: closeEnabled,
     close_action: closeAction,
     close_redirect_url: closeRedirectUrl,
@@ -941,7 +943,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     introImageUrl, introImagePosition, introImageWidth,
     backgroundStyle, backgroundGradient, backgroundImageUrl, introLayout, buttonShape, themeId,
     questionLayout, splitImageUrl, splitSide, panelMedia,
-    answerLayout, showResultInsight, showResultProjection, showResultShare,
+    answerLayout, showResultInsight, showResultProjection, showResultShare, shareResultPage,
     closeEnabled, closeAction, closeRedirectUrl, closeMessage, closeCtaText, closeCtaUrl,
     shareMessage, locale, sioShareTagName, status,
     fontFamily, primaryColor, bgColor, textColor, quizBrandLogoUrl, hideBrandLogo,
@@ -1018,6 +1020,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     if (typeof s.show_result_insight === "boolean") setShowResultInsight(s.show_result_insight);
     if (typeof s.show_result_projection === "boolean") setShowResultProjection(s.show_result_projection);
     if (typeof s.show_result_share === "boolean") setShowResultShare(s.show_result_share);
+    if (typeof s.share_result_page === "boolean") setShareResultPage(s.share_result_page);
     if (typeof s.close_enabled === "boolean") setCloseEnabled(s.close_enabled);
     if (s.close_action === "redirect" || s.close_action === "message") setCloseAction(s.close_action);
     if (typeof s.close_redirect_url === "string") setCloseRedirectUrl(s.close_redirect_url);
@@ -1296,6 +1299,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
         setShowResultInsight((q as { show_result_insight?: boolean | null }).show_result_insight !== false);
         setShowResultProjection((q as { show_result_projection?: boolean | null }).show_result_projection !== false);
         setShowResultShare((q as { show_result_share?: boolean | null }).show_result_share !== false);
+        setShareResultPage((q as { share_result_page?: boolean | null }).share_result_page !== false);
         {
           const cq = q as Record<string, unknown>;
           setCloseEnabled(cq.close_enabled === true);
@@ -1911,6 +1915,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           show_result_insight: showResultInsight,
           show_result_projection: showResultProjection,
           show_result_share: showResultShare,
+          share_result_page: shareResultPage,
           close_enabled: closeEnabled,
           close_action: closeAction,
           close_redirect_url: closeRedirectUrl.trim() || null,
@@ -3164,6 +3169,15 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     checked={showResultShare}
                     onChange={v => setShowResultShare(v)}
                   />
+                  {/* Partage du profil obtenu (Jocelyne 28 juillet 2026) :
+                      l'URL partagee ?rp= met en avant le profil du visiteur
+                      dans l'apercu social. Default ON (null = actif). */}
+                  <SettingsToggle
+                    label={t("optionShareResultPage")}
+                    hint={t("optionShareResultPageHint")}
+                    checked={shareResultPage}
+                    onChange={v => setShareResultPage(v)}
+                  />
                   {/* Masque le nombre brut de reponses dans l'onglet
                       Resultats (donut + barres) et n'affiche que les %.
                       Off par defaut = compteurs visibles. */}
@@ -4101,6 +4115,9 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                         className="text-sm bg-background border rounded-lg"
                         placeholder={`Je viens de faire le quiz "${title || "…"}" !`}
                       />
+                      <p className="text-[11px] text-muted-foreground">
+                        {t("shareMessageHint")}
+                      </p>
                     </div>
 
                     {/* Share buttons mockup — reflect actual configured networks */}

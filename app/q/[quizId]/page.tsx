@@ -18,6 +18,7 @@ import { TrackingPixels } from "@/components/tracking/TrackingPixels";
 import { resolveEffectivePixels } from "@/lib/effectivePixels";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { stripHtml } from "@/lib/richText";
+import { interpolateText } from "@/lib/quizPersonalization";
 import { buildCanonicalUrl, fetchOwnerBranding } from "@/lib/publicUrl";
 
 const CUSTOM_HOST_HEADER = "x-tipote-custom-host";
@@ -43,13 +44,28 @@ export const dynamic = "force-dynamic";
 
 type RouteContext = {
   params: Promise<{ quizId: string }>;
-  searchParams?: Promise<{ compact?: string }>;
+  searchParams?: Promise<{ compact?: string; rp?: string }>;
 };
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export async function generateMetadata({ params }: RouteContext): Promise<Metadata> {
+// "J'ai obtenu : <profil>" dans la langue du quiz, pour l'og:title des
+// URL de partage de resultat (?rp=<resultId>). La formule marche au
+// tutoiement comme au vouvoiement (c'est le partageur qui parle).
+const OG_GOT: Record<string, (t: string) => string> = {
+  fr: (t) => `J'ai obtenu : ${t}`,
+  en: (t) => `I got: ${t}`,
+  es: (t) => `He obtenido: ${t}`,
+  de: (t) => `Mein Ergebnis: ${t}`,
+  pt: (t) => `Meu resultado: ${t}`,
+  it: (t) => `Ho ottenuto: ${t}`,
+  ar: (t) => `حصلت على: ${t}`,
+};
+
+export async function generateMetadata({ params, searchParams }: RouteContext): Promise<Metadata> {
   const { quizId: param } = await params;
+  const sp = searchParams ? await searchParams : {};
+  const rp = typeof sp?.rp === "string" && UUID_RE.test(sp.rp) ? sp.rp : null;
 
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -59,7 +75,7 @@ export async function generateMetadata({ params }: RouteContext): Promise<Metada
     const supabase = createClient(supabaseUrl, supabaseKey);
     const base = supabase
       .from("quizzes")
-      .select("user_id, project_id, slug, title, introduction, og_image_url, og_description, seo_noindex")
+      .select("id, user_id, project_id, slug, title, introduction, og_image_url, og_description, share_message, locale, seo_noindex")
       .eq("status", "active");
     const { data } = await (UUID_RE.test(param)
       ? base.eq("id", param).maybeSingle()
@@ -72,8 +88,42 @@ export async function generateMetadata({ params }: RouteContext): Promise<Metada
     // Cf. rapport Adeline (16 mai 2026) : iMessage affichait `&nbsp;`
     // littéral dans l'aperçu de partage.
     const ogDescPlain = stripHtml(data.og_description).trim();
+    // Facebook et LinkedIn ne preremplissent JAMAIS le texte d'un partage :
+    // seul l'apercu du lien est visible. Le message de partage du createur
+    // sert donc de description d'apercu par defaut (retour Jocelyne
+    // 28 juillet 2026) ; une description OG explicite garde la priorite.
+    const shareMsgPlain = stripHtml((data as { share_message?: string | null }).share_message).trim();
     const introPlain = stripHtml(data.introduction).slice(0, 160);
-    const description = (ogDescPlain || introPlain).trim() || undefined;
+    const description = (ogDescPlain || shareMsgPlain || introPlain).trim() || undefined;
+
+    // Partage du PROFIL obtenu (?rp=<resultId>) : l'og:title devient
+    // "J'ai obtenu : <profil>" et l'og:image le visuel du profil (image
+    // du createur, sinon carte generee /result-og). Retour Jocelyne
+    // 28 juillet 2026 : le partage FB ne montrait jamais le profil.
+    let resultShare: { ogTitle: string; imageUrl: string } | null = null;
+    const quizRowId = String((data as { id?: string | null }).id ?? "");
+    if (rp && quizRowId) {
+      const { data: rrow } = await supabase
+        .from("quiz_results")
+        .select("quiz_id, title, image_url")
+        .eq("id", rp)
+        .maybeSingle();
+      if (rrow && rrow.quiz_id === quizRowId) {
+        const cleanTitle = stripHtml(interpolateText(rrow.title as string, { name: "", gender: "x" }))
+          .replace(/\s+/g, " ")
+          .replace(/^[\s,;:.!?-]+/, "")
+          .trim();
+        if (cleanTitle) {
+          const loc = String((data as { locale?: string | null }).locale ?? "fr").split("-")[0];
+          const got = (OG_GOT[loc] ?? OG_GOT.fr)(cleanTitle.charAt(0).toUpperCase() + cleanTitle.slice(1));
+          const generated =
+            (await buildCanonicalUrl(`/api/quiz/${quizRowId}/result-og?rp=${rp}`)) ??
+            `https://app.tipote.com/api/quiz/${quizRowId}/result-og?rp=${rp}`;
+          const resultImage = String((rrow as { image_url?: string | null }).image_url ?? "").trim();
+          resultShare = { ogTitle: got, imageUrl: resultImage || generated };
+        }
+      }
+    }
     // Title is rich-text in DB → strip pour la balise <title> et l'OG.
     const plainTitle = stripHtml(data.title);
 
@@ -110,7 +160,13 @@ export async function generateMetadata({ params }: RouteContext): Promise<Metada
       : plainTitle;
 
     // Respecte le toggle "masquer aux moteurs de recherche" côté éditeur.
-    const noindex = !!(data as { seo_noindex?: boolean }).seo_noindex;
+    // Les variantes ?rp= (partage de profil) sont TOUJOURS noindex.
+    const noindex = !!(data as { seo_noindex?: boolean }).seo_noindex || Boolean(resultShare);
+
+    // og:url : FB re-scrape l'URL declaree ici. Pour une variante ?rp=,
+    // elle DOIT garder le ?rp= sinon FB retombe sur l'apercu generique.
+    const ogUrl = canonical ? (resultShare && rp ? `${canonical}?rp=${rp}` : canonical) : null;
+    const ogTitle = resultShare?.ogTitle ?? plainTitle;
 
     const meta: Metadata = {
       title: titleOverride,
@@ -132,16 +188,17 @@ export async function generateMetadata({ params }: RouteContext): Promise<Metada
           }
         : {}),
       openGraph: {
-        title: plainTitle,
+        title: ogTitle,
         description,
         type: "website",
         ...(siteName ? { siteName } : {}),
-        ...(canonical ? { url: canonical } : {}),
+        ...(ogUrl ? { url: ogUrl } : {}),
       },
     };
 
-    if (data.og_image_url) {
-      meta.openGraph!.images = [{ url: data.og_image_url, width: 1200, height: 630 }];
+    const ogImage = resultShare?.imageUrl ?? data.og_image_url ?? null;
+    if (ogImage) {
+      meta.openGraph!.images = [{ url: ogImage, width: 1200, height: 630 }];
     }
 
     return meta;
