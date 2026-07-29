@@ -40,8 +40,12 @@ export async function GET(
   { params }: { params: Promise<{ quizId: string }> },
 ) {
   const { quizId } = await params;
+  // Sans ?rp= : carte du QUIZ (og:image par defaut des quiz sans vignette
+  // uploadee, le debogueur FB alerte "propriete deduite" quand og:image
+  // manque, retour Bene 28 juillet 2026). Avec ?rp=<resultId> : carte du
+  // profil obtenu (partage de resultat).
   const rp = req.nextUrl.searchParams.get("rp") ?? "";
-  if (!UUID_RE.test(quizId) || !UUID_RE.test(rp)) {
+  if (!UUID_RE.test(quizId) || (rp && !UUID_RE.test(rp))) {
     return new Response("Not found", { status: 404 });
   }
 
@@ -51,22 +55,29 @@ export async function GET(
       .select("id, title, locale, brand_color_primary, status")
       .eq("id", quizId)
       .maybeSingle(),
-    supabaseAdmin
-      .from("quiz_results")
-      .select("quiz_id, title")
-      .eq("id", rp)
-      .maybeSingle(),
+    rp
+      ? supabaseAdmin
+          .from("quiz_results")
+          .select("quiz_id, title")
+          .eq("id", rp)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
   ]);
 
-  if (!quiz || quiz.status !== "active" || !result || result.quiz_id !== quizId) {
+  if (!quiz || quiz.status !== "active" || (rp && (!result || result.quiz_id !== quizId))) {
     return new Response("Not found", { status: 404 });
   }
 
   const primary = String(quiz.brand_color_primary ?? "").trim() || "#4F46E5";
   const locale = String(quiz.locale ?? "fr").split("-")[0];
-  const label = LABELS[locale] ?? LABELS.fr;
-  const resultTitle = titleForVisual(result.title as string) || label;
-  const quizTitle = titleForVisual(quiz.title as string);
+  const label = rp ? (LABELS[locale] ?? LABELS.fr) : "Quiz";
+  const quizTitleClean = titleForVisual(quiz.title as string);
+  // Carte profil : titre du profil en grand, titre du quiz en dessous.
+  // Carte quiz : titre du quiz en grand, pas de sous-ligne.
+  const resultTitle = rp
+    ? titleForVisual(result?.title as string) || label
+    : quizTitleClean || label;
+  const quizTitle = rp ? quizTitleClean : "";
 
   return new ImageResponse(
     (
