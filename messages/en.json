@@ -4644,6 +4644,8 @@
     "ogImageDesc": "Image shown by WhatsApp, iMessage, X, etc. when your link is shared. Without an upload, our logo is shown.",
     "uploadImage": "Upload an image",
     "ogImageFormatHint": "Recommended format: 1200 × 630 px (1.91:1 ratio). Max 10 MB.",
+    "shareTabFbCacheHint": "Facebook preview out of date? Facebook caches the old one: paste the quiz URL into its debugger, then click Scrape Again.",
+    "shareTabFbCacheLink": "Open the Facebook debugger",
     "seoNoindexLabel": "Hide this quiz from search engines",
     "seoNoindexDesc": "Check if you don't want Google, Bing or AIs (ChatGPT, Perplexity…) to index this quiz. Your direct link stays shareable.",
     "customFooterTitle": "Custom footer",

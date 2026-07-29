@@ -4942,6 +4942,8 @@
     "ogImageDesc": "Imagem mostrada pelo WhatsApp, iMessage, X, etc. quando o teu link é partilhado. Sem upload, é o nosso logo que aparece.",
     "uploadImage": "Carregar uma imagem",
     "ogImageFormatHint": "Formato recomendado: 1200 × 630 px (rácio 1,91:1). Máx. 10 MB.",
+    "shareTabFbCacheHint": "A pré-visualização do Facebook não atualiza? O Facebook guarda a antiga em cache: cola o URL do quiz no seu depurador e clica em Scrape Again.",
+    "shareTabFbCacheLink": "Abrir o depurador do Facebook",
     "seoNoindexLabel": "Ocultar este quiz aos motores de busca",
     "seoNoindexDesc": "Marca se não queres que o Google, o Bing ou as IAs (ChatGPT, Perplexity…) indexem este quiz. O teu link direto continua partilhável.",
     "customFooterTitle": "Rodapé personalizado",
