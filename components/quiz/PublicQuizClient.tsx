@@ -153,6 +153,10 @@ type PublicQuizData = {
   show_result_insight?: boolean | null;
   show_result_projection?: boolean | null;
   show_result_share?: boolean | null;
+  // Partage du profil obtenu : quand actif (null = defaut ON), "Partager
+  // mon resultat" partage l'URL ?rp=<resultId> dont l'apercu social met
+  // en avant le profil. false = comportement historique (carte PNG).
+  share_result_page?: boolean | null;
   capture_first_name?: boolean | null;
   // Capture email optionnelle (juillet 2026, port miroir Tiquiz). Default
   // TRUE = comportement historique (email demande avant le resultat). Off
@@ -1121,6 +1125,29 @@ export default function PublicQuizClient({
     try {
       const resultTitle = stripHtml(interp(resultProfile.title || "")).trim();
       const quizTitle = stripHtml(interp(quiz.title || "")).trim();
+
+      // Partage du profil obtenu (defaut ON) : on partage l'URL ?rp= dont
+      // l'apercu social (og:title "J'ai obtenu..." + visuel genere) met en
+      // avant le profil. Retour Jocelyne 28 juillet 2026 : "sur FB, mon
+      // partage montre le quiz, mais pas le profil que j'ai obtenu".
+      // share_result_page === false -> comportement historique (carte PNG).
+      if (quiz.share_result_page !== false && typeof window !== "undefined") {
+        const resultUrl = `${window.location.origin}${window.location.pathname}?rp=${resultProfile.id}`;
+        const shareText = quiz.share_message?.trim()
+          ? stripHtml(quiz.share_message)
+          : t.defaultShareMessage(quizTitle);
+        try {
+          if (typeof navigator.share === "function") {
+            await navigator.share({ title: quizTitle, text: shareText, url: resultUrl });
+          } else {
+            await navigator.clipboard.writeText(`${shareText}\n${resultUrl}`);
+            toast.success(t.copied);
+          }
+        } catch {
+          /* annulation utilisateur : silencieux */
+        }
+        return;
+      }
       const blob = await generateResultCard({
         primaryColor: branding.primaryColor,
         logoUrl: branding.logoUrl,

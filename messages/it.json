@@ -4436,6 +4436,8 @@
     "optionShowResultProjectionHint": "La scheda proiezione nella pagina del risultato. Deseleziona per nasconderla.",
     "optionShowResultShare": "Mostra il pulsante di condivisione",
     "optionShowResultShareHint": "Il pulsante «Condividi il mio risultato» nella pagina del risultato. Deseleziona per rimuoverlo.",
+    "optionShareResultPage": "Condivisione del risultato: evidenziare il profilo ottenuto",
+    "optionShareResultPageHint": "Il link condiviso dalla schermata del risultato mostra il profilo del visitatore nell'anteprima (titolo + visual con i colori del quiz). Deselezionato: si condivide solo il quiz.",
     "trackingPixelsTitle": "Tracking e Pubblicità",
     "trackingPixelsHint": "Aggiungi il tuo Pixel Meta e i tag Google. I pixel si caricano solo dopo il consenso.",
     "trackingApplyDefaults": "↺ Applica i miei valori predefiniti",

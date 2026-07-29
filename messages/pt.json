@@ -4741,6 +4741,8 @@
     "optionShowResultProjectionHint": "O cartão projeção na página de resultado. Desmarca para o ocultar.",
     "optionShowResultShare": "Mostrar o botão de partilha",
     "optionShowResultShareHint": "O botão «Partilhar o meu resultado» na página de resultado. Desmarca para o remover.",
+    "optionShareResultPage": "Partilha do resultado: destacar o perfil obtido",
+    "optionShareResultPageHint": "O link partilhado do ecrã de resultado mostra o perfil do visitante na pré-visualização (título + visual com as cores do quiz). Desmarcado: partilha apenas o quiz.",
     "trackingPixelsTitle": "Tracking e Anúncios",
     "trackingPixelsHint": "Adiciona o teu Pixel Meta e tags Google. Os pixels só carregam após o consentimento.",
     "trackingApplyDefaults": "↺ Aplicar os meus padrões",

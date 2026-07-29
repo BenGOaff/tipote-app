@@ -4435,6 +4435,8 @@
     "optionShowResultProjectionHint": "بطاقة التوقّع في صفحة النتيجة. ألغِ التحديد لإخفائها.",
     "optionShowResultShare": "إظهار زر المشاركة",
     "optionShowResultShareHint": "زر «مشاركة نتيجتي» في صفحة النتيجة. ألغِ التحديد لإزالته.",
+    "optionShareResultPage": "مشاركة النتيجة: إبراز الملف الذي حصل عليه الزائر",
+    "optionShareResultPageHint": "الرابط المُشارك من شاشة النتيجة يعرض ملف الزائر في المعاينة (العنوان + صورة بألوان الاختبار). عند إلغاء التحديد: تُشارك صفحة الاختبار فقط.",
     "trackingPixelsTitle": "التتبع والإعلانات",
     "trackingPixelsHint": "أضف Pixel Meta وعلامات Google. لا تُحمَّل البكسلات إلا بعد موافقة الزائر.",
     "trackingApplyDefaults": "↺ تطبيق إعداداتي الافتراضية",

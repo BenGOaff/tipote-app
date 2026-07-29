@@ -205,7 +205,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       "background_style", "background_gradient", "background_image_url",
       "intro_layout", "button_shape", "theme_id",
       "question_layout", "split_image_url", "split_side", "panel_media",
-      "answer_layout", "show_result_insight", "show_result_projection", "show_result_share",
+      "answer_layout", "show_result_insight", "show_result_projection", "show_result_share", "share_result_page",
       "close_enabled", "close_action", "close_redirect_url", "close_message",
       "close_cta_text", "close_cta_url",
     ];
@@ -271,7 +271,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     }
     // Cartes resultat masquables + bouton de partage optionnel. Booleens
     // stricts ; default true cote DB -> absence = comportement historique.
-    for (const key of ["show_result_insight", "show_result_projection", "show_result_share"] as const) {
+    for (const key of ["show_result_insight", "show_result_projection", "show_result_share", "share_result_page"] as const) {
       if (key in patch) patch[key] = patch[key] !== false;
     }
 

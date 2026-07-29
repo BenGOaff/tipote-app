@@ -4443,6 +4443,8 @@
     "optionShowResultProjectionHint": "La carte projection sur la page de résultat. Décoche pour la masquer.",
     "optionShowResultShare": "Afficher le bouton de partage",
     "optionShowResultShareHint": "Le bouton « Partager mon résultat » sur la page de résultat. Décoche pour le retirer.",
+    "optionShareResultPage": "Partage du résultat : mettre en avant le profil obtenu",
+    "optionShareResultPageHint": "Le lien partagé depuis l'écran de résultat affiche le profil du visiteur dans l'aperçu (titre + visuel aux couleurs du quiz). Décoché : le partage montre le quiz seul.",
     "trackingPixelsTitle": "Tracking & Publicités",
     "trackingPixelsHint": "Ajoute ton pixel Meta et tes tags Google. Les pixels ne chargent qu'après le consentement du visiteur.",
     "trackingApplyDefaults": "↺ Appliquer mes valeurs par défaut",
