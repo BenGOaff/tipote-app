@@ -4602,7 +4602,7 @@
     "bonusShareTitle": "Bonus ofrecido por compartir",
     "bonusShareDesc": "Describe lo que recibe el visitante al compartir.",
     "bonusDescriptionPh": "P. ej.: mi miniformación exclusiva",
-    "shareMessageHint": "Texto rellenado previamente cuando el visitante comparte.",
+    "shareMessageHint": "Se rellena al compartir en X, WhatsApp, Threads o desde el móvil. Facebook y LinkedIn nunca rellenan el texto: muestran la vista previa del enlace, cuya descripción usa este mensaje (salvo que definas una descripción OG personalizada).",
     "shareMessagePh": "¡Acabo de hacer el quiz \"{title}\"!",
     "sioShareTagLabel": "Etiqueta Systeme.io tras compartir",
     "sioShareTagHint": "Añadido al contacto cuando comparte realmente. Activa tu automatización.",

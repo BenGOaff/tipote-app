@@ -59,7 +59,7 @@ export async function generateMetadata({ params }: RouteContext): Promise<Metada
     const supabase = createClient(supabaseUrl, supabaseKey);
     const base = supabase
       .from("quizzes")
-      .select("user_id, project_id, slug, title, introduction, og_image_url, og_description, seo_noindex")
+      .select("user_id, project_id, slug, title, introduction, og_image_url, og_description, share_message, seo_noindex")
       .eq("status", "active");
     const { data } = await (UUID_RE.test(param)
       ? base.eq("id", param).maybeSingle()
@@ -72,8 +72,13 @@ export async function generateMetadata({ params }: RouteContext): Promise<Metada
     // Cf. rapport Adeline (16 mai 2026) : iMessage affichait `&nbsp;`
     // littéral dans l'aperçu de partage.
     const ogDescPlain = stripHtml(data.og_description).trim();
+    // Facebook et LinkedIn ne preremplissent JAMAIS le texte d'un partage :
+    // seul l'apercu du lien est visible. Le message de partage du createur
+    // sert donc de description d'apercu par defaut (retour Jocelyne
+    // 28 juillet 2026) ; une description OG explicite garde la priorite.
+    const shareMsgPlain = stripHtml((data as { share_message?: string | null }).share_message).trim();
     const introPlain = stripHtml(data.introduction).slice(0, 160);
-    const description = (ogDescPlain || introPlain).trim() || undefined;
+    const description = (ogDescPlain || shareMsgPlain || introPlain).trim() || undefined;
     // Title is rich-text in DB → strip pour la balise <title> et l'OG.
     const plainTitle = stripHtml(data.title);
 

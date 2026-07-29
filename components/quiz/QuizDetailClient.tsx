@@ -4101,6 +4101,9 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                         className="text-sm bg-background border rounded-lg"
                         placeholder={`Je viens de faire le quiz "${title || "…"}" !`}
                       />
+                      <p className="text-[11px] text-muted-foreground">
+                        {t("shareMessageHint")}
+                      </p>
                     </div>
 
                     {/* Share buttons mockup — reflect actual configured networks */}

@@ -81,7 +81,7 @@ async function resolve(slug: string, userId: string, projectId: string): Promise
   //    precedence so the error messages and resolution agree.
   const { data: quiz } = await supabaseAdmin
     .from("quizzes")
-    .select("title, introduction, og_image_url, og_description, meta_pixel_id, ga4_measurement_id, google_ads_conversion_id")
+    .select("title, introduction, og_image_url, og_description, share_message, meta_pixel_id, ga4_measurement_id, google_ads_conversion_id")
     .eq("user_id", userId)
     .eq("project_id", projectId)
     .ilike("slug", slug)
@@ -147,8 +147,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (r.kind === "quiz") {
     const ogDescPlain = stripHtml(r.meta.og_description ?? "").trim();
+    // FB/LinkedIn n'affichent que l'apercu du lien : le message de partage
+    // sert de description par defaut (retour Jocelyne 28 juillet 2026),
+    // parite avec /q/[quizId].
+    const shareMsgPlain = stripHtml((r.meta as { share_message?: string | null }).share_message ?? "").trim();
     const introPlain = stripHtml(r.meta.introduction ?? "").slice(0, 160);
-    const description = (ogDescPlain || introPlain).trim() || undefined;
+    const description = (ogDescPlain || shareMsgPlain || introPlain).trim() || undefined;
     const plainTitle = stripHtml(r.meta.title ?? "");
     const baseTitle = plainTitle || "Quiz";
     const titleOverride = siteName
