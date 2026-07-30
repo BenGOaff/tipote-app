@@ -299,6 +299,13 @@ export default function QuizFormClient() {
   const [aiLocale, setAiLocale] = useState("fr");
   const [aiFormat, setAiFormat] = useState<"short" | "long">("short");
   const [aiSegmentation, setAiSegmentation] = useState<"level" | "profile">("profile");
+  // Type de quiz IA (voie B, Béné 30 juillet 2026) : "profile" = quiz par
+  // profils (flux historique inchangé) ; "scoring" = quiz scoré
+  // (diagnostic) avec points, tranches calculées côté serveur et axes
+  // optionnels. L'ancien choix "Par niveau" est couvert par "scoring".
+  const [aiQuizType, setAiQuizType] = useState<"profile" | "scoring">("profile");
+  const [aiAxes, setAiAxes] = useState("");
+  const [aiTrancheCount, setAiTrancheCount] = useState(3);
   const [aiAskFirstName, setAiAskFirstName] = useState(false);
   const [aiAskGender, setAiAskGender] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -326,6 +333,10 @@ export default function QuizFormClient() {
     if (brief.bonus) setAiBonus(brief.bonus);
     setAiFormat(brief.format);
     setAiSegmentation(brief.segmentation);
+    // "Par niveau" n'existe plus comme choix : un brief niveau devient un
+    // quiz scoré (tranches Débutant → Expert calculées automatiquement).
+    const briefQuizType = brief.segmentation === "level" ? "scoring" : "profile";
+    setAiQuizType(briefQuizType);
 
     setIdeaChatOpen(false);
     void handleGenerate({
@@ -335,7 +346,10 @@ export default function QuizFormClient() {
       bonus,
       locale: aiLocale,
       format: brief.format,
-      segmentation: brief.segmentation,
+      segmentation: "profile",
+      quizType: briefQuizType,
+      axes: [],
+      trancheCount: 3,
     });
   }
 
@@ -654,6 +668,9 @@ export default function QuizFormClient() {
     locale: string;
     format: "short" | "long";
     segmentation: "level" | "profile";
+    quizType?: "profile" | "scoring";
+    axes?: string[];
+    trancheCount?: number;
     askFirstName?: boolean;
     askGender?: boolean;
   };
@@ -667,6 +684,11 @@ export default function QuizFormClient() {
       locale: aiLocale,
       format: aiFormat,
       segmentation: aiSegmentation,
+      quizType: aiQuizType,
+      axes: aiQuizType === "scoring"
+        ? aiAxes.split(",").map((a) => a.trim()).filter(Boolean).slice(0, 6)
+        : [],
+      trancheCount: aiTrancheCount,
       askFirstName: aiAskFirstName,
       askGender: aiAskGender,
     };
@@ -697,6 +719,9 @@ export default function QuizFormClient() {
           locale: params.locale,
           format: params.format,
           segmentation: params.segmentation,
+          quizType: params.quizType ?? "profile",
+          axes: params.axes ?? [],
+          ...(params.quizType === "scoring" ? { resultCount: params.trancheCount ?? 3 } : {}),
           questionCount: params.format === "short" ? 4 : 8,
           askFirstName: params.askFirstName,
           askGender: params.askGender,
@@ -780,6 +805,13 @@ export default function QuizFormClient() {
             share_message: receivedQuiz.share_message ? String(receivedQuiz.share_message) : null,
             questions: Array.isArray(receivedQuiz.questions) ? receivedQuiz.questions : [],
             results: Array.isArray(receivedQuiz.results) ? receivedQuiz.results : [],
+            // Quiz scoré généré : mode + axes + jauge posés par la route
+            // de génération (bornes des tranches déjà calculées).
+            ...(receivedQuiz.mode === "scoring" ? {
+              mode: "scoring",
+              scoring_axes: receivedQuiz.scoring_axes,
+              show_score_gauge: true,
+            } : {}),
           };
           const saveRes = await fetch("/api/quiz", {
             method: "POST",
@@ -1137,12 +1169,12 @@ export default function QuizFormClient() {
 
               {/* 4. Segmentation */}
               <div className="space-y-2">
-                <Label>{t("aiSegmentationLabel")}</Label>
+                <Label>{t("aiTypeLabel")}</Label>
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
-                    onClick={() => setAiSegmentation("profile")}
-                    className={`p-3 rounded-xl border text-left transition-all ${aiSegmentation === "profile" ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/40"}`}
+                    onClick={() => { setAiQuizType("profile"); setAiSegmentation("profile"); }}
+                    className={`p-3 rounded-xl border text-left transition-all ${aiQuizType === "profile" ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/40"}`}
                   >
                     <Users className="h-4 w-4 text-violet-500 dark:text-violet-400 mb-1" />
                     <p className="font-medium text-sm">{t("aiSegProfile")}</p>
@@ -1150,14 +1182,42 @@ export default function QuizFormClient() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setAiSegmentation("level")}
-                    className={`p-3 rounded-xl border text-left transition-all ${aiSegmentation === "level" ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/40"}`}
+                    onClick={() => { setAiQuizType("scoring"); setAiSegmentation("profile"); }}
+                    className={`p-3 rounded-xl border text-left transition-all ${aiQuizType === "scoring" ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/40"}`}
                   >
                     <TrendingUp className="h-4 w-4 text-emerald-500 dark:text-emerald-400 mb-1" />
-                    <p className="font-medium text-sm">{t("aiSegLevel")}</p>
-                    <p className="text-xs text-muted-foreground">{t("aiSegLevelDesc")}</p>
+                    <p className="font-medium text-sm">{t("aiTypeScoring")}</p>
+                    <p className="text-xs text-muted-foreground">{t("aiTypeScoringDesc")}</p>
                   </button>
                 </div>
+                {aiQuizType === "scoring" && (
+                  <div className="space-y-2 rounded-xl border border-dashed p-3">
+                    <div className="space-y-1">
+                      <Label htmlFor="ai-axes">{t("aiAxesLabel")}</Label>
+                      <Input
+                        id="ai-axes"
+                        value={aiAxes}
+                        onChange={(e) => setAiAxes(e.target.value)}
+                        placeholder={t("aiAxesPh")}
+                      />
+                      <p className="text-xs text-muted-foreground">{t("aiAxesHint")}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="ai-tranches">{t("aiTrancheCountLabel")}</Label>
+                      <select
+                        id="ai-tranches"
+                        value={aiTrancheCount}
+                        onChange={(e) => setAiTrancheCount(Math.min(5, Math.max(2, Number(e.target.value) || 3)))}
+                        className="w-full border border-input rounded-lg px-3 py-2 text-sm bg-background"
+                      >
+                        {[2, 3, 4, 5].map((n) => (
+                          <option key={n} value={n}>{n}</option>
+                        ))}
+                      </select>
+                      <p className="text-xs text-muted-foreground">{t("aiTrancheCountHint")}</p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Personalization toggles — name + gender */}

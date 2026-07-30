@@ -3,6 +3,7 @@
 // 16 strategic objectives, format awareness, segmentation, conversion-optimized output.
 
 import { buildLanguageDirective } from "@/lib/quizLanguages";
+import { slugifyAxisLabel } from "@/lib/quizScoring";
 
 // Bloc d'écriture NATURELLE 2026 — l'arme anti « ça fait IA ». Réutilisé par la
 // génération de quiz ET de sondage. Cible précisément les tics qui trahissent un
@@ -51,6 +52,15 @@ type QuizPromptParams = {
   addressForm?: "tu" | "vous";
   format?: "short" | "long";
   segmentation?: "level" | "profile";
+  /**
+   * "profile" (défaut) = quiz par profils, prompt historique inchangé à
+   * l'octet près. "scoring" = quiz scoré (diagnostic) : points 0-3 par
+   * option, tranches ordonnées SANS bornes chiffrées (calculées côté
+   * code), axes optionnels. Voie B validée par Béné le 30 juillet 2026.
+   */
+  quizType?: "profile" | "scoring";
+  /** Axes du diagnostic (labels bruts, max 6) — quiz scoré uniquement. */
+  axes?: string[];
   /** Quiz asks the visitor for their first name on a pre-quiz screen. */
   askFirstName?: boolean;
   /** Quiz asks the visitor for their grammatical gender (m / f / x). */
@@ -97,12 +107,27 @@ export function buildQuizGenerationPrompt(params: QuizPromptParams): {
     addressForm = "tu",
     format = "short",
     segmentation = "profile",
+    quizType = "profile",
+    axes = [],
     askFirstName = false,
     askGender = false,
   } = params;
 
   const formality = addressForm === "vous" ? "vous" : "tu";
   const isShort = format === "short";
+  const isScoring = quizType === "scoring";
+  // Axes nettoyés + leurs ids EXACTS que le modèle doit réutiliser.
+  const scoringAxes = isScoring
+    ? axes.map((l) => String(l ?? "").trim()).filter(Boolean).slice(0, 6)
+        .map((label) => ({ id: slugifyAxisLabel(label) || "axe", label }))
+    : [];
+  const axesDirective = scoringAxes.length > 0
+    ? `\nAXES DU DIAGNOSTIC : le créateur veut évaluer ces dimensions :\n${scoringAxes.map((a) => `  - ${a.label} (id: "${a.id}")`).join("\n")}
+- Chaque question de type choix ou échelle DOIT être rattachée à 1 ou 2 axes via un champ "axes" au niveau de la question : "axes": { "<id>": poids } (poids 1 ou 2 ; 2 = question très représentative de cet axe).
+- Utilise UNIQUEMENT les ids listés ci-dessus, à l'identique, jamais d'autres.
+- Couvre CHAQUE axe avec au moins 2 questions, et équilibre le nombre de questions par axe.
+- Les textes des résultats peuvent évoquer les dimensions fortes/faibles en général, mais SANS citer de chiffres (les barres par axe s'affichent automatiquement).\n`
+    : "";
 
   const langLabel = buildLanguageDirective(locale);
 
@@ -123,7 +148,7 @@ OBJECTIF STRATÉGIQUE : ${objectiveLabel}
 ${intention ? `\nINTENTION BUSINESS DU CRÉATEUR : ${intention}\nChaque résultat doit amener le participant, de manière naturelle et personnalisée, vers CETTE intention business. Le CTA de chaque résultat doit servir cet objectif concret (et non un CTA générique).\n` : ""}
 FORMAT : ${isShort ? "Quiz COURT (3 à 5 questions) → conversions rapides, légèreté, curiosité maximale." : "Quiz LONG (6 à 10 questions) → plus de valeur, meilleur diagnostic, profondeur d'analyse."}
 
-SEGMENTATION : ${segmentation === "level" ? "Par NIVEAU (débutant, intermédiaire, expert…). Le scoring classe le participant selon son degré de maîtrise." : "Par PROFIL (types de personnalité, styles, archétypes…). Le scoring révèle un profil valorisant et personnalisé."}
+${isScoring ? `TYPE DE QUIZ : SCORÉ (diagnostic). Le participant obtient un SCORE global (affiché en jauge et en pourcentage)${scoringAxes.length > 0 ? " et un score par axe (barres)" : ""}, pas un profil de personnalité. Les résultats sont des TRANCHES de score ordonnées, du diagnostic le plus fragile au plus avancé. N'écris JAMAIS de bornes chiffrées, de notes ni de pourcentages dans les textes (titres, descriptions, insights) : les tranches exactes sont calculées automatiquement par la plateforme.${axesDirective}` : `SEGMENTATION : ${segmentation === "level" ? "Par NIVEAU (débutant, intermédiaire, expert…). Le scoring classe le participant selon son degré de maîtrise." : "Par PROFIL (types de personnalité, styles, archétypes…). Le scoring révèle un profil valorisant et personnalisé."}`}
 ${(askFirstName || askGender) ? `
 PERSONNALISATION DYNAMIQUE — OBLIGATOIRE :
 Le quiz capture ${askFirstName && askGender ? "le prénom ET le genre" : askFirstName ? "le prénom" : "le genre"} du visiteur avant la première question. Tu DOIS produire des textes qui exploitent ces variables dans les questions, options, résultats et CTA.
@@ -166,7 +191,22 @@ ${isShort
 - Les résultats sont riches, détaillés, avec insight + projection + CTA.
 - L'introduction installe le contexte et promet une révélation personnalisée.`}
 
-QUESTIONS — RÈGLES :
+${isScoring ? `QUESTIONS — RÈGLES :
+- La MAJORITÉ des questions sont des choix (3 à 5 options). En quiz scoré, result_index vaut TOUJOURS 0 (il n'est pas utilisé) : c'est le champ "points" qui compte.
+- Chaque question porte un champ "question_type". Formats disponibles :
+  - "multiple_choice" (défaut) : 3 à 5 options.
+  - "yes_no" : exactement 2 options, "Oui" puis "Non".
+  - "rating_scale" (échelle 0-10) ou "star_rating" (étoiles) : la note choisie compte DIRECTEMENT dans le score (auto-évaluation naturelle en diagnostic). 0 à 2 par quiz, jamais scolaire.
+  - "free_text" : réponse libre, jamais comptée dans le score. Très rare.
+- Pour "rating_scale" ajoute "config": { "min": 0, "max": 10 } ; pour "star_rating" ajoute "config": { "max": 5 }. Ces types (et free_text) n'ont PAS d'options (mets "options": []).
+- Varie les formulations : scénarios, mises en situation, fréquences ("jamais / parfois / souvent / toujours").
+
+POINTS (déterminant, à soigner) :
+Chaque option de type choix porte un champ "points" (entier de 0 à 3) = l'INTENSITÉ de cette réponse sur ce que le quiz mesure. 0 = le signal le plus faible / la situation la plus fragile ; 3 = le signal le plus fort / la situation idéale. Le score du participant est la somme de ses points, et son résultat est la tranche où il tombe.
+- Toutes les options d'une même question ont des points DIFFÉRENTS (jamais deux fois la même valeur dans une question) : chaque réponse doit déplacer le score.
+- Utilise TOUTE l'échelle 0-3 sur l'ensemble du quiz, pas seulement 1-2.
+- L'ordre d'affichage des options ne doit PAS suivre l'ordre des points (ne mets pas toujours la meilleure réponse en premier) : mélange pour que le quiz ne soit pas devinable.
+- Les points doivent refléter une vraie gradation métier, pas un barème scolaire : la "bonne" réponse est celle qui témoigne de la situation la plus saine/avancée sur le sujet.` : `QUESTIONS — RÈGLES :
 - La MAJORITÉ des questions sont des choix (3 à 5 options), chaque option mappée vers un profil résultat via result_index (entre 0 et ${resultCount - 1}). C'est ce qui détermine le profil, donc garde-les majoritaires pour que le résultat reste pertinent.
 - Chaque question porte un champ "question_type". Formats disponibles :
   - "multiple_choice" (défaut) : 3 à 5 options, chacune avec un result_index.
@@ -183,7 +223,7 @@ Chaque option de type choix porte un champ "points" (entier de 1 à 3) qui pond�
 - Les questions plus secondaires gardent un poids de 1.
 - Donne à CHAQUE profil une "signature" distincte : une combinaison de réponses qui le fait clairement ressortir. Évite que deux profils puissent finir à égalité pour un répondant cohérent.
 - N'attribue jamais le même poids partout (ça recrée des égalités et un biais vers le premier profil). Varie intelligemment, mais garde les poids modérés (1 à 3) pour qu'aucun profil n'écrase les autres d'entrée.
-- Les questions rating_scale / star_rating / free_text ne portent pas de points (elles ne déterminent pas le profil).
+- Les questions rating_scale / star_rating / free_text ne portent pas de points (elles ne déterminent pas le profil).`}
 
 RÉSULTATS — RÈGLES :
 - Chaque résultat doit être TRANSFORMATIF : révéler un élément caché, bloquant ou valorisant.
@@ -191,7 +231,10 @@ RÉSULTATS — RÈGLES :
 - Le CTA de chaque résultat doit s'intégrer naturellement après le résultat, jamais plaqué artificiellement.
 - Chaque cta_text est UNIQUE au profil : il doit refléter la promesse adaptée à CE résultat (et servir l'intention business du créateur si elle est fournie). Jamais un CTA générique type "En savoir plus".
 - Format du cta_text : **3 à 6 mots maximum**, formulation verbe + bénéfice. Ex: "Réserver mon audit gratuit", "Découvrir la méthode". JAMAIS de phrase longue ou explicative — le CTA tient sur UNE ligne dans un bouton.
-${segmentation === "level"
+${isScoring
+    ? `- Les résultats sont les TRANCHES, ordonnées du score le plus BAS au plus HAUT. Le PREMIER résultat s'adresse au participant en difficulté (bienveillant, jamais culpabilisant : il repart avec un premier pas concret), le DERNIER au participant avancé (valorisant, avec le défi d'après). Chaque tranche reste TRANSFORMATIVE : insight + projection + CTA propres.
+- N'écris PAS de champs "min_score" / "max_score" : les bornes sont calculées automatiquement.`
+    : segmentation === "level"
     ? "- Scoring par majorité de réponses (le résultat correspondant au result_index le plus fréquent l'emporte)."
     : "- Scoring par profil dominant (le result_index majoritaire détermine le profil révélé)."}
 
@@ -202,18 +245,25 @@ FORMAT DE SORTIE : JSON strict uniquement. Pas de markdown, pas de commentaires,
   "questions": [
     {
       "question_text": "La question",
-      "question_type": "multiple_choice",
+      "question_type": "multiple_choice",${isScoring ? `${scoringAxes.length > 0 ? `
+      "axes": { "${scoringAxes[0]?.id ?? "axe1"}": 2 },` : ""}
+      "options": [
+        { "text": "Option A", "result_index": 0, "points": 1 },
+        { "text": "Option B", "result_index": 0, "points": 3 },
+        { "text": "Option C", "result_index": 0, "points": 0 },
+        { "text": "Option D", "result_index": 0, "points": 2 }
+      ]` : `
       "options": [
         { "text": "Option A", "result_index": 0, "points": 2 },
         { "text": "Option B", "result_index": 1, "points": 1 },
         { "text": "Option C", "result_index": 2, "points": 3 },
         { "text": "Option D", "result_index": 0, "points": 1 }
-      ]
+      ]`}
     }
   ],
   "results": [
     {
-      "title": "Nom du profil ou niveau",
+      "title": "${isScoring ? "Nom de la tranche (du plus bas au plus haut)" : "Nom du profil ou niveau"}",
       "description": "Description valorisante (2-3 phrases)",
       "insight": "Prise de conscience forte et spécifique — ce que la personne ne voyait pas",
       "projection": "${formality === "vous" ? "Et si vous..." : "Et si tu..."}  — projection motivante vers l'action",
@@ -229,9 +279,9 @@ FORMAT DE SORTIE : JSON strict uniquement. Pas de markdown, pas de commentaires,
     `CIBLE PRÉCISE : ${target}`,
     `TON SOUHAITÉ : ${tone}`,
     `FORMAT : ${isShort ? "Court (3-5 questions)" : "Long (8-12 questions)"}`,
-    `SEGMENTATION : ${segmentation === "level" ? "Par niveau" : "Par profil"}`,
+    isScoring ? `TYPE : Quiz scoré (diagnostic)${scoringAxes.length > 0 ? ` avec axes : ${scoringAxes.map((a) => `${a.label} (id: ${a.id})`).join(", ")}` : ""}` : `SEGMENTATION : ${segmentation === "level" ? "Par niveau" : "Par profil"}`,
     `NOMBRE DE QUESTIONS : ${questionCount}`,
-    `NOMBRE DE PROFILS RÉSULTAT : ${resultCount}`,
+    isScoring ? `NOMBRE DE TRANCHES DE RÉSULTAT : ${resultCount} (ordonnées du score le plus bas au plus haut)` : `NOMBRE DE PROFILS RÉSULTAT : ${resultCount}`,
   ];
 
   if (intention) userParts.push(`INTENTION BUSINESS : ${intention}\nChaque CTA de résultat doit servir cette intention avec des formulations spécifiques au profil révélé.`);
@@ -245,8 +295,12 @@ FORMAT DE SORTIE : JSON strict uniquement. Pas de markdown, pas de commentaires,
   userParts.push(
     `\nCONSIGNES STRICTES :`,
     `- Génère exactement ${questionCount} questions, en MAJORITÉ des choix (3 à 5 options).`,
-    `- Génère exactement ${resultCount} profils résultat.`,
-    `- Pour les questions de type choix, chaque option a un result_index entre 0 et ${resultCount - 1}, répartis équilibré, ET un "points" (1 à 3) pondéré pour éviter toute égalité entre profils (poids fort sur les 2-3 questions les plus déterminantes, poids 1 ailleurs, une signature distincte par profil).`,
+    isScoring
+      ? `- Génère exactement ${resultCount} tranches de résultat, ordonnées du score le plus bas au plus haut, SANS bornes chiffrées.`
+      : `- Génère exactement ${resultCount} profils résultat.`,
+    isScoring
+      ? `- Pour les questions de type choix, result_index vaut toujours 0 et chaque option porte un "points" (0 à 3) qui traduit l'intensité de la réponse ; toutes les options d'une question ont des points différents et l'ordre d'affichage ne suit pas l'ordre des points.${scoringAxes.length > 0 ? ` Chaque question de choix ou d'échelle porte un champ "axes" avec 1 ou 2 ids parmi : ${scoringAxes.map((a) => a.id).join(", ")}.` : ""}`
+      : `- Pour les questions de type choix, chaque option a un result_index entre 0 et ${resultCount - 1}, répartis équilibré, ET un "points" (1 à 3) pondéré pour éviter toute égalité entre profils (poids fort sur les 2-3 questions les plus déterminantes, poids 1 ailleurs, une signature distincte par profil).`,
     `- Ajoute "question_type" à chaque question (défaut "multiple_choice"). Échelle/étoiles/texte libre avec parcimonie (ne déterminent pas le profil).`,
     `- Tout le contenu DOIT être en ${langLabel}.`,
     `- Les résultats doivent être TRANSFORMATIFS, pas génériques.`,

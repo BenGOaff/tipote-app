@@ -51,6 +51,11 @@ export async function POST(req: NextRequest) {
   let supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>;
   let userId: string;
   let projectId: string | null;
+  // Quiz scoré généré par l'IA (voie B, Béné 30 juillet 2026) : le
+  // modèle écrit points/axes/tranches ordonnées, le code calcule les
+  // bornes (finalizeAiScoringQuiz) après la génération.
+  let isScoringGen = false;
+  let scoringAxesInput: string[] = [];
   let system: string;
   let userPrompt: string;
 
@@ -195,6 +200,11 @@ export async function POST(req: NextRequest) {
 
       const format = body.format === "short" ? "short" : body.format === "long" ? "long" : "short";
       const segmentation = body.segmentation === "level" ? "level" : "profile";
+      const quizType = body.quizType === "scoring" ? "scoring" : "profile";
+      isScoringGen = quizType === "scoring";
+      scoringAxesInput = Array.isArray(body.axes)
+        ? (body.axes as unknown[]).map((a) => String(a ?? "").trim()).filter(Boolean).slice(0, 6)
+        : [];
       const defaultQuestionCount = format === "short" ? 5 : 8;
 
       const prompts = buildQuizGenerationPrompt({
@@ -214,6 +224,8 @@ export async function POST(req: NextRequest) {
         addressForm: resolvedAddressForm,
         format,
         segmentation,
+        quizType,
+        axes: scoringAxesInput,
         askFirstName: Boolean(body.askFirstName),
         askGender: Boolean(body.askGender),
       });
@@ -388,9 +400,36 @@ export async function POST(req: NextRequest) {
         // Strip residual AI tics (em dashes used in incise, decorative
         // emojis, double-spaces) before handing the payload to the editor.
         // Belt-and-suspenders on top of NATURAL_WRITING_BLOCK in the prompt.
-        const cleanedQuiz = quiz && typeof quiz === "object"
+        let cleanedQuiz = quiz && typeof quiz === "object"
           ? sanitizeAiQuizPayload(quiz as Record<string, unknown>)
           : quiz;
+        // Quiz scoré : l'IA a fait la sémantique, le code fait
+        // l'arithmétique. On normalise points/axes et on découpe les
+        // tranches min/max sur la plage réellement atteignable (zéro
+        // trou, zéro chevauchement, garanti par construction).
+        if (isScoringGen && cleanedQuiz && typeof cleanedQuiz === "object") {
+          try {
+            const { finalizeAiScoringQuiz } = await import("@/lib/quizScoring");
+            const cq = cleanedQuiz as Record<string, unknown>;
+            const fin = finalizeAiScoringQuiz(
+              Array.isArray(cq.questions) ? (cq.questions as Record<string, unknown>[]) : [],
+              Array.isArray(cq.results) ? (cq.results as Record<string, unknown>[]) : [],
+              scoringAxesInput,
+            );
+            cleanedQuiz = {
+              ...cq,
+              questions: fin.questions,
+              results: fin.results,
+              mode: "scoring",
+              scoring_axes: fin.axes,
+              show_score_gauge: true,
+            };
+          } catch (finErr) {
+            console.error("[quiz/generate] scoring finalize error:", finErr);
+            sendSSE("error", { ok: false, error: "Scored quiz post-processing failed. Please retry." });
+            return;
+          }
+        }
         sendSSE("result", { ok: true, quiz: cleanedQuiz });
       } catch (e: any) {
         const msg = String(e?.message ?? "").toUpperCase();
