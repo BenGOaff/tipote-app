@@ -258,6 +258,12 @@ export type PanelMediaConfig = {
   perPage?: boolean;
   global?: PanelMediaItem;
   pages?: Record<string, PanelMediaItem>;
+  /**
+   * Largeur du panneau média en % (desktop), réglée au taquet dans
+   * l'éditeur (demande Béné 30 juil 2026, façon Systeme.io). 20 à 60.
+   * Absent = défauts historiques du viewer (40% md / 44% lg).
+   */
+  width?: number;
 };
 
 function sanitizeMotifKey(raw: unknown): PanelMotifKey {
@@ -301,6 +307,10 @@ export function sanitizePanelMediaConfig(raw: unknown): PanelMediaConfig | null 
   const r = raw as Record<string, unknown>;
   const out: PanelMediaConfig = {};
   if (typeof r.perPage === "boolean") out.perPage = r.perPage;
+  if (typeof r.width === "number" && Number.isFinite(r.width)) {
+    const w = Math.round(r.width);
+    if (w >= 20 && w <= 60) out.width = w;
+  }
   const global = sanitizePanelMediaItem(r.global);
   if (global) out.global = global;
   if (r.pages && typeof r.pages === "object") {
@@ -312,7 +322,7 @@ export function sanitizePanelMediaConfig(raw: unknown): PanelMediaConfig | null 
     }
     if (Object.keys(pages).length > 0) out.pages = pages;
   }
-  if (out.perPage === undefined && !out.global && !out.pages) return null;
+  if (out.perPage === undefined && !out.global && !out.pages && out.width === undefined) return null;
   return out;
 }
 
