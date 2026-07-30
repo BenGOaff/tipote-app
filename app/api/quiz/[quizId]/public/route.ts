@@ -16,6 +16,15 @@ import { applyFrenchTypography, isFrenchLocale } from "@/lib/frenchTypography";
 import { resolveSioApiKey } from "@/lib/sio/resolveApiKey";
 import { sendCapiLead } from "@/lib/metaCapi";
 import { logBusinessEvent, dedupeKeys } from "@/lib/businessEvents";
+import {
+  sanitizeScoresSnapshot,
+  resolveScoreLabels,
+  scorePercent,
+  scoreTranche,
+  normalizeScoringAxes,
+  axisSlug,
+  slugifyAxisLabel,
+} from "@/lib/quizScoring";
 
 // No `force-dynamic`: it would make Vercel inject `Cache-Control: private, no-store`,
 // overriding the edge-SWR headers set on the GET response and forcing `cf-cache-status: DYNAMIC`.
@@ -309,7 +318,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
     }
 
     const [quizRes, questionsRes, resultsRes] = await Promise.all([
-      admin.from("quizzes").select("id,user_id,project_id,status,title,slug,introduction,cta_text,cta_url,privacy_url,consent_text,virality_enabled,bonus_description,bonus_heading,bonus_intro_text,bonus_image_url,bonus_image_position,bonus_image_width,bonus_unlocked_message,share_message,share_networks,locale,address_form,views_count,capture_heading,capture_subtitle,capture_submit_text,capture_before_questions,survey_thanks_heading,survey_thanks_body,capture_first_name,capture_last_name,capture_phone,capture_country,phone_required,first_name_required,last_name_required,country_required,ask_first_name,ask_gender,start_button_text,og_description,og_image_url,custom_footer_text,custom_footer_url,hide_branding,result_insight_heading,result_projection_heading,capture_enabled,brand_font,brand_color_primary,brand_color_background,brand_color_text,brand_logo_url,hide_brand_logo,toast_widget_id,share_widget_id,show_consent_checkbox,show_results_breakdown,show_other_results,meta_pixel_id,ga4_measurement_id,google_ads_conversion_id,google_ads_conversion_label,mode,intro_image_url,intro_image_position,intro_image_width,background_style,background_gradient,background_image_url,intro_layout,button_shape,question_layout,split_image_url,split_side,panel_media,answer_layout,show_result_insight,show_result_projection,show_result_share,share_result_page,close_enabled,close_action,close_redirect_url,close_message,close_cta_text,close_cta_url").eq("id", quizId).maybeSingle(),
+      admin.from("quizzes").select("id,user_id,project_id,status,title,slug,introduction,cta_text,cta_url,privacy_url,consent_text,virality_enabled,bonus_description,bonus_heading,bonus_intro_text,bonus_image_url,bonus_image_position,bonus_image_width,bonus_unlocked_message,share_message,share_networks,locale,address_form,views_count,capture_heading,capture_subtitle,capture_submit_text,capture_before_questions,survey_thanks_heading,survey_thanks_body,capture_first_name,capture_last_name,capture_phone,capture_country,phone_required,first_name_required,last_name_required,country_required,ask_first_name,ask_gender,start_button_text,og_description,og_image_url,custom_footer_text,custom_footer_url,hide_branding,result_insight_heading,result_projection_heading,capture_enabled,brand_font,brand_color_primary,brand_color_background,brand_color_text,brand_logo_url,hide_brand_logo,toast_widget_id,share_widget_id,show_consent_checkbox,show_results_breakdown,show_other_results,meta_pixel_id,ga4_measurement_id,google_ads_conversion_id,google_ads_conversion_label,mode,intro_image_url,intro_image_position,intro_image_width,background_style,background_gradient,background_image_url,intro_layout,button_shape,question_layout,split_image_url,split_side,panel_media,answer_layout,show_result_insight,show_result_projection,show_result_share,share_result_page,close_enabled,close_action,close_redirect_url,close_message,close_cta_text,close_cta_url,scoring_axes,show_score_gauge,score_display_mode,score_labels").eq("id", quizId).maybeSingle(),
       admin.from("quiz_questions").select("id,question_text,options,sort_order,question_type,config").eq("quiz_id", quizId).order("sort_order"),
       admin.from("quiz_results").select("id,title,description,insight,projection,insight_heading,projection_heading,cta_text,cta_url,sort_order,image_url,image_position,image_width,min_score,max_score").eq("quiz_id", quizId).order("sort_order"),
     ]);
@@ -695,7 +704,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
     // Verify quiz is active
     const { data: quiz } = await admin
       .from("quizzes")
-      .select("id, user_id, project_id, title, meta_pixel_id, mode, sio_capture_tag")
+      .select("id, user_id, project_id, title, meta_pixel_id, mode, sio_capture_tag, sio_score_tags, scoring_axes, score_labels, locale")
       .eq("id", quizId)
       .eq("status", "active")
       .maybeSingle();
@@ -712,6 +721,13 @@ export async function POST(req: NextRequest, context: RouteContext) {
     const rawGender = String(body.gender ?? "").trim().toLowerCase();
     const gender: "m" | "f" | "x" | null = rawGender === "m" || rawGender === "f" || rawGender === "x" ? rawGender : null;
     const answers = Array.isArray(body.answers) ? body.answers : null;
+    // Snapshot des scores multi-axes (mode scoring uniquement). Validé
+    // et borné côté serveur : triplets {points, min, max} finis, 6 axes
+    // max. Invalide → ignoré silencieusement (le lead reste capturé).
+    const scoresSnapshot =
+      (quiz as { mode?: string | null }).mode === "scoring"
+        ? sanitizeScoresSnapshot(body.scores)
+        : null;
 
     // Données requête pour la Conversions API (Lead server-side). Le
     // meta_event_id vient du pixel navigateur → dédup. fbp/fbc/IP/UA
@@ -741,6 +757,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
           consent_given: Boolean(body.consent_given),
           ...(gender ? { gender } : {}),
           ...(answers ? { answers } : {}),
+          ...(scoresSnapshot ? { scores: scoresSnapshot } : {}),
         },
         { onConflict: "quiz_id,email" },
       )
@@ -852,7 +869,27 @@ export async function POST(req: NextRequest, context: RouteContext) {
       ? String((quiz as { sio_capture_tag?: string | null }).sio_capture_tag ?? "").trim()
       : "";
     const surveyHasAnswers = isSurveyLead && Array.isArray(answers) && answers.length > 0;
-    if (resultId || surveyCaptureTag || surveyHasAnswers) {
+    // Tags par tranche de score (Véronique juillet 2026, opt-in
+    // quizzes.sio_score_tags) : "score-bas", "sommeil-eleve"... pour
+    // segmenter l'emailing selon le diagnostic.
+    const scoreTags: string[] = [];
+    if ((quiz as { sio_score_tags?: boolean | null }).sio_score_tags === true && scoresSnapshot) {
+      const labels = resolveScoreLabels(
+        (quiz as { score_labels?: unknown }).score_labels,
+        (quiz as { locale?: string | null }).locale,
+      );
+      const trancheSlug = (pct: number) =>
+        slugifyAxisLabel(labels[scoreTranche(pct)]) || scoreTranche(pct);
+      if (scoresSnapshot.global.max - scoresSnapshot.global.min > 0) {
+        scoreTags.push(`score-${trancheSlug(scorePercent(scoresSnapshot.global))}`);
+      }
+      for (const axis of normalizeScoringAxes((quiz as { scoring_axes?: unknown }).scoring_axes)) {
+        const sc = scoresSnapshot.axes?.[axis.id];
+        if (!sc || sc.max - sc.min <= 0) continue;
+        scoreTags.push(`${axisSlug(axis)}-${trancheSlug(scorePercent(sc))}`);
+      }
+    }
+    if (resultId || surveyCaptureTag || surveyHasAnswers || scoreTags.length > 0) {
       // Fire & forget: don't await so the response is fast
       (async () => {
         try {
@@ -942,7 +979,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
             }
           }
 
-          const tagsToApply = [...resultTags, surveyCaptureTag, ...answerTags]
+          const tagsToApply = [...resultTags, surveyCaptureTag, ...answerTags, ...scoreTags]
             .map((t) => t.trim())
             .filter((t, i, arr) => t && arr.findIndex((x) => x.toLowerCase() === t.toLowerCase()) === i);
 

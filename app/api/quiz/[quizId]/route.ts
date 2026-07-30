@@ -15,6 +15,7 @@ import {
 import { computeLockedLeadIds, redactLockedLead, type LeadLike } from "@/lib/leadLock";
 import { isPaidPlan } from "@/lib/planLimits";
 import { fetchAllRows } from "@/lib/db/fetchAllRows";
+import { normalizeScoringAxes } from "@/lib/quizScoring";
 
 export const dynamic = "force-dynamic";
 
@@ -208,6 +209,8 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       "answer_layout", "show_result_insight", "show_result_projection", "show_result_share", "share_result_page",
       "close_enabled", "close_action", "close_redirect_url", "close_message",
       "close_cta_text", "close_cta_url",
+      // Scoring multi-axes (Véronique juillet 2026). Re-validé ci-dessous.
+      "scoring_axes", "show_score_gauge", "score_display_mode", "score_labels", "sio_score_tags",
     ];
 
     const patch: Record<string, any> = { updated_at: new Date().toISOString() };
@@ -268,6 +271,34 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     if ("answer_layout" in patch) {
       const v = patch.answer_layout;
       patch.answer_layout = v === "grid" || v === "list" ? v : "auto";
+    }
+    // Scoring multi-axes : jamais de JSON brut en base. Axes normalisés
+    // (labels non vides, 6 max, ids dédupliqués), libellés bornés à 3
+    // chaînes courtes, mode d'affichage fermé.
+    if ("scoring_axes" in patch) {
+      const axes = normalizeScoringAxes(patch.scoring_axes);
+      patch.scoring_axes = axes.length > 0
+        ? axes.map((a) => ({ id: a.id.slice(0, 60), label: a.label.slice(0, 80) }))
+        : null;
+    }
+    if ("show_score_gauge" in patch) {
+      patch.show_score_gauge = patch.show_score_gauge === true;
+    }
+    if ("score_display_mode" in patch) {
+      patch.score_display_mode = patch.score_display_mode === "label" ? "label" : "percent";
+    }
+    if ("score_labels" in patch) {
+      const v = patch.score_labels as Record<string, unknown> | null;
+      if (v && typeof v === "object" && !Array.isArray(v)) {
+        const pick = (k: string) => (typeof v[k] === "string" ? (v[k] as string).trim().slice(0, 40) : "");
+        const labels = { low: pick("low"), mid: pick("mid"), high: pick("high") };
+        patch.score_labels = labels.low || labels.mid || labels.high ? labels : null;
+      } else {
+        patch.score_labels = null;
+      }
+    }
+    if ("sio_score_tags" in patch) {
+      patch.sio_score_tags = patch.sio_score_tags === true;
     }
     // Cartes resultat masquables + bouton de partage optionnel. Booleens
     // stricts ; default true cote DB -> absence = comportement historique.

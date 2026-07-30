@@ -1,7 +1,7 @@
 // components/quiz/PublicQuizClient.tsx
 "use client";
 
-import { useEffect, useState, useCallback, useRef, type ReactNode } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -26,6 +26,18 @@ import { sanitizeRichText, stripHtml } from "@/lib/richText";
 import { fireQuizPixel, newEventId } from "@/lib/clientPixels";
 import { RichParagraph } from "@/components/ui/rich-paragraph";
 import { makeInterpolator, getGenderLabels, extractResultLabel, type QuizGender } from "@/lib/quizPersonalization";
+import {
+  normalizeScoringAxes,
+  computeScoresSnapshot,
+  resolveScoreLabels,
+  applyScorePlaceholders,
+  scorePercent,
+  scoreTranche,
+  type ScoresSnapshot,
+  type ScorePlaceholderContext,
+  type ScoringAxis,
+  type AxisScore,
+} from "@/lib/quizScoring";
 import { ensureExternalUrl } from "@/lib/url";
 import { celebrate } from "@/lib/celebrate";
 import { generateResultCard } from "@/lib/resultCard";
@@ -109,6 +121,11 @@ type PublicQuizData = {
   // step instead. mode === "scoring" is a graded quiz (score X/Y + ranged
   // results). Falls back to "quiz" for rows created before these migrations.
   mode?: "quiz" | "survey" | "scoring" | null;
+  // Scoring multi-axes (Véronique, juillet 2026 ; porté depuis Tiquiz).
+  scoring_axes?: unknown;
+  show_score_gauge?: boolean | null;
+  score_display_mode?: string | null;
+  score_labels?: unknown;
   introduction: string | null;
   cta_text: string | null;
   cta_url: string | null;
@@ -1053,6 +1070,9 @@ export default function PublicQuizClient({
   const [resultScores, setResultScores] = useState<number[]>([]);
   // Mode "scoring" : score obtenu / max, affiche en tete du resultat (X/Y).
   const [resultScore, setResultScore] = useState<{ value: number; max: number } | null>(null);
+  // Scoring multi-axes : snapshot {points, min, max} global + par axe,
+  // calculé à la finalisation, envoyé avec le lead, persisté en session.
+  const [scoreSnapshot, setScoreSnapshot] = useState<ScoresSnapshot | null>(null);
   const [hasShared, setHasShared] = useState(false);
   const [bonusUnlocked, setBonusUnlocked] = useState(false);
   // Reprise "type Tally" : true quand on vient de restaurer un brouillon de
@@ -1065,9 +1085,30 @@ export default function PublicQuizClient({
 
   const t = getT(quiz?.locale, quiz?.address_form);
 
+  // Axes de score du quiz (mode scoring uniquement). Vide = pas d'axes,
+  // tout le multi-axes est inerte (quiz existants inchangés).
+  const scoringAxes = useMemo(
+    () => (quiz?.mode === "scoring" ? normalizeScoringAxes(quiz.scoring_axes) : []),
+    [quiz],
+  );
+  const scoreLabels = useMemo(
+    () => resolveScoreLabels(quiz?.score_labels, quiz?.locale),
+    [quiz],
+  );
+  // Contexte des placeholders {score} / {label} / {score_<axe>} : null
+  // tant que le résultat n'est pas calculé (les placeholders restent
+  // alors visibles tels quels, comme les inconnus de interpolateText).
+  const scoreCtx = useMemo<ScorePlaceholderContext | null>(
+    () => (scoreSnapshot ? { snapshot: scoreSnapshot, axes: scoringAxes, labels: scoreLabels } : null),
+    [scoreSnapshot, scoringAxes, scoreLabels],
+  );
+
+  // Les placeholders de score sont résolus APRÈS {name}/genre ({score}
+  // traverse interpolateText intact : ni virgule ni pipe).
   const interp = useCallback(
-    (text: string | null | undefined) => makeInterpolator({ name: firstName, gender })(text),
-    [firstName, gender],
+    (text: string | null | undefined) =>
+      applyScorePlaceholders(makeInterpolator({ name: firstName, gender })(text), scoreCtx),
+    [firstName, gender, scoreCtx],
   );
 
   // Étiquette courte pour les résultats AUTRES que celui du visiteur
@@ -1493,6 +1534,8 @@ export default function PublicQuizClient({
         step?: Step;
         resultProfileId?: string | null;
         resultScores?: number[];
+        resultScore?: { value: number; max: number } | null;
+        scoreSnapshot?: ScoresSnapshot | null;
         hasShared?: boolean;
         bonusUnlocked?: boolean;
         email?: string;
@@ -1513,6 +1556,14 @@ export default function PublicQuizClient({
       setResultProfile(profile);
       if (Array.isArray(saved.resultScores)) {
         setResultScores(saved.resultScores.map((n) => Number(n) || 0));
+      }
+      // Mode scoring : restaure le score X/Y et le snapshot multi-axes
+      // pour que la jauge et les barres survivent au refresh.
+      if (saved.resultScore && typeof saved.resultScore.value === "number" && typeof saved.resultScore.max === "number") {
+        setResultScore({ value: saved.resultScore.value, max: saved.resultScore.max });
+      }
+      if (saved.scoreSnapshot && saved.scoreSnapshot.global) {
+        setScoreSnapshot(saved.scoreSnapshot);
       }
       setHasShared(Boolean(saved.hasShared));
       setBonusUnlocked(Boolean(saved.bonusUnlocked));
@@ -1536,6 +1587,8 @@ export default function PublicQuizClient({
           step,
           resultProfileId: resultProfile?.id ?? null,
           resultScores,
+          resultScore,
+          scoreSnapshot,
           hasShared,
           bonusUnlocked,
           email,
@@ -1544,7 +1597,7 @@ export default function PublicQuizClient({
     } catch {
       // quota exceeded or storage disabled — non-fatal
     }
-  }, [previewData, sessionKey, step, resultProfile, resultScores, hasShared, bonusUnlocked, email]);
+  }, [previewData, sessionKey, step, resultProfile, resultScores, resultScore, scoreSnapshot, hasShared, bonusUnlocked, email]);
 
   // ─── Auto-save + reprise mid-quiz (comportement "type Tally") ───
   // Contrairement au bloc ci-dessus (sessionStorage, post-capture, scope
@@ -1758,6 +1811,7 @@ export default function PublicQuizClient({
     const { profile, scores, scoreValue, scoreMax } = computeResult(finalAnswers);
     if (quiz?.mode === "scoring") {
       setResultScore({ value: scoreValue ?? 0, max: scoreMax ?? 0 });
+      setScoreSnapshot(computeScoresSnapshot(quiz.questions, finalAnswers, scoringAxes));
     }
     setResultProfile(profile);
     setResultScores(scores);
@@ -1769,7 +1823,7 @@ export default function PublicQuizClient({
       ),
     );
     setStep(hasBonusFlow ? "bonus" : "result");
-  }, [quiz, computeResult]);
+  }, [quiz, computeResult, scoringAxes]);
 
   // Single answer-commit pathway for every question type. Auto-advances to
   // the next question (or to email capture on the last one) so the existing
@@ -1992,8 +2046,13 @@ export default function PublicQuizClient({
     setSubmitError(null);
     try {
       const { profile, scores, scoreValue, scoreMax } = computeResult();
+      // Snapshot des scores (global + axes) : calculé AVANT le POST pour
+      // partir avec le lead, et posé en state pour la page de résultat.
+      let snapshot: ScoresSnapshot | null = null;
       if (quiz?.mode === "scoring") {
         setResultScore({ value: scoreValue ?? 0, max: scoreMax ?? 0 });
+        snapshot = computeScoresSnapshot(quiz.questions, finalAnswers ?? answers, scoringAxes);
+        setScoreSnapshot(snapshot);
       }
 
       // In preview mode (props-data preview OR ?preview_name=<x> URL preview),
@@ -2039,6 +2098,8 @@ export default function PublicQuizClient({
             result_id: profile?.id ?? null,
             consent_given: consent,
             answers: answersPayload,
+            // Snapshot {points, min, max} global + par axe (mode scoring).
+            scores: snapshot ?? undefined,
             // event_id partagé avec le pixel navigateur → dédup CAPI.
             meta_event_id: leadEventIdRef.current ?? undefined,
           }),
@@ -3548,17 +3609,90 @@ export default function PublicQuizClient({
         <div className="flex-1 flex flex-col min-w-0">
         <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6 py-10 sm:py-16">
         <div className="max-w-2xl w-full space-y-8" style={readerSurfaceStyle}>
-            {/* Score (mode scoring) : "Tu as obtenu X / Y" + pourcentage. */}
+            {/* Score (mode scoring). Deux rendus :
+                - jauge visuelle (opt-in show_score_gauge, Véronique juillet
+                  2026) : gros % OU libellé + barre de progression ;
+                - "X / Y" texte historique sinon (quiz existants inchangés). */}
             {quiz.mode === "scoring" && resultScore && resultScore.max > 0 && (
-              <div className="text-center space-y-2">
-                <div className="text-5xl sm:text-6xl font-black text-primary">
-                  {resultScore.value} <span className="text-muted-foreground">/ {resultScore.max}</span>
+              quiz.show_score_gauge && scoreSnapshot ? (() => {
+                const pct = scorePercent(scoreSnapshot.global);
+                const asLabel = quiz.score_display_mode === "label";
+                const display = asLabel ? scoreLabels[scoreTranche(pct)] : `${pct}%`;
+                return (
+                  <div className="text-center space-y-3">
+                    {/* Le libellé seul ne suffit pas à situer la barre :
+                        role/aria portent toujours le pourcentage exact. */}
+                    <div className="text-5xl sm:text-6xl font-black text-primary">{display}</div>
+                    <div
+                      className="h-3 w-full max-w-md mx-auto rounded-full bg-muted overflow-hidden"
+                      role="progressbar"
+                      aria-valuenow={pct}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-label={asLabel ? `${display} (${pct}%)` : display}
+                    >
+                      <div
+                        className="h-full rounded-full transition-[width] duration-700"
+                        style={{ width: `${pct}%`, backgroundImage: "linear-gradient(to right, hsl(var(--primary)), hsl(var(--primary)))" }}
+                      />
+                    </div>
+                  </div>
+                );
+              })() : (
+                <div className="text-center space-y-2">
+                  <div className="text-5xl sm:text-6xl font-black text-primary">
+                    {resultScore.value} <span className="text-muted-foreground">/ {resultScore.max}</span>
+                  </div>
+                  <div className="text-sm font-semibold text-muted-foreground">
+                    {Math.round((resultScore.value / resultScore.max) * 100)}%
+                  </div>
                 </div>
-                <div className="text-sm font-semibold text-muted-foreground">
-                  {Math.round((resultScore.value / resultScore.max) * 100)}%
-                </div>
-              </div>
+              )
             )}
+
+            {/* Barres multi-axes (Véronique, juillet 2026) : une barre par
+                axe défini par le créateur, HTML/CSS pur aux couleurs du
+                quiz. Chiffre ou libellé TOUJOURS affiché à côté de la barre
+                (la couleur seule ne porte jamais l'information). N'existe
+                que si des axes sont définis : zéro impact sur l'existant. */}
+            {quiz.mode === "scoring" && scoringAxes.length > 0 && scoreSnapshot?.axes && (() => {
+              const rows: { axis: ScoringAxis; s: AxisScore }[] = [];
+              for (const axis of scoringAxes) {
+                const s = scoreSnapshot.axes?.[axis.id];
+                if (s && s.max - s.min > 0) rows.push({ axis, s });
+              }
+              if (rows.length === 0) return null;
+              const asLabel = quiz.score_display_mode === "label";
+              return (
+                <div className="p-5 rounded-2xl bg-card border shadow-sm space-y-4">
+                  {rows.map(({ axis, s }) => {
+                    const pct = scorePercent(s);
+                    const valueText = asLabel ? scoreLabels[scoreTranche(pct)] : `${pct}%`;
+                    return (
+                      <div key={axis.id} className="space-y-1.5">
+                        <div className="flex items-center justify-between gap-3 text-sm">
+                          <span className="font-medium truncate">{axis.label}</span>
+                          <span className="font-semibold text-primary tabular-nums shrink-0">{valueText}</span>
+                        </div>
+                        <div
+                          className="w-full h-2.5 rounded-full bg-muted overflow-hidden"
+                          role="progressbar"
+                          aria-valuenow={pct}
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                          aria-label={`${axis.label} : ${valueText}${asLabel ? ` (${pct}%)` : ""}`}
+                        >
+                          <div
+                            className="h-full rounded-full transition-[width] duration-700"
+                            style={{ width: `${pct}%`, backgroundImage: "linear-gradient(to right, hsl(var(--primary)), hsl(var(--primary)))" }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
             {/* Hero image du résultat (Adeline, mai 2026). Bloc séparé
                 du texte, rendu à la position choisie par le créateur
                 via image_position. */}
@@ -3834,7 +3968,12 @@ export default function PublicQuizClient({
               Falls back to the locale's default label when only the URL is set,
               so a user who forgets the text still gets a working button. */}
           {(() => {
-            const ctaUrl = resultProfile?.cta_url || quiz.cta_url;
+            // Sortie du score vers l'URL de redirection : {score},
+            // {score_<axe>}, {label_<axe>} résolus dans l'URL du CTA
+            // (valeurs URL-encodées). UNIQUEMENT le score : jamais l'email
+            // ni le prénom dans une URL.
+            const rawCtaUrl = resultProfile?.cta_url || quiz.cta_url;
+            const ctaUrl = rawCtaUrl ? applyScorePlaceholders(rawCtaUrl, scoreCtx, { urlEncode: true }) : rawCtaUrl;
             const ctaText = interp(resultProfile?.cta_text || quiz.cta_text || "") || t.resultCtaDefault;
             return ctaUrl ? (
               <Button size="lg" className={`w-full min-h-[48px] h-auto py-3 px-6 text-base rounded-full whitespace-normal leading-snug ${btnShapeClass}`} asChild>

@@ -695,7 +695,7 @@ export function RichTextEdit({
   };
 
   const baseCls = `${className || ""} cursor-text rounded-lg px-2 py-1 transition-all min-h-[1.2em]`;
-  const hasVars = availableVars && (availableVars.name || availableVars.gender);
+  const hasVars = availableVars && (availableVars.name || availableVars.gender || (availableVars.extra?.length ?? 0) > 0);
 
   // Link / image dialogs — déclarés AVANT le branchement editing/display
   // pour pouvoir les rendre dans les DEUX branches. Bug Adeline (18 mai
