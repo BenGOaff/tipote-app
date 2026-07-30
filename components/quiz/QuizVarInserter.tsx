@@ -24,6 +24,12 @@ import { cn } from "@/lib/utils";
 export type QuizVarFlags = {
   name?: boolean;
   gender?: boolean;
+  /**
+   * Placeholders additionnels à proposer tels quels (ex. variables de
+   * score "{score}", "{score_sommeil}" sur les champs de résultat d'un
+   * quiz scoring multi-axes). Chaque entrée devient un chip "+ {…}".
+   */
+  extra?: string[];
 };
 
 /**
@@ -57,7 +63,8 @@ type Props = {
 
 export function QuizVarInserter({ vars, onInsert, className, compact }: Props) {
   const t = useTranslations("quizVars");
-  if (!vars.name && !vars.gender) return null;
+  const extras = vars.extra ?? [];
+  if (!vars.name && !vars.gender && extras.length === 0) return null;
 
   const chipBase = cn(
     "inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/5 text-primary font-medium hover:bg-primary/10 hover:border-primary/40 transition-colors",
@@ -91,6 +98,19 @@ export function QuizVarInserter({ vars, onInsert, className, compact }: Props) {
           <span className="font-mono">{"{m|f|x}"}</span>
         </button>
       )}
+      {extras.map((placeholder) => (
+        <button
+          key={placeholder}
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => onInsert(placeholder)}
+          className={chipBase}
+          title={t("insertScoreTitle")}
+        >
+          <span className="text-primary/60">+</span>
+          <span className="font-mono">{placeholder}</span>
+        </button>
+      ))}
     </div>
   );
 }

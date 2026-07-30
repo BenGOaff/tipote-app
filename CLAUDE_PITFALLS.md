@@ -1780,3 +1780,17 @@ format.ts, analysis.ts, survey-results/route.ts, SurveyResponsesTable.tsx.
   "Détail des répondants". Construit côté client dans SurveyResultsPanel
   via formatSurveyAnswer. pdfReport.ts IDENTIQUE Tiquiz/Tipote.
 - Pas de glyphe étoile dans le PDF (encodage helvetica) : préfixe "* ".
+
+## Scoring multi-axes — conventions (Véronique, 30 juillet 2026, porté depuis Tiquiz)
+
+Toute la logique vit dans `lib/quizScoring.ts` (identique à Tiquiz). NE PAS
+ré-implémenter un calcul de score ailleurs.
+- Un score = TOUJOURS un triplet {points, min, max}, jamais un nombre nu.
+  Snapshot écrit à la capture dans quiz_leads.scores, jamais recalculé.
+- L'id d'un axe est FIGÉ à la création (slug du 1er label) : renommer ne
+  casse ni les placeholders {score_<axe>} ni les tags SIO.
+- Poids par question dans quiz_questions.config.axes ({"<axisId>": poids}).
+- Jauge opt-in (show_score_gauge), barres seulement si axes définis :
+  zéro changement sur les quiz en ligne.
+- Namespace i18n éditeur : quizDetail (pas quizEditor comme Tiquiz).
+- Validation visuelle : harness Playwright du repo TIQUIZ (viewers jumeaux).
