@@ -352,6 +352,83 @@ export function formatScoresSummary(raw: unknown): string {
   return parts.join(" ; ");
 }
 
+// ── Finalisation d'un quiz scoré généré par l'IA ────────────────────
+//
+// Principe voie B (Béné, 30 juillet 2026) : l'IA fait la SÉMANTIQUE
+// (textes, points 0-3 par option, rattachement aux axes, tranches
+// ordonnées du plus bas au plus haut), le CODE fait l'ARITHMÉTIQUE.
+// On ne demande JAMAIS de bornes chiffrées au modèle : on calcule ici
+// la plage atteignable et on découpe les tranches en N segments
+// contigus. Couverture garantie : zéro trou, zéro chevauchement.
+
+export function finalizeAiScoringQuiz(
+  rawQuestions: Record<string, unknown>[],
+  rawResults: Record<string, unknown>[],
+  axisLabels: string[],
+): {
+  questions: Record<string, unknown>[];
+  results: Record<string, unknown>[];
+  axes: ScoringAxis[];
+} {
+  const axes = normalizeScoringAxes(axisLabels.map((label) => ({ label })));
+  const axisIds = new Set(axes.map((a) => a.id));
+
+  const questions = rawQuestions.map((q) => {
+    const qType = typeof q.question_type === "string" ? q.question_type : "multiple_choice";
+    const isChoice = qType === "multiple_choice" || qType === "image_choice" || qType === "yes_no";
+    // Points : entiers 0-3, défaut 1 sur les choix. result_index forcé à
+    // 0 (non utilisé en mode scoring, mais la colonne l'exige).
+    const options = (Array.isArray(q.options) ? q.options : []).map((o) => {
+      const opt = (o && typeof o === "object" ? o : {}) as Record<string, unknown>;
+      const rawPts = typeof opt.points === "number" && Number.isFinite(opt.points) ? opt.points : 1;
+      return {
+        ...opt,
+        result_index: 0,
+        points: isChoice ? Math.max(0, Math.min(3, Math.trunc(rawPts))) : undefined,
+      };
+    });
+    // Axes : l'IA les écrit au niveau de la question ("axes": {id: poids}) ;
+    // on ne garde que les ids connus, poids entiers 1-2, et on les range
+    // dans config.axes (l'emplacement runtime).
+    const cfg = { ...((q.config && typeof q.config === "object" && !Array.isArray(q.config) ? q.config : {}) as Record<string, unknown>) };
+    const rawAxes = (q.axes ?? cfg.axes) as Record<string, unknown> | undefined;
+    const cleanAxes: Record<string, number> = {};
+    if (rawAxes && typeof rawAxes === "object" && !Array.isArray(rawAxes)) {
+      for (const [k, v] of Object.entries(rawAxes)) {
+        if (!axisIds.has(k)) continue;
+        const w = typeof v === "number" && Number.isFinite(v) ? Math.max(1, Math.min(2, Math.trunc(v))) : 1;
+        cleanAxes[k] = w;
+      }
+    }
+    if (Object.keys(cleanAxes).length > 0) cfg.axes = cleanAxes;
+    else delete cfg.axes;
+    const out: Record<string, unknown> = { ...q, options, config: cfg };
+    delete out.axes;
+    return out;
+  });
+
+  // Plage atteignable calculée sur les questions NETTOYÉES, puis découpe
+  // en N tranches contiguës aussi égales que possible. Le reliquat va
+  // aux tranches HAUTES (le meilleur diagnostic est un peu plus dur à
+  // atteindre, jamais l'inverse).
+  const range = computeReachableRange(questions as ScoringQuestion[]);
+  const n = Math.max(1, rawResults.length);
+  const total = range.max - range.min + 1;
+  const base = Math.floor(total / n);
+  const remainder = total - base * n;
+  const results: Record<string, unknown>[] = [];
+  let cursor = range.min;
+  for (let i = 0; i < n; i++) {
+    const width = Math.max(1, base + (i >= n - remainder ? 1 : 0));
+    const min = Math.min(cursor, range.max);
+    const max = i === n - 1 ? range.max : Math.min(cursor + width - 1, range.max);
+    results.push({ ...rawResults[i], min_score: min, max_score: max });
+    cursor = max + 1;
+  }
+
+  return { questions, results, axes };
+}
+
 // ── Couverture des tranches (mode scoring) ──────────────────────────
 
 export type TrancheIssue =
