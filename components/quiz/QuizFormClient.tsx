@@ -435,7 +435,17 @@ export default function QuizFormClient() {
       .then((r) => r.json())
       .then((data) => {
         if (data.ok && data.profile) {
-          const ta = data.profile.mission ?? "";
+          // Le persona d'onboarding peut arriver en Markdown brut
+          // (**gras**, titres, puces) : on le nettoie pour l'input,
+          // sinon le champ prérempli fait amateur.
+          const stripMd = (v: string) => v
+            .replace(/\*\*([^*]+)\*\*/g, "$1")
+            .replace(/__([^_]+)__/g, "$1")
+            .replace(/`([^`]+)`/g, "$1")
+            .replace(/^#+\s*/gm, "")
+            .replace(/^\s*[*•]\s*/gm, "- ")
+            .trim();
+          const ta = stripMd(String(data.profile.mission ?? ""));
           setAiTargetFromProfile(ta);
           if (ta && !aiTarget) setAiTarget(ta);
           const cl = data.profile.content_locale;
@@ -1058,16 +1068,12 @@ export default function QuizFormClient() {
             {/* Deux types de quiz en création manuelle (par profil /
                 scoré), tooltips pour choisir sans se poser la question.
                 Le cas "par niveau" se fera via le flux IA (choix scoré). */}
-            <TabsTrigger value="manual" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-5 py-3 text-sm font-medium gap-1.5" title={t("tabManualHint")} onClick={(e) => { e.preventDefault(); handleCreateManual(); }}>
+            {/* L'onglet Manuel ouvre un CHOIX (par profil / scoré),
+                comme l'onglet IA : plus d'onglet "Quiz scoré" séparé
+                (retour Béné 31 juil 2026). */}
+            <TabsTrigger value="manual" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-5 py-3 text-sm font-medium gap-1.5">
               <FileText className="h-4 w-4" />
-              {creatingManual ? <Loader2 className="h-4 w-4 animate-spin" /> : t("tabManual")}
-            </TabsTrigger>
-            {/* Libellé traduit + tooltip : quelqu'un qui cherche "un quiz
-                scoré / un diagnostic" doit comprendre que c'est ICI, sans
-                se poser la question (demande Béné 30 juil 2026). */}
-            <TabsTrigger value="scoring" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-5 py-3 text-sm font-medium gap-1.5" title={t("tabScoringHint")} onClick={(e) => { e.preventDefault(); handleCreateManual("scoring"); }}>
-              <Award className="h-4 w-4" />
-              {t("tabScoring")}
+              {t("tabManual")}
             </TabsTrigger>
             <TabsTrigger value="ai" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-5 py-3 text-sm font-medium gap-1.5">
               <Sparkles className="h-4 w-4" />
@@ -1082,13 +1088,42 @@ export default function QuizFormClient() {
       </div>
 
       {/* MANUAL TAB — creates quiz and redirects to WYSIWYG editor */}
-      {(activeTab === "manual" || activeTab === "scoring") && (
-        <div className="flex items-center justify-center min-h-[40vh]">
-          <div className="text-center space-y-4">
-            <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
-            <p className="text-sm text-muted-foreground">{t("creatingQuiz")}</p>
+      {activeTab === "manual" && (
+        creatingManual ? (
+          <div className="flex items-center justify-center min-h-[40vh]">
+            <div className="text-center space-y-4">
+              <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+              <p className="text-sm text-muted-foreground">{t("creatingQuiz")}</p>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="max-w-2xl mx-auto py-10 space-y-4">
+            <div className="text-center space-y-1">
+              <h2 className="text-lg font-semibold">{t("manualChooseTitle")}</h2>
+              <p className="text-sm text-muted-foreground">{t("manualChooseHint")}</p>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <button
+                type="button"
+                onClick={() => handleCreateManual()}
+                className="p-5 rounded-2xl border-2 border-border text-left hover:border-primary/50 hover:bg-primary/5 transition-all"
+              >
+                <Users className="h-5 w-5 text-violet-500 mb-2" />
+                <p className="font-semibold">{t("manualTypeProfile")}</p>
+                <p className="text-sm text-muted-foreground mt-1">{t("manualTypeProfileDesc")}</p>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleCreateManual("scoring")}
+                className="p-5 rounded-2xl border-2 border-border text-left hover:border-primary/50 hover:bg-primary/5 transition-all"
+              >
+                <Award className="h-5 w-5 text-emerald-500 mb-2" />
+                <p className="font-semibold">{t("manualTypeScoring")}</p>
+                <p className="text-sm text-muted-foreground mt-1">{t("manualTypeScoringDesc")}</p>
+              </button>
+            </div>
+          </div>
+        )
       )}
 
       {/* ================================================================
