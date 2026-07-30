@@ -145,6 +145,10 @@ export async function POST(req: NextRequest) {
         // Vide si le projet n'a rien defini -> colonnes NULL = rendu historique.
         ...designDefaultsToQuizColumns(bpProfile as Record<string, unknown> | null),
         mode,
+        // Jauge du score : activée par défaut sur les NOUVEAUX quiz
+        // scorés créés depuis les onglets "Quiz par niveau" / "Quiz
+        // scoré". Les quiz existants ne sont pas concernés.
+        ...(mode === "scoring" && body.show_score_gauge === true ? { show_score_gauge: true } : {}),
         title,
         introduction: body.introduction ?? null,
         cta_text: body.cta_text ?? null,

@@ -3973,7 +3973,8 @@
   "quizForm": {
     "createTitle": "Crear un quiz",
     "editTitle": "Editar quiz",
-    "tabManual": "Crear manualmente",
+    "tabManual": "Quiz por perfil",
+    "tabManualHint": "Cada respuesta apunta a un perfil (ej. ¿Qué tipo de emprendedor eres?). Ideal para personalidad, arquetipos.",
     "tabScoring": "Quiz con puntuación",
     "tabScoringHint": "Quiz con puntuación sobre 100: indicador, ejes (ej. sueño, estrés) y resultados por rangos de puntos. Ideal para un diagnóstico.",
     "tabAI": "Generar con IA",

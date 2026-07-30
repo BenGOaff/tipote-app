@@ -3980,7 +3980,8 @@
   "quizForm": {
     "createTitle": "Create a quiz",
     "editTitle": "Edit quiz",
-    "tabManual": "Create manually",
+    "tabManual": "Profile quiz",
+    "tabManualHint": "Each answer points to a profile (e.g. What kind of entrepreneur are you?). Ideal for personality, archetypes.",
     "tabScoring": "Scored quiz",
     "tabScoringHint": "Quiz with a score out of 100: gauge, axes (e.g. sleep, stress) and results by point ranges. Ideal for a diagnosis.",
     "tabAI": "Generate with AI",

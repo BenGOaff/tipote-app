@@ -3980,8 +3980,9 @@
   "quizForm": {
     "createTitle": "Créer un quiz",
     "editTitle": "Modifier le quiz",
-    "tabManual": "Créer manuellement",
-    "tabScoring": "Quiz noté",
+    "tabManual": "Quiz par profil",
+    "tabManualHint": "Chaque réponse oriente vers un profil (ex. Quel entrepreneur es-tu ?). Idéal personnalité, archétypes.",
+    "tabScoring": "Quiz scoré",
     "tabScoringHint": "Quiz avec score sur 100 : jauge, axes (ex. sommeil, stress) et résultats par tranches de points. Idéal pour un diagnostic.",
     "tabAI": "Générer avec l'IA",
     "tabImport": "Importer un fichier",

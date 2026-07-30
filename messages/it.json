@@ -3973,7 +3973,8 @@
   "quizForm": {
     "createTitle": "Crea un quiz",
     "editTitle": "Modifica quiz",
-    "tabManual": "Crea manualmente",
+    "tabManual": "Quiz per profilo",
+    "tabManualHint": "Ogni risposta punta a un profilo (es. Che tipo di imprenditore sei?). Ideale per personalità, archetipi.",
     "tabScoring": "Quiz con punteggio",
     "tabScoringHint": "Quiz con punteggio su 100: indicatore, assi (es. sonno, stress) e risultati per fasce di punti. Ideale per una diagnosi.",
     "tabAI": "Genera con l'IA",

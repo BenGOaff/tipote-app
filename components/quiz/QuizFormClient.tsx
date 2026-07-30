@@ -357,6 +357,9 @@ export default function QuizFormClient() {
           { question_text: "", options: [{ text: "", result_index: 0, points: 1 }, { text: "", result_index: 0, points: 0 }, { text: "", result_index: 0, points: 0 }, { text: "", result_index: 0, points: 0 }] },
           { question_text: "", options: [{ text: "", result_index: 0, points: 1 }, { text: "", result_index: 0, points: 0 }, { text: "", result_index: 0, points: 0 }, { text: "", result_index: 0, points: 0 }] },
         ],
+        // Jauge activée d'office sur les nouveaux quiz scorés : rendu
+        // propre sans réglage. Désactivable dans l'éditeur.
+        show_score_gauge: true,
         results: [
           { title: t("resultLabel", { n: 1 }), description: null, min_score: 0, max_score: 1 },
           { title: t("resultLabel", { n: 2 }), description: null, min_score: 2, max_score: 2 },
@@ -1020,7 +1023,10 @@ export default function QuizFormClient() {
       <div className="flex items-center justify-between gap-4">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
           <TabsList className="w-full sm:w-auto bg-transparent border-b rounded-none justify-start gap-0 h-auto p-0">
-            <TabsTrigger value="manual" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-5 py-3 text-sm font-medium gap-1.5" onClick={(e) => { e.preventDefault(); handleCreateManual(); }}>
+            {/* Deux types de quiz en création manuelle (par profil /
+                scoré), tooltips pour choisir sans se poser la question.
+                Le cas "par niveau" se fera via le flux IA (choix scoré). */}
+            <TabsTrigger value="manual" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-5 py-3 text-sm font-medium gap-1.5" title={t("tabManualHint")} onClick={(e) => { e.preventDefault(); handleCreateManual(); }}>
               <FileText className="h-4 w-4" />
               {creatingManual ? <Loader2 className="h-4 w-4 animate-spin" /> : t("tabManual")}
             </TabsTrigger>
