@@ -681,6 +681,39 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     }
   }, []);
   const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
+  // Taquet de largeur du panneau split (Béné 30 juil 2026, façon
+  // Systeme.io) : drag horizontal -> panel_media.width (20-60%),
+  // badge % pendant le drag, double-clic = retour au défaut.
+  const [splitDragPct, setSplitDragPct] = useState<number | null>(null);
+  const startSplitDrag = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const row = (e.currentTarget as HTMLElement).parentElement;
+    if (!row) return;
+    const rect = row.getBoundingClientRect();
+    const rightSide = splitSide === "right";
+    const move = (ev: MouseEvent) => {
+      let pct = ((ev.clientX - rect.left) / rect.width) * 100;
+      if (rightSide) pct = 100 - pct;
+      const w = Math.round(Math.min(60, Math.max(20, pct)));
+      setSplitDragPct(w);
+      setPanelMedia((prev) => ({ ...(prev ?? {}), width: w }));
+    };
+    const up = () => {
+      window.removeEventListener("mousemove", move);
+      window.removeEventListener("mouseup", up);
+      setSplitDragPct(null);
+    };
+    window.addEventListener("mousemove", move);
+    window.addEventListener("mouseup", up);
+  };
+  const resetSplitWidth = () => {
+    setPanelMedia((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev };
+      delete next.width;
+      return next.perPage === undefined && !next.global && !next.pages ? null : next;
+    });
+  };
   const [primaryColor, setPrimaryColor] = useState<string>(DEFAULT_BRAND_COLOR_PRIMARY);
   const [bgColor, setBgColor] = useState<string>(DEFAULT_BRAND_COLOR_BACKGROUND);
   // Couleur des autres textes. NULL = non défini -> aucun override.
@@ -3766,14 +3799,38 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     <div className="w-full max-w-2xl mx-auto mb-8">
                       <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden"><div className="h-full rounded-full" style={{ width: `${progress}%`, backgroundColor: pc }} /></div>
                     </div>
-                    <div className={`flex-1 flex ${previewSplit ? (splitSide === "right" ? "flex-col md:flex-row-reverse gap-6" : "flex-col md:flex-row gap-6") : "flex-col items-center justify-center"}`}>
+                    {/* Aperçu split piloté par le toggle écran/mobile de
+                        l'ÉDITEUR, pas par la largeur du viewport : avant, en
+                        aperçu mobile (canvas étroit), les classes md: du
+                        viewport restaient actives -> deux colonnes écrasées
+                        au lieu de la bannière réelle (retour Béné 30 juil
+                        2026). Les proportions desktop suivent maintenant
+                        EXACTEMENT le rendu public (largeur réglable, 40%
+                        par défaut). */}
+                    <div className={`flex-1 flex ${previewSplit ? (device === "mobile" ? "flex-col gap-6" : (splitSide === "right" ? "flex-row-reverse gap-3" : "flex-row gap-3")) : "flex-col items-center justify-center"}`}>
                       {previewSplit && (
                         <QuizPanelMedia
                           item={resolvePanelMedia(panelMedia, "q:" + (q.id ?? ""), pc, splitImageUrl)}
                           brandColor={pc}
                           logoUrl={effectiveLogoUrl}
-                          className="w-full h-40 md:h-auto md:w-2/5 shrink-0 md:self-stretch rounded-2xl"
+                          className={device === "mobile" ? "w-full h-40 shrink-0 rounded-2xl" : "h-auto shrink-0 self-stretch rounded-2xl"}
+                          style={device === "mobile" ? undefined : { width: `${panelMedia?.width ?? 40}%` }}
                         />
+                      )}
+                      {previewSplit && device === "desktop" && (
+                        <div
+                          onMouseDown={startSplitDrag}
+                          onDoubleClick={resetSplitWidth}
+                          className="relative w-2 -mx-1 shrink-0 cursor-col-resize self-stretch flex items-center justify-center group/split"
+                          title={t("splitWidthHandleTitle")}
+                        >
+                          <div className={`w-1 h-12 rounded-full transition-colors ${splitDragPct != null ? "bg-primary" : "bg-border group-hover/split:bg-primary/60"}`} />
+                          {splitDragPct != null && (
+                            <span className="absolute top-1/2 -translate-y-1/2 left-3 z-10 text-[11px] font-semibold tabular-nums bg-primary text-white rounded px-1.5 py-0.5 shadow">
+                              {splitDragPct}%
+                            </span>
+                          )}
+                        </div>
                       )}
                       <div className={`${previewSplit ? "flex-1 min-w-0 flex flex-col justify-center " : ""}max-w-2xl w-full space-y-8${previewAlignText}`}>
                         <div className="flex flex-wrap items-center justify-between gap-2">

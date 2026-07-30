@@ -4483,6 +4483,7 @@
     "trancheUnbounded": "Aucune tranche min-max n'est définie sur tes résultats : renseigne les champs de tranche de chaque résultat.",
     "trancheCoverageHelp": "Ajuste les bornes min et max des tranches pour couvrir toute la plage, sans chevauchement.",
     "csvScoresHeader": "Scores",
+    "splitWidthHandleTitle": "Glisser pour régler la largeur du panneau (20 à 60%). Double-clic : revenir à la largeur par défaut.",
     "optionShareResultPageHint": "Le lien partagé depuis l'écran de résultat affiche le profil du visiteur dans l'aperçu (titre + visuel aux couleurs du quiz). Décoché : le partage montre le quiz seul.",
     "trackingPixelsTitle": "Tracking & Publicités",
     "trackingPixelsHint": "Ajoute ton pixel Meta et tes tags Google. Les pixels ne chargent qu'après le consentement du visiteur.",

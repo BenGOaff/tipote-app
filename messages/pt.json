@@ -4781,6 +4781,7 @@
     "trancheUnbounded": "Nenhuma faixa min-max está definida nos teus resultados: preenche os campos de faixa de cada resultado.",
     "trancheCoverageHelp": "Ajusta os limites min e max das faixas para cobrir todo o intervalo, sem sobreposições.",
     "csvScoresHeader": "Pontuações",
+    "splitWidthHandleTitle": "Arrasta para ajustar a largura do painel (20 a 60%). Duplo clique: voltar à largura por defeito.",
     "optionShareResultPageHint": "O link partilhado do ecrã de resultado mostra o perfil do visitante na pré-visualização (título + visual com as cores do quiz). Desmarcado: partilha apenas o quiz.",
     "trackingPixelsTitle": "Tracking e Anúncios",
     "trackingPixelsHint": "Adiciona o teu Pixel Meta e tags Google. Os pixels só carregam após o consentimento.",

@@ -4476,6 +4476,7 @@
     "trancheUnbounded": "Nessuna fascia min-max è definita sui tuoi risultati: compila i campi fascia di ogni risultato.",
     "trancheCoverageHelp": "Regola i limiti min e max delle fasce per coprire tutto l'intervallo, senza sovrapposizioni.",
     "csvScoresHeader": "Punteggi",
+    "splitWidthHandleTitle": "Trascina per regolare la larghezza del pannello (20 a 60%). Doppio clic: torna alla larghezza predefinita.",
     "optionShareResultPageHint": "Il link condiviso dalla schermata del risultato mostra il profilo del visitatore nell'anteprima (titolo + visual con i colori del quiz). Deselezionato: si condivide solo il quiz.",
     "trackingPixelsTitle": "Tracking e Pubblicità",
     "trackingPixelsHint": "Aggiungi il tuo Pixel Meta e i tag Google. I pixel si caricano solo dopo il consenso.",
