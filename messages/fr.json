@@ -629,7 +629,7 @@
     "legalMentions": "Mentions légales",
     "legalCookies": "Cookies",
     "errFillCredentials": "Merci de remplir ton email et ton mot de passe.",
-    "errInvalidCredentials": "Email ou mot de passe incorrect.",
+    "errInvalidCredentials": "Email ou mot de passe incorrect. Ton navigateur a peut-être prérempli le mot de passe d'une autre app Tipote. Clique sur 'Mot de passe oublié ?' pour en choisir un nouveau, ou utilise le lien magique.",
     "errUnexpected": "Erreur inattendue. Merci de réessayer.",
     "errFillEmail": "Merci de renseigner ton email.",
     "errSendFailed": "Impossible d'envoyer le lien de connexion. Vérifie ton email ou réessaie dans quelques minutes.",
@@ -747,7 +747,8 @@
     "tooltipSettingsAi": "IA et crédits - suis ta consommation et personnalise le style de tes auto-commentaires.",
     "tooltipSettingsPricing": "Abonnement - gère ton plan : upgrade, downgrade ou annule en toute autonomie.",
     "tooltipCoach": "Coach IA - ton conseiller personnel (plans PRO et ELITE). Il connaît ton projet et t'aide à prendre les bonnes décisions.",
-    "tooltipComplete": "Tour terminé ! Avant de créer, va compléter tes réglages : offres, positionnement et persona. Clique sur ta photo de profil en haut à droite."
+    "tooltipComplete": "Tour terminé ! Avant de créer, va compléter tes réglages : offres, positionnement et persona. Clique sur ta photo de profil en haut à droite.",
+    "nudgeClose": "Masquer ce bloc"
   },
   "errors": {
     "generic": "Une erreur est survenue. Veuillez réessayer.",

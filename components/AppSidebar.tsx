@@ -19,6 +19,7 @@ import {
   HelpCircle,
   HandCoins,
   Rocket,
+  Play,
 } from "lucide-react";
 import { TutorialSpotlight } from "@/components/tutorial/TutorialSpotlight";
 import { TutorialNudge } from "@/components/tutorial/TutorialNudge";
@@ -141,6 +142,39 @@ function SidebarCollapseButton() {
   );
 }
 
+// Entree discrete "Refaire le tour guide", montree seulement quand la
+// carte TutorialNudge n'est pas visible (fermee via sa croix ou opt-out) :
+// le tour doit toujours rester relancable quelque part.
+function RestartTourItem() {
+  const t = useTranslations("tutorial");
+  const { tutorialOptOut, nudgeDismissed, isLoading, resetTutorial, setShowWelcome, setPhase } =
+    useTutorial();
+
+  if (isLoading || (!tutorialOptOut && !nudgeDismissed)) return null;
+
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton asChild>
+        <button
+          type="button"
+          className={cx(MENU_ITEM_CLASS, "w-full text-left")}
+          onClick={() => {
+            if (tutorialOptOut) {
+              resetTutorial();
+              return;
+            }
+            setShowWelcome(true);
+            setPhase("welcome");
+          }}
+        >
+          <Play className="w-5 h-5" />
+          <span>{tutorialOptOut ? t("helpReactivate") : t("helpRestart")}</span>
+        </button>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
+}
+
 export function AppSidebar() {
   const t = useTranslations("nav");
   const { phase, nextPhase } = useTutorial();
@@ -231,12 +265,18 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {/* Carte tour guide : DANS la zone scrollable, APRES le menu.
+            Avant elle vivait dans le footer (hauteur fixe) et comprimait
+            le menu sur petit ecran (drame testeuse Tiquiz 31 juillet
+            2026, meme layout ici). Le menu garde la priorite. */}
+        <div className="mt-4">
+          <TutorialNudge />
+        </div>
       </SidebarContent>
 
       {/* Footer: analytics + pepites + language switch — no separator border */}
       <SidebarFooter className="p-4 space-y-1">
-        <TutorialNudge />
-
         <SidebarMenu>
           <TutorialSpotlight elementId="analytics" tooltipPosition="right" showNextButton>
             <SidebarMenuItem>
@@ -273,6 +313,7 @@ export function AppSidebar() {
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>
+          <RestartTourItem />
           {/* Programme affilié — accessible à tout moment depuis chaque app. */}
           <SidebarMenuItem>
             <SidebarMenuButton asChild>

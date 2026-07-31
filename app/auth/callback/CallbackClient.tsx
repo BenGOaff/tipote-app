@@ -319,12 +319,14 @@ export default function CallbackClient() {
 
     setResendStatus("sending");
     try {
-      const supabase = getSupabaseBrowserClient();
-      const redirectTo = `${window.location.origin}/auth/callback?type=recovery`;
-
-      const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, { redirectTo });
-      if (error) {
-        console.error("[callback] resetPasswordForEmail error", error);
+      // Meme canal que /auth/forgot-password : lien recovery serveur +
+      // email Resend au template Tipote (fallback Supabase cote serveur).
+      const res = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: cleanEmail }),
+      });
+      if (!res.ok) {
         setResendStatus("failed");
         setResendMsg(t("errResendFailed"));
         return;

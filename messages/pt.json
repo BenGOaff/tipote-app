@@ -773,7 +773,7 @@
     "legalMentions": "Menções legais",
     "legalCookies": "Cookies",
     "errFillCredentials": "Preenche o teu email e palavra-passe.",
-    "errInvalidCredentials": "Email ou palavra-passe incorretos.",
+    "errInvalidCredentials": "Email ou palavra-passe incorretos. O teu navegador pode ter preenchido uma palavra-passe de outra app Tipote. Clica em 'Esqueceste a palavra-passe?' para escolher uma nova, ou usa o link mágico.",
     "errUnexpected": "Erro inesperado. Tenta novamente.",
     "errFillEmail": "Introduz o teu endereço de email.",
     "errSendFailed": "Não foi possível enviar o link. Verifica o teu email.",
@@ -909,7 +909,8 @@
     "previous": "Anterior",
     "skip": "Saltar",
     "finish": "Terminar",
-    "step": "Passo {n} de {total}"
+    "step": "Passo {n} de {total}",
+    "nudgeClose": "Ocultar este bloco"
   },
   "errors": {
     "generic": "Ocorreu um erro. Tenta novamente.",

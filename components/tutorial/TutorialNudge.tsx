@@ -1,21 +1,36 @@
 // components/tutorial/TutorialNudge.tsx
 "use client";
 
-import { Rocket } from "lucide-react";
+import { Rocket, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTutorial } from "@/hooks/useTutorial";
 import { useTranslations } from "next-intl";
 
 export function TutorialNudge() {
-  const { tutorialOptOut, isLoading, setShowWelcome, setPhase } = useTutorial();
+  const { tutorialOptOut, nudgeDismissed, isLoading, setShowWelcome, setPhase, dismissNudge } =
+    useTutorial();
   const t = useTranslations("tutorial");
 
-  if (isLoading || tutorialOptOut) return null;
+  // Fermable d'un clic (croix) SANS avoir a ouvrir le tour : la carte
+  // comprimait le menu de la sidebar sur petit ecran (drame testeuse
+  // Tiquiz 31 juillet 2026, meme layout ici). Le tour reste relancable
+  // via l'entree "Refaire le tour guide" du pied de sidebar.
+  if (isLoading || tutorialOptOut || nudgeDismissed) return null;
 
   return (
-    <div className="mx-3 mb-3 rounded-lg border border-primary/15 bg-primary/5">
+    <div className="mb-3 rounded-lg border border-primary/15 bg-primary/5 relative">
+      <button
+        type="button"
+        onClick={dismissNudge}
+        className="absolute right-1.5 top-1.5 p-1 rounded-md text-muted-foreground/60 hover:text-foreground hover:bg-muted/50 transition-colors"
+        aria-label={t("nudgeClose")}
+        title={t("nudgeClose")}
+      >
+        <X className="w-3.5 h-3.5" />
+      </button>
+
       <div className="px-3 py-2.5">
-        <div className="flex items-start gap-2.5">
+        <div className="flex items-start gap-2.5 pr-5">
           <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center shrink-0">
             <Rocket className="w-4 h-4 text-primary-foreground" />
           </div>

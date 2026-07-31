@@ -622,7 +622,7 @@
     "legalMentions": "Aviso legal",
     "legalCookies": "Cookies",
     "errFillCredentials": "Por favor, introduce tu correo y contraseña.",
-    "errInvalidCredentials": "Correo o contraseña incorrectos.",
+    "errInvalidCredentials": "Email o contraseña incorrectos. Puede que tu navegador haya rellenado una contraseña de otra app de Tipote. Haz clic en '¿Contraseña olvidada?' para elegir una nueva, o usa el enlace mágico.",
     "errUnexpected": "Error inesperado. Por favor, inténtalo de nuevo.",
     "errFillEmail": "Por favor, introduce tu correo.",
     "errSendFailed": "No se pudo enviar el enlace de acceso.",
@@ -740,7 +740,8 @@
     "tooltipSettingsAi": "IA y créditos - sigue tu consumo y personaliza el estilo de tus auto-comentarios.",
     "tooltipSettingsPricing": "Suscripción - gestiona tu plan: mejora, reduce o cancela de forma autónoma.",
     "tooltipCoach": "Coach IA - tu asesor personal (planes PRO y ELITE). Conoce tu proyecto y te ayuda a tomar las decisiones correctas.",
-    "tooltipComplete": "¡Tour terminado! Antes de crear, ve a completar tus ajustes: ofertas, posicionamiento y persona. Haz clic en tu foto de perfil arriba a la derecha."
+    "tooltipComplete": "¡Tour terminado! Antes de crear, ve a completar tus ajustes: ofertas, posicionamiento y persona. Haz clic en tu foto de perfil arriba a la derecha.",
+    "nudgeClose": "Ocultar este bloque"
   },
   "errors": {
     "generic": "Algo salió mal. Por favor, inténtalo de nuevo.",

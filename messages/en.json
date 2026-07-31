@@ -629,7 +629,7 @@
     "legalMentions": "Legal Notices",
     "legalCookies": "Cookies",
     "errFillCredentials": "Please enter your email and password.",
-    "errInvalidCredentials": "Invalid email or password.",
+    "errInvalidCredentials": "Incorrect email or password. Your browser may have autofilled a password from another Tipote app. Click 'Forgot password?' to choose a new one, or use the magic link.",
     "errUnexpected": "Unexpected error. Please try again.",
     "errFillEmail": "Please enter your email.",
     "errSendFailed": "Unable to send the sign-in link. Check your email or try again in a few minutes.",
@@ -747,7 +747,8 @@
     "tooltipSettingsAi": "AI & Credits - track your usage and customise the style of your auto-comments.",
     "tooltipSettingsPricing": "Subscription - manage your plan: upgrade, downgrade or cancel independently.",
     "tooltipCoach": "AI Coach - your personal adviser (PRO and ELITE plans). It knows your project and helps you make the right decisions.",
-    "tooltipComplete": "Tour complete! Before creating, go complete your settings: offers, positioning and persona. Click your profile photo in the top right."
+    "tooltipComplete": "Tour complete! Before creating, go complete your settings: offers, positioning and persona. Click your profile photo in the top right.",
+    "nudgeClose": "Hide this box"
   },
   "errors": {
     "generic": "Something went wrong. Please try again.",

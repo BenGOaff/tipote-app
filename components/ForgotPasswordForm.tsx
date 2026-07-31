@@ -6,8 +6,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { getSupabaseBrowserClient } from '@/lib/supabaseBrowser';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,12 +15,9 @@ import { Label } from '@/components/ui/label';
 
 import { Mail, ArrowLeft } from 'lucide-react';
 
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL ?? 'https://app.tipote.com';
-
 export default function ForgotPasswordForm() {
   const t = useTranslations('forgotPasswordPage');
-  const supabase = getSupabaseBrowserClient();
+  const locale = useLocale();
 
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
@@ -42,23 +38,16 @@ export default function ForgotPasswordForm() {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
-        redirectTo: `${SITE_URL}/auth/callback`,
+      // Passe par notre API : lien recovery genere cote serveur + email
+      // Resend au template Tipote (fallback Supabase gere serveur).
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: cleanEmail, locale }),
       });
 
-      if (error) {
-        console.error(
-          '[ForgotPasswordForm] resetPasswordForEmail error',
-          error.message,
-          error.status,
-        );
-
-        const msg = (error.message || '').toLowerCase();
-        if (msg.includes('rate') || msg.includes('limit') || error.status === 429) {
-          setErrorMsg(t('errRateLimit'));
-        } else {
-          setErrorMsg(t('errSendFailed'));
-        }
+      if (!res.ok) {
+        setErrorMsg(t('errSendFailed'));
         setLoading(false);
         return;
       }
