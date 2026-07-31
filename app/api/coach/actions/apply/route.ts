@@ -228,7 +228,9 @@ async function applySingleTaskUpdate(args: { userId: string; projectId?: string 
     .maybeSingle();
 
   if (error) return { ok: false as const, status: 400 as const, error: error.message };
-  if (!data) return { ok: false as const, status: 404 as const, error: "Task not found" };
+  // Message user-visible (toast côté widget) : le "Task not found" brut
+  // sortait tel quel chez Richard (29 juil 2026).
+  if (!data) return { ok: false as const, status: 404 as const, error: "Cette tâche n'existe plus dans ce projet. Demande au coach de te proposer une nouvelle action." };
   return { ok: true as const, task: data };
 }
 

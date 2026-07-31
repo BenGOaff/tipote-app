@@ -1405,13 +1405,44 @@ TONE & STYLE:
     }
 
     const rawMessage = sanitizeAiText(String(out?.message ?? "").trim()) || "Ok. Donne-moi 1 précision et on avance.";
-    const suggestions = sanitizeSuggestions(out?.suggestions, { isTeaser, appliedTitles, rejectedTitles }).map(
+    let suggestions = sanitizeSuggestions(out?.suggestions, { isTeaser, appliedTitles, rejectedTitles }).map(
       (s) => ({
         ...s,
         title: sanitizeAiText(s.title),
         ...(s.description ? { description: sanitizeAiText(s.description) } : {}),
       }),
     );
+
+    // Anti "Task not found" (Richard 29 juil 2026) : le modèle peut inventer
+    // un task_id plausible, la regex uuidLike de sanitizeSuggestions ne
+    // prouve pas l'existence. On vérifie en base et on jette les cartes
+    // update_tasks qui pointent vers une tâche absente du projet : mieux
+    // vaut aucune carte qu'un "Valider" qui finit en erreur.
+    const strictUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const taskIdOf = (s: { type: string; payload?: Record<string, unknown> }) =>
+      s.type === "update_tasks" ? String((s.payload as any)?.task_id ?? "") : "";
+    const candidateIds = suggestions.map(taskIdOf).filter((id) => strictUuid.test(id));
+    if (suggestions.some((s) => s.type === "update_tasks")) {
+      let liveIds = new Set<string>();
+      if (candidateIds.length) {
+        try {
+          let q = supabaseAdmin
+            .from("project_tasks")
+            .select("id")
+            .eq("user_id", user.id)
+            .in("id", candidateIds)
+            .is("deleted_at", null);
+          if (projectId) q = q.eq("project_id", projectId);
+          const { data: liveRows } = await q;
+          liveIds = new Set((liveRows ?? []).map((r: { id: string }) => String(r.id)));
+        } catch {
+          // Vérification impossible : on jette quand même les ids non-uuid
+          // stricts (forcément inexistants), on garde le reste.
+          liveIds = new Set(candidateIds);
+        }
+      }
+      suggestions = suggestions.filter((s) => s.type !== "update_tasks" || liveIds.has(taskIdOf(s)));
+    }
 
     const maxLines = isTeaser ? 8 : goDeeper ? 18 : 10;
     const message = enforceLineLimit(rawMessage, maxLines) || rawMessage;

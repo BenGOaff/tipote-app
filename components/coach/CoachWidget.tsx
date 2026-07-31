@@ -376,16 +376,31 @@ export function CoachWidget() {
   }, [open, t]);
 
   /* ── Auto-scroll ── */
+  // "L'ascenseur ne fonctionne pas" (Richard 29 juil 2026) : l'auto-scroll
+  // ramenait la conversation tout en bas à chaque changement d'état, même
+  // quand le user remontait lire un ancien message. Règle : on ne colle au
+  // bas QUE si le user y était déjà (à ~80px près). Envoyer un nouveau
+  // message re-active le collage.
   const isStreaming = messages.some((m) => m.streaming);
+  const stickToBottomRef = useRef(true);
+  const handleListScroll = () => {
+    const el = listRef.current;
+    if (!el) return;
+    stickToBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+  };
   useEffect(() => {
     if (!open || view !== "chat") return;
     const el = listRef.current;
     if (!el) return;
+    const last = messages[messages.length - 1];
+    if (last && last.role === "user") stickToBottomRef.current = true;
+    if (!stickToBottomRef.current) return;
     // Use instant scroll during streaming to avoid competing animations
     const raf = requestAnimationFrame(() => {
       el.scrollTo({ top: el.scrollHeight, behavior: isStreaming ? "auto" : "smooth" });
     });
     return () => cancelAnimationFrame(raf);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, view, messages.length, suggestions.length, loading, bootstrapping, isStreaming]);
 
   const canSend = useMemo(
@@ -915,7 +930,7 @@ export function CoachWidget() {
             {/* ── Chat View ── */}
             {view === "chat" ? (
               <>
-                <div ref={listRef} className="flex-1 min-h-0 overflow-auto px-3 py-3 space-y-3">
+                <div ref={listRef} onScroll={handleListScroll} className="flex-1 min-h-0 overflow-auto px-3 py-3 space-y-3">
                   {messages.map((m) => {
                     const isUser = m.role === "user";
                     return (
