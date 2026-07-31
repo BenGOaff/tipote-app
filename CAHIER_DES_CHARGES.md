@@ -130,8 +130,10 @@ Onboarding (une fois) puis, à chaque connexion : Aujourd'hui, Créer, Publier, 
 
 ### 4.1. Authentification
 
-- Login email plus mot de passe (Supabase Auth, PKCE, cookies httpOnly).
-- Reset password, set password.
+- Login email plus mot de passe (Supabase Auth, PKCE, cookies httpOnly), plus lien magique.
+- Mot de passe oublié (`/auth/forgot-password`) : lien de récupération généré côté serveur (`generateLink` type recovery) et envoyé dans un **email Resend au template Tipote** (7 langues), fallback automatique sur le template Supabase si Resend est indisponible. Réponse identique que le compte existe ou non (anti-énumération), cooldown 60 s par email. Le lien mène à `/auth/reset-password` (choix du nouveau mot de passe).
+- Set password (`/auth/set-password`) pour les comptes créés sans mot de passe.
+- Le message d'erreur de connexion signale le piège du gestionnaire de mots de passe (les sous-domaines tipote.com partagent les suggestions ; un mot de passe d'une autre app Tipote peut être prérempli) et pointe vers le mot de passe oublié.
 - Détection automatique de la langue.
 - Callbacks OAuth pour les réseaux sociaux.
 
@@ -322,12 +324,12 @@ Pages publiques : accessibles via `/p/[slug]`.
 Constructeur de quiz interactifs pour capture de leads. Le module partage la table `quizzes` pour 3 modes :
 
 - `quiz` : quiz à profils (chaque combinaison de réponses conduit à un profil résultat).
-- `scoring` : quiz à score (le résultat dépend d'une tranche de score).
+- `scoring` : quiz scoré (diagnostic). Le résultat dépend d'une tranche de score, avec en option jusqu'à 6 axes thématiques (`quizzes.scoring_axes`, id figé à la création) sur lesquels chaque question pèse avec un poids (`config.axes`). Côté visiteur : jauge du score global (pourcentage ou libellé bas / moyen / élevé personnalisable, `show_score_gauge` + `score_display_mode` + `score_labels`) et barres par axe. Chaque lead reçoit un snapshot `{ points, min, max }` global et par axe (`leads` + `quiz_leads.scores`), figé à la capture. Variables `{score}`, `{label}`, `{score_<axe>}`, `{label_<axe>}` dans les textes de résultat et l'URL du CTA. Option tags Systeme.io par tranche (`sio_score_tags` : `score-<tranche>` et `<axe>-<tranche>`). Le cœur du calcul vit dans `lib/quizScoring.ts`, fichier identique à celui de Tiquiz.
 - `survey` : sondage (NPS, feedback), sans profil, avec analyse des réponses.
 
-Modes de création : génération par IA (avec chat d'idéation `QuizIdeaChat`), création manuelle, import d'un quiz existant, duplication, réécriture assistée.
+Modes de création : onglets Créer manuellement (choix en deux cartes : par profil ou scoré), Générer avec l'IA (type par profil ou scoré, axes et nombre de tranches au choix ; l'IA écrit, `finalizeAiScoringQuiz` calcule des tranches contiguës exactes), Importer. Plus chat d'idéation `QuizIdeaChat`, duplication, réécriture assistée.
 
-Types de questions : choix multiple, choix par image, oui/non, texte libre, échelle, notation. Le choix multiple supporte la sélection multiple.
+Types de questions : choix multiple, choix par image, oui/non, texte libre (invite personnalisable avec l'éditeur riche, rendue fidèlement côté visiteur), échelle, notation. Le choix multiple supporte la sélection multiple ; en mode scoré, l'éditeur affiche par question les pastilles d'axes avec poids, le rappel de la règle d'égalité et le détecteur de couverture des tranches (trous, chevauchements).
 
 Capture : email, prénom, nom, téléphone, pays (configurable). Position de la capture avant ou après le quiz. Étape de partage bonus optionnelle (viralité) avec image bonus, texte d'intro custom et message de bonus débloqué.
 
@@ -346,6 +348,7 @@ Présentation et thèmes (rendu public `/q/[quizId]`, éditeur WYSIWYG identique
 - Reprise de session : le visiteur qui revient reprend là où il s'était arrêté (stockage local), avec bandeau et bouton pour tout recommencer.
 - Carte résultat partageable générée à la volée (`lib/resultCard.ts`) avec partage via Web Share API sur mobile ou téléchargement, plus confettis à l'arrivée sur le résultat.
 - Fermeture du quiz : le créateur peut fermer un quiz, avec message par défaut ou redirection vers une URL (`close_redirect_url`).
+- Disposition en colonnes : taquet de largeur du panneau image (`panel_media.width`, 20-60 %, défauts historiques 40 % / 44 %), preview de l'éditeur fidèle au rendu public y compris en bascule mobile.
 
 Automations Systeme.io par résultat (3 actions configurables) : tag SIO, inscription à une formation SIO (`sio_course_id`), ajout à une communauté SIO (`sio_community_id`). Le résultat du quiz est stocké comme champ personnalisé sur le contact (enrichissement). Les leads sont synchronisés vers Systeme.io avec prénom, nom, téléphone et pays.
 
@@ -376,13 +379,15 @@ Bulle flottante de conversation avec le coach.
 
 Le coach reçoit tout le contexte business : profil, persona, progression, et le contexte financier réel (CA du mois, progression vers l'objectif, abonnés perdus) formaté par `lib/compta/businessContext.ts`. Le contexte est injecté dans le chat, la phrase d'encouragement quotidienne et la génération de stratégie. Historique des conversations conservé.
 
+Le coach peut proposer des **cartes d'action** (Valider / Refuser) : mise à jour de tâches, mise à jour d'offres, ouverture d'un outil. Garde-fous : une carte de mise à jour de tâche dont le `task_id` n'existe pas dans le projet est filtrée côté serveur avant affichage (le modèle peut inventer un id plausible), et l'apply revérifie l'existence avec un message d'erreur en français. L'auto-scroll du chat ne colle en bas que si l'utilisateur y est déjà : remonter lire un ancien message n'est jamais interrompu.
+
 ### 4.18. Didacticiel interactif
 
 Tutoriel guidé pas-à-pas pour les nouveaux utilisateurs. Objectif : présenter chaque section puis insister sur l'importance de compléter les réglages (offres, positionnement, persona, branding) avant de créer du contenu.
 
 Phases séquentielles couvrant : bienvenue, Aujourd'hui, Stratégie, Créer, Contenus, Templates, Crédits, Analytics, Pépites, chaque onglet des Paramètres, Coach, complétion.
 
-UX : tooltips avec compteur d'étapes, spotlight sur les éléments ciblés, opt-out visible, fenêtre limitée aux premiers jours, relançable via le bouton d'aide flottant. Le tutoriel et les widgets propres à Tipote sont désactivés sur le sous-domaine affilié (détection par host).
+UX : tooltips avec compteur d'étapes, spotlight sur les éléments ciblés, opt-out visible, fenêtre limitée aux premiers jours. La carte "Besoin d'un coup de main ?" de la sidebar est fermable d'un clic (croix, mémorisé par utilisateur) et vit dans la zone scrollable du menu pour ne jamais comprimer la navigation ; quand elle est fermée ou le guide désactivé, une entrée "Refaire le tour guidé" apparaît dans le pied de sidebar. Le tutoriel et les widgets propres à Tipote sont désactivés sur le sous-domaine affilié (détection par host).
 
 ### 4.19. Module Compta (onglet Paramètres > Compta)
 
@@ -483,6 +488,8 @@ Composants : `ProjectSwitcher` (sidebar, avec identité visuelle et bouton nouve
 API : `GET/POST/PATCH/DELETE /api/projects`. La création insère une ligne `projects` et un `business_profiles` vide avec onboarding non complété, et renvoie un flag qui redirige vers l'onboarding. La suppression est une danger zone (confirmation par recopie du nom, cascade FK, refus si projet unique).
 
 Sémantique : un nouveau projet est un profil business neuf et vide, à re-onboarder ; aucune copie depuis le projet courant. Domaines, contenus publics, leads, clients, connexions sociales et clé Systeme.io sont per-projet.
+
+Réinitialisation : deux primitives distinctes. `/api/profile/reset` vide UNIQUEMENT le projet actif (tables scopées `(user_id, project_id)`, jamais de fallback user seul) et refuse si l'utilisateur n'a qu'un projet ; `/api/account/reset` vide tout le compte (sauf crédits et abonnement). L'UI tente d'abord le per-projet et bascule sur le global en mono-projet. Les libellés et la confirmation disent explicitement que seul le projet actif est réinitialisé quand il y en a plusieurs (retour utilisateur du 31 juillet 2026 : un compte revenu après plusieurs mois s'était retrouvé avec deux projets similaires sans comprendre).
 
 Plan gate : `canUseMultiProjects(plan)` renvoie vrai pour Elite. Le plan d'abonnement reste un attribut global du user (`profiles.plan`), jamais per-projet.
 

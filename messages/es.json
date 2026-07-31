@@ -469,7 +469,14 @@
     "salesArgsSaved": "Argumentos guardados",
     "salesArgsSaveFailed": "Guardado imposible",
     "salesArgsUnknownError": "Error desconocido",
-    "subtitle": "Configura tu perfil, tus conexiones y tus preferencias."
+    "subtitle": "Configura tu perfil, tus conexiones y tus preferencias.",
+    "faviconTitle": "Favicon",
+    "faviconDesc": "Se muestra en la pestaña del navegador en este dominio. PNG, JPG, SVG o ICO - redimensionado automáticamente a 256×256 px.",
+    "faviconUploadBtn": "Subir un favicon",
+    "faviconRemoveBtn": "Quitar",
+    "faviconUploaded": "Favicon subido",
+    "errFaviconUpload": "Error al subir el favicon: {msg}",
+    "errImageTooLarge2": "Imagen demasiado pesada (máx. 5 MB)."
   },
   "common": {
     "save": "Guardar",

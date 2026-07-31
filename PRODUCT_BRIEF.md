@@ -135,7 +135,7 @@ Variations selon le canal :
 - Scripts vidéo (TikTok, Reels, YouTube short).
 - Offres (page produit, promesse, deliverables, tarification).
 - Pages (capture, vente, vitrine, link-in-bio) via constructeur visuel.
-- Quiz lead-magnet, quiz à score et sondages.
+- Quiz lead-magnet (par profil), quiz scorés (diagnostic avec score sur 100, jauge, barres par axe, tranches de résultat) et sondages. L'IA génère les deux types de quiz, tranches calculées automatiquement.
 - Popquiz vidéo (vidéo avec quiz incrustés à des timestamps).
 - Stratégie éditoriale (calendrier).
 
@@ -147,6 +147,7 @@ Variations selon le canal :
 
 ### 7.4. Captation et relation client
 - Quiz : simple à créer, capture email plus tags, étape de partage pour la viralité, résultats personnalisés avec CTA. Thèmes prêts à l'emploi, fonds riches (dégradé ou image), écran d'accueil en cover, transitions directionnelles, raccourcis clavier, swipe mobile, formes de boutons, carte résultat partageable avec confettis, fermeture du quiz avec redirection.
+- Quiz scoré : score global sur 100 (jauge en pourcentage ou en mots : bas, moyen, élevé), jusqu'à 6 axes thématiques avec barre par axe, variables de score dans les textes et le lien du bouton, tags Systeme.io par tranche pour segmenter les emails.
 - Sondages (NPS, feedback) avec analyse des réponses.
 - Popquiz vidéo (YouTube, Vimeo ou upload), embeddable en iframe.
 - Pages de capture drag-and-drop avec branding cohérent.
