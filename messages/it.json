@@ -622,7 +622,7 @@
     "legalMentions": "Note legali",
     "legalCookies": "Cookie",
     "errFillCredentials": "Inserisci la tua email e la tua password.",
-    "errInvalidCredentials": "Email o password non corretti.",
+    "errInvalidCredentials": "Email o password errati. Il tuo browser potrebbe aver inserito una password di un'altra app Tipote. Clicca su 'Password dimenticata?' per sceglierne una nuova, oppure usa il link magico.",
     "errUnexpected": "Errore imprevisto. Riprova.",
     "errFillEmail": "Inserisci la tua email.",
     "errSendFailed": "Impossibile inviare il link di accesso.",
@@ -740,7 +740,8 @@
     "tooltipSettingsAi": "IA e crediti - segui il consumo e personalizza lo stile degli auto-commenti.",
     "tooltipSettingsPricing": "Abbonamento - gestisci il tuo piano: upgrade, downgrade o cancella in autonomia.",
     "tooltipCoach": "Coach IA - il tuo consulente personale (piani PRO ed ELITE). Conosce il tuo progetto e ti aiuta a prendere le decisioni giuste.",
-    "tooltipComplete": "Tour completato! Prima di creare, vai a completare le impostazioni: offerte, posizionamento e persona. Clicca sulla foto profilo in alto a destra."
+    "tooltipComplete": "Tour completato! Prima di creare, vai a completare le impostazioni: offerte, posizionamento e persona. Clicca sulla foto profilo in alto a destra.",
+    "nudgeClose": "Nascondi questo blocco"
   },
   "errors": {
     "generic": "Qualcosa è andato storto. Riprova.",

@@ -773,7 +773,7 @@
     "legalMentions": "Menções legais",
     "legalCookies": "Cookies",
     "errFillCredentials": "Preencha seu email e senha.",
-    "errInvalidCredentials": "Email ou senha incorretos.",
+    "errInvalidCredentials": "Email ou senha incorretos. Seu navegador pode ter preenchido uma senha de outro app Tipote. Clique em 'Esqueceu a senha?' para escolher uma nova, ou use o link mágico.",
     "errUnexpected": "Erro inesperado. Tente novamente.",
     "errFillEmail": "Digite seu endereço de email.",
     "errSendFailed": "Não foi possível enviar o link. Verifique seu email.",
@@ -909,7 +909,8 @@
     "previous": "Anterior",
     "skip": "Pular",
     "finish": "Concluir",
-    "step": "Passo {n} de {total}"
+    "step": "Passo {n} de {total}",
+    "nudgeClose": "Ocultar este bloco"
   },
   "errors": {
     "generic": "Ocorreu um erro. Tente novamente.",

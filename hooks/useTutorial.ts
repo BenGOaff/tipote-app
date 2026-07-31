@@ -72,6 +72,12 @@ interface TutorialContextType {
   tutorialOptOut: boolean;
   setTutorialOptOut: (value: boolean) => void;
 
+  // Carte "Besoin d'un coup de main ?" de la sidebar : fermable d'un clic
+  // (croix), sans opt-out du tour. Persistant par user (drame testeuse
+  // Tiquiz 31 juillet 2026 : la carte comprimait le menu).
+  nudgeDismissed: boolean;
+  dismissNudge: () => void;
+
   firstSeenAt: string | null;
   daysSinceFirstSeen: number;
 
@@ -160,7 +166,7 @@ function daysBetween(fromIso: string, toIso: string) {
 
 function userKey(
   userId: string,
-  key: "phase" | "optout" | "first_seen_at" | "done",
+  key: "phase" | "optout" | "first_seen_at" | "done" | "nudge_dismissed",
 ) {
   return `tipote_tutorial_${key}_v1_${userId}`;
 }
@@ -195,6 +201,7 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
   const [contextFlags, setContextFlags] = useState<SeenMap>({});
 
   const [tutorialOptOut, setTutorialOptOutState] = useState(false);
+  const [nudgeDismissed, setNudgeDismissedState] = useState(false);
   const [firstSeenAt, setFirstSeenAt] = useState<string | null>(null);
   const [daysSinceFirstSeen, setDaysSinceFirstSeen] = useState(0);
 
@@ -238,6 +245,12 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
           localStorage.getItem(userKey(user.id, "done")),
           false,
         );
+
+        const nudgeGone = safeParseJson<boolean>(
+          localStorage.getItem(userKey(user.id, "nudge_dismissed")),
+          false,
+        );
+        setNudgeDismissedState(Boolean(nudgeGone));
 
         const savedPhaseRaw = safeParseJson<string | null>(
           localStorage.getItem(userKey(user.id, "phase")),
@@ -364,7 +377,18 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem(userKey(userId, "optout"));
       localStorage.removeItem(userKey(userId, "phase"));
       localStorage.removeItem(userKey(userId, "done"));
+      localStorage.removeItem(userKey(userId, "nudge_dismissed"));
       // on garde first_seen_at (fenêtre “premiers jours”)
+    } catch {
+      // ignore
+    }
+  }, [userId]);
+
+  const dismissNudge = useCallback(() => {
+    setNudgeDismissedState(true);
+    if (!userId) return;
+    try {
+      localStorage.setItem(userKey(userId, "nudge_dismissed"), "true");
     } catch {
       // ignore
     }
@@ -422,6 +446,7 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
     // ✅ récupération “tuto disparu”
     clearPersisted();
     setTutorialOptOutState(false);
+    setNudgeDismissedState(false);
     setShowWelcome(true);
     setPhase("welcome");
   }, [clearPersisted, setPhase]);
@@ -520,6 +545,8 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
       nextPhaseUrl,
       tutorialOptOut,
       setTutorialOptOut,
+      nudgeDismissed,
+      dismissNudge,
       firstSeenAt,
       daysSinceFirstSeen,
       currentStep,
@@ -540,6 +567,8 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
       nextPhaseUrl,
       tutorialOptOut,
       setTutorialOptOut,
+      nudgeDismissed,
+      dismissNudge,
       firstSeenAt,
       daysSinceFirstSeen,
       currentStep,
