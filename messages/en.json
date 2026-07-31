@@ -1267,7 +1267,7 @@
       "danger": {
         "title": "Danger zone",
         "subtitle": "Reset my Tipote",
-        "desc": "Changed direction or got lost along the way? Want to start fresh with your Tipote and take it in a new direction? Click this button. Warning: all content, tasks, and customisations created since you joined will be deleted and you will start from scratch. This is permanent and cannot be undone.",
+        "desc": "Changed direction or got lost along the way? Want to start fresh with your Tipote and take it in a new direction? Click this button. Warning: all content, tasks, and customisations created since you joined will be deleted and you will start from scratch. This is permanent and cannot be undone. If you have several Tipote projects, only the one you are using right now is reset: the others are not touched.",
         "reset": "Reset my Tipote",
         "resetting": "Resetting…"
       },
@@ -1447,7 +1447,7 @@
       "personaEnriched": "Persona enriched successfully",
       "noResult": "No result received",
       "legalUrlsSaved": "Legal URLs saved",
-      "resetConfirm": "⚠️ Reset your Tipote?\n\nAll content, tasks and customizations will be deleted. This is irreversible.",
+      "resetConfirm": "⚠️ Reset this Tipote?\n\nAll contents, tasks and customizations of THIS project will be erased. If you have several Tipote projects, the others are not touched. This is permanent.",
       "resetCancelled": "Reset cancelled",
       "resetDone": "Tipote reset ✅"
     },

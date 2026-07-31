@@ -1260,7 +1260,7 @@
       "danger": {
         "title": "Zona pericolosa",
         "subtitle": "Reimposta il mio Tipote",
-        "desc": "Hai cambiato direzione o ti sei perso lungo il percorso? Vuoi ricominciare da zero con il tuo Tipote? Clicca questo pulsante. Attenzione: tutti i contenuti, le attività e le personalizzazioni creati dalla tua iscrizione saranno eliminati e ripartirai da zero. È permanente e irreversibile.",
+        "desc": "Hai cambiato direzione o ti sei perso lungo il percorso? Vuoi ricominciare da zero con il tuo Tipote? Clicca questo pulsante. Attenzione: tutti i contenuti, le attività e le personalizzazioni creati dalla tua iscrizione saranno eliminati e ripartirai da zero. È permanente e irreversibile. Se hai più Tipote (progetti), viene reimpostato solo quello che stai usando adesso: gli altri non vengono toccati.",
         "reset": "Reimposta il mio Tipote",
         "resetting": "Reimpostazione…"
       },
@@ -1440,7 +1440,7 @@
       "personaEnriched": "Persona arricchito con successo",
       "noResult": "Nessun risultato ricevuto",
       "legalUrlsSaved": "URL legali salvati",
-      "resetConfirm": "⚠️ Reimpostare il tuo Tipote?\n\nTutti i contenuti, task e personalizzazioni saranno cancellati. È definitivo.",
+      "resetConfirm": "⚠️ Reimpostare questo Tipote?\n\nTutti i contenuti, le attività e le personalizzazioni di QUESTO progetto verranno cancellati. Se hai più Tipote, gli altri non vengono toccati. È definitivo.",
       "resetCancelled": "Reset annullato",
       "resetDone": "Tipote reimpostato ✅"
     },

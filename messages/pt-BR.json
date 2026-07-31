@@ -1437,7 +1437,7 @@
       "danger": {
         "title": "Zona de perigo",
         "subtitle": "Resetar meu Tipote",
-        "desc": "Mudou de direção ou se perdeu pelo caminho? Quer recomeçar do zero com seu Tipote e lançá-lo em outra direção? Clique neste botão. Atenção: todos os conteúdos, todas as tarefas e todas as personalizações criadas desde sua chegada serão apagados, você volta ao zero. É definitivo, você não poderá voltar atrás.",
+        "desc": "Mudou de direção ou se perdeu pelo caminho? Quer recomeçar do zero com seu Tipote e lançá-lo em outra direção? Clique neste botão. Atenção: todos os conteúdos, todas as tarefas e todas as personalizações criadas desde sua chegada serão apagados, você volta ao zero. É definitivo, você não poderá voltar atrás. Se você tiver vários Tipote (projetos), só o que você está usando agora é reiniciado: os outros não são tocados.",
         "reset": "Resetar meu Tipote",
         "resetting": "Resetando…"
       },
@@ -1617,7 +1617,7 @@
       "personaEnriched": "Persona enriquecido com sucesso",
       "noResult": "Nenhum resultado recebido",
       "legalUrlsSaved": "URLs legais salvas",
-      "resetConfirm": "⚠️ Resetar seu Tipote?\n\nTodos os conteúdos, todas as tarefas e todas as personalizações serão apagados. É definitivo.",
+      "resetConfirm": "⚠️ Reiniciar este Tipote?\n\nTodos os conteúdos, tarefas e personalizações DESTE projeto serão apagados. Se você tiver vários Tipote, os outros não são tocados. É definitivo.",
       "resetCancelled": "Reset cancelado",
       "resetDone": "Tipote resetado ✅"
     },

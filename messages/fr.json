@@ -1267,7 +1267,7 @@
       "danger": {
         "title": "Zone danger",
         "subtitle": "Réinitialiser mon Tipote",
-        "desc": "Tu as changé de voie ou tu t'es perdu en cours de route ? Tu veux repartir à zéro avec ton Tipote et le lancer dans une autre direction ? Clique sur ce bouton. Attention : tous les contenus, toutes les tâches et toutes les personnalisations créés depuis ton arrivée seront effacés, tu repartira de zéro. C'est définitif, tu ne pourras pas revenir en arrière.",
+        "desc": "Tu as changé de voie ou tu t'es perdu en cours de route ? Tu veux repartir à zéro avec ton Tipote et le lancer dans une autre direction ? Clique sur ce bouton. Attention : tous les contenus, toutes les tâches et toutes les personnalisations créés depuis ton arrivée seront effacés, tu repartira de zéro. C'est définitif, tu ne pourras pas revenir en arrière. Si tu as plusieurs Tipote (projets), seul celui que tu utilises en ce moment est réinitialisé : les autres ne bougent pas.",
         "reset": "Réinitialiser mon Tipote",
         "resetting": "Réinitialisation…"
       },
@@ -1447,7 +1447,7 @@
       "personaEnriched": "Persona enrichi avec succès",
       "noResult": "Aucun résultat reçu",
       "legalUrlsSaved": "URLs légales enregistrées",
-      "resetConfirm": "⚠️ Réinitialiser ton Tipote ?\n\nTous les contenus, toutes les tâches et toutes les personnalisations seront effacés. C'est définitif.",
+      "resetConfirm": "⚠️ Réinitialiser ce Tipote ?\n\nTous les contenus, toutes les tâches et toutes les personnalisations de CE projet seront effacés. Si tu as plusieurs Tipote, les autres ne sont pas touchés. C'est définitif.",
       "resetCancelled": "Réinitialisation annulée",
       "resetDone": "Tipote réinitialisé ✅"
     },
