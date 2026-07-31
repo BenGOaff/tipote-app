@@ -4024,12 +4024,15 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                               <div className="relative">
                                 <textarea readOnly rows={5} maxLength={maxLength} className="w-full rounded-xl border-2 border-border px-4 py-3 text-base resize-none bg-muted/10" style={{ borderColor: `${pc}30` }} />
                                 {/* Placeholder ÉDITABLE (demande Béné 30 juil
-                                    2026) : le créateur clique sur le texte
-                                    d'invite et le personnalise. Stocké dans
-                                    config.placeholder, affiché tel quel côté
-                                    visiteur ("Ta réponse…" par défaut). */}
-                                <div className="absolute top-3 left-4 right-4">
-                                  <InlineEdit value={typeof cfg.placeholder === "string" ? cfg.placeholder : ""} onChange={(v) => updateQuestionConfig(qi, { placeholder: v.trim() ? v : null })} className="text-base text-muted-foreground/70 italic" placeholder={t("previewFreeTextPh")} />
+                                    2026, passé en éditeur RICHE le 31 : même
+                                    éditeur que les autres textes, taille /
+                                    police / alignement compris). Stocké en
+                                    HTML dans config.placeholder, rendu en
+                                    overlay côté visiteur ("Ta réponse…" par
+                                    défaut). Aligné à gauche par défaut comme
+                                    le champ visiteur. */}
+                                <div className="absolute top-3 left-4 right-4 text-left">
+                                  <RichTextEdit value={typeof cfg.placeholder === "string" ? cfg.placeholder : ""} onChange={(v) => updateQuestionConfig(qi, { placeholder: stripHtml(v).trim() ? v : null })} onGenderize={genderize} availableVars={personalizationVars} previewTransform={previewInterpolate} className="text-base text-muted-foreground/70" placeholder={t("previewFreeTextPh")} />
                                 </div>
                               </div>
                               <div className="flex items-center justify-between gap-2">

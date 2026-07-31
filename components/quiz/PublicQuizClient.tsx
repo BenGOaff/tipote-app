@@ -2830,15 +2830,32 @@ export default function PublicQuizClient({
       const maxLength = typeof cfg.maxLength === "number" ? cfg.maxLength : 1000;
       const draft = freeTextDraft || (currentAnswer?.kind === "text" ? currentAnswer.value : "");
       const trimmed = draft.trim();
+      // Placeholder personnalisé = HTML riche (même éditeur que les autres
+      // textes côté créateur). Un attribut placeholder natif ne sait pas
+      // rendre du HTML : on pose un overlay non interactif sur le textarea,
+      // masqué dès que le visiteur tape. Sans placeholder custom, on garde
+      // l'attribut natif avec le texte par défaut localisé.
+      const customPh = stripHtml(String(cfg.placeholder ?? "")).trim()
+        ? String(cfg.placeholder)
+        : "";
       answerBlock = (
         <div className="space-y-3">
-          <textarea
-            value={draft}
-            onChange={(e) => setFreeTextDraft(e.target.value.slice(0, maxLength))}
-            placeholder={String(cfg.placeholder ?? "").trim() || t.freeTextPlaceholder || "Your answer…"}
-            rows={5}
-            className="w-full rounded-xl border-2 border-border focus:border-primary focus:ring-0 px-4 py-3 text-base resize-none outline-none transition-colors"
-          />
+          <div className="relative">
+            <textarea
+              value={draft}
+              onChange={(e) => setFreeTextDraft(e.target.value.slice(0, maxLength))}
+              placeholder={customPh ? "" : t.freeTextPlaceholder || "Your answer…"}
+              rows={5}
+              className="w-full rounded-xl border-2 border-border focus:border-primary focus:ring-0 px-4 py-3 text-base resize-none outline-none transition-colors"
+            />
+            {customPh && !draft && (
+              <div
+                aria-hidden="true"
+                className="tipote-quiz-rich pointer-events-none absolute left-4 right-4 top-3 max-h-[7.5rem] overflow-hidden text-left text-base text-muted-foreground/70"
+                dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(customPh)) }}
+              />
+            )}
+          </div>
           <div className="flex justify-end text-xs text-muted-foreground">
             {draft.length}/{maxLength}
           </div>
