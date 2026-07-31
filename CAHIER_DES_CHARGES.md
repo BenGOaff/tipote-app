@@ -508,11 +508,11 @@ Espace dédié aux affiliés qui promeuvent Tiquiz et Tipote, servi sur `affilia
 
 Navigation : Vue d'ensemble, Promouvoir, Contenus, Essai gratuit, Support.
 
-- Vue d'ensemble : lien d'affiliation, gains, progression.
-- Promouvoir : liens trackés éditables par l'affilié (libellé, description, destination), le paramètre `?sa=` étant ajouté automatiquement. Persistance dans `affiliates.promo_overrides`.
-- Contenus : emails, posts réseaux, articles, visuels, tous éditables et personnalisables (le lien et le prénom de l'affilié sont injectés).
+- Vue d'ensemble : bloc "Ce que tu peux promouvoir" en tête de page, une carte par produit avec sa commission, son pitch, son propre lien tracké et le raccourci vers son matériel. L'Atelier du Quiz (70%) est affiché en premier et mis en avant, Tiquiz (40%) ensuite ; une note rappelle que vendre la formation entraîne l'outil. La carte Atelier n'apparaît qu'en français (formation vendue sur le marché FR). Suivent les statistiques, les gains, l'essai offert, le guide de lancement, les badges et le classement.
+- Promouvoir : les deux liens principaux (Atelier et Tiquiz) côte à côte en tête, puis les liens trackés éditables par l'affilié (libellé, description, destination), le paramètre `?sa=` étant ajouté automatiquement. Persistance dans `affiliates.promo_overrides`.
+- Contenus : emails, posts réseaux, articles, visuels, tous éditables et personnalisables (le lien et le prénom de l'affilié sont injectés). La séquence email Atelier du Quiz est présentée avant la séquence Tiquiz, avec son propre lien tracké injecté.
 - Studio visuels IA (`ImageStudio`, moteur Fabric.js) : l'IA lit le post et choisit le format et le style d'image, le visuel s'accroche automatiquement au post. Copy générée sans clé côté affilié.
-- Essai gratuit : accès Tipote Elite offert pour créer du contenu de promo authentique.
+- Essai gratuit : un mois Tiquiz Plus offert (octroyé côté base Tiquiz en service-role, retour au plan d'origine à J+30 par cron), pour créer du contenu de promo authentique.
 - CMS admin (`affiliate_contents`) : un espace admin gaté permet d'ajouter, éditer et publier articles, emails, posts et visuels, avec import des modèles par défaut et repli sur ces modèles tant que rien n'est publié.
 
 Auth affilié : après connexion, navigation dure (`window.location.assign`) pour que le SSR du layout affilié lise le cookie de session.

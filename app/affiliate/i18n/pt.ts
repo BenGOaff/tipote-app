@@ -41,7 +41,7 @@ export const PT: AffiliateDict = {
   login: {
     title_password: "Iniciar sessão",
     title_magic: "Receber um link mágico",
-    description_password: "Acede ao teu espaço de afiliado Tiquiz",
+    description_password: "Acede ao teu espaço de afiliado",
     description_magic: "Enviamos-te um link de utilização única por email",
     banner_not_affiliate:
       "Este email não é reconhecido como afiliado ativo. Regista-te primeiro através do botão na tua conta Systeme.io.",
@@ -116,10 +116,26 @@ export const PT: AffiliateDict = {
   },
   overview: {
     greeting: "Olá {name} 👋",
-    subtitle: "Aqui está a tua visão geral do programa de afiliação Tiquiz.",
+    subtitle: "Aqui está a tua visão geral do programa de afiliação.",
     link_card_title: "O teu link de afiliado",
     link_card_help:
       "O teu link principal para a página de venda Tiquiz. Mais abaixo encontras variantes por plano (gratuito, mensal, anual). Todos os links contêm o teu ID de rastreio ?sa={sa}.",
+    promote_title: "O que podes promover",
+    promote_subtitle:
+      "Dois produtos, dois links rastreados. Promove um, o outro, ou os dois.",
+    promote_atelier_kind: "A formação",
+    promote_atelier_badge: "O que mais paga",
+    promote_atelier_pitch:
+      "O percurso de 7 dias em que os teus indicados constroem um verdadeiro sistema de quiz: o lead magnet publicado, ligado ao emailing, e a campanha à volta. É o produto que mais te paga.",
+    promote_atelier_cta: "Emails e publicações prontos a enviar",
+    promote_tiquiz_kind: "A ferramenta",
+    promote_tiquiz_pitch:
+      "O software para criar quizzes. Nas subscrições, recebes a tua comissão nos primeiros 12 meses de cada cliente.",
+    promote_tiquiz_cta: "Todas as variantes de links",
+    promote_link_hint: "Link rastreado com o teu ID ?sa={sa}",
+    promote_combo_title: "A combinação inteligente",
+    promote_combo_body:
+      "Vender a formação é vender a ferramenta por trás, sem forçar: L'Atelier du Quiz ensina a criar quizzes COM o Tiquiz. Promove um, o outro, ou os dois à mesma audiência.",
     stat_clicks: "Cliques",
     stat_signups: "Inscrições",
     stat_sales: "Vendas",
@@ -154,9 +170,9 @@ export const PT: AffiliateDict = {
     guide_step_trial_title: "Ativar o teu mês de Tiquiz Plus",
     guide_step_trial_body: "1 mês grátis de Tiquiz Plus para testar a ferramenta e criar conteúdo de promo autêntico.",
     guide_step_email_title: "Envia o teu primeiro email",
-    guide_step_email_body: "Tira um email evergreen do separador Promover e envia-o à tua lista.",
+    guide_step_email_body: "Vai ao separador Conteúdos, tira um email da sequência de L'Atelier du Quiz ou da sequência Tiquiz, e envia-o à tua lista.",
     guide_step_post_title: "Publica a tua primeira publicação",
-    guide_step_post_body: "Escolhe uma publicação da sequência de redes e publica-a na conta mais ativa.",
+    guide_step_post_body: "No separador Conteúdos, escolhe uma publicação da sequência de redes e publica-a na conta mais ativa.",
     badges_title: "Os teus crachás",
     badges_subtitle: "Uma medalha por cada marco alcançado.",
     badges_progress: "{done}/{total} desbloqueados",
@@ -164,7 +180,7 @@ export const PT: AffiliateDict = {
     badge_first_click_title: "Primeiro clique",
     badge_first_click_body: "Alguém clicou no teu link - existes.",
     badge_first_signup_title: "Primeira inscrição",
-    badge_first_signup_body: "O teu primeiro lead trazido para o Tiquiz.",
+    badge_first_signup_body: "O teu primeiro indicado inscrito graças ao teu link.",
     badge_first_sale_title: "Primeira venda",
     badge_first_sale_body: "Cai a primeira comissão. A mais difícil de conseguir.",
     badge_tier_mid_title: "10 vendas",
@@ -232,7 +248,7 @@ export const PT: AffiliateDict = {
     conditions_lasttouch:
       "Last-touch: se um visitante clicou em vários links de afiliados, ganha o último clique antes da compra.",
     conditions_tiers:
-      "Comissão: 40% em cada venda Tiquiz que trouxeres.",
+      "Comissão: 40% em cada venda Tiquiz que trouxeres, e 70% em L'Atelier du Quiz (a formação, mercado francês).",
     see_full_terms: "Ver as condições completas",
     edit_button: "Editar",
     edit_reset: "Repor o modelo",
@@ -246,7 +262,7 @@ export const PT: AffiliateDict = {
   },
   revenus: {
     page_title: "Ganhos",
-    page_subtitle: "Acompanhamento das tuas comissões no Tiquiz.",
+    page_subtitle: "Acompanhamento das tuas comissões no Tiquiz e em L'Atelier du Quiz.",
     total_gains: "Ganhos totais",
     pending: "Pendente",
     approved: "Aprovadas",
@@ -395,11 +411,11 @@ export const PT: AffiliateDict = {
     step1_title: "Bem-vindo/a ao espaço de afiliados 👋",
     step1_subtitle: "1 minuto para perceber como funciona.",
     step1_body_1:
-      "Agora fazes parte do programa de afiliação Tiquiz. Ganhas 40% de comissão em cada venda Tiquiz gerada pelo teu link.",
+      "Agora fazes parte do programa de afiliação. Ganhas 70% em L'Atelier du Quiz (a formação) e 40% em cada venda Tiquiz (a ferramenta) gerada pelo teu link.",
     step1_body_2: "Aqui estão os 5 passos a saber para começar em força.",
     step2_title: "O teu link de afiliado rastreado",
     step2_subtitle: "A única coisa a recordar para ganhar comissões.",
-    step2_body_intro: "No separador Promover encontras o teu link principal: tipote.fr/part-tiquiz?sa=o_teu_id",
+    step2_body_intro: "No separador Promover encontras os teus dois links principais: o de L'Atelier du Quiz e o do Tiquiz, ambos com o teu ?sa=o_teu_id.",
     step2_bullet_cookie:
       "Cookie de 90 dias - mesmo que o cliente compre 3 meses após o clique, ganhas tu.",
     step2_bullet_lasttouch:
@@ -421,7 +437,7 @@ export const PT: AffiliateDict = {
       "É uma só vez na tua vida de afiliado. Reserva-o para quando tiveres 2 h para explorar a fundo. Separador Teste grátis no menu.",
     step5_title: "A tua comissão",
     step5_subtitle: "Simples e clara.",
-    step5_body_intro: "Ganhas 40% em cada venda Tiquiz que trouxeres, subscrições incluídas (primeiros 12 meses).",
+    step5_body_intro: "Ganhas 70% em cada venda de L'Atelier du Quiz, e 40% em cada venda Tiquiz que trouxeres, subscrições incluídas (primeiros 12 meses).",
     step5_tier_low: "0-9 vendas",
     step5_tier_mid: "10-24 vendas",
     step5_tier_high: "25+ vendas",

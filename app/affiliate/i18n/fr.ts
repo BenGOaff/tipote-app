@@ -42,7 +42,7 @@ export const FR: AffiliateDict = {
   login: {
     title_password: "Connexion",
     title_magic: "Recevoir un lien magique",
-    description_password: "Accède à ton espace affilié Tiquiz",
+    description_password: "Accède à ton espace affilié",
     description_magic: "On t'envoie un lien à usage unique par email",
     banner_not_affiliate:
       "Cet email n'est pas reconnu comme un affilié actif. Inscris-toi d'abord via le bouton dans ton compte Systeme.io.",
@@ -117,10 +117,26 @@ export const FR: AffiliateDict = {
   },
   overview: {
     greeting: "Bonjour {name} 👋",
-    subtitle: "Voici ta vue d'ensemble du programme d'affiliation Tiquiz.",
+    subtitle: "Voici ta vue d'ensemble du programme d'affiliation.",
     link_card_title: "Ton lien d'affiliation",
     link_card_help:
       "Ton lien principal vers la page de vente Tiquiz. Plus bas, tu trouves les variantes par plan (gratuit, mensuel, annuel). Tous ces liens sont tagués avec ton identifiant ?sa={sa}.",
+    promote_title: "Ce que tu peux promouvoir",
+    promote_subtitle:
+      "Deux produits, deux liens trackés. À toi de choisir celui que tu mets en avant, ou les deux.",
+    promote_atelier_kind: "La formation",
+    promote_atelier_badge: "Le plus rentable",
+    promote_atelier_pitch:
+      "Le parcours en 7 jours qui fait construire à tes filleuls un vrai système de quiz : leur lead-magnet publié, connecté à leur emailing, et la campagne autour. C'est le produit qui te rapporte le plus.",
+    promote_atelier_cta: "Emails et posts prêts à envoyer",
+    promote_tiquiz_kind: "L'outil",
+    promote_tiquiz_pitch:
+      "Le logiciel de création de quiz. Sur les abonnements, tu touches ta commission sur les 12 premiers mois de chaque client.",
+    promote_tiquiz_cta: "Toutes les variantes de liens",
+    promote_link_hint: "Lien tracké avec ton identifiant ?sa={sa}",
+    promote_combo_title: "Le combo malin",
+    promote_combo_body:
+      "Vendre la formation, c'est vendre l'outil derrière, sans forcer : l'Atelier du Quiz apprend à créer des quiz AVEC Tiquiz. Tu peux promouvoir l'un, l'autre, ou les deux à la même audience.",
     stat_clicks: "Clics",
     stat_signups: "Inscriptions",
     stat_sales: "Ventes",
@@ -156,9 +172,9 @@ export const FR: AffiliateDict = {
     guide_step_trial_title: "Activer ton mois Tiquiz Plus",
     guide_step_trial_body: "1 mois Tiquiz Plus offert pour tester l'outil et créer du contenu de promo authentique.",
     guide_step_email_title: "Envoyer ton 1er email",
-    guide_step_email_body: "Sors un email evergreen depuis l'onglet Promouvoir et envoie-le à ta liste.",
+    guide_step_email_body: "Va dans l'onglet Contenus, prends un email de la séquence Atelier du Quiz ou de la séquence Tiquiz, et envoie-le à ta liste.",
     guide_step_post_title: "Publier ton 1er post",
-    guide_step_post_body: "Choisis un post de la séquence réseaux et publie-le sur ton compte le plus actif.",
+    guide_step_post_body: "Dans l'onglet Contenus, choisis un post de la séquence réseaux et publie-le sur ton compte le plus actif.",
     badges_title: "Tes badges",
     badges_subtitle: "Une médaille pour chaque palier franchi.",
     badges_progress: "{done}/{total} débloqués",
@@ -166,7 +182,7 @@ export const FR: AffiliateDict = {
     badge_first_click_title: "Premier clic",
     badge_first_click_body: "Quelqu'un a cliqué sur ton lien - tu existes.",
     badge_first_signup_title: "Première inscription",
-    badge_first_signup_body: "Ton premier lead ramené sur Tiquiz.",
+    badge_first_signup_body: "Ton premier filleul inscrit grâce à ton lien.",
     badge_first_sale_title: "Première vente",
     badge_first_sale_body: "La première commission qui tombe. La plus dure à décrocher.",
     badge_tier_mid_title: "10 ventes",
@@ -402,11 +418,11 @@ export const FR: AffiliateDict = {
     step1_title: "Bienvenue dans l'espace affilié 👋",
     step1_subtitle: "1 minute pour comprendre comment ça marche.",
     step1_body_1:
-      "Tu fais maintenant partie du programme d'affiliation Tiquiz. Tu touches 40% de commission sur chaque vente Tiquiz générée par ton lien (et 70% sur L'Atelier du Quiz).",
+      "Tu fais maintenant partie du programme d'affiliation. Tu touches 70% sur L'Atelier du Quiz (la formation) et 40% sur chaque vente Tiquiz (l'outil) générée par ton lien.",
     step1_body_2: "Voici les 5 étapes pour démarrer en force.",
     step2_title: "Ton lien d'affiliation tracké",
     step2_subtitle: "Le seul truc à retenir pour toucher tes commissions.",
-    step2_body_intro: "Sur Promouvoir, tu trouves ton lien principal : tipote.fr/part-tiquiz?sa=ton_id",
+    step2_body_intro: "Sur Promouvoir, tu trouves tes deux liens principaux : celui de L'Atelier du Quiz et celui de Tiquiz, tous les deux tagués ?sa=ton_id.",
     step2_bullet_cookie:
       "Cookie 90 jours - même si le client achète 3 mois après son clic, c'est toi qui touches.",
     step2_bullet_lasttouch:
@@ -429,7 +445,7 @@ export const FR: AffiliateDict = {
       "C'est une seule fois dans ta vie d'affilié. Réserve-le pour quand tu auras 2h devant toi pour explorer à fond. Onglet Essai gratuit dans la nav.",
     step5_title: "Ta commission",
     step5_subtitle: "Simple et claire.",
-    step5_body_intro: "Tu touches 40% sur chaque vente Tiquiz que tu ramènes, abonnements inclus (12 premiers mois).",
+    step5_body_intro: "Tu touches 70% sur chaque vente de L'Atelier du Quiz, et 40% sur chaque vente Tiquiz que tu ramènes, abonnements inclus (12 premiers mois).",
     step5_tier_low: "0-9 ventes",
     step5_tier_mid: "10-24 ventes",
     step5_tier_high: "25+ ventes",

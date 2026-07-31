@@ -5,8 +5,9 @@
 // désormais dans /contenus.
 
 import { redirect } from "next/navigation";
-import { Link2, FileText, ExternalLink, AlertTriangle } from "lucide-react";
+import { Link2, FileText, ExternalLink, AlertTriangle, GraduationCap } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 import { getAffiliateSession } from "@/lib/affiliate/session";
@@ -83,6 +84,13 @@ export default async function PromouvoirPage({
   // depuis la table (defaut /part-tiquiz).
   const mainPath = await getLinkPath("tiquiz_main");
   const baseLink = buildAffiliateLink(market, mainPath, session.sa);
+  // Lien Atelier du Quiz (70%) mis au meme niveau que le lien Tiquiz en tete
+  // de page (Bene 31 juillet 2026). Hors marche FR, le slug a ete retire
+  // plus haut : on n'affiche alors que le lien Tiquiz.
+  const atelierAvailable = pathBySlug.has("atelier");
+  const atelierLink = atelierAvailable
+    ? buildAffiliateLink(market, pathBySlug.get("atelier") as string, session.sa)
+    : null;
   // Articles de blog du marché courant — 20 derniers, antéchrono. Best-effort :
   // si le feed est down, on retourne tableau vide et la section n'affiche rien.
   const blogMarket: "fr" | "en" = market === "en" ? "en" : "fr";
@@ -126,18 +134,42 @@ export default async function PromouvoirPage({
         {interpolate(t.promouvoir.market_hint, { market: localeLabel(market) })}
       </p>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Link2 className="h-4 w-4 text-primary" />
-            {t.promouvoir.main_link_title}
-          </CardTitle>
-          <CardDescription>{t.promouvoir.main_link_description}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <AffiliateLinkCopy url={baseLink} />
-        </CardContent>
-      </Card>
+      <div className={`grid gap-4 ${atelierLink ? "md:grid-cols-2" : ""}`}>
+        {atelierLink && (
+          <Card className="border-primary bg-primary/5">
+            <CardHeader>
+              <div className="flex items-center justify-between gap-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <GraduationCap className="h-4 w-4 text-primary" />
+                  L&apos;Atelier du Quiz
+                </CardTitle>
+                <Badge variant="default" className="text-sm px-2.5">70%</Badge>
+              </div>
+              <CardDescription>{t.overview.promote_atelier_pitch}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AffiliateLinkCopy url={atelierLink} />
+            </CardContent>
+          </Card>
+        )}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between gap-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Link2 className="h-4 w-4 text-primary" />
+                {atelierLink ? "Tiquiz" : t.promouvoir.main_link_title}
+              </CardTitle>
+              {atelierLink && <Badge variant="secondary" className="text-sm px-2.5">40%</Badge>}
+            </div>
+            <CardDescription>
+              {atelierLink ? t.overview.promote_tiquiz_pitch : t.promouvoir.main_link_description}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <AffiliateLinkCopy url={baseLink} />
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Garde-fou Bene 8 juin 2026 : l'URL "nue" tipote.fr/tiquiz n'est
           PAS taggee affiliation cote Systeme.io, donc un affilie qui la

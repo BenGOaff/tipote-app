@@ -128,6 +128,21 @@ export type AffiliateDict = {
     subtitle: string;
     link_card_title: string;
     link_card_help: string; // explication "?sa=" partout
+    // Bloc "Ce que tu peux promouvoir" : une carte par produit, avec son
+    // propre lien tracké. L'Atelier (70%) passe devant Tiquiz (40%) car
+    // c'est le produit prioritaire côté stratégie.
+    promote_title: string;
+    promote_subtitle: string;
+    promote_atelier_kind: string; // "La formation"
+    promote_atelier_badge: string; // "Le plus rentable"
+    promote_atelier_pitch: string;
+    promote_atelier_cta: string;
+    promote_tiquiz_kind: string; // "L'outil"
+    promote_tiquiz_pitch: string;
+    promote_tiquiz_cta: string;
+    promote_link_hint: string; // "Lien tracké avec ton ?sa={sa}"
+    promote_combo_title: string;
+    promote_combo_body: string;
     stat_clicks: string;
     stat_signups: string;
     stat_sales: string;
@@ -139,8 +154,8 @@ export type AffiliateDict = {
     tier_current: string; // @deprecated
     tier_remaining: string; // @deprecated
     tier_current_badge: string; // @deprecated
-    commission_title: string; // "Ta commission"
-    commission_tiquiz_desc: string; // description du taux Tiquiz 40%
+    commission_title: string; // @deprecated (remplacé par le bloc promote_*)
+    commission_tiquiz_desc: string; // @deprecated (idem)
     coming_soon: string;
     trial_cta_title: string;
     trial_cta_description: string;

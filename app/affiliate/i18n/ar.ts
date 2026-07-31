@@ -42,7 +42,7 @@ export const AR: AffiliateDict = {
   login: {
     title_password: "تسجيل الدخول",
     title_magic: "احصل على رابط سحري",
-    description_password: "ادخل إلى مساحتك كمسوّق Tiquiz",
+    description_password: "ادخل إلى مساحتك كمسوّق",
     description_magic: "نرسل لك رابطًا للاستخدام مرة واحدة عبر البريد",
     banner_not_affiliate:
       "هذا البريد غير معروف كمسوّق نشط. سجّل أولًا عبر الزر في حسابك على Systeme.io.",
@@ -117,10 +117,25 @@ export const AR: AffiliateDict = {
   },
   overview: {
     greeting: "مرحبًا {name} 👋",
-    subtitle: "نظرة عامة على برنامج التسويق بالعمولة Tiquiz.",
+    subtitle: "نظرة عامة على برنامج التسويق بالعمولة.",
     link_card_title: "رابط التسويق الخاص بك",
     link_card_help:
       "رابطك الرئيسي إلى صفحة بيع Tiquiz. تجد أدناه نسخًا حسب الخطة (المجانية، الشهرية، السنوية). كل الروابط تحتوي على معرّف التتبع الخاص بك ?sa={sa}.",
+    promote_title: "ما يمكنك الترويج له",
+    promote_subtitle: "منتجان، رابطان متتبَّعان. روّج لأحدهما، أو للآخر، أو لكليهما.",
+    promote_atelier_kind: "التدريب",
+    promote_atelier_badge: "الأعلى ربحًا",
+    promote_atelier_pitch:
+      "مسار من 7 أيام يبني فيه من تحيلهم نظام اختبارات حقيقيًا: مغناطيس عملاء منشور، موصول ببريدهم التسويقي، مع الحملة المحيطة به. هذا المنتج هو الأعلى عائدًا لك.",
+    promote_atelier_cta: "رسائل ومنشورات جاهزة للإرسال",
+    promote_tiquiz_kind: "الأداة",
+    promote_tiquiz_pitch:
+      "برنامج إنشاء الاختبارات. في الاشتراكات، تكسب عمولتك على الـ 12 شهراً الأولى لكل عميل.",
+    promote_tiquiz_cta: "كل نسخ الروابط",
+    promote_link_hint: "رابط متتبَّع يحمل معرّفك ?sa={sa}",
+    promote_combo_title: "المزيج الذكي",
+    promote_combo_body:
+      "بيع التدريب هو بيع للأداة التي خلفه، بلا ضغط: L'Atelier du Quiz يعلّم إنشاء الاختبارات بواسطة Tiquiz. روّج لأحدهما أو لكليهما أمام الجمهور نفسه.",
     stat_clicks: "النقرات",
     stat_signups: "التسجيلات",
     stat_sales: "المبيعات",
@@ -156,9 +171,9 @@ export const AR: AffiliateDict = {
     guide_step_trial_title: "فعّل شهر Tiquiz Plus",
     guide_step_trial_body: "شهر مجاني من Tiquiz Plus لاختبار الأداة وإنشاء محتوى ترويجي أصيل.",
     guide_step_email_title: "أرسل بريدك الأول",
-    guide_step_email_body: "خذ بريدًا دائمًا من تبويب الترويج وأرسله إلى قائمتك.",
+    guide_step_email_body: "ادخل إلى تبويب المحتويات، اختر رسالة من سلسلة L'Atelier du Quiz أو من سلسلة Tiquiz، وأرسلها إلى قائمتك.",
     guide_step_post_title: "انشر منشورك الأول",
-    guide_step_post_body: "اختر منشورًا من سلسلة الشبكات وانشره على حسابك الأكثر نشاطًا.",
+    guide_step_post_body: "في تبويب المحتويات، اختر منشورًا من سلسلة الشبكات وانشره على حسابك الأكثر نشاطًا.",
     badges_title: "أوسمتك",
     badges_subtitle: "وسام عن كل إنجاز تتجاوزه.",
     badges_progress: "{done}/{total} مفتوحة",
@@ -166,7 +181,7 @@ export const AR: AffiliateDict = {
     badge_first_click_title: "النقرة الأولى",
     badge_first_click_body: "نقر أحدهم على رابطك - أنت موجود.",
     badge_first_signup_title: "التسجيل الأول",
-    badge_first_signup_body: "أول عميل محتمل أحضرته إلى Tiquiz.",
+    badge_first_signup_body: "أول مسجَّل بفضل رابطك.",
     badge_first_sale_title: "البيع الأول",
     badge_first_sale_body: "تسقط أول عمولة. الأصعب تحقيقًا.",
     badge_tier_mid_title: "10 مبيعات",
@@ -234,7 +249,7 @@ export const AR: AffiliateDict = {
     conditions_lasttouch:
       "آخر لمسة: إذا نقر الزائر على عدة روابط مسوّقين، تفوز النقرة الأخيرة قبل الشراء.",
     conditions_tiers:
-      "العمولة: 40% على كل بيع Tiquiz تجلبه.",
+      "العمولة: 40% على كل بيع Tiquiz تجلبه، و70% على L'Atelier du Quiz (التدريب، السوق الفرنسي).",
     see_full_terms: "عرض الشروط الكاملة",
     edit_button: "تعديل",
     edit_reset: "إعادة ضبط النموذج",
@@ -248,7 +263,7 @@ export const AR: AffiliateDict = {
   },
   revenus: {
     page_title: "الأرباح",
-    page_subtitle: "تتبّع عمولاتك على Tiquiz.",
+    page_subtitle: "تتبّع عمولاتك على Tiquiz وعلى L'Atelier du Quiz.",
     total_gains: "إجمالي الأرباح",
     pending: "قيد الانتظار",
     approved: "معتمَدة",
@@ -397,11 +412,11 @@ export const AR: AffiliateDict = {
     step1_title: "مرحبًا بك في مساحة المسوّقين 👋",
     step1_subtitle: "دقيقة واحدة لفهم آلية العمل.",
     step1_body_1:
-      "أنت الآن جزء من برنامج التسويق بالعمولة Tiquiz. تكسب عمولة 40% على كل بيع Tiquiz يولّده رابطك.",
+      "أنت الآن جزء من برنامج التسويق بالعمولة. تكسب 70% على L'Atelier du Quiz (التدريب) و40% على كل بيع Tiquiz (الأداة) يولّده رابطك.",
     step1_body_2: "إليك 5 خطوات يجب معرفتها لانطلاقة قوية.",
     step2_title: "رابط التسويق المتتبَّع الخاص بك",
     step2_subtitle: "الشيء الوحيد الذي يجب تذكّره لكسب العمولات.",
-    step2_body_intro: "في تبويب الترويج تجد رابطك الرئيسي: tipote.fr/part-tiquiz?sa=معرّفك",
+    step2_body_intro: "في تبويب الترويج تجد رابطيك الرئيسيين: رابط L'Atelier du Quiz ورابط Tiquiz، وكلاهما يحمل ?sa=معرّفك.",
     step2_bullet_cookie:
       "كوكي 90 يومًا - حتى لو اشترى العميل بعد 3 أشهر من نقرته، تكسب أنت.",
     step2_bullet_lasttouch:
@@ -423,7 +438,7 @@ export const AR: AffiliateDict = {
       "إنها مرة واحدة في حياتك كمسوّق. احتفظ بها لوقت تملك فيه ساعتين للاستكشاف بعمق. تبويب تجربة مجانية في القائمة.",
     step5_title: "عمولتك",
     step5_subtitle: "بسيطة وواضحة.",
-    step5_body_intro: "تكسب 40% على كل بيع Tiquiz تجلبه، بما في ذلك الاشتراكات (الـ 12 شهراً الأولى).",
+    step5_body_intro: "تكسب 70% على كل بيع لـ L'Atelier du Quiz، و40% على كل بيع Tiquiz تجلبه، بما في ذلك الاشتراكات (الـ 12 شهراً الأولى).",
     step5_tier_low: "0-9 مبيعات",
     step5_tier_mid: "10-24 مبيعة",
     step5_tier_high: "25+ مبيعة",
