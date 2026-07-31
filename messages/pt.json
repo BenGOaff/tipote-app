@@ -1437,7 +1437,7 @@
       "danger": {
         "title": "Zona de perigo",
         "subtitle": "Reinicializar o meu Tipote",
-        "desc": "Mudaste de rumo ou perdeste-te pelo caminho? Queres recomeçar do zero com o teu Tipote e lançá-lo noutra direção? Clica neste botão. Atenção: todos os conteúdos, todas as tarefas e todas as personalizações criadas desde a tua chegada serão apagadas, voltas ao zero. É definitivo, não poderás voltar atrás.",
+        "desc": "Mudaste de rumo ou perdeste-te pelo caminho? Queres recomeçar do zero com o teu Tipote e lançá-lo noutra direção? Clica neste botão. Atenção: todos os conteúdos, todas as tarefas e todas as personalizações criadas desde a tua chegada serão apagadas, voltas ao zero. É definitivo, não poderás voltar atrás. Se tiveres vários Tipote (projetos), só o que estás a usar agora é reiniciado: os outros não são tocados.",
         "reset": "Reinicializar o meu Tipote",
         "resetting": "A reinicializar…"
       },
@@ -1617,7 +1617,7 @@
       "personaEnriched": "Persona enriquecido com sucesso",
       "noResult": "Nenhum resultado recebido",
       "legalUrlsSaved": "URLs legais guardadas",
-      "resetConfirm": "⚠️ Reinicializar o teu Tipote?\n\nTodos os conteúdos, todas as tarefas e todas as personalizações serão apagados. É definitivo.",
+      "resetConfirm": "⚠️ Reiniciar este Tipote?\n\nTodos os conteúdos, tarefas e personalizações DESTE projeto serão apagados. Se tiveres vários Tipote, os outros não são tocados. É definitivo.",
       "resetCancelled": "Reinicialização cancelada",
       "resetDone": "Tipote reinicializado ✅"
     },
