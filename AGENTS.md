@@ -355,3 +355,34 @@ un champ déjà cassé se répare tout seul au premier clic sur une taille.
 **Ne jamais** revenir à un `:scope >` ni supposer que le DOM d'un
 contentEditable ressemble à ce qu'on y a écrit. Le module Tiquiz est
 jumeau : toute correction ici se porte là-bas.
+
+## Quiz scoré : les contrôles "profil" ne s'appliquent PAS (drame Véronique 1er août 2026)
+
+Deux mécaniques d'attribution du résultat coexistent, et elles ne se
+mélangent jamais :
+
+| Mode | Le résultat est choisi par | Ce qui compte sur l'option |
+|---|---|---|
+| profils (défaut) | `option.result_index` le plus voté | `result_index` |
+| scoring | la TRANCHE `[min_score, max_score]` | `points` |
+
+En scoring, `result_index` ne veut rien dire. Or deux analyses de
+l'éditeur sont bâties dessus :
+- `resultCoverage` ("combien de questions mènent à ce résultat") ;
+- `tieAnalysis` (ex-æquo entre profils).
+
+Sur un quiz scoré, elles répondaient zéro pour tout le monde, d'où le
+bandeau rouge **"Ce résultat ne peut jamais être attribué"** sur un quiz
+parfaitement fonctionnel : Véronique testait, obtenait le bon résultat,
+et voyait quand même l'alerte. Deux jours perdus, et un bouton
+"Rééquilibrer avec l'IA" qui aurait réécrit des `result_index` inutiles.
+
+**Règle : les deux analyses sortent en `ok` / vide dès que
+`quiz.mode === "scoring"`.** Le contrôle équivalent en scoring existe
+déjà et lui est correct : `trancheCoverage` (trous et chevauchements
+entre les tranches, comparés à la plage réellement atteignable via
+`computeReachableRange`).
+
+**Avant d'ajouter un contrôle de cohérence sur les résultats**, se
+demander de quelle mécanique il parle, et le gater sur `isScoring`. Le
+module Tipote est jumeau : toute correction ici se porte là-bas.

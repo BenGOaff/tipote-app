@@ -2199,6 +2199,24 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     const N = editQuestions.length;
     const R = Math.max(1, editResults.length);
     const expected = Math.max(1, Math.ceil(N / R));
+    // MODE SCORING : le résultat est choisi par la TRANCHE DE POINTS, pas
+    // par le `result_index` des options (qui ne sert qu'aux quiz à
+    // profils). Compter "combien de questions mènent à ce résultat" n'a
+    // donc aucun sens ici, et répondait systématiquement zéro -> bandeau
+    // rouge "ce résultat ne peut jamais être attribué" sur des quiz
+    // parfaitement fonctionnels, alors que le test donnait le bon
+    // résultat (drame Véronique, 1er août 2026).
+    // Le contrôle équivalent en scoring existe déjà juste en dessous :
+    // `trancheCoverage`, qui compare les tranches à la plage réellement
+    // atteignable et signale trous et chevauchements.
+    if (isScoring) {
+      return editResults.map(() => ({
+        questionsLeading: N,
+        totalQuestions: N,
+        expected,
+        severity: "ok" as ResultCoverageSeverity,
+      }));
+    }
     return editResults.map((_, ri) => {
       const questionsLeading = editQuestions.reduce(
         (acc, q) => acc + (q.options.some((o) => o.result_index === ri) ? 1 : 0),
@@ -2208,10 +2226,16 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
         questionsLeading === 0 ? "danger" : questionsLeading < expected ? "warn" : "ok";
       return { questionsLeading, totalQuestions: N, expected, severity };
     });
-  }, [editQuestions, editResults]);
+  }, [editQuestions, editResults, isScoring]);
 
   // Analyseur d'ex-æquo (Adeline, 19 mai 2026). Cf. lib/quizTieAnalysis.ts.
   const tieAnalysis = useMemo(() => {
+    // Même raison qu'au-dessus : en scoring, deux résultats ne peuvent pas
+    // être ex-æquo par `result_index`, ils se départagent par tranche de
+    // points. L'analyse ne s'applique qu'aux quiz à profils.
+    if (isScoring) {
+      return { conflicts: [], totalCombinations: 0, analyzed: 0, truncated: false, hasSkipped: false };
+    }
     return analyzeTies(
       editQuestions.map((q) => ({
         options: q.options.map((o) => ({ result_index: o.result_index, points: o.points })),
@@ -2219,7 +2243,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       })),
       editResults.length,
     );
-  }, [editQuestions, editResults]);
+  }, [editQuestions, editResults, isScoring]);
 
   // Couverture des tranches (mode scoring, Véronique juillet 2026) :
   // trous et chevauchements entre les [min_score, max_score] des
