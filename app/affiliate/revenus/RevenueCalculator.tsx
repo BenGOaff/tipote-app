@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { Slider } from "@/components/ui/slider";
+import { Button } from "@/components/ui/button";
 import { useDict } from "../i18n/context";
 import { interpolate } from "../i18n";
 
@@ -11,12 +12,15 @@ const ATELIER_RATE = 0.7;
 const TIQUIZ_RATE = 0.4;
 
 // Prix publics réels. On n'invente aucun chiffre : l'Atelier du Quiz est
-// un paiement unique à 47 €, l'abonnement Tiquiz mensuel est à 9 €/mois.
-// Les autres plans Tiquiz (annuel, Plus) rapportent davantage : la
-// simulation prend volontairement le plan le moins cher pour rester
-// conservative.
+// un paiement unique à 47 €. Tiquiz a deux niveaux mensuels : l'accès
+// simple à 9 € (solo, un seul projet) et le Plus à 29 € (agence,
+// freelance qui vend des prestations de quiz, multi-projets).
+// Les formules annuelles (90 € et 290 €) rapportent une commission
+// légèrement plus faible sur douze mois : on calcule sur le mensuel.
 const ATELIER_PRICE_EUR = 47;
-const TIQUIZ_MONTHLY_EUR = 9;
+const TIQUIZ_PRICE_EUR = { simple: 9, plus: 29 } as const;
+
+type TiquizPlan = keyof typeof TIQUIZ_PRICE_EUR;
 
 // Un abonné ramené au mois m rapporte une commission de m à m+11. Sur une
 // fenêtre de 12 mois avec un rythme constant, ça fait 12+11+…+1 = 78 mois
@@ -36,19 +40,21 @@ export function RevenueCalculator({ showAtelier = true }: { showAtelier?: boolea
   const t = useDict();
   const [atelierSales, setAtelierSales] = useState(showAtelier ? 3 : 0);
   const [tiquizSubs, setTiquizSubs] = useState(3);
+  const [plan, setPlan] = useState<TiquizPlan>("simple");
+  const tiquizPrice = TIQUIZ_PRICE_EUR[plan];
 
   const projected = useMemo(() => {
     const atelierMonth = showAtelier ? atelierSales * ATELIER_PRICE_EUR * ATELIER_RATE : 0;
-    const tiquizMonth = tiquizSubs * TIQUIZ_MONTHLY_EUR * TIQUIZ_RATE;
+    const tiquizMonth = tiquizSubs * tiquizPrice * TIQUIZ_RATE;
     const atelierYear = atelierMonth * 12;
-    const tiquizYear = tiquizSubs * TIQUIZ_MONTHLY_EUR * TIQUIZ_RATE * RECURRING_MONTHS_OVER_YEAR;
+    const tiquizYear = tiquizSubs * tiquizPrice * TIQUIZ_RATE * RECURRING_MONTHS_OVER_YEAR;
     return {
       month: atelierMonth + tiquizMonth,
       year: atelierYear + tiquizYear,
       atelierYear,
       tiquizYear,
     };
-  }, [atelierSales, tiquizSubs, showAtelier]);
+  }, [atelierSales, tiquizSubs, tiquizPrice, showAtelier]);
 
   return (
     <div className="space-y-6">
@@ -65,6 +71,25 @@ export function RevenueCalculator({ showAtelier = true }: { showAtelier?: boolea
         value={tiquizSubs}
         onChange={setTiquizSubs}
       />
+
+      {/* Deux niveaux Tiquiz : l'accès simple (solo, un projet) et le Plus
+          (agence, freelance qui vend des prestations, multi-projets). Le
+          Plus triple la commission récurrente, l'affilié doit le voir. */}
+      <div>
+        <p className="text-sm font-medium mb-2">{t.revenus.calculator_tiquiz_plan}</p>
+        <div className="flex flex-wrap gap-2">
+          {(["simple", "plus"] as const).map((p) => (
+            <Button
+              key={p}
+              size="sm"
+              variant={plan === p ? "default" : "outline"}
+              onClick={() => setPlan(p)}
+            >
+              {p === "simple" ? t.revenus.calculator_plan_simple : t.revenus.calculator_plan_plus}
+            </Button>
+          ))}
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-4 border-t border-border">
         <Stat label={t.revenus.calculator_month_total} value={eur(projected.month)} highlight />
@@ -85,16 +110,16 @@ export function RevenueCalculator({ showAtelier = true }: { showAtelier?: boolea
           {showAtelier
             ? interpolate(t.revenus.calculator_per_unit, {
                 atelierUnit: eur(ATELIER_PRICE_EUR * ATELIER_RATE, 2),
-                tiquizUnit: eur(TIQUIZ_MONTHLY_EUR * TIQUIZ_RATE * 12, 2),
+                tiquizUnit: eur(tiquizPrice * TIQUIZ_RATE * 12, 2),
               })
             : interpolate(t.revenus.calculator_per_unit_tiquiz, {
-                tiquizUnit: eur(TIQUIZ_MONTHLY_EUR * TIQUIZ_RATE * 12, 2),
+                tiquizUnit: eur(tiquizPrice * TIQUIZ_RATE * 12, 2),
               })}
         </p>
         <p className="text-xs text-muted-foreground leading-relaxed">
           {interpolate(t.revenus.calculator_assumptions, {
             atelier: eur(ATELIER_PRICE_EUR),
-            tiquiz: eur(TIQUIZ_MONTHLY_EUR),
+            tiquiz: eur(tiquizPrice),
           })}
         </p>
       </div>

@@ -289,6 +289,9 @@ export type AffiliateDict = {
     calculator_subtitle: string;
     calculator_atelier_sales: string;
     calculator_tiquiz_subs: string;
+    calculator_tiquiz_plan: string;
+    calculator_plan_simple: string; // "Accès simple (9 €/mois)"
+    calculator_plan_plus: string; // "Plus (29 €/mois)"
     calculator_month_total: string;
     calculator_year_total: string;
     calculator_breakdown: string; // "dont {atelier} … et {tiquiz} …"
