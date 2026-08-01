@@ -61,7 +61,7 @@ export function SurveyResponsesTable({
   // puis filtre par recherche texte sur l'ensemble (identité + réponses).
   const rows = useMemo(() => {
     return leads.map((l) => {
-      const byQ = indexAnswers(l.answers);
+      const byQ = indexAnswers(l.answers, questions);
       const cells = questions.map((q, qi) => formatSurveyAnswer(q, byQ.get(qi), locale));
       const name = [l.first_name, l.last_name].filter(Boolean).join(" ").trim();
       const haystack = [name, l.email, l.phone, l.country, ...cells]

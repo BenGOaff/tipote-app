@@ -23,9 +23,13 @@ import {
   Tooltip,
 } from "recharts";
 import { stripHtml } from "@/lib/richText";
+import { buildQuestionPositions, indexAnswersByPosition } from "@/lib/quiz/questionIdentity";
 
 type SurveyOption = { text: string; result_index: number; image_url?: string | null };
 type SurveyQuestion = {
+  /** Identité stable : rattache les réponses à LA question, même après
+   *  une suppression ou un déplacement (cf. lib/quiz/questionIdentity.ts). */
+  id?: string;
   question_text: string;
   question_type: "multiple_choice" | "rating_scale" | "star_rating" | "free_text" | "image_choice" | "yes_no";
   config: Record<string, unknown>;
@@ -34,6 +38,7 @@ type SurveyQuestion = {
 
 type SurveyAnswer = {
   question_index: number;
+  question_id?: string | null;
   // Legacy single-choice path. Multi-select questions populate option_indices
   // instead — aggregation below treats them as one tally per picked option.
   option_index?: number;
@@ -68,15 +73,17 @@ function shortAxisLabel(s: string, max = 24): string {
 // question (rating_scale 0-10 / NPS, star_rating 1-5), pour que les axes
 // soient comparables sur une meme echelle 0..100.
 type RadarRow = { n: number; axis: string; label: string; value: number; avg: number; max: number };
-function buildRadarData(questions: SurveyQuestion[], leads: SurveyLead[]): RadarRow[] {
+function buildRadarData(
+  questions: SurveyQuestion[],
+  answersByLead: ReadonlyArray<Map<number, SurveyAnswer>>,
+): RadarRow[] {
   const rows: RadarRow[] = [];
   let n = 0;
   questions.forEach((q, qIdx) => {
     if (q.question_type !== "rating_scale" && q.question_type !== "star_rating") return;
     const values: number[] = [];
-    for (const l of leads) {
-      if (!Array.isArray(l.answers)) continue;
-      const a = l.answers.find((x) => x.question_index === qIdx);
+    for (const byPos of answersByLead) {
+      const a = byPos.get(qIdx);
       if (!a) continue;
       const v = q.question_type === "rating_scale" ? a.rating : a.stars;
       if (typeof v === "number" && Number.isFinite(v)) values.push(v);
@@ -118,9 +125,22 @@ export function SurveyTrends({
 }) {
   const t = useTranslations("survey");
 
+  // Identité stable (drame Adeline, 1er août 2026) : chaque réponse est
+  // rangée sous la POSITION ACTUELLE de sa question via son `question_id`.
+  // Sans ça, supprimer une question au milieu décalait toutes les réponses
+  // suivantes d'un cran dans toutes les cartes ci-dessous.
+  const positions = buildQuestionPositions(questions);
+  const answersByLead = leads.map((l) =>
+    indexAnswersByPosition(
+      Array.isArray(l.answers) ? l.answers : [],
+      positions,
+      questions.length,
+    ),
+  );
+
   // Radar agrege des questions de type note. Rendu seulement si >= 3 axes
   // (un radar a moins de 3 sommets est degenere / illisible).
-  const radarData = buildRadarData(questions, leads);
+  const radarData = buildRadarData(questions, answersByLead);
 
   if (leads.length === 0) {
     return (
@@ -222,7 +242,14 @@ export function SurveyTrends({
       )}
 
       {questions.map((q, qIdx) => (
-        <QuestionTrend key={qIdx} question={q} qIdx={qIdx} leads={leads} hideCounts={hideCounts} />
+        <QuestionTrend
+          key={q.id ?? qIdx}
+          question={q}
+          answers={answersByLead
+            .map((byPos) => byPos.get(qIdx))
+            .filter((a): a is SurveyAnswer => Boolean(a))}
+          hideCounts={hideCounts}
+        />
       ))}
     </div>
   );
@@ -230,20 +257,15 @@ export function SurveyTrends({
 
 function QuestionTrend({
   question,
-  qIdx,
-  leads,
+  answers,
   hideCounts,
 }: {
   question: SurveyQuestion;
-  qIdx: number;
-  leads: SurveyLead[];
+  /** Réponses DÉJÀ rattachées à cette question par identité stable. */
+  answers: SurveyAnswer[];
   hideCounts: boolean;
 }) {
   const t = useTranslations("survey");
-
-  const answers = leads
-    .map((l) => (Array.isArray(l.answers) ? l.answers.find((a) => a.question_index === qIdx) : null))
-    .filter((a): a is NonNullable<typeof a> => Boolean(a));
 
   const respondedCount = answers.length;
 

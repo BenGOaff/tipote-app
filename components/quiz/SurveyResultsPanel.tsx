@@ -114,7 +114,7 @@ export default function SurveyResultsPanel({
       date: l.created_at ? new Date(l.created_at).toLocaleDateString(locale ?? undefined) : "",
       flagged: !!l.flagged,
       answers: (() => {
-        const byQ = indexAnswers(l.answers);
+        const byQ = indexAnswers(l.answers, questions);
         return questions
           .map((q, qi) => ({
             q: stripHtml(String(q.question_text ?? "")).trim() || `Q${qi + 1}`,

@@ -8,6 +8,7 @@
 // existe mais en indices, pas en texte (drame Béné 22 juin 2026).
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { buildQuestionPositions, resolveQuestionPosition } from "@/lib/quiz/questionIdentity";
 
 export interface ResolvedAnswer {
   question_text: string;
@@ -16,6 +17,9 @@ export interface ResolvedAnswer {
 
 interface RawAnswer {
   question_index?: number;
+  /** Identité stable de la question (cf. lib/quiz/questionIdentity.ts).
+   *  Absent sur les réponses antérieures au 1er août 2026. */
+  question_id?: string | null;
   option_index?: number;
   option_indices?: number[];
   text?: string;
@@ -45,17 +49,23 @@ export async function resolveLeadAnswers(
 
   const { data: questions } = await supabase
     .from("quiz_questions")
-    .select("question_text, options, sort_order")
+    .select("id, question_text, options, sort_order")
     .eq("quiz_id", quizId)
-    .order("sort_order", { ascending: true });
+    .order("sort_order", { ascending: true })
+    .order("id", { ascending: true });
 
   if (!questions || questions.length === 0) return [];
 
+  // Identité stable : on rattache chaque réponse à SA question par id.
+  // Sans ça, une question supprimée au milieu affichait la réponse de Q6
+  // sous le libellé de Q5 dans la fiche lead (drame Adeline, 1er août 2026).
+  const positions = buildQuestionPositions(questions as Array<{ id?: string | null }>);
+
   const out: ResolvedAnswer[] = [];
   for (const a of raw as RawAnswer[]) {
-    const qi = typeof a?.question_index === "number" ? a.question_index : -1;
-    const q = qi >= 0 ? questions[qi] : null;
-    if (!q) continue;
+    const qi = resolveQuestionPosition(a, positions, questions.length);
+    const q = qi === null ? null : questions[qi];
+    if (!q || qi === null) continue;
 
     const questionText = strip(q.question_text) || `Question ${qi + 1}`;
     const options = Array.isArray(q.options) ? (q.options as Array<{ text?: string }>) : [];

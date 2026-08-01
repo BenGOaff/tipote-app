@@ -491,7 +491,12 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       const sanitized = incoming.map((q: any, i: number) => {
         const rawType = typeof q.question_type === "string" ? q.question_type : "multiple_choice";
         const question_type = ALLOWED_TYPES.has(rawType) ? rawType : "multiple_choice";
+        const incomingId = typeof q.id === "string" && UUID_RE.test(q.id) ? q.id : null;
         return {
+          // `incomingId` n'est PAS écrit en base : il sert uniquement à
+          // apparier la question envoyée par l'éditeur avec sa ligne
+          // existante (cf. plus bas). L'id en base ne change jamais.
+          incomingId,
           quiz_id: quizId,
           question_text: applyFrenchTypography(
             String(q.question_text ?? ""),
@@ -512,44 +517,83 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         };
       });
 
-      const { error: deleteErr } = await supabase
-        .from("quiz_questions")
-        .delete()
-        .eq("quiz_id", quizId);
-      if (deleteErr) {
-        return NextResponse.json(
-          { ok: false, error: "DELETE_FAILED", message: deleteErr.message },
-          { status: 500 },
-        );
+      // IDENTITÉ STABLE DES QUESTIONS (drame Adeline, 1er août 2026).
+      //
+      // Avant : delete-all + insert-all. Chaque sauvegarde régénérait tous
+      // les `quiz_questions.id`, donc rien ne pouvait relier un event de
+      // funnel ou une réponse de lead à la question qui l'avait produite.
+      // Une question supprimée AU MILIEU décalait tout l'historique
+      // postérieur, en silence.
+      //
+      // Maintenant : même stratégie que `quiz_results` juste en dessous —
+      // UPDATE des lignes déjà connues (l'id survit), INSERT des nouvelles,
+      // DELETE de celles que l'éditeur ne renvoie plus. L'id devient la clé
+      // d'appariement de toutes les statistiques (cf.
+      // lib/quiz/questionIdentity.ts).
+      const snapshotIds = new Set(
+        snapshotRows.map((r: any) => String(r?.id ?? "")).filter(Boolean),
+      );
+      const keptIds = new Set<string>();
+      const qToUpdate: Array<{ id: string; data: Record<string, unknown> }> = [];
+      const qToInsert: Record<string, unknown>[] = [];
+
+      for (const s of sanitized) {
+        const { incomingId, ...row } = s;
+        if (incomingId && snapshotIds.has(incomingId) && !keptIds.has(incomingId)) {
+          keptIds.add(incomingId);
+          qToUpdate.push({ id: incomingId, data: row });
+        } else {
+          // Question nouvelle (ou éditeur ancien qui ne renvoie pas d'id) :
+          // la base génère l'id, il sera durable dès la sauvegarde suivante.
+          qToInsert.push(row);
+        }
       }
 
-      if (sanitized.length > 0) {
-        const { error: insertErr } = await supabase.from("quiz_questions").insert(sanitized);
-        if (insertErr) {
-          console.error(`[quiz PATCH] Insert failed for quiz ${quizId}, attempting snapshot restore:`, insertErr.message);
-          if (snapshotRows.length > 0) {
-            const restorePayload = snapshotRows.map((r: any) => {
-              const { created_at: _ca, updated_at: _ua, ...rest } = r;
-              void _ca; void _ua;
-              return rest;
-            });
-            const { error: restoreErr } = await supabase.from("quiz_questions").insert(restorePayload);
-            if (restoreErr) {
-              console.error(`[quiz PATCH] CATASTROPHIC: snapshot restore also failed for quiz ${quizId}:`, restoreErr.message);
-              return NextResponse.json(
-                {
-                  ok: false,
-                  error: "INSERT_AND_RESTORE_FAILED",
-                  message: "Sauvegarde échouée et restauration aussi. Ton éditeur a la version actuelle — ne quitte pas la page et réessaie.",
-                  insert_error: insertErr.message,
-                  restore_error: restoreErr.message,
-                },
-                { status: 500 },
-              );
-            }
-          }
+      const qToDelete = snapshotRows
+        .map((r: any) => String(r?.id ?? ""))
+        .filter((id: string) => id && !keptIds.has(id));
+
+      for (const upd of qToUpdate) {
+        const { error: upErr } = await supabase
+          .from("quiz_questions")
+          .update(upd.data)
+          .eq("id", upd.id)
+          .eq("quiz_id", quizId);
+        if (upErr) {
+          // Aucune donnée perdue : les lignes non encore traitées sont
+          // intactes en base, l'éditeur garde sa version, un nouvel
+          // enregistrement repartira du bon état.
           return NextResponse.json(
-            { ok: false, error: "INSERT_FAILED_RESTORED", message: `Sauvegarde échouée (${insertErr.message}), ta version précédente a été restaurée.` },
+            { ok: false, error: "QUESTION_UPDATE_FAILED", message: upErr.message },
+            { status: 500 },
+          );
+        }
+      }
+
+      if (qToInsert.length > 0) {
+        const { error: insertErr } = await supabase.from("quiz_questions").insert(qToInsert);
+        if (insertErr) {
+          console.error(`[quiz PATCH] Question insert failed for quiz ${quizId}:`, insertErr.message);
+          return NextResponse.json(
+            {
+              ok: false,
+              error: "QUESTION_INSERT_FAILED",
+              message: `Sauvegarde échouée (${insertErr.message}). Tes questions existantes n'ont pas été touchées, réessaie.`,
+            },
+            { status: 500 },
+          );
+        }
+      }
+
+      if (qToDelete.length > 0) {
+        const { error: delErr } = await supabase
+          .from("quiz_questions")
+          .delete()
+          .in("id", qToDelete)
+          .eq("quiz_id", quizId);
+        if (delErr) {
+          return NextResponse.json(
+            { ok: false, error: "QUESTION_DELETE_FAILED", message: delErr.message },
             { status: 500 },
           );
         }

@@ -145,12 +145,72 @@ lignes brutes. Mieux vaut la donnée telle quelle qu'un écran vide.
 celui de Tiquiz : toute correction ici doit être portée là-bas, et
 réciproquement.
 
-**Ce qu'on ne peut PAS réparer :** une question supprimée ou insérée AU
-MILIEU décale les index des events postérieurs. Les questions sont
-supprimées puis réinsérées à chaque sauvegarde (PATCH /api/quiz/[id]),
-donc ni `id` ni `created_at` ne survivent pour réaligner l'historique.
-On n'invente pas : on n'affiche que ce qui correspond à une question
-vivante.
+## Identité stable des questions - RÈGLE UNIQUE (1er août 2026)
+
+Le recalage sur les questions vivantes (section ci-dessus) supprime la
+question fantôme mais ne réaligne rien : une question supprimée ou
+insérée AU MILIEU décale les index de tout l'historique postérieur. La
+correction définitive est l'identité stable, et elle tient en 3 pièces.
+Les trois sont obligatoires, en zapper une remet le bug.
+
+**1. `quiz_questions.id` est DURABLE.** Le PATCH `/api/quiz/[quizId]`
+fait UPDATE des lignes déjà connues, INSERT des nouvelles, DELETE de
+celles que l'éditeur ne renvoie plus (exactement comme `quiz_results`).
+Il ne fait PLUS `delete().eq("quiz_id")` + `insert(all)`, qui régénérait
+tous les ids à chaque sauvegarde.
+-> Corollaire : **tout éditeur DOIT renvoyer `id` dans le payload
+`questions`** (`QuizDetailClient`, `SurveyDetailClient`). Sans l'id,
+la question est traitée comme nouvelle et perd son historique.
+
+**2. Ce qu'on écrit porte l'id.**
+- `quiz_question_events.question_id` (route `/track`, le viewer envoie
+  `questionId`) ;
+- `quiz_leads.answers[].question_id` (le viewer envoie `question_id`
+  dans chaque réponse).
+L'index reste écrit à côté : c'est le repli des lignes historiques.
+L'INSERT du `/track` retombe sur la version sans `question_id` si la
+colonne n'existe pas encore en prod (jamais de tracking perdu en
+silence, cf. drame `quiz_events.meta`).
+
+**3. Tout lecteur traduit l'id en POSITION ACTUELLE** via
+`lib/quiz/questionIdentity.ts` :
+- `buildQuestionPositions(questions)` -> Map id -> position ;
+- `resolveQuestionPosition(ref, positions, count)` -> position ou null ;
+- `indexAnswersByPosition(answers, positions, count)` -> Map position ->
+  réponse.
+Ordre de résolution : `question_id` connu -> position actuelle ; id
+inconnu -> question supprimée, on EXCLUT ; pas d'id -> on garde l'index
+tant qu'il désigne une question vivante. Fail-open si la structure est
+inconnue (0 question) : on renvoie l'index brut.
+
+Côté SQL, les RPC font la même traduction (`left join` sur
+`question_id`, `row_number()` pour la position) et renvoient une **ligne
+sentinelle `question_index = -1`** dont `views` porte le nombre de
+questions disparues. `buildLiveFunnel()` la lit et la transforme en
+`removedQuestions`, que l'UI affiche honnêtement.
+
+**Tri de référence : `order by sort_order, id`.** Les RPC l'utilisent ;
+les requêtes JS qui construisent des positions doivent l'utiliser aussi
+(`.order("sort_order").order("id")`), sinon deux lecteurs peuvent
+calculer des positions différentes en cas d'égalité de `sort_order`.
+
+**Anti-patterns INTERDITS :**
+- `answers.find(a => a.question_index === qIdx)` : c'est exactement le
+  bug. Passer par `indexAnswersByPosition`.
+- Un éditeur qui renvoie `questions` sans `id`.
+- Un nouveau lecteur d'`answers` qui n'importe pas
+  `lib/quiz/questionIdentity.ts`.
+
+**Endroits à respecter (Tipote) :** `app/api/quiz/[quizId]/route.ts`
+(PATCH), `app/api/quiz/[quizId]/track/route.ts`,
+`components/quiz/PublicQuizClient.tsx`, `QuizDetailClient.tsx`,
+`SurveyDetailClient.tsx`, `QuizResultsAnalytics.tsx`, `SurveyTrends.tsx`,
+`lib/survey/format.ts`, `lib/survey/analysis.ts`, `lib/leadAnswers.ts`,
+`app/api/quiz/[quizId]/survey-results/route.ts`,
+`app/api/quiz/[quizId]/public/route.ts` (tags SIO par réponse),
+`supabase/migrations/20260801_question_identity.sql`.
+Le module quiz de Tiquiz est jumeau : toute correction ici doit être
+portée là-bas, et réciproquement.
 
 ## Réponses sans options - à ne pas oublier (retour Jocelyne 1er août 2026)
 

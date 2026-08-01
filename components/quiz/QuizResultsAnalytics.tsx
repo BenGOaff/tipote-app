@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import { stripHtml } from "@/lib/richText";
 import { localDateKey } from "@/lib/dateKeys";
+import { buildQuestionPositions, indexAnswersByPosition } from "@/lib/quiz/questionIdentity";
 
 // Donut palette: primary Tipote + tonal variations, repeats if > 7 slices.
 const CHART_COLORS = [
@@ -79,6 +80,9 @@ type Lead = {
   // Either shape can appear on a given quiz_leads row.
   answers: {
     question_index: number;
+    /** Identité stable de la question (cf. lib/quiz/questionIdentity.ts).
+     *  Présent depuis le 1er août 2026 ; absent sur l'historique. */
+    question_id?: string | null;
     option_index?: number;
     option_indices?: number[];
     // Questions sans options : la réponse est un texte, une note sur une
@@ -263,6 +267,20 @@ export default function QuizResultsAnalytics({
 
   // ─── Per-question answer distribution ────────────────────────────────────
   const questionStats = useMemo(() => {
+    // Identité stable (drame Adeline, 1er août 2026) : chaque réponse est
+    // rangée sous la POSITION ACTUELLE de sa question, via son
+    // `question_id`. Sans ça, supprimer une question au milieu décalait
+    // toutes les réponses suivantes d'un cran et la synthèse montrait les
+    // réponses de Q6 sous le libellé de Q5.
+    const positions = buildQuestionPositions(questions);
+    const answersByLead = leads.map((l) =>
+      indexAnswersByPosition(
+        Array.isArray(l.answers) ? l.answers : [],
+        positions,
+        questions.length,
+      ),
+    );
+
     return questions.map((q, qIdx) => {
       const type = q.question_type ?? "multiple_choice";
       const base = {
@@ -275,9 +293,8 @@ export default function QuizResultsAnalytics({
         // date décroissante côté parent, on ne re-trie pas pour ne rien
         // supposer, on garde l'ordre reçu).
         const texts: string[] = [];
-        for (const lead of leads) {
-          if (!Array.isArray(lead.answers)) continue;
-          const answer = lead.answers.find((a) => a.question_index === qIdx);
+        for (const byPos of answersByLead) {
+          const answer = byPos.get(qIdx);
           const value = typeof answer?.text === "string" ? answer.text.trim() : "";
           if (value) texts.push(value);
         }
@@ -292,9 +309,8 @@ export default function QuizResultsAnalytics({
         for (let v = min; v <= max; v++) counts.set(v, 0);
         let sum = 0;
         let n = 0;
-        for (const lead of leads) {
-          if (!Array.isArray(lead.answers)) continue;
-          const answer = lead.answers.find((a) => a.question_index === qIdx);
+        for (const byPos of answersByLead) {
+          const answer = byPos.get(qIdx);
           const raw = type === "star_rating" ? answer?.stars : answer?.rating;
           if (typeof raw !== "number" || !Number.isFinite(raw)) continue;
           const value = Math.round(raw);
@@ -321,9 +337,8 @@ export default function QuizResultsAnalytics({
 
       const optionCounts = q.options.map(() => 0);
       let totalAnswered = 0;
-      for (const lead of leads) {
-        if (!Array.isArray(lead.answers)) continue;
-        const answer = lead.answers.find((a) => a.question_index === qIdx);
+      for (const byPos of answersByLead) {
+        const answer = byPos.get(qIdx);
         if (!answer) continue;
         // Build the list of picked indices: legacy single-pick OR multi-select
         // array. Each pick contributes 1 to its option counter; a multi-select

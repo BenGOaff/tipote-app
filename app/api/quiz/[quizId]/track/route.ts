@@ -203,7 +203,14 @@ export async function POST(req: NextRequest, context: RouteContext) {
     // Owner exclusion — créateur qui preview son propre quiz ne compte pas.
     if (await isQuizOwner(quizId)) return silent("owner_excluded");
 
-    let body: { event?: string; questionIndex?: number; meta?: Record<string, unknown> };
+    let body: {
+      event?: string;
+      questionIndex?: number;
+      // Identité stable de la question (cf. lib/quiz/questionIdentity.ts).
+      // Absent des viewers déployés avant le 1er août 2026.
+      questionId?: string | null;
+      meta?: Record<string, unknown>;
+    };
     try {
       body = await req.json();
     } catch {
@@ -289,15 +296,35 @@ export async function POST(req: NextRequest, context: RouteContext) {
       if (!Number.isInteger(qIdx) || qIdx < 0 || qIdx >= 200) {
         return silent("bad_question_index");
       }
+      // IDENTITÉ STABLE (drame Adeline, 1er août 2026) : l'id de la
+      // question est écrit à côté de l'index. C'est lui qui permet de
+      // recaler l'historique quand une question est supprimée, déplacée ou
+      // insérée au milieu (cf. lib/quiz/questionIdentity.ts).
+      const rawQuestionId = typeof body.questionId === "string" ? body.questionId.trim() : "";
+      const questionId = UUID_RE.test(rawQuestionId) ? rawQuestionId : null;
+
       // Pas de dédup ici : on veut voir chaque vue de question (un
       // visiteur qui revient en arrière puis re-avance produit 2
       // vues sur Q3, et c'est légitime).
-      await supabaseAdmin.from("quiz_question_events").insert({
+      const baseRow = {
         quiz_id: quizId,
         question_index: qIdx,
         session_id: sessionId,
         event: QUESTION_EVENT_DB[event as QuestionEvent],
-      });
+      };
+      const withId = await supabaseAdmin
+        .from("quiz_question_events")
+        .insert(questionId ? { ...baseRow, question_id: questionId } : baseRow);
+      if (withId.error && questionId) {
+        // Migration 20260801_question_identity en retard en prod : la
+        // colonne n'existe pas encore. On retombe sur l'INSERT historique
+        // plutôt que de perdre le funnel EN SILENCE pendant des semaines.
+        console.error(
+          "[track] insert question_id KO (migration question_identity en retard ?) →",
+          withId.error.message,
+        );
+        await supabaseAdmin.from("quiz_question_events").insert(baseRow);
+      }
       const res = ok({ event, q: qIdx });
       if (needSetCookie) attachSessionCookie(res, sessionId);
       return res;
