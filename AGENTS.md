@@ -484,3 +484,38 @@ GLOBAL et les barres d'axes ; les axes restent éditables (ils alimentent
 les variables `{score_axe}` et les tags Systeme.io).
 
 Le module Tiquiz est jumeau : toute correction ici se porte là-bas.
+
+## Boutons de partage : les réseaux cochés, ou TOUS (retour Béné 1er août 2026)
+
+Deux problèmes distincts, sur le même bouton.
+
+**1. "Partager mes résultats ne déclenche rien."** Le bouton appelait
+`navigator.share`, absent des navigateurs desktop, retombait sur un
+`navigator.clipboard.writeText`, et TOUT échec était avalé par un
+`catch {}` silencieux. Sur desktop, au mieux un toast discret, au pire
+rien du tout. Il ouvre maintenant un panneau de boutons par réseau,
+comme l'écran bonus le faisait déjà.
+
+**2. Le repli oubliait 4 réseaux sur 9.** La liste par défaut était
+codée en dur à deux endroits :
+`["x", "facebook", "linkedin", "whatsapp", "threads"]`. Une créatrice
+qui ne cochait AUCUN réseau (le cas par défaut) privait ses visiteurs
+d'Instagram, Pinterest, Reddit et email sans le savoir.
+
+**Règle :** `resolveShareNetworks()` (`lib/quiz/shareNetworks.ts`), une
+seule fonction testée pour tous les écrans. Sélection non vide -> elle,
+dans SON ordre. Rien de coché, colonne nulle, valeur illisible -> TOUS
+les réseaux (`ALLOWED_SHARE_NETWORKS`). Une sélection qui ne contient
+que des réseaux inconnus retombe sur tous, jamais sur zéro bouton.
+L'aperçu de l'éditeur passe par la MÊME fonction, sinon il ment.
+
+**Ne pas ré-écrire de liste de réseaux en dur**, nulle part, y compris
+dans un aperçu. C'est comme ça que le bug est né.
+
+L'URL partagée depuis l'écran de résultat est celle du profil obtenu
+(`?rp=`) : `getShareData` / `shareOn` / `copyShareLink` prennent un
+`urlOverride`. Instagram, qui n'a pas d'URL de partage web, copie ce
+même lien (pas celui du quiz).
+
+Le partage de fin de quiz reste désactivable : `show_result_share`,
+toggle "Afficher le bouton de partage" dans l'éditeur.
