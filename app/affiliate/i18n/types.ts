@@ -557,7 +557,9 @@ export type AffiliateDict = {
     gen_loading: string;
     gen_submit: string;
     gen_retry: string;
-    gen_preview: string;
+    gen_edit: string;
+    gen_edit_done: string;
+    gen_edit_hint: string;
     gen_copy_plain: string;
     gen_copy_rich: string;
     gen_make_visual: string;

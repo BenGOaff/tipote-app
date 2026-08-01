@@ -50,9 +50,14 @@ Un seul lien dans tout l'email. Longueur : 250 à 450 mots.`,
 La première ligne est une accroche qui tient seule et donne envie de cliquer sur "voir plus". Laisse-lui une ligne blanche après.
 Paragraphes courts, une idée par paragraphe. Termine par "Lien en commentaire ↓" puis 4 à 5 hashtags pertinents en minuscules.
 Ne mets AUCUN lien dans le corps du post : LinkedIn étouffe les publications sortantes. Longueur : 150 à 300 mots.`,
-  article: `FORMAT : un article de blog.
-Titre en H1, chapô de deux phrases, puis 4 à 6 sections avec des sous-titres en H2. Termine par une conclusion qui amène naturellement l'appel à l'action avec {AFFILIATE_LINK}.
-Écris en markdown léger (## pour les sous-titres, **gras** pour les mots importants). Longueur : 700 à 1100 mots.`,
+  article: `FORMAT : un ARTICLE DE BLOG. Ce n'est PAS un post réseaux sociaux : pas d'accroche isolée, pas de "Lien en commentaire", aucun hashtag, et on ne s'arrête pas à 300 mots.
+Structure OBLIGATOIRE, dans cet ordre :
+1. Une ligne "# Titre de l'article" (un seul #).
+2. Un chapô de deux ou trois phrases, en paragraphe normal.
+3. AU MOINS QUATRE sections, chacune introduite par une ligne "## Sous-titre" suivie de deux à quatre paragraphes. Une liste à puces (lignes commençant par "- ") dans une ou deux sections, pas partout.
+4. Une section finale "## " de conclusion qui amène l'appel à l'action, avec le lien sur sa propre ligne sous la forme "**Texte du lien >> {AFFILIATE_LINK}**".
+Mise en forme : markdown léger uniquement. "# " et "## " pour les titres, "**gras**" pour les mots importants, "- " pour les puces. Rien d'autre : pas de tableau, pas de bloc de code, pas de note de bas de page.
+Longueur : 700 à 1100 mots. En dessous de 700, l'article est incomplet, ajoute une section.`,
   script_court: `FORMAT : un script de vidéo courte (Reel, Short, TikTok), 30 à 60 secondes.
 Donne le texte à dire, découpé en plans numérotés avec la durée approximative de chacun, et indique entre crochets ce qui doit apparaître à l'écran.
 Les 3 premières secondes doivent arrêter le défilement. Termine par un appel à l'action parlé qui renvoie au lien en bio ou en commentaire.`,
@@ -78,6 +83,10 @@ export const WRITING_RULES = `RÈGLES D'ÉCRITURE, sans exception :
 - Pas de jargon marketing anglais quand un mot français existe.
 - Tu écris le contenu demandé, rien d'autre : pas de préambule, pas de commentaire sur ton propre travail, pas de conclusion du type "voilà ton email".`;
 
+// L'ordre compte : le FORMAT est la dernière chose lue avant d'écrire.
+// Coincé au milieu du prompt, entre les faits produits et les règles de
+// style, il se faisait oublier et un article demandé revenait en post
+// (retour Béné, 1er août 2026).
 export function buildSystemPrompt(
   product: ContentProduct,
   format: GeneratorFormat,
@@ -86,7 +95,31 @@ export function buildSystemPrompt(
 
 ${productFacts(product)}
 
-${formatBrief(format)}
+${WRITING_RULES}
 
-${WRITING_RULES}`;
+FORMAT DEMANDÉ, à respecter à la lettre. Il prime sur toute habitude :
+
+${formatBrief(format)}`;
+}
+
+/** Rappel du format dans le message utilisateur : deuxième ancrage. */
+export const FORMAT_REMINDER: Record<GeneratorFormat, string> = {
+  email: "Tu écris UN EMAIL DE VENTE (objets A/B/C, pré-en-tête, corps signé).",
+  post: "Tu écris UN POST pour les réseaux sociaux (accroche, paragraphes courts, hashtags, aucun lien dans le corps).",
+  article:
+    "Tu écris UN ARTICLE DE BLOG de 700 à 1100 mots, avec un titre en '# ' et au moins quatre sous-titres en '## '. Ce n'est pas un post : ni hashtag, ni 'lien en commentaire'.",
+  script_court: "Tu écris UN SCRIPT DE VIDÉO COURTE, découpé en plans numérotés.",
+  script_long: "Tu écris UN SCRIPT DE VIDÉO LONGUE, avec accroche, plan en parties et conclusion.",
+};
+
+/**
+ * Le rendu attendu est-il conforme au format ? Sert de garde-fou serveur :
+ * un article sans le moindre sous-titre est un post déguisé, on le refait
+ * une fois plutôt que de le servir tel quel.
+ */
+export function looksLikeFormat(format: GeneratorFormat, text: string): boolean {
+  if (format !== "article") return true;
+  const hasTitle = /^#\s+\S/m.test(text);
+  const sectionCount = (text.match(/^##\s+\S/gm) ?? []).length;
+  return hasTitle && sectionCount >= 3;
 }

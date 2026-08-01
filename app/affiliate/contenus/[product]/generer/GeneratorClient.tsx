@@ -6,7 +6,7 @@
 // jamais à écrire à la main.
 
 import { useState } from "react";
-import { Loader2, Sparkles, Wand2 } from "lucide-react";
+import { Check, Loader2, Pencil, Sparkles, Wand2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,6 +47,11 @@ export function GeneratorClient({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<string | null>(null);
+  // Le texte s'affiche MIS EN FORME par défaut. L'éditer est un geste
+  // volontaire : afficher en permanence le markdown brut donnait
+  // l'impression que le générateur rendait du code, et l'aperçu juste
+  // en dessous faisait doublon (retour Béné, 1er août 2026).
+  const [editing, setEditing] = useState(false);
 
   const formatLabel: Record<GeneratorFormat, string> = {
     email: cs.gen_format_email,
@@ -86,6 +91,7 @@ export function GeneratorClient({
         return;
       }
       setResult(data.text);
+      setEditing(false);
     } catch {
       setError(cs.gen_err_network);
     } finally {
@@ -198,37 +204,52 @@ export function GeneratorClient({
               </Button>
             </div>
 
-            <Textarea
-              value={result}
-              onChange={(e) => setResult(e.target.value)}
-              rows={18}
-              className="text-sm leading-relaxed"
-            />
-
-            <div className="rounded-md border border-border bg-muted/30 px-4 py-3">
-              <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                {cs.gen_preview}
-              </p>
-              <div
-                className="tipote-quiz-rich max-h-[360px] overflow-y-auto text-sm leading-relaxed"
-                dangerouslySetInnerHTML={{ __html: html }}
-              />
-            </div>
+            {editing ? (
+              <>
+                <Textarea
+                  value={result}
+                  onChange={(e) => setResult(e.target.value)}
+                  rows={22}
+                  className="font-mono text-sm leading-relaxed"
+                />
+                <p className="text-xs text-muted-foreground">{cs.gen_edit_hint}</p>
+              </>
+            ) : (
+              <div className="tipote-quiz-rich rounded-md border border-border bg-muted/30 px-4 py-3 text-sm leading-relaxed">
+                <div dangerouslySetInnerHTML={{ __html: html }} />
+              </div>
+            )}
 
             <div className="flex flex-wrap items-center gap-2">
+              <CopyRichButton
+                html={html}
+                label={cs.gen_copy_rich}
+                copiedLabel={t.common.copied}
+              />
               <CopyButton
                 text={plain}
                 label={cs.gen_copy_plain}
                 copiedLabel={t.common.copied}
                 size="default"
-                variant="default"
-              />
-              <CopyRichButton
-                html={html}
-                label={cs.gen_copy_rich}
-                copiedLabel={t.common.copied}
                 variant="outline"
               />
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setEditing((e) => !e)}
+              >
+                {editing ? (
+                  <>
+                    <Check className="mr-1.5 h-3.5 w-3.5" />
+                    {cs.gen_edit_done}
+                  </>
+                ) : (
+                  <>
+                    <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                    {cs.gen_edit}
+                  </>
+                )}
+              </Button>
               <StudioLauncher label={cs.gen_make_visual} intent={plain} />
             </div>
 
