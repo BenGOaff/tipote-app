@@ -32,6 +32,7 @@ export async function POST(req: NextRequest) {
     .from("affiliate_contents")
     .select("id", { count: "exact", head: true })
     .eq("kind", kind)
+    .eq("product", "tiquiz")
     .eq("locale", locale);
   if ((count ?? 0) > 0) return NextResponse.json({ ok: true, seeded: 0, reason: "already_seeded" });
 
@@ -39,6 +40,9 @@ export async function POST(req: NextRequest) {
   if (kind === "email") {
     rows = EMAILS_FR.map((e, i) => ({
       kind: "email",
+      // Les modèles par défaut sont le kit Tiquiz. Le kit Atelier vit dans
+      // le code (atelier-emails-fr.ts) et n'a pas besoin d'être seedé.
+      product: "tiquiz",
       locale,
       title: e.subject,
       body: e.body,
@@ -49,6 +53,7 @@ export async function POST(req: NextRequest) {
   } else if (kind === "post") {
     rows = POSTS_FR.map((p, i) => ({
       kind: "post",
+      product: "tiquiz",
       locale,
       title: p.dayLabel,
       body: "",

@@ -1,390 +1,86 @@
 // app/affiliate/contenus/page.tsx
 //
-// Onglet "Contenus" : tout le matériel prêt à copier-coller, regroupé et
-// organisé pour être facile à lire, éditer et copier.
-//   - Emails (templates avec lien tracké injecté)
-//   - Posts réseaux sociaux (3 réseaux × N jours) + visuel généré attaché
-//   - Articles (à venir — bientôt gérables depuis l'admin)
-//   - Visuels (banque de PNG téléchargeables)
-//
-// Contenu FR pour la V1 (multilang au sprint multilang complet).
+// Racine de l'espace Contenu : un dossier par produit à promouvoir.
+// Chaque dossier contient les mêmes cinq rayons (emails, réseaux,
+// articles, logos, générer), remplis avec le matériel du produit.
 
 import { redirect } from "next/navigation";
-import { Mail, Share2, Image as ImageIcon, FileText } from "lucide-react";
+import { GraduationCap, Wrench } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { getAffiliateSession } from "@/lib/affiliate/session";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { signedPlaybackUrl } from "@/lib/popquiz/playback";
-import { EmailCard } from "../promouvoir/components/EmailCard";
-import { PostDayCard } from "../promouvoir/components/PostDayCard";
-import { VisualGallery } from "../promouvoir/components/VisualGallery";
-import { ArticleCard } from "../promouvoir/components/ArticleCard";
-
-import { EMAILS_FR, type EmailTemplate } from "../promouvoir/content/emails-fr";
-import { ATELIER_EMAILS_FR } from "../promouvoir/content/atelier-emails-fr";
-import { POSTS_FR, type PostDay, type SocialPost } from "../promouvoir/content/posts-fr";
-import { VISUELS_FR } from "../promouvoir/content/visuels-fr";
 import { getDict, interpolate, normaliseLocale } from "../i18n";
-import { localeLabel, AFFILIATE_LIVE_LOCALES, resolveAffiliateMarket } from "@/lib/affiliate/contentLocales";
-import { buildAffiliateLink } from "@/lib/affiliate/links";
-import { getLinkPath } from "@/lib/affiliate/linkDestinations";
-import { ContentLocalePicker } from "../components/ContentLocalePicker";
+import { FolderCard } from "../components/ContentNav";
+import {
+  contentHref,
+  PRODUCT_NAME,
+  PRODUCT_RATE,
+} from "@/lib/affiliate/contentSpace";
+import { ATELIER_EMAILS_FR } from "../promouvoir/content/atelier-emails-fr";
+import { ATELIER_POSTS_FR } from "../promouvoir/content/atelier-posts-fr";
+import { EMAILS_FR } from "../promouvoir/content/emails-fr";
+import { POSTS_FR } from "../promouvoir/content/posts-fr";
 
 export const dynamic = "force-dynamic";
 
-export default async function ContenusPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ locale?: string }>;
-}) {
+export default async function ContenusHomePage() {
   const session = await getAffiliateSession();
   if (!session) redirect("/login");
 
   const t = getDict(normaliseLocale(session.locale));
-  const displayName = session.display_name ?? session.email.split("@")[0];
+  const isFr = normaliseLocale(session.locale) === "fr";
 
-  // Langue du CONTENU (≠ langue d'interface). Priorité : query param explicite
-  // > langue de l'affilié > "fr". Un affilié français qui veut shooter en
-  // portugais peut activer le picker et lire son matériel en PT sans changer
-  // l'UI. La fallback aux modèles FR codés en dur (EMAILS_FR / POSTS_FR /
-  // VISUELS_FR) n'est activée que pour la locale "fr" — pas envie de servir
-  // du FR par défaut à quelqu'un qui demande du PT.
-  const sp = await searchParams;
-  // MARCHÉ de diffusion choisi (FR/EN) : pilote le contenu affiché ET le
-  // domaine des liens. Défaut = langue de l'affilié, mais librement changeable.
-  const contentLocale = resolveAffiliateMarket(sp.locale, session.locale);
-  const isFrLocale = contentLocale === "fr";
-  // Les liens injectés dans le matériel suivent le marché choisi (domaine).
-  // Path = destination principale admin-editable (defaut /part-tiquiz).
-  // Avant le 8 juin 2026 c'etait "/tiquiz/affiliation" code en dur, qui
-  // n'existe pas chez Systeme.io -> commission perdue dans TOUT le
-  // materiel emails/posts copie par les affilies.
-  const mainPath = await getLinkPath("tiquiz_main");
-  const baseLink = buildAffiliateLink(contentLocale, mainPath, session.sa);
-  // Lien tracké vers le tunnel affilié de L'Atelier du Quiz (formation, 70%).
-  // Sert à injecter {AFFILIATE_LINK} dans la séquence email Atelier (FR only).
-  const atelierPath = await getLinkPath("atelier");
-  const atelierLink = buildAffiliateLink(contentLocale, atelierPath, session.sa);
-  // Lien tracké vers l'étude de cas Jocelyne (pose le cookie affilié 90j
-  // même si le visiteur achète plus tard). Pré-injecté dans le mail 2.
-  const caseStudyLink = buildAffiliateLink(
-    contentLocale,
-    "/tiquiz/cas-client-jocelyne-tdah",
-    session.sa,
-  );
-  const atelierEmails: EmailTemplate[] = ATELIER_EMAILS_FR.map((e) => ({
-    ...e,
-    body: e.body.replaceAll("{LIEN_ETUDE_CAS}", caseStudyLink),
-  }));
-
-  const { data: ov } = await supabaseAdmin
-    .from("affiliates")
-    .select("promo_overrides")
-    .eq("sa", session.sa)
-    .maybeSingle();
-  const overrides = ((ov as { promo_overrides?: Record<string, string> } | null)?.promo_overrides) ?? {};
-
-  // Articles publiés par l'admin (gérés depuis /affiliate/admin/contenus).
-  const { data: articleRows } = await supabaseAdmin
-    .from("affiliate_contents")
-    .select("id, title, body")
-    .eq("kind", "article")
-    .eq("locale", contentLocale)
-    .eq("published", true)
-    .order("sort_order", { ascending: true });
-  const articles = (articleRows ?? []) as { id: string; title: string | null; body: string | null }[];
-
-  // Emails : gérés en base par l'admin. Tant que rien n'est importé, on
-  // retombe sur les 8 modèles par défaut FR (aucune régression). Les autres
-  // langues n'ont pas de fallback : si la banque est vide en PT, on affiche
-  // un état vide plutôt que servir du FR.
-  const { data: emailRows } = await supabaseAdmin
-    .from("affiliate_contents")
-    .select("id, title, body, meta")
-    .eq("kind", "email")
-    .eq("locale", contentLocale)
-    .eq("published", true)
-    .order("sort_order", { ascending: true });
-  const dbEmails: EmailTemplate[] = (emailRows ?? []).map((r) => {
-    const row = r as { id: string; title: string | null; body: string | null; meta: Record<string, unknown> | null };
-    return {
-      id: row.id,
-      subject: row.title ?? "",
-      preheader: (row.meta?.preheader as string) ?? "",
-      body: row.body ?? "",
-      notes: (row.meta?.notes as string) ?? undefined,
-    };
+  const atelierMeta = interpolate(t.content_space.folder_meta, {
+    emails: ATELIER_EMAILS_FR.length,
+    posts: ATELIER_POSTS_FR.length,
   });
-  const emailsToShow: EmailTemplate[] = dbEmails.length ? dbEmails : isFrLocale ? EMAILS_FR : [];
-
-  // Posts : idem — gérés en base, repli sur la séquence par défaut si vide
-  // (FR uniquement).
-  const { data: postRows } = await supabaseAdmin
-    .from("affiliate_contents")
-    .select("id, title, meta")
-    .eq("kind", "post")
-    .eq("locale", contentLocale)
-    .eq("published", true)
-    .order("sort_order", { ascending: true });
-  const dbPosts: PostDay[] = (postRows ?? []).map((r) => {
-    const row = r as { id: string; title: string | null; meta: Record<string, unknown> | null };
-    const m = row.meta ?? {};
-    return {
-      id: row.id,
-      dayLabel: row.title ?? "",
-      theme: String(m.theme ?? ""),
-      hook: String(m.hook ?? ""),
-      visualPath: String(m.visualPath ?? ""),
-      posts: (Array.isArray(m.posts) ? m.posts : []) as SocialPost[],
-    };
+  const tiquizMeta = interpolate(t.content_space.folder_meta, {
+    emails: EMAILS_FR.length,
+    posts: POSTS_FR.length,
   });
-  const postsToShow: PostDay[] = dbPosts.length ? dbPosts : isFrLocale ? POSTS_FR : [];
-
-  // Visuels ajoutés par l'admin (uploadés, stockés TUS) — re-signés à l'affichage.
-  const { data: visualRows } = await supabaseAdmin
-    .from("affiliate_contents")
-    .select("id, meta")
-    .eq("kind", "visual")
-    .eq("locale", contentLocale)
-    .eq("published", true)
-    .order("sort_order", { ascending: true });
-  const adminVisuals: { id: string; url: string }[] = (visualRows ?? [])
-    .map((r) => {
-      const path = (r as { meta: Record<string, unknown> | null }).meta?.storagePath;
-      if (typeof path !== "string" || !path) return null;
-      try {
-        return { id: (r as { id: string }).id, url: signedPlaybackUrl(path) };
-      } catch {
-        return null;
-      }
-    })
-    .filter((v): v is { id: string; url: string } => v !== null);
-
-  // Visuels accrochés à un post : on a persisté les CHEMINS de stockage (TUS,
-  // long terme) ; on re-signe une URL de lecture fraîche à chaque affichage
-  // (les URLs signées expirent en 2 h, pas le fichier).
-  const attachedFor = (dayId: string): { path: string; url: string }[] => {
-    const raw = overrides[`post:${dayId}:visuals`];
-    if (typeof raw !== "string") return [];
-    try {
-      const paths = JSON.parse(raw);
-      if (!Array.isArray(paths)) return [];
-      return paths
-        .filter((p): p is string => typeof p === "string" && p.length > 0)
-        .map((p) => {
-          try {
-            return { path: p, url: signedPlaybackUrl(p) };
-          } catch {
-            return null;
-          }
-        })
-        .filter((v): v is { path: string; url: string } => v !== null);
-    } catch {
-      return [];
-    }
-  };
 
   return (
-    <main className="max-w-5xl mx-auto px-6 py-8 space-y-6">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t.contenus.page_title}</h1>
-          <p className="text-muted-foreground mt-1">
-            {t.contenus.page_subtitle}{" "}
-            <span className="text-foreground">{localeLabel(contentLocale)}</span>{" "}
-            {t.contenus.page_subtitle_market}
-          </p>
-        </div>
-        <ContentLocalePicker current={contentLocale} label={t.promouvoir.market_label} locales={AFFILIATE_LIVE_LOCALES} />
+    <main className="mx-auto max-w-5xl space-y-6 px-6 py-8">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">
+          {t.content_space.page_title}
+        </h1>
+        <p className="mt-1 text-muted-foreground">
+          {t.content_space.page_subtitle}
+        </p>
       </div>
 
-      {/* Onglet Emails par défaut : c'est là que vit la séquence Atelier du
-          Quiz (70%) et c'est le canal qui convertit le mieux. Avant, on
-          ouvrait sur les posts et la séquence Atelier passait inaperçue. */}
-      <Tabs defaultValue="emails" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="emails" className="gap-1.5">
-            <Mail className="h-4 w-4" />
-            <span className="hidden sm:inline">{t.promouvoir.tab_emails}</span>
-          </TabsTrigger>
-          <TabsTrigger value="posts" className="gap-1.5">
-            <Share2 className="h-4 w-4" />
-            <span className="hidden sm:inline">{t.promouvoir.tab_posts}</span>
-          </TabsTrigger>
-          <TabsTrigger value="articles" className="gap-1.5">
-            <FileText className="h-4 w-4" />
-            <span className="hidden sm:inline">{t.contenus.tab_articles}</span>
-          </TabsTrigger>
-          <TabsTrigger value="visuels" className="gap-1.5">
-            <ImageIcon className="h-4 w-4" />
-            <span className="hidden sm:inline">{t.promouvoir.tab_visuels}</span>
-          </TabsTrigger>
-        </TabsList>
+      <div className={`grid gap-4 ${isFr ? "md:grid-cols-2" : ""}`}>
+        {isFr && (
+          <FolderCard
+            href={contentHref("atelier")}
+            icon={GraduationCap}
+            title={interpolate(t.content_space.folder_promote, {
+              product: PRODUCT_NAME.atelier,
+            })}
+            description={t.content_space.folder_atelier_desc}
+            meta={atelierMeta}
+            badge={PRODUCT_RATE.atelier}
+            highlight
+          />
+        )}
+        <FolderCard
+          href={contentHref("tiquiz")}
+          icon={Wrench}
+          title={interpolate(t.content_space.folder_promote, {
+            product: PRODUCT_NAME.tiquiz,
+          })}
+          description={t.content_space.folder_tiquiz_desc}
+          meta={tiquizMeta}
+          badge={PRODUCT_RATE.tiquiz}
+        />
+      </div>
 
-        <TabsContent value="emails" className="space-y-4 mt-6">
-          <Card className="border-primary/20 bg-primary/5">
-            <CardContent className="pt-5 text-sm">
-              <p className="font-medium mb-2">{t.promouvoir.emails_info_title}</p>
-              <p className="text-muted-foreground leading-relaxed">{t.promouvoir.emails_info_body}</p>
-            </CardContent>
-          </Card>
-
-          {/* Séquence Atelier du Quiz (formation, 70%) - FR uniquement, lien
-              Atelier injecté (distinct de la séquence Tiquiz ci-dessous). */}
-          {isFrLocale && (
-            <div className="space-y-3">
-              <div className="flex flex-col gap-1 pt-1">
-                <span className="text-sm font-semibold uppercase tracking-wide text-primary">
-                  L&apos;Atelier du Quiz - 70% de commission
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  Séquence prête à copier-coller pour promouvoir la formation. Ton lien Atelier tracké est déjà injecté.
-                </span>
-              </div>
-              {atelierEmails.map((email) => (
-                <EmailCard
-                  key={email.id}
-                  email={email}
-                  affiliateLink={atelierLink}
-                  displayName={displayName}
-                  overrides={overrides}
-                />
-              ))}
-              <div className="pt-2">
-                <span className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                  Tiquiz - 40% de commission
-                </span>
-              </div>
-            </div>
-          )}
-
-          {emailsToShow.length > 0 ? (
-            <div className="space-y-3">
-              {emailsToShow.map((email) => (
-                <EmailCard
-                  key={email.id}
-                  email={email}
-                  affiliateLink={baseLink}
-                  displayName={displayName}
-                  overrides={overrides}
-                />
-              ))}
-            </div>
-          ) : (
-            <Card className="border-dashed">
-              <CardContent className="pt-6 pb-6 text-center space-y-2">
-                <Mail className="h-8 w-8 text-muted-foreground mx-auto" />
-                <p className="font-medium">
-                  {interpolate(t.contenus.empty_emails, { locale: localeLabel(contentLocale) })}
-                </p>
-                <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                  {t.contenus.empty_lang_help}
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        <TabsContent value="posts" className="space-y-4 mt-6">
-          <Card className="border-primary/20 bg-primary/5">
-            <CardContent className="pt-5 text-sm">
-              <p className="font-medium mb-2">{t.promouvoir.posts_info_title}</p>
-              <p className="text-muted-foreground leading-relaxed">{t.promouvoir.posts_info_body}</p>
-            </CardContent>
-          </Card>
-          {/* Les posts injectent le lien Tiquiz : on le dit, sinon un affilié
-              croit promouvoir la formation en les publiant. */}
-          {isFrLocale && postsToShow.length > 0 && (
-            <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground pt-1">
-              Tiquiz - 40% de commission
-            </p>
-          )}
-          {postsToShow.length > 0 ? (
-            <div className="space-y-3">
-              {postsToShow.map((day) => (
-                <PostDayCard
-                  key={day.id}
-                  day={day}
-                  affiliateLink={baseLink}
-                  overrides={overrides}
-                  attachedVisuals={attachedFor(day.id)}
-                />
-              ))}
-            </div>
-          ) : (
-            <Card className="border-dashed">
-              <CardContent className="pt-6 pb-6 text-center space-y-2">
-                <Share2 className="h-8 w-8 text-muted-foreground mx-auto" />
-                <p className="font-medium">
-                  {interpolate(t.contenus.empty_posts, { locale: localeLabel(contentLocale) })}
-                </p>
-                <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                  {t.contenus.empty_lang_help}
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        <TabsContent value="articles" className="space-y-4 mt-6">
-          {articles.length > 0 ? (
-            <div className="space-y-3">
-              {articles.map((a) => (
-                <ArticleCard key={a.id} article={a} />
-              ))}
-            </div>
-          ) : (
-            <Card className="border-dashed">
-              <CardContent className="pt-6 pb-6 text-center space-y-2">
-                <FileText className="h-8 w-8 text-muted-foreground mx-auto" />
-                <p className="font-medium">
-                  {interpolate(t.contenus.empty_articles, { locale: localeLabel(contentLocale) })}
-                </p>
-                <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                  {t.contenus.empty_lang_help}
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        <TabsContent value="visuels" className="space-y-4 mt-6">
-          <Card className="border-primary/20 bg-primary/5">
-            <CardContent className="pt-5 text-sm">
-              <p className="font-medium mb-2">{t.promouvoir.visuels_info_title}</p>
-              <p className="text-muted-foreground leading-relaxed">{t.promouvoir.visuels_info_body}</p>
-            </CardContent>
-          </Card>
-          {adminVisuals.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{t.contenus.admin_visuals_title}</p>
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-                {adminVisuals.map((v) => (
-                  <a key={v.id} href={v.url} download className="group relative rounded-md border border-border overflow-hidden bg-muted block">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={v.url} alt={t.contenus.visual_alt} className="w-full h-auto block" />
-                  </a>
-                ))}
-              </div>
-            </div>
-          )}
-          {isFrLocale ? (
-            <VisualGallery singles={VISUELS_FR.singles} carrousel={VISUELS_FR.carrousel} />
-          ) : adminVisuals.length === 0 ? (
-            <Card className="border-dashed">
-              <CardContent className="pt-6 pb-6 text-center space-y-2">
-                <ImageIcon className="h-8 w-8 text-muted-foreground mx-auto" />
-                <p className="font-medium">{t.contenus.empty_visuals}</p>
-                <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                  {interpolate(t.contenus.empty_visuals_help, { locale: localeLabel(contentLocale) })}
-                </p>
-              </CardContent>
-            </Card>
-          ) : null}
-        </TabsContent>
-      </Tabs>
+      <Card className="border-dashed bg-muted/30">
+        <CardContent className="pt-5 text-sm text-muted-foreground">
+          {t.content_space.home_hint}
+        </CardContent>
+      </Card>
     </main>
   );
 }

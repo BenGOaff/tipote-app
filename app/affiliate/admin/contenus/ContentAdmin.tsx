@@ -41,6 +41,7 @@ export function ContentAdmin({
   initial,
   kind = "article",
   locale = "fr",
+  product = "tiquiz",
   seedable = false,
 }: {
   initial: ContentItem[];
@@ -48,6 +49,8 @@ export function ContentAdmin({
   /** Langue du CONTENU géré (pas l'UI). Filtre les fetches et est utilisée
    *  comme locale de tout nouveau contenu créé depuis cet onglet. */
   locale?: string;
+  /** Produit promu par ce contenu ("tiquiz" ou "atelier"). */
+  product?: string;
   /** Affiche un bouton "Importer les modèles par défaut" quand la liste est vide. */
   seedable?: boolean;
 }) {
@@ -77,7 +80,7 @@ export function ContentAdmin({
   }
 
   async function refresh() {
-    const r = await fetch(`/affiliate/api/admin/contents?kind=${kind}&locale=${encodeURIComponent(locale)}`)
+    const r = await fetch(`/affiliate/api/admin/contents?kind=${kind}&product=${encodeURIComponent(product)}&locale=${encodeURIComponent(locale)}`)
       .then((x) => x.json())
       .catch(() => null);
     if (r?.ok) setItems(r.items as ContentItem[]);
@@ -94,7 +97,7 @@ export function ContentAdmin({
       body: draft.body,
       sort_order: draft.sort_order,
       published: draft.published,
-      ...(includeLocale ? { locale } : {}),
+      ...(includeLocale ? { locale, product } : {}),
       ...(isEmail ? { meta: { preheader: draft.preheader } } : {}),
     };
   }

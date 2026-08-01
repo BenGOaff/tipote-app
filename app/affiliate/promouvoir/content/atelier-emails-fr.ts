@@ -1,228 +1,187 @@
 // app/affiliate/promouvoir/content/atelier-emails-fr.ts
 //
-// Séquence email affiliation L'ATELIER DU QUIZ (formation, commission 70%).
-// Texte de Béné, repris fidèlement, mis en forme dans le style "maison" des
-// emails affiliés (texte propre, pas de markdown brut). FR uniquement.
+// Généré à partir du kit affilié de Béné (repo formaquiz,
+// vente/contenu-affiliés). Ne pas réécrire à la main : régénérer depuis
+// le markdown source si le kit évolue.
 //
-// Placeholders (résolus côté UI, cf. contenus/page.tsx + EmailCard) :
-//   {AFFILIATE_LINK} -> lien tracké de l'affilié vers le tunnel Atelier
-//                        (https://www.tipote.fr/atelier-du-quiz?sa=...).
-//   {NAME}           -> prénom de l'affilié (signature).
-//   {first_name}     -> variable du destinataire (ESP de l'affilié), laissée telle quelle.
-//   {LIEN_ETUDE_CAS} -> lien tracké vers l'étude de cas Jocelyne
-//                        (https://www.tipote.fr/tiquiz/cas-client-jocelyne-tdah?sa=...),
-//                        pré-injecté avec le ?sa de l'affilié côté page.
+// Placeholders résolus à l'affichage :
+//   {AFFILIATE_LINK} -> lien tracké de l'affilié
+//   {NAME}           -> nom affiché de l'affilié
+//   {first_name}     -> variable Systeme.io, laissée telle quelle
 
 import type { EmailTemplate } from "./emails-fr";
 
-export const ATELIER_EMAILS_FR: EmailTemplate[] = [
+export type AtelierEmail = EmailTemplate & {
+  /** Intitulé court de l'email (ex. "L'ouverture"). */
+  label: string;
+  /** Variantes d'objet B et C, à tester. */
+  subjectAlt: string[];
+};
+
+export const ATELIER_EMAILS_FR: AtelierEmail[] = [
   {
-    id: "atelier-01-ouverture",
-    subject: "Ton quiz, tu sais le faire. Et après ?",
-    preheader: "",
-    notes:
-      "Mail 1 - Ouverture (cascade de bénéfices). Objets A/B/C à tester. B : La pièce qui manque à 90% des quiz. C : Comment transformer un quiz en machine à leads.",
-    body: `Salut {first_name},
-
-Si tu cherches à capter plus de leads sans y passer tes journées, garde ce mail deux minutes.
-
-On sait tous que les quiz, ça marche pour récolter des emails.
-
-Le hic, ce n'est presque jamais de créer le quiz. Ça, c'est la partie facile.
-
-Le vrai blocage, c'est l'après : amener des visiteurs dessus, trier les leads, les relancer, vendre. Et savoir dans quel ordre le faire.
-
-Personne n'explique cette partie-là. Résultat : des quiz tout beaux… qui ne rapportent rien.
-
-Je suis tombé sur un truc qui règle exactement ce problème : L'Atelier du Quiz.
-
-Ce n'est pas une formation de plus à regarder en accéléré pour ne jamais l'appliquer.
-
-C'est un « quizing » : tu apprends en faisant, une petite action par jour, et au bout de 7 jours tu as un quiz publié, branché à ton Systeme.io, qui tourne tout seul.
-
-Voici ce que tu obtiens :
-
-- Un plan de trafic gratuit, jour par jour, pour remplir ton quiz de visiteurs qualifiés sans un euro de pub.
-- Le réglage à 0€ qui empêche les gens d'abandonner ton quiz juste avant de te laisser leur email.
-- Le Quiz Doctor qui passe ton quiz au crible avant publication, repère les erreurs qui te coûtent des leads et te dit quoi corriger.
-- Un générateur d'emails branché sur ton quiz + des templates Systeme.io à importer en un clic : tes leads sont accueillis et relancés à ta place.
-- La méthode CAPTO® : les 5 étapes dans l'ordre, pour ne plus jamais te demander « et maintenant, je fais quoi ? ».
-- Ton quiz branché à Systeme.io sans code, tes leads taggés et tes emails automatisés (pas de Zapier, pas de Make).
-- Un coach IA branché sur les vraies données de ton quiz, dispo jour et nuit, qui adapte sa stratégie à TES chiffres.
-
-Tu as aussi la communauté des participants et 5 bonus pour aller plus loin (trafic payant, vente, sondages, popquiz, réseaux sociaux).
-
-Le tout pour 47€. Une seule fois. Accès à vie, et l'accès Tiquiz gratuit est inclus pour démarrer sans rien payer de plus.
-
-Et il y a une garantie : si tu appliques la méthode et que tu ne captes pas un seul lead en 30 jours, tu es remboursé.
-
-👉 Je découvre l'Atelier du Quiz → {AFFILIATE_LINK}
-
-{NAME}
-
-PS : si tu as déjà un quiz qui ne te ramène pas grand-chose, le problème n'est presque jamais le quiz lui-même. C'est tout ce qu'il y a autour. Et c'est exactement ce que l'Atelier règle en 7 jours.`,
+    "id": "atelier-email-01",
+    "label": "L'ouverture",
+    "subject": "Créer le quiz, c'est 10 % du travail",
+    "subjectAlt": [
+      "Ton quiz est en ligne. Et après ?",
+      "La partie que personne ne te montre"
+    ],
+    "preheader": "Les 90 % qui rapportent, personne ne les explique.",
+    "body": "Salut {first_name},\n\nTu as forcément déjà répondu à un quiz sur internet. « Quel type de … êtes-vous ? »\n\nTu as cliqué, tu as répondu à 5 questions, tu as eu ton profil. Et tu as laissé ton adresse email sans y réfléchir une seconde.\n\nC'est exactement ce qui rend cet outil redoutable. Personne n'a l'impression de donner quelque chose. Les gens adorent parler d'eux.\n\nAlors depuis quelques mois, tout le monde s'y met. Et c'est là que je vois toujours la même scène se répéter.\n\nLe quiz est créé. Il est joli. Il est en ligne.\n\nEt il ne rapporte rien.\n\nPas parce qu'il est raté. Parce que créer le quiz, c'est 10 % du travail. Les 90 % qui rapportent viennent après : amener du monde dessus, trier les gens selon leurs réponses, les relancer avec le bon message, et vendre. Dans cet ordre précis.\n\nEt ça, personne ne te l'explique.\n\nC'est pour ça que je te parle aujourd'hui de **l'Atelier du Quiz**, créé par ma partenaire Béné.\n\nCe n'est pas une formation de plus à regarder en accéléré un dimanche soir. C'est 7 jours, une action par jour, et à la fin tu as un quiz publié, connecté à ton Systeme.io, qui tourne sans toi.\n\nVoilà ce que tu installes pendant ces 7 jours :\n\n**Les 7 jours.** Une action par jour, et le 7ᵉ jour ton quiz est en ligne. Dans huit jours, tu envoies ton premier lien à tes gens et tu regardes les premières réponses arriver. (Accès à vie, mises à jour comprises.)\n\n**La méthode CAPTO®.** Les 5 maillons d'un quiz qui vend, montés dans l'ordre et appliqués à ton activité. Tu comprends pourquoi chaque question est là, donc tu deviens capable d'en écrire d'autres tout seul, pour ta prochaine offre comme pour celle d'après.\n\n**Le générateur d'emails.** Comment obtenir la suite d'emails de chaque profil de ton quiz, écrite noir sur blanc, sans en rédiger une ligne toi-même, et importée dans Systeme.io en un clic. Tu passes du quiz aux emails qui vendent dans le même après-midi.\n\n**Le moment de l'email.** Ce qu'il ne faut JAMAIS faire à la seconde où tu demandes l'adresse, et l'instant exact où elle se donne toute seule. Plus le réglage du jour 3, celui qui transforme un inscrit de plus en lecteur qui t'ouvre chaque semaine.\n\n**Du monde, sans pub.** Comment remplir ton quiz sans dépenser un euro de publicité, avec ce que tu as déjà sous la main aujourd'hui. Et le déclencheur qui donne envie à tes participants de l'envoyer eux-mêmes à leur entourage, pour que ton quiz continue de tourner pendant que tu dors.\n\n**Le Coach IA.** Une IA connectée aux vraies données de TON quiz, qui connaît ton domaine et ton contexte. Tu bloques à 23 h un dimanche, tu demandes, tu as ta réponse, et tu avances d'un cran le soir même.\n\n**Le Quiz Doctor.** Le diagnostic question par question, qui te montre exactement laquelle réécrire. Tu changes une phrase, et tes participants vont jusqu'au bout du parcours que tu as construit pour eux.\n\n**La communauté.** Tu vois les quiz des autres membres pendant que tu construis le tien. Tu repères le matin ce qui marche chez eux, et tu l'appliques chez toi l'après-midi.\n\n**Les 5 bonus.** Trafic payant sans risque · Vendre avec ton quiz · Les sondages · Les popquiz · Réseaux sociaux. Cinq leviers à activer une fois ton quiz en ligne, pour qu'il te ramène encore du monde dans six mois.\n\nLe tout pour **47 €, une seule fois.**\n\nPas d'abonnement, aucun prélèvement caché. L'Atelier est à toi pour toujours, mises à jour comprises. Et tu démarres sans payer un centime de plus : l'accès gratuit à l'outil est inclus.\n\n**Je vais voir l'Atelier du Quiz >> {AFFILIATE_LINK}**\n\n{NAME}\n\nPS : si tu as déjà un quiz qui ne te ramène pas grand-chose, retiens juste cette phrase. Le problème n'est presque jamais le quiz. C'est tout ce qu'il y a autour. Et c'est exactement ce qui se règle en 7 jours."
   },
   {
-    id: "atelier-02-preuve",
-    subject: "285 leads en 9 jours, partie de zéro",
-    preheader: "",
-    notes:
-      "Mail 2 - La preuve (étude de cas). Objets A/B/C à tester. B : 0,18€ le lead (tu as bien lu). C : Elle n'avait ni audience ni liste.",
-    body: `Salut {first_name},
-
-Hier je t'ai parlé de l'Atelier du Quiz. Aujourd'hui, du concret.
-
-Il y a une étude de cas qui résume tout : celle de Jocelyne.
-
-Elle s'est lancée sur une niche où elle était totalement inconnue. Comptes réseaux créés la veille. Aucune audience. Aucune liste email. Le point de départ le plus dur qui soit.
-
-Plutôt que d'attendre des mois pour construire une audience, elle a fait un quiz. 5 questions, des profils sur mesure. Le quiz tague chaque personne selon ses réponses, directement dans Systeme.io, et déclenche l'email adapté. Sans code.
-
-Le résultat, sur 9 jours (chiffres réels) :
-
-- 285 leads qualifiés via la pub.
-- 63,50€ de budget pub. Au total, pas par jour.
-- 0,18€ le lead.
-
-Et ce n'est pas un coup de chance. C'est juste le bon enchaînement, dans le bon ordre : capter, attirer, profiler, transformer, optimiser. La méthode qu'on installe pas à pas dans l'Atelier.
-
-Franchement, elle a mis un peu de pub. Mais dans l'Atelier, on commence par le trafic 100% gratuit (la pub, c'est un bonus, pas un passage obligé). Ce que son histoire prouve, c'est l'essentiel : un quiz bien construit qualifie tes leads pour une fraction du prix d'un PDF classique, même en partant de rien.
-
-👉 Je veux ce système pour mon activité → {AFFILIATE_LINK}
-
-Si tu veux lire son histoire en détail (captures et analyse), c'est ici : {LIEN_ETUDE_CAS}
-
-{NAME}`,
+    "id": "atelier-email-02",
+    "label": "La preuve chiffrée",
+    "subject": "Presque 1 sur 2 laisse son email",
+    "subjectAlt": [
+      "44,9 %. Regarde le chiffre de ta page de capture.",
+      "Ce que ton PDF ne te dira jamais"
+    ],
+    "preheader": "Compare avec ta dernière page de capture. Tu vas rire (jaune).",
+    "body": "Salut {first_name},\n\nUn chiffre, et je te laisse en tirer ta conclusion.\n\nDans la catégorie coaching et formation, **44,9 % des personnes qui commencent un quiz laissent leur email à la fin.** C'est le rapport Interact qui le dit, pas moi.\n\nPresque une personne sur deux.\n\nMaintenant, va regarder le taux de ta dernière page de capture. Prends ton temps, je t'attends.\n\nVoilà. On peut parler.\n\nEt encore, le taux n'est même pas le plus intéressant.\n\nUn lead magnet classique te donne une adresse email. Un PDF, une checklist, une mini-formation : la personne télécharge, ferme, oublie. Tu récupères une ligne de plus dans ta liste, et tu ne sais toujours rien d'elle.\n\nUn quiz te donne une adresse email **et** la raison d'acheter.\n\nParce que pendant qu'elle répond, la personne te dit où elle en est, ce qui la bloque, ce qu'elle a déjà essayé et ce qu'elle cherche. Elle te le dit volontairement, en cliquant, sans que tu aies rien à demander.\n\nRésultat : quand tu lui écris le lendemain, tu ne pars plus d'une adresse anonyme. Tu sais déjà à qui tu parles. Et le taux d'ouverture de tes emails ne ressemble plus du tout à celui d'avant.\n\nC'est toute la différence entre collecter des emails et construire une liste qui achète.\n\nMa partenaire Béné a construit **l'Atelier du Quiz** pour installer ça chez toi en 7 jours : une action par jour, ton quiz publié dès le 4ᵉ jour, connecté à ton Systeme.io, et tes inscrits qui arrivent déjà triés.\n\n47 €, une seule fois, accès à vie.\n\n**Je veux voir comment ça marche >> {AFFILIATE_LINK}**\n\n{NAME}\n\nPS : le chiffre de 44,9 %, c'est une moyenne de marché. Ce n'est pas une promesse, et Béné ne te la fera pas. Ce qu'elle te montre, c'est comment construire le quiz qui te met du bon côté de la moyenne."
   },
   {
-    id: "atelier-03-objection",
-    subject: "« Oui mais elle, c'est pas pareil »",
-    preheader: "",
-    notes:
-      "Mail 3 - Pourquoi pas toi (objection d'identité). Objets A/B/C à tester. B : Ils l'ont fait. Pourquoi pas toi ? C : Ce que ton cerveau s'est dit hier.",
-    body: `Salut {first_name},
-
-Hier, l'histoire de Jocelyne. Et je parie que ton cerveau a fait un truc en la lisant : il a cherché la raison pour laquelle, toi, ça ne marcherait pas.
-
-« Elle a plus d'expérience que moi. »
-« Elle a mis de la pub, j'ai pas de budget. »
-« Moi je suis nul en technique. »
-
-Je te réponds vite fait.
-
-Ton expertise, tu l'as déjà. Tu as un métier, un vécu, des galères que d'autres traversent en ce moment. Le quiz sert justement à mettre ça en avant, et l'IA t'aide à le formuler à partir de tes mots.
-
-Le budget, tu n'en as pas besoin pour démarrer. On commence par le trafic gratuit, et l'accès Tiquiz gratuit est inclus. Tu fais tout le parcours sans sortir un euro de plus que les 47€.
-
-La technique, elle est guidée. Zéro code, zéro Make, zéro Zapier. L'IA écrit ton quiz, tu corriges en cliquant, la connexion à Systeme.io est expliquée clic par clic. Si tu sais répondre à des questions, tu sais faire ton quiz.
-
-Et si malgré tout tu as un doute : la garantie couvre tes arrières. Pas un seul lead capté en 30 jours malgré la méthode appliquée ? Remboursé. Le risque est du côté du produit, pas du tien.
-
-Donc la vraie question, ce n'est plus « est-ce que ça peut marcher pour moi ». C'est « est-ce que je me lance ».
-
-👉 Oui, je me lance → {AFFILIATE_LINK}
-
-{NAME}`,
+    "id": "atelier-email-03",
+    "label": "Ton PDF gratuit dort, et ce n'est pas ta faute",
+    "subject": "Ton PDF gratuit dort. Voilà pourquoi.",
+    "subjectAlt": [
+      "Le problème n'est pas ta niche",
+      "Pourquoi tes lead magnets tombent à plat"
+    ],
+    "preheader": "Ce n'est ni ta niche, ni ton marketing.",
+    "body": "Salut {first_name},\n\nSi tu as déjà essayé de capter des emails sans grand résultat, tu es sûrement passé par un de ces classiques.\n\nLe PDF gratuit à télécharger. La checklist. La mini-formation offerte. Le guide en 12 pages que tu as mis trois week-ends à écrire.\n\nTu l'as proposé. Quelques personnes l'ont pris. Et puis plus rien.\n\nAlors tu t'es dit : « c'est ma niche, ça ne marche pas chez moi. » Ou : « je suis nul en marketing. »\n\nCe n'est ni l'un ni l'autre.\n\nLe vrai problème, c'est que ces lead magnets sont **passifs**. La personne télécharge, ferme le fichier, et t'oublie. Toi, tu n'apprends strictement rien sur elle. Tu ne sais pas qui elle est, ce qu'elle veut, ni où elle en est.\n\nTu te retrouves donc à écrire à une liste dont tu ne sais rien. Et à envoyer la même offre à tout le monde en croisant les doigts.\n\nUn quiz fait exactement l'inverse.\n\nLa personne participe. Elle répond. Elle se dévoile. Elle prend du plaisir à le faire, parce que tout le monde adore parler de soi et découvrir son profil.\n\nEt à la fin, tu ne récupères pas juste un email. Tu récupères un email, un profil et un besoin précis, que tu peux taguer et adresser directement dans ton Systeme.io.\n\nC'est vrai dans tous les domaines, y compris le tien. Un sujet sérieux ne devient pas léger parce qu'il passe par un quiz. Au contraire : plus ton sujet est sérieux, plus les gens ont besoin de savoir où ils en sont avant de dépenser le moindre euro.\n\nDans **l'Atelier du Quiz**, ma partenaire Béné te fait transformer ton lead magnet qui dort en quiz qui trie et qui vend. 7 jours, une action par jour, zéro ligne de code.\n\n**Je transforme mon PDF qui dort >> {AFFILIATE_LINK}**\n\n{NAME}\n\nPS : garde ton PDF. Il ne devient pas inutile. Il devient ce que tu offres à la fin du quiz, une fois que tu sais à qui tu parles. Ce n'est plus le même objet."
   },
   {
-    id: "atelier-04-systeme",
-    subject: "Là où 9 personnes sur 10 lâchent",
-    preheader: "",
-    notes:
-      "Mail 4 - Le système (la chaîne CAPTO). Objets A/B/C à tester. B : Ton quiz n'est que la première marche. C : Les 5 étapes (et celle que tout le monde saute).",
-    body: `Salut {first_name},
-
-Pour qu'un quiz rapporte vraiment, il y a des étapes à respecter, dans l'ordre :
-
-1. Capter : un quiz qu'on a envie de finir (le bon angle, des résultats qui parlent).
-2. Attirer : du trafic qualifié dessus, gratuitement.
-3. Profiler : taguer chaque personne selon ses réponses.
-4. Transformer : convertir ces leads en ventes, avec les bons emails au bon moment.
-5. Optimiser : mesurer, ajuster, faire tourner en boucle.
-
-C'est la méthode CAPTO®. Et voilà le truc que presque personne ne dit.
-
-La plupart des gens font l'étape 1. Ils créent leur quiz. Ils sont fiers (à raison). Et ils s'arrêtent là.
-
-Le quiz est en ligne, mais personne ne tombe dessus. Ou il capte des emails que personne ne trie ni ne relance. La chaîne casse à la première marche, et le quiz ne rapporte rien.
-
-Ce n'est pas un problème d'effort. C'est un problème d'enchaînement.
-
-L'Atelier du Quiz, c'est exactement ça : on déroule les 5 maillons avec toi, dans l'ordre, sans en sauter un seul. Ton quiz est publié dès le 4e jour, pour avoir le temps de brancher tout le reste derrière.
-
-Un maillon en cadeau, tout de suite : à l'étape « Capter », l'ordre de tes questions change tout. Plus une personne avance dans ton quiz, moins elle a envie de l'abandonner. Donc si ta question qui fait décrocher tombe trop tôt, tu perds des gens juste avant qu'ils ne te laissent leur email. Inverse-la avec une autre, et tu gardes plus de monde jusqu'au bout. Plus de monde au bout = plus de leads, sans un visiteur de plus.
-
-Ça, c'est UN maillon. Dans l'Atelier, tu as les cinq, et le coach vérifie que les tiens tiennent.
-
-👉 Je veux la chaîne complète → {AFFILIATE_LINK}
-
-{NAME}`,
+    "id": "atelier-email-04",
+    "label": "La chaîne à 5 maillons (et le maillon que je t'offre)",
+    "subject": "Là où 9 personnes sur 10 lâchent",
+    "subjectAlt": [
+      "Ton quiz n'est que la première marche",
+      "Les 5 étapes, et celle que tout le monde saute"
+    ],
+    "preheader": "Un maillon offert à la fin de cet email, applicable ce soir.",
+    "body": "Salut {first_name},\n\nPour qu'un quiz rapporte vraiment, il y a une chaîne à respecter. Dans l'ordre, elle donne ça :\n\n**1. Capter.** Concevoir un quiz qu'on a envie de finir : le bon angle, des résultats qui parlent vraiment à la personne.\n**2. Attirer.** Amener du trafic qualifié dessus, gratuitement.\n**3. Profiler.** Taguer chaque personne selon ses réponses, pour savoir précisément à qui tu parles.\n**4. Transformer.** Convertir ces inscrits en clients, avec les bons emails, la bonne offre, au bon moment.\n**5. Optimiser.** Mesurer, ajuster, et faire tourner le système en boucle.\n\nCapter, Attirer, Profiler, Transformer, Optimiser. C'est la méthode CAPTO®, mise au point par ma partenaire Béné.\n\nEt voilà le truc que presque personne ne te dira.\n\nLa plupart des gens font l'étape 1. Ils créent leur quiz. Ils sont fiers, et ils ont raison de l'être. Et ils s'arrêtent là.\n\nAlors le quiz est en ligne, mais personne ne tombe dessus : l'étape 2 manque. Ou il capte des emails que personne ne trie ni ne relance : les étapes 3 et 4 manquent.\n\nLa chaîne casse à la première marche, et le quiz ne rapporte rien.\n\nCe n'est pas un problème d'effort. C'est un problème d'enchaînement. Une seule maille qui lâche, et toute la chaîne tombe.\n\n**Tiens, je t'offre un maillon tout de suite.**\n\nÀ l'étape « Capter », l'ordre de tes questions change tout. Plus une personne avance dans ton quiz, moins elle a envie de l'abandonner. Donc si ta question la plus moyenne, celle qui fait décrocher, tombe trop tôt, tu perds des gens pour rien, juste avant qu'ils ne te laissent leur adresse.\n\nUne participante de l'Atelier a raconté exactement ça. Son quiz avait un gros abandon à la question 2. Elle a simplement inversé la 2 et la 3. Ses mots :\n\n*« J'ai juste inversé la 2 et la 3, et les résultats sont déjà bien meilleurs. Plus les gens sont avancés dans le quiz, moins ils abandonnent. En attendant de modifier la question, ça a suffi à bien augmenter le taux de complétion. »*\n\nComment a-t-elle su quelle question coinçait ? Parce que l'outil lui montre le parcours question par question. Elle a vu noir sur blanc que sa Q2 faisait fuir 18 % des gens. Tu repères le point chaud, tu le corriges, tu gardes plus de monde jusqu'au bout. Et plus de monde au bout, ça veut dire plus d'inscrits, sans un visiteur de plus.\n\nÇa, c'est UN maillon sur cinq, et tu peux l'appliquer ce soir.\n\nDans **l'Atelier du Quiz**, tu as les cinq, montés dans l'ordre avec toi, et un coach qui vérifie que les tiens tiennent. 7 jours, une action par jour, 47 € une seule fois.\n\n**Je veux la chaîne complète >> {AFFILIATE_LINK}**\n\n{NAME}\n\nPS : si tu ne devais retenir qu'une phrase de cet email : ton quiz n'est pas le produit fini, c'est la première marche. Ce qui rapporte, c'est ce que tu montes derrière."
   },
   {
-    id: "atelier-05-faq",
-    subject: "Tout ce que tu te demandes sur l'Atelier",
-    preheader: "",
-    notes:
-      "Mail 5 - FAQ (objections pratiques). Objets A/B/C à tester. B : Je réponds à tes questions. C : Cette question vient de toi ?",
-    body: `Salut {first_name},
-
-On me pose souvent les mêmes questions sur l'Atelier du Quiz. Je te réponds cash.
-
-« C'est un abonnement ? »
-Non. 47€ une seule fois, accès à vie, mises à jour comprises. Aucun prélèvement caché.
-
-« Faut-il payer Tiquiz pour réussir ? »
-Non, tu démarres en gratuit. L'accès Tiquiz gratuit est inclus et il suffit pour créer et publier ton premier quiz. Tu passeras au payant seulement quand ton quiz te ramènera déjà des leads.
-
-« C'est encore une formation comme les autres ? »
-Non. Tu ne regardes pas des vidéos en prenant des notes que tu n'appliques jamais. Tu apprends à faire un quiz en faisant ton quiz. Chaque jour, une action, un livrable. À la fin, tu as un quiz publié qui tourne.
-
-« Et si je bloque ? »
-Tu as un coach IA branché sur les vraies données de ton quiz, dispo jour et nuit, qui te débloque en adaptant ses conseils à tes chiffres. Plus la communauté des participants.
-
-« Comment je sais si mon quiz est bon avant de le lancer ? »
-Le Quiz Doctor le passe au crible avant publication : angle, ordre des questions, capture, images. Il te dit quoi corriger. Tu publies un quiz déjà réglé.
-
-« Je débute, je suis nul en technique. »
-C'est fait pour toi. Zéro code. L'IA écrit ton quiz, tu corriges en cliquant, chaque étape est guidée.
-
-« Est-ce que ça marche dans ma niche ? »
-Oui. Coach, consultant, e-commerce, freelance, créateur… la mécanique est la même, c'est juste l'angle qui change. Partout, les gens adorent parler d'eux et découvrir leur profil.
-
-« Et si ça ne marche pas pour moi ? »
-Garantie 30 jours. Pas un seul lead capté en appliquant la méthode ? Remboursé.
-
-👉 J'ai ma réponse, je rejoins l'Atelier → {AFFILIATE_LINK}
-
-{NAME}`,
+    "id": "atelier-email-05",
+    "label": "« Ça marche pour eux, pas pour moi »",
+    "subject": "« Oui mais moi, c'est pas pareil »",
+    "subjectAlt": [
+      "Les 4 raisons que ton cerveau vient d'inventer",
+      "Ce que tu te dis, et pourquoi c'est faux"
+    ],
+    "preheader": "Je te les prends une par une, sans te raconter d'histoires.",
+    "body": "Salut {first_name},\n\nJe connais ton cerveau, parce que c'est le mien aussi.\n\nDès qu'il voit quelque chose qui marche chez quelqu'un d'autre, il part chercher la raison pour laquelle, toi, ça ne marcherait pas. Et il la trouve toujours. En général, une de ces quatre.\n\n**« Je n'ai pas l'expertise. »**\nSi. Tu as un métier, un vécu, des galères que tu as traversées et que d'autres traversent en ce moment. C'est ça, l'expertise. Le quiz sert justement à la mettre en avant, et l'IA t'aide à la formuler à partir de tes propres mots. Dans l'Atelier, un carnet de bord se remplit au fil des jours avec TES réponses. Ton quiz s'écrit à partir de toi.\n\n**« Je n'ai pas le budget. »**\nTu n'en as pas besoin pour démarrer. On commence par le trafic 100 % gratuit, et l'accès gratuit à l'outil est inclus. Tu peux faire tout le parcours sans sortir un euro de plus que les 47 € de l'Atelier. La publicité, tu la mettras plus tard, ou jamais, comme tu veux.\n\n**« La technique, ça me dépasse. »**\nZéro code, zéro Zapier, zéro Make. L'IA écrit la première version de ton quiz, tu corriges en cliquant, et la connexion à Systeme.io est montrée clic par clic. Si tu sais répondre à des questions, tu sais faire ton quiz.\n\n**« Je suis seul face à tout ça. »**\nC'est justement le cœur de l'Atelier. Un coach IA connecté aux vraies données de ton quiz, disponible jour et nuit, qui te débloque à la seconde où tu cales. Une communauté de membres qui construisent en même temps que toi. Et Béné, qui répond personnellement.\n\nEt s'il te reste un doute après ces quatre-là, voilà ce qu'elle te propose.\n\n**Si tu n'as pas capté un seul inscrit avec ton quiz au bout de 30 jours, alors que tu as appliqué la méthode, elle te rembourse.**\n\nTout le risque est de son côté. Soit ça te ramène des inscrits, soit tu récupères ton argent. On ne propose pas ça quand on n'y croit pas.\n\nDonc la vraie question n'est plus « est-ce que ça peut marcher pour moi ».\n\nC'est « est-ce que je me lance ».\n\n**Oui, je me lance >> {AFFILIATE_LINK}**\n\n{NAME}\n\nPS : la seule personne qui sait vraiment de quoi tu es capable, c'est toi. Et honnêtement, à 47 € avec un remboursement au bout, la question du risque ne se pose plus. Reste celle de l'envie."
   },
   {
-    id: "atelier-06-cloture",
-    subject: "Dernier rappel pour l'Atelier du Quiz",
-    preheader: "",
-    notes:
-      "Mail 6 - Clôture (à activer si l'affilié pose une deadline). Objets A/B/C à tester. B : Ce n'est plus le moment de réfléchir. C : On récapitule (et on décide).",
-    body: `Salut {first_name},
-
-Je ne vais pas te tenir la jambe, alors je fais court.
-
-Tu sais que les quiz marchent. Tu sais (ou presque) en créer un. Et tu sais que ce qui te manque, c'est tout ce qui vient après : le trafic, le tri des leads, les relances, la vente.
-
-C'est exactement ce que tu installes dans l'Atelier du Quiz, en 7 jours, accompagné du premier au dernier jour :
-
-- Un quiz audité par le Quiz Doctor puis publié dès le 4e jour.
-- Tes leads triés et tes relances automatisées (générateur d'emails + templates Systeme.io).
-- Des visiteurs sans un euro de pub et le mécanisme de viralité qui fait grossir ta liste.
-- Un coach IA branché sur tes données, la communauté et 5 bonus (trafic payant, vente, sondages, popquiz, réseaux sociaux).
-
-Le tout pour 47€, une seule fois, avec la garantie remboursé si tu ne captes pas un seul lead en 30 jours.
-
-Au fond, tu as deux options. Fermer ce mail, et dans un mois ton quiz est au même point qu'aujourd'hui. Ou cliquer, répondre à quelques questions, et dans 7 jours avoir un système qui te ramène des leads en automatique.
-
-👉 Je rejoins l'Atelier du Quiz → {AFFILIATE_LINK}
-
-{NAME}
-
-PS : si tu veux vraiment créer de l'urgence auprès de ta liste, ajoute ici TA propre échéance (un bonus que tu offres, une date de fin de recommandation). Reste honnête : ne promets que ce que tu tiens.`,
+    "id": "atelier-email-06",
+    "label": "Partir de zéro (vraiment de zéro)",
+    "subject": "Elle est partie de zéro. Vraiment de zéro.",
+    "subjectAlt": [
+      "Aucune audience, aucune liste, aucun abonné",
+      "1 h 30 de travail, et tout a changé"
+    ],
+    "preheader": "Comptes créés la veille. Zéro abonné. Et pourtant.",
+    "body": "Salut {first_name},\n\nIl y a une objection que je n'ai pas encore traitée, et c'est la plus fréquente de toutes.\n\n« Ça marche pour ceux qui ont déjà une audience. Moi je pars de rien. »\n\nAlors laisse-moi te présenter Jocelyne.\n\nJocelyne a été orthophoniste pendant 40 ans. Elle a écrit près de 70 romans. Et récemment, elle décide de se lancer sur un sujet complètement nouveau pour elle, où absolument personne ne la connaît.\n\nComptes Facebook et Instagram créés la veille. Aucune audience. Aucune liste email. Un livre sur Amazon que personne ne lit encore.\n\nLe point de départ le plus dur qui soit.\n\nElle avait deux options. Passer six mois à construire une audience avant d'espérer capter quoi que ce soit. Ou faire l'inverse.\n\nElle a fait un quiz. 5 questions, 5 profils sur mesure. L'IA a écrit la première version, elle l'a affinée avec ses 40 ans de métier. Temps de création : à peu près 1 h 30.\n\nLe quiz tague chaque personne selon son profil, directement dans Systeme.io. Le tag déclenche l'email adapté à cette personne. Pas de Zapier, pas de Make, pas une ligne de code.\n\nEt en 9 jours, elle est passée de zéro contact à une liste qualifiée, sur laquelle elle sait déjà qui est qui.\n\nSon plus beau retour n'est même pas un chiffre. C'est une lectrice qui lui a envoyé un message qui lui a « fait venir les larmes aux yeux ».\n\nParce qu'un quiz bien fait, ça ne capture pas juste une adresse. Ça touche la bonne personne, sur le bon sujet, au bon moment.\n\nJe te dis les choses franchement : Jocelyne a aussi testé un petit budget publicitaire pour accélérer. Ce n'est ni obligatoire, ni le point de départ. Dans l'Atelier, on commence par le trafic 100 % gratuit, avec ce que tu as déjà sous la main.\n\nCe que son histoire prouve, c'est autre chose, et c'est bien plus important : ce qui a tout changé pour elle, ce n'est pas son audience, elle n'en avait pas. C'est d'avoir suivi le bon enchaînement, dans le bon ordre.\n\nCapter, attirer, profiler, transformer, optimiser.\n\nC'est exactement ce que tu montes dans **l'Atelier du Quiz** de ma partenaire Béné. 7 jours, une action par jour, 47 € une seule fois.\n\n**Je pars de zéro moi aussi >> {AFFILIATE_LINK}**\n\n{NAME}\n\nPS : le meilleur moment pour construire une liste qualifiée, c'était il y a deux ans. Le deuxième meilleur moment, c'est cette semaine, pendant que ton concurrent envoie encore un PDF."
   },
+  {
+    "id": "atelier-email-07",
+    "label": "Pourquoi je te parle d'elle",
+    "subject": "Pourquoi je te parle d'elle",
+    "subjectAlt": [
+      "Je ne recommande presque jamais rien",
+      "Une ancienne infirmière, et un réflexe qui change tout"
+    ],
+    "preheader": "Ce qui m'a convaincu, ce n'est pas la promesse.",
+    "body": "Salut {first_name},\n\nTu as remarqué que je ne te parle pas d'un outil ou d'une formation toutes les semaines. C'est volontaire.\n\nAlors quand je le fais, autant que tu saches pourquoi.\n\nBéné a été infirmière avant de créer son entreprise. Et il lui reste un réflexe de ce métier : on ne traite pas un symptôme, on cherche la vraie cause.\n\nC'est exactement ce qu'elle a fait avec les quiz.\n\nPendant des mois, elle a vu des gens créer leur quiz, être fiers de l'avoir fait, et puis… plus rien. Le quiz reste là. Personne dessus. Ou des adresses qui tombent et qui ne mènent nulle part.\n\nEt toujours la même phrase qui revenait dans sa boîte mail : « j'ai fait mon quiz, mais je fais quoi maintenant ? »\n\nAu début elle répondait, un par un, longuement. Des heures. Parce que ça la rend dingue, cette idée que quelqu'un fasse l'effort, y croie, et abandonne juste parce que personne ne lui a montré la suite.\n\nPuis elle a arrêté de traiter le symptôme. Elle a cherché la vraie cause.\n\nEt la vraie cause n'était pas le quiz. C'était le vide autour : pas de trafic, pas d'automatisation, pas de plan.\n\nAlors elle a construit **l'Atelier du Quiz**. Pas un produit de plus. La réponse qu'elle aurait voulu pouvoir donner à chaque personne restée coincée.\n\n7 jours, une action par jour, un livrable concret à chaque fois. Un coach IA connecté à tes données quand elle ne peut pas être là en personne. Et elle qui répond, personnellement, dans la communauté.\n\nVoilà ce qui m'a convaincu. Ce n'est pas la promesse, c'est la façon dont c'est construit. Ça se voit tout de suite, quand quelqu'un a passé des mois sur un truc pour qu'il serve vraiment.\n\n**Je vais voir ce qu'elle a construit >> {AFFILIATE_LINK}**\n\n{NAME}\n\nPS : 47 €, paiement unique, accès à vie, mises à jour comprises. Et si tu n'as pas capté un seul inscrit en 30 jours en appliquant la méthode, elle rembourse. Ça aussi, ça dit quelque chose sur la personne."
+  },
+  {
+    "id": "atelier-email-08",
+    "label": "« C'est gratuit sur YouTube »",
+    "subject": "« Je trouve tout ça gratuitement sur YouTube »",
+    "subjectAlt": [
+      "La voie lente, ou la voie rapide ?",
+      "Pourquoi payer pour un truc qu'on trouve gratuitement"
+    ],
+    "preheader": "Question légitime. Réponse franche.",
+    "body": "Salut {first_name},\n\n« Pourquoi je paierais, alors que je peux tout trouver gratuitement sur YouTube ? »\n\nC'est une bonne question, elle est légitime, et je vais y répondre franchement.\n\nOui, tu peux tout trouver gratuitement. Les quiz, le trafic, les tags, les séquences d'emails. Tout est quelque part.\n\nEn morceaux. Éparpillé dans des centaines de vidéos qui ne se parlent pas entre elles.\n\nLe problème n'a jamais été l'information. Le problème, c'est le temps.\n\nLa voie gratuite, concrètement, c'est : chercher la bonne vidéo et trier les mauvaises, assembler des bouts de méthodes qui ne vont pas ensemble, adapter tout ça à ton activité à toi, tester, te tromper, recommencer. Et rester bloqué trois jours sur un détail, sans personne pour te dire où est l'erreur.\n\nDes semaines. Parfois des mois. Et le plus souvent, un abandon en cours de route, parce que la vie continue à côté.\n\nLa voie de **l'Atelier du Quiz**, c'est le même savoir. Béné ne réinvente pas la route.\n\nSauf qu'il est rangé dans l'ordre, testé, adapté à ton domaine, et que tu n'y es jamais seul : le coach IA te débloque à la seconde où tu cales, et Béné répond tous les jours.\n\n7 jours. Une action par jour. Un quiz qui tourne au bout.\n\n47 € pour gagner des semaines. À toi de voir ce que vaut ton temps.\n\n**Je prends le raccourci >> {AFFILIATE_LINK}**\n\n{NAME}\n\nPS : compte le nombre d'heures que tu as déjà passées à regarder des vidéos sur le sujet sans rien publier derrière. Multiplie par ton tarif horaire. Puis relis le prix."
+  },
+  {
+    "id": "atelier-email-09",
+    "label": "Ce n'est ni facile ni rapide",
+    "subject": "Ce n'est ni facile ni rapide",
+    "subjectAlt": [
+      "Je ne vais pas te mentir là-dessus",
+      "À ne pas prendre si tu cherches un bouton magique"
+    ],
+    "preheader": "Autant te le dire maintenant que te décevoir après.",
+    "body": "Salut {first_name},\n\nJe vais écrire un truc qu'on lit rarement dans un email qui recommande quelque chose.\n\nL'Atelier du Quiz, ce n'est pas magique.\n\nTu ne vas pas cliquer, croiser les bras, et voir les inscrits pleuvoir. Il va falloir répondre aux questions du carnet, construire ton quiz, le publier, le diffuser. Bref, bosser. Un peu chaque jour, pendant 7 jours.\n\nSi tu cherches le bouton « gagner sans rien faire », ferme cet email. Sincèrement. Je préfère te le dire maintenant.\n\nPar contre.\n\nSi tu acceptes de mettre une petite heure par jour pendant une semaine, voilà ce que ça installe chez toi :\n\n**Un quiz publié et qui capte dès le 4ᵉ jour**, pas dans six mois, pas « quand tu auras le temps ». Tu vois les premières réponses arriver pendant que la semaine est encore en cours.\n\n**Tes inscrits qui rentrent triés tout seuls**, avec leur profil et leur besoin déjà rangés dans ton Systeme.io. Tu ouvres ton tableau de bord le matin et tu sais à qui tu écris aujourd'hui.\n\n**Un plan clair, dans l'ordre**, avec une seule action par jour. Tu ouvres ton ordinateur en sachant exactement quoi faire, et tu le refermes en ayant terminé quelque chose.\n\nCe n'est pas « facile » au sens de sans rien faire. C'est simple au sens de : tu sais exactement quoi faire, étape par étape, avec quelqu'un pour te débloquer quand tu cales.\n\nLa nuance est énorme.\n\nJocelyne a mis à peu près 1 h 30 à créer son quiz, en partant d'une audience à zéro. Elle a bossé, oui. Mais au bon endroit, dans le bon ordre.\n\nC'est tout ce que je te propose : arrêter de t'épuiser au mauvais endroit.\n\n**Je suis d'accord pour bosser au bon endroit >> {AFFILIATE_LINK}**\n\n{NAME}\n\nPS : 7 jours. C'est plus court que le temps que tu as déjà passé à te demander si tu devais te lancer."
+  },
+  {
+    "id": "atelier-email-10",
+    "label": "Ce qui se passe vraiment pendant les 7 jours",
+    "subject": "Ce qui se passe vraiment pendant les 7 jours",
+    "subjectAlt": [
+      "Tu n'apprends pas à faire un quiz. Tu en fais un.",
+      "Une action par jour, un livrable par jour"
+    ],
+    "preheader": "Ce n'est pas une formation. C'est un chantier.",
+    "body": "Salut {first_name},\n\nTu as déjà acheté une formation que tu n'as jamais finie. Moi aussi. Tout le monde aussi.\n\nLe schéma est toujours le même : tu regardes trois vidéos le premier soir, plein d'enthousiasme. Puis la semaine reprend. Et le module 4 t'attend encore aujourd'hui.\n\nL'Atelier du Quiz est construit pour rendre ça impossible.\n\nParce que tu n'apprends pas à faire un quiz. **Tu fais ton quiz.**\n\nChaque jour, une action, une seule. Et un livrable concret à la fin. Pas des notes. Pas un « j'ai compris ». Un morceau de ton quiz qui existe et que tu peux montrer.\n\nTrois moments que je te donne, pour que tu voies le rythme :\n\n**Le jour 3.** Le réglage au moment où tu demandes l'adresse email. Un détail que presque personne ne connaît, et qui décide si la personne te la donne ou referme l'onglet à deux questions de la fin.\n\n**Le jour 4.** Ton quiz est publié. En ligne, connecté à ton Systeme.io, capable de capter. À partir de là, les trois jours qui restent servent à amener du monde dessus et à faire tourner la machine derrière.\n\n**Le jour 7.** Le système est monté. Tu envoies ton premier lien, et tu regardes les réponses tomber. Ensuite, ça tourne sans toi.\n\nEntre les deux, un carnet de bord se remplit avec TES réponses, et c'est lui qui sert de matière première : à ton quiz, à tes emails, à ta page de résultat.\n\nVoilà pourquoi Béné appelle ça un quizing et pas une formation. Tu apprends en faisant, et ce que tu produis reste à toi.\n\n47 €, paiement unique, accès à vie, mises à jour comprises.\n\n**Je veux mon quiz en ligne cette semaine >> {AFFILIATE_LINK}**\n\n{NAME}\n\nPS : le jour 4, c'est le moment que je préfère. C'est là que ça arrête d'être un projet et que ça devient un truc qui existe sur internet."
+  },
+  {
+    "id": "atelier-email-11",
+    "label": "Tu ne restes jamais bloqué",
+    "subject": "Il est 23 h un dimanche et tu bloques",
+    "subjectAlt": [
+      "Ce qui fait qu'on abandonne (et comment c'est réglé)",
+      "Personne pour te répondre : voilà le vrai problème"
+    ],
+    "preheader": "On n'abandonne pas par manque de motivation.",
+    "body": "Salut {first_name},\n\nOn n'abandonne presque jamais par manque de motivation.\n\nOn abandonne parce qu'on bloque sur un truc, qu'il n'y a personne pour répondre, et que le lendemain on est passé à autre chose. Le projet ne meurt pas d'un coup. Il meurt d'un point d'interrogation resté sans réponse.\n\nDans l'Atelier du Quiz, il y a trois filets pour que ça n'arrive pas.\n\n**Le Coach IA.** Une IA connectée aux vraies données de TON quiz, qui connaît ton domaine et ton contexte. Ce n'est pas un chatbot générique à qui tu dois réexpliquer ta vie à chaque fois. Tu bloques à 23 h un dimanche, tu demandes, tu as ta réponse, et tu avances d'un cran le soir même.\n\n**Le Quiz Doctor.** Ton quiz tourne mais peu de gens vont au bout ? Ce n'est pas tout le quiz qu'il faut refaire. Le diagnostic te montre, question par question, exactement laquelle bloque. Tu réécris une phrase, et tes participants vont jusqu'au bout du parcours que tu as construit pour eux.\n\n**La communauté, et Béné dedans.** Tu vois les quiz des autres membres pendant que tu construis le tien. Tu repères le matin ce qui marche chez eux, et tu l'appliques chez toi l'après-midi. Et Béné répond personnellement, tous les jours.\n\nTrois filets, pour que la question du dimanche soir ne devienne jamais l'abandon du lundi matin.\n\nC'est aussi ça que tu achètes à 47 €. Pas seulement du contenu : quelqu'un au bout du fil.\n\n**Je veux être accompagné jusqu'au bout >> {AFFILIATE_LINK}**\n\n{NAME}\n\nPS : compte les projets que tu as laissés tomber à 80 %. C'est presque toujours à cause d'un blocage minuscule que personne n'était là pour lever."
+  },
+  {
+    "id": "atelier-email-12",
+    "label": "Les 5 bonus et les 2 outils",
+    "subject": "7 cadeaux dans l'Atelier",
+    "subjectAlt": [
+      "Les bonus coûtent plus cher que le programme",
+      "Ce qu'il y a une fois ton quiz en ligne"
+    ],
+    "preheader": "Ce qui se passe après le 7ᵉ jour.",
+    "body": "Salut {first_name},\n\nJusqu'ici je t'ai parlé des 7 jours. Aujourd'hui je te parle de ce qu'il y a après.\n\nParce qu'une fois ton quiz en ligne, l'Atelier ne s'arrête pas. Il te donne 5 bonus et 2 outils. Voilà à quoi ils servent.\n\n**🎁 Le trafic payant sans risque.** La règle d'or : tu ne lances jamais de publicité avant que ton quiz capte déjà en gratuit. Plus l'offre à placer juste après le quiz pour que ses ventes remboursent ce que tu as dépensé, et le seul poste de publicité vraiment rentable, celui qui va rechercher les gens qui ont commencé ton quiz sans le finir. Tu n'ouvres les vannes que le jour où les maths sont bonnes.\n\n**🎁 Vendre avec ton quiz.** Pourquoi ton quiz pose le diagnostic et pourquoi c'est toi qui prescris, ce qui fait que la personne ne se braque pas quand tu proposes ta solution. Plus ta page de résultat en 4 temps, et l'aiguilleur qui envoie chaque profil vers l'offre faite pour lui. Tu arrêtes de proposer la même chose à tout le monde, et tu commences à proposer la bonne chose à la bonne personne.\n\n**🎁 Les sondages.** Comment écrire ton quiz et ton offre avec les mots exacts de ta cible, au lieu de les deviner tout seul à ton bureau. Une réponse est anecdotique, trois cents deviennent des tendances, et l'analyse les sort à ta place. Tu crées ta prochaine offre en sachant déjà qu'elle va se vendre.\n\n**🎁 Les popquiz.** Un quiz incrusté dans ta vidéo, à un moment que tu choisis toi-même. Le cliffhanger, placé juste avant la révélation, pile quand l'envie de savoir est la plus forte. Ta meilleure vidéo devient un webinaire qui tourne 24 h sur 24, et plus personne ne rate la session.\n\n**🎁 Les réseaux sociaux, en 7 modules.** Facebook, Instagram, LinkedIn, Reddit, Threads et X, un module par réseau, avec ce qui marche et ce qui te fait sanctionner. Tu ramènes du monde sur ton quiz sans payer un euro de publicité.\n\n**🛠 Les modèles à importer.** Rien à écouter ici. Ta séquence de bienvenue en 4 emails et trois modèles de page de liens, importés en un clic dans ton Systeme.io. Tu remplaces, tu publies. La partie technique que tu repousses depuis des mois est pliée avant le dîner.\n\n**🛠 Le générateur de campagne.** Tu remplis ton carnet, il écrit ta séquence de bienvenue, un email par profil de résultat, ta séquence de vente et ton kit de lancement. Celui qui a répondu « je débute » ne reçoit pas le message de celui qui vend déjà. Et plus ton carnet est rempli, meilleure est la campagne.\n\nTout ça est compris dans les 47 €. Une seule fois, accès à vie, mises à jour comprises.\n\n**Je veux les 7 >> {AFFILIATE_LINK}**\n\n{NAME}\n\nPS : regarde bien la liste. Ce ne sont pas des bonus posés là pour gonfler la page. Chacun sert à faire tourner ton quiz une fois qu'il est en ligne. C'est-à-dire au moment exact où la plupart des gens ne savent plus quoi faire."
+  },
+  {
+    "id": "atelier-email-13",
+    "label": "Les questions qu'on me pose",
+    "subject": "Je réponds à tes questions sur l'Atelier",
+    "subjectAlt": [
+      "« C'est un abonnement ? » et 5 autres questions",
+      "Tout ce que tu te demandes avant de te lancer"
+    ],
+    "preheader": "Réponses courtes, sans détour.",
+    "body": "Salut {first_name},\n\nTu m'as posé des questions sur l'Atelier du Quiz depuis que je t'en parle. Je réponds à toutes d'un coup, cash.\n\n**« C'est un abonnement ? »**\nNon. 47 €, une seule fois, et l'Atelier est à toi pour toujours, mises à jour comprises. Aucun prélèvement caché, aucune reconduction.\n\n**« Il faut payer un outil en plus ? »**\nNon, tu démarres en gratuit. L'accès gratuit à l'outil est inclus et il suffit pour créer et publier ton premier quiz pendant les 7 jours. Tu passeras à une formule supérieure seulement quand ton quiz te ramènera déjà des inscrits, c'est-à-dire quand ça se financera tout seul.\n\n**« C'est encore une formation comme les autres ? »**\nNon, et c'est tout l'intérêt. Tu ne regardes pas des vidéos en prenant des notes que tu n'appliques jamais. Tu apprends à faire un quiz en faisant le tien. Chaque jour, une action, un livrable. À la fin, tu n'as pas juste compris : tu as un quiz publié qui tourne.\n\n**« Et si je bloque ? »**\nUn coach IA connecté aux données de ton quiz, disponible jour et nuit, qui te débloque tout de suite. Et au-dessus, Béné répond personnellement. Un vrai humain, pas un répondeur.\n\n**« Je suis nul en technique. C'est grave ? »**\nC'est même fait pour toi. Zéro code, zéro Make, zéro Zapier. L'IA écrit la première version de ton quiz à partir de ton idée, tu corriges en cliquant, chaque étape est montrée clic par clic. Si tu sais répondre à des questions, tu sais faire ton quiz.\n\n**« Est-ce que ça marche dans MON domaine ? »**\nOui. Un quiz s'adapte partout, parce que partout les gens adorent parler d'eux et découvrir leur profil. Coach, consultant, formateur, e-commerce, freelance, créateur de contenu : la mécanique est identique, c'est seulement l'angle qui change. Et l'angle, tu le travailles dès le premier jour.\n\n**« Et si ça ne marche pas pour moi ? »**\nSi tu n'as pas capté un seul inscrit avec ton quiz au bout de 30 jours, alors que tu as appliqué la méthode, Béné te rembourse. Le risque est de son côté, pas du tien.\n\nVoilà. S'il te reste une question qui n'est pas là, réponds simplement à cet email. Je lis tout.\n\n**J'ai ma réponse, j'y vais >> {AFFILIATE_LINK}**\n\n{NAME}\n\nPS : la question que personne ne pose et qui compte le plus : « est-ce que je vais le faire ? » 7 jours, une heure par jour. Regarde ton agenda de la semaine prochaine et réponds honnêtement."
+  },
+  {
+    "id": "atelier-email-14",
+    "label": "Imagine, dans 30 jours",
+    "subject": "Un matin, dans 30 jours",
+    "subjectAlt": [
+      "Tu ouvres ton téléphone et il s'est passé un truc",
+      "Et si, cette fois, c'était toi ?"
+    ],
+    "preheader": "Ça ne t'a demandé aucun effort la veille.",
+    "body": "Salut {first_name},\n\nFais-moi plaisir, deux minutes.\n\nDans 30 jours, un matin, tu ouvres ton téléphone au réveil.\n\nEt tu vois que des gens ont répondu à ton quiz pendant la nuit. Pas des curieux : des gens qualifiés, qui t'ont dit où ils en sont, ce qui les bloque et ce qu'ils cherchent. Ils sont déjà rangés dans la bonne liste, avec le bon tag.\n\nTu n'as rien fait de spécial la veille. Tu as dîné, regardé un truc, dormi. Ton quiz, lui, a travaillé.\n\nTa liste grossit chaque semaine, sans que tu postes tous les jours en espérant récolter trois adresses.\n\nEt quand tu lances une offre, tu ne pars plus d'une page blanche. Tu parles à des gens déjà chauds, déjà triés, dont tu connais le problème exact.\n\nTu ne demandes plus « est-ce que ça va intéresser quelqu'un ? ». Tu sais déjà qui, et pourquoi.\n\nCe n'est pas un rêve lointain. C'est ce que fait un quiz correctement construit et correctement connecté.\n\nEntre toi et cette matinée-là, il y a exactement deux choses : un quiz bien monté, et 7 jours pour le faire.\n\nC'est tout l'objet de **l'Atelier du Quiz**. 47 €, une seule fois, accès à vie.\n\n**Je veux ce matin-là >> {AFFILIATE_LINK}**\n\n{NAME}\n\nPS : dans 30 jours, tu auras 30 jours de plus, quoi qu'il arrive. La seule question, c'est de savoir si ton quiz tournera déjà ou s'il sera encore « à faire »."
+  },
+  {
+    "id": "atelier-email-15",
+    "label": "Le dernier",
+    "subject": "Je ne t'en reparle plus",
+    "subjectAlt": [
+      "Deux chemins, et c'est toi qui choisis",
+      "Le dernier email sur le sujet"
+    ],
+    "preheader": "Pas de compte à rebours. Juste un choix.",
+    "body": "Salut {first_name},\n\nC'est le dernier email que je t'écris sur l'Atelier du Quiz. Après, je passe à autre chose et je te laisse tranquille.\n\nPas de compte à rebours, pas de fausse urgence, pas de « il ne reste que ». Je n'aime pas ça, et tu mérites mieux.\n\nJuste un constat, et deux chemins.\n\n**Le premier chemin.** Tu fermes cet email. Dans trois mois, ta liste ressemble à celle d'aujourd'hui, tu écris toujours à des gens dont tu ne sais rien, et tu envoies toujours la même offre à tout le monde en croisant les doigts. Ce n'est pas dramatique. C'est juste identique.\n\n**Le deuxième chemin.** Tu prends 7 jours, une heure par jour. Au 4ᵉ jour ton quiz est en ligne et capte déjà. Au 7ᵉ, le système tourne : les gens répondent, se trient tout seuls, et arrivent chez toi avec leur profil et leur besoin. Ensuite ça continue sans toi, le soir, le week-end, en vacances.\n\nCe que ça coûte : 47 €, une seule fois, accès à vie, mises à jour comprises.\n\nCe que ça risque : rien. Pas un seul inscrit capté au bout de 30 jours en appliquant la méthode, et Béné te rembourse.\n\nJe serais content de te savoir dedans. Mais quoi que tu décides, c'est ton choix et je le respecte.\n\n**Le lien est ici, il reste ouvert >> {AFFILIATE_LINK}**\n\n{NAME}\n\nPS : garde cet email quelque part. Le jour où tu en auras marre d'écrire à une liste dont tu ne sais rien, tu sauras où retrouver le lien."
+  }
 ];
