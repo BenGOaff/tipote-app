@@ -506,12 +506,16 @@ Accès restreint aux emails listés dans `lib/adminEmails.ts` (`isAdminEmail()`)
 
 Espace dédié aux affiliés qui promeuvent Tiquiz et Tipote, servi sur `affiliate.tipote.com` (rewrite vers `/affiliate/*`). Le pathname côté client n'a pas le préfixe `/affiliate`, le gating des composants Tipote se fait par host.
 
-Navigation : Vue d'ensemble, Promouvoir, Contenus, Essai gratuit, Support.
+Navigation : Vue d'ensemble, Promouvoir, Contenus, Revenus, Paiement, Essai gratuit, Support. Revenus et Paiement existaient sans figurer dans aucun menu depuis le passage à la sidebar : un affilié ne pouvait ni consulter ses commissions ni comprendre comment il est payé sans connaître l'URL.
 
 - Vue d'ensemble : bloc "Ce que tu peux promouvoir" en tête de page, une carte par produit avec sa commission, son pitch, son propre lien tracké et le raccourci vers son matériel. L'Atelier du Quiz (70%) est affiché en premier et mis en avant, Tiquiz (40%) ensuite ; une note rappelle que vendre la formation entraîne l'outil. La carte Atelier n'apparaît qu'en français (formation vendue sur le marché FR). Suivent les statistiques, les gains, l'essai offert, le guide de lancement, les badges et le classement.
 - Promouvoir : les deux liens principaux (Atelier et Tiquiz) côte à côte en tête, puis les liens trackés éditables par l'affilié (libellé, description, destination), le paramètre `?sa=` étant ajouté automatiquement. Persistance dans `affiliates.promo_overrides`.
 - Contenus : emails, posts réseaux, articles, visuels, tous éditables et personnalisables (le lien et le prénom de l'affilié sont injectés). La séquence email Atelier du Quiz est présentée avant la séquence Tiquiz, avec son propre lien tracké injecté.
 - Studio visuels IA (`ImageStudio`, moteur Fabric.js) : l'IA lit le post et choisit le format et le style d'image, le visuel s'accroche automatiquement au post. Copy générée sans clé côté affilié.
+- Guide de lancement : 6 étapes (profil, lien copié, paiement configuré chez Systeme.io, essai activé, premier email envoyé, premier post publié), 3 détectées automatiquement et 3 auto-déclarées, affiché en haut de la vue d'ensemble avant les compteurs tant qu'il n'est pas terminé.
+- Revenus : totaux par statut, historique des commissions, et simulateur de gains à deux produits. Le simulateur part des prix publics réels (Atelier du Quiz à 47 € en paiement unique, abonnement Tiquiz mensuel à 9 €) et des taux réels (70% et 40% sur les 12 premiers mois), montre le gain du mois et le cumul sur 12 mois en tenant compte du récurrent, et n'avance aucun taux de conversion moyen.
+- Paiement : configuration chez Systeme.io, calendrier de virement (entre le 10 et le 13 du mois), seuil de 50 €, factures. Aucune donnée de paiement stockée côté Tipote.
+- Support : FAQ ouverte sur trois entrées pour débutants (par où commencer, quel produit promouvoir, où trouver le matériel), puis le calcul exact de la commission par vente. Les moyennes de revenus et les taux de conversion jamais mesurés en ont été retirés.
 - Essai gratuit : un mois Tiquiz Plus offert (octroyé côté base Tiquiz en service-role, retour au plan d'origine à J+30 par cron), pour créer du contenu de promo authentique.
 - CMS admin (`affiliate_contents`) : un espace admin gaté permet d'ajouter, éditer et publier articles, emails, posts et visuels, avec import des modèles par défaut et repli sur ces modèles tant que rien n'est publié.
 

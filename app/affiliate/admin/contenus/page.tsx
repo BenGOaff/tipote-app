@@ -63,7 +63,7 @@ export default async function AdminContenusPage({
         <div className="flex items-center gap-2">
           <ShieldCheck className="h-5 w-5 text-primary" />
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Admin — Contenus</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Admin - Contenus</h1>
             <p className="text-muted-foreground text-sm mt-0.5">
               Ajoute, édite et publie tes contenus. Ils apparaissent dans l&apos;onglet Contenus des affiliés
               pour la langue <strong className="text-foreground">{localeLabel(locale)}</strong>.

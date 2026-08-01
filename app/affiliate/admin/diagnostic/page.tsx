@@ -251,7 +251,7 @@ export default async function AffiliateDiagnosticPage({
             {clicks.map((c) => (
               <li key={c.id} className="border-b last:border-0 py-1.5">
                 <div className="text-xs text-muted-foreground">{formatDate(c.created_at)}</div>
-                <div className="text-xs truncate">{c.page_url ?? "—"}</div>
+                <div className="text-xs truncate">{c.page_url ?? "-"}</div>
                 {c.referrer && (
                   <div className="text-[11px] text-muted-foreground truncate">← {c.referrer}</div>
                 )}

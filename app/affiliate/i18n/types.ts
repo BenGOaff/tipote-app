@@ -126,11 +126,10 @@ export type AffiliateDict = {
   overview: {
     greeting: string; // "Bonjour {name} 👋"
     subtitle: string;
-    link_card_title: string;
-    link_card_help: string; // explication "?sa=" partout
     // Bloc "Ce que tu peux promouvoir" : une carte par produit, avec son
     // propre lien tracké. L'Atelier (70%) passe devant Tiquiz (40%) car
-    // c'est le produit prioritaire côté stratégie.
+    // c'est le produit prioritaire côté stratégie. Il remplace l'ancienne
+    // carte "lien d'affiliation" et l'ancienne carte "ta commission".
     promote_title: string;
     promote_subtitle: string;
     promote_atelier_kind: string; // "La formation"
@@ -150,13 +149,6 @@ export type AffiliateDict = {
     gain_total: string;
     gain_pending: string;
     gain_paid: string;
-    tier_card_title: string; // @deprecated (paliers supprimés) - conservé pour compat
-    tier_current: string; // @deprecated
-    tier_remaining: string; // @deprecated
-    tier_current_badge: string; // @deprecated
-    commission_title: string; // @deprecated (remplacé par le bloc promote_*)
-    commission_tiquiz_desc: string; // @deprecated (idem)
-    coming_soon: string;
     trial_cta_title: string;
     trial_cta_description: string;
     trial_cta_button: string;
@@ -290,15 +282,19 @@ export type AffiliateDict = {
     status_paid: string;
     status_cancelled: string;
     status_rejected: string;
+    // Simulateur : deux produits, prix et taux réels, aucun chiffre de
+    // conversion inventé (l'ancienne version annonçait une "moyenne
+    // observée sur le programme" qui n'existait pas).
     calculator_title: string;
     calculator_subtitle: string;
-    calculator_visitors: string;
-    calculator_conversion_rate: string;
-    calculator_rate_hint: string;
-    calculator_sales_per_month: string;
-    calculator_revenue_per_month: string;
-    calculator_revenue_per_year: string;
-    calculator_disclaimer: string;
+    calculator_atelier_sales: string;
+    calculator_tiquiz_subs: string;
+    calculator_month_total: string;
+    calculator_year_total: string;
+    calculator_breakdown: string; // "dont {atelier} … et {tiquiz} …"
+    calculator_per_unit: string; // "{atelierUnit} par vente, {tiquizUnit} par abonné"
+    calculator_per_unit_tiquiz: string; // variante sans l'Atelier
+    calculator_assumptions: string; // "{atelier}" + "{tiquiz}" = prix publics
   };
 
   // ─── Paiement (info-only : tout passe par Systeme.io) ────────────
@@ -329,6 +325,14 @@ export type AffiliateDict = {
     terms_card_title: string;
     terms_card_button: string;
     // FAQ entries
+    // Trois entrées d'entrée de gamme pour les affiliés qui débutent :
+    // par où commencer, quoi promouvoir, où est le matériel.
+    faq_start_q: string;
+    faq_start_a: string;
+    faq_which_product_q: string;
+    faq_which_product_a: string;
+    faq_where_material_q: string;
+    faq_where_material_a: string;
     faq_payment_q: string;
     faq_payment_a: string;
     faq_cookie_q: string;
@@ -349,6 +353,8 @@ export type AffiliateDict = {
     faq_first_revenue_a: string;
     faq_taxes_q: string;
     faq_taxes_a: string;
+    // Ex-"combien gagnent les affiliés en moyenne" : la réponse citait des
+    // moyennes jamais mesurées. Remplacée par le calcul réel par vente.
     faq_avg_earnings_q: string;
     faq_avg_earnings_a: string;
     faq_missing_commission_q: string;

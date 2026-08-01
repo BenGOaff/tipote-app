@@ -200,7 +200,10 @@ export default async function ContenusPage({
         <ContentLocalePicker current={contentLocale} label={t.promouvoir.market_label} locales={AFFILIATE_LIVE_LOCALES} />
       </div>
 
-      <Tabs defaultValue="posts" className="w-full">
+      {/* Onglet Emails par défaut : c'est là que vit la séquence Atelier du
+          Quiz (70%) et c'est le canal qui convertit le mieux. Avant, on
+          ouvrait sur les posts et la séquence Atelier passait inaperçue. */}
+      <Tabs defaultValue="emails" className="w-full">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="emails" className="gap-1.5">
             <Mail className="h-4 w-4" />
@@ -291,6 +294,13 @@ export default async function ContenusPage({
               <p className="text-muted-foreground leading-relaxed">{t.promouvoir.posts_info_body}</p>
             </CardContent>
           </Card>
+          {/* Les posts injectent le lien Tiquiz : on le dit, sinon un affilié
+              croit promouvoir la formation en les publiant. */}
+          {isFrLocale && postsToShow.length > 0 && (
+            <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground pt-1">
+              Tiquiz - 40% de commission
+            </p>
+          )}
           {postsToShow.length > 0 ? (
             <div className="space-y-3">
               {postsToShow.map((day) => (

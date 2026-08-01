@@ -188,6 +188,12 @@ export default async function AffiliateOverviewPage() {
           )}
         </section>
 
+        {/* Guide de lancement AVANT les compteurs : un affilie qui debute
+            voit quoi faire, pas quatre statistiques a zero. Une fois les
+            6 etapes faites, la carte se reduit a un bandeau de felicitations
+            puis disparait (logique du composant). */}
+        <LaunchGuideCard sa={session.sa} locale={session.locale} />
+
         <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <StatCard icon={MousePointerClick} label={t.overview.stat_clicks} value={stats.total_clicks.toLocaleString("fr-FR")} />
           <StatCard icon={Users} label={t.overview.stat_signups} value={stats.total_conversions.toLocaleString("fr-FR")} />
@@ -202,8 +208,6 @@ export default async function AffiliateOverviewPage() {
         </section>
 
         <TrialTipoteCard sa={session.sa} t={t} />
-
-        <LaunchGuideCard sa={session.sa} locale={session.locale} />
 
         <BadgesCard stats={stats} t={t} />
 

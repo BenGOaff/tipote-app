@@ -16,7 +16,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard, Megaphone, Library, HelpCircle,
-  LogOut, Gift, Menu, X, ShieldCheck,
+  LogOut, Gift, Menu, X, ShieldCheck, Wallet, CreditCard,
 } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { Button } from "@/components/ui/button";
@@ -25,14 +25,20 @@ import { LocaleSwitcher } from "./LocaleSwitcher";
 
 type NavItem = {
   href: string;
-  key: "overview" | "promouvoir" | "contenus" | "trial" | "support";
+  key: "overview" | "promouvoir" | "contenus" | "trial" | "revenus" | "paiement" | "support";
   icon: React.ComponentType<{ className?: string }>;
 };
 
+// Bene 1er aout 2026 : /revenus et /paiement existaient mais n'etaient
+// dans AUCUN menu depuis le passage de la nav horizontale a la sidebar.
+// Un affilie ne pouvait pas trouver ses commissions ni comprendre
+// comment il est paye sans connaitre l'URL par coeur.
 const NAV: NavItem[] = [
   { href: "/", key: "overview", icon: LayoutDashboard },
   { href: "/promouvoir", key: "promouvoir", icon: Megaphone },
   { href: "/contenus", key: "contenus", icon: Library },
+  { href: "/revenus", key: "revenus", icon: Wallet },
+  { href: "/paiement", key: "paiement", icon: CreditCard },
   { href: "/trial-tiquiz", key: "trial", icon: Gift },
   { href: "/support", key: "support", icon: HelpCircle },
 ];

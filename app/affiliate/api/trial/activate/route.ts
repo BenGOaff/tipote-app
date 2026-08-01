@@ -121,7 +121,7 @@ export async function POST(): Promise<NextResponse> {
         reason: "already_paid_user",
         current_plan: currentPlan,
         message:
-          "Tu as déjà un compte Tiquiz Plus payant — pas besoin du mois offert. Profite à fond !",
+          "Tu as déjà un compte Tiquiz Plus payant, pas besoin du mois offert. Profite à fond !",
       },
       { status: 200 },
     );
