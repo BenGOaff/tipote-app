@@ -433,13 +433,28 @@ export function RichTextEdit({
   const FIELD_FS_CLASS = "rt-field-fs";
   const FS_VAR = previewDevice === "mobile" ? "--rt-fs-m" : "--rt-fs-d";
 
+  // Toutes les enveloppes de taille du champ, dans l'ordre du DOM.
+  // On ne cherche PLUS `:scope > .rt-field-fs` (drame Jocelyne, 1er août
+  // 2026) : le navigateur restructure le contenu a la moindre commande
+  // (aligner, coller, Entree), et l'enveloppe se retrouve imbriquee dans
+  // un <div> d'alignement. `:scope >` ne la trouvait alors plus, le clic
+  // suivant en creait une SECONDE par-dessus, et comme la plus profonde
+  // gagne en CSS (elle porte sa propre variable), la taille choisie
+  // n'avait aucun effet visible : le menu affichait la nouvelle taille,
+  // l'ecran gardait l'ancienne.
+  const fieldWrappers = useCallback((el: HTMLElement): HTMLElement[] => {
+    return Array.from(el.querySelectorAll<HTMLElement>(`.${FIELD_FS_CLASS}`));
+  }, []);
+
   const getCurrentFieldSize = useCallback((): string | null => {
     const el = ref.current;
     if (!el) return null;
-    const wrapper = el.querySelector<HTMLElement>(`:scope > .${FIELD_FS_CLASS}`);
-    const v = wrapper?.style.getPropertyValue(FS_VAR).trim();
+    // La plus profonde est celle qui gagne a l'affichage : c'est donc
+    // elle qui porte la taille reellement vue par l'utilisatrice.
+    const all = fieldWrappers(el);
+    const v = all[all.length - 1]?.style.getPropertyValue(FS_VAR).trim();
     return v || null;
-  }, [FS_VAR]);
+  }, [FS_VAR, fieldWrappers]);
 
   const applyFieldFontSize = useCallback(
     (sizePx: string | null) => {
@@ -448,39 +463,67 @@ export function RichTextEdit({
         setFontSizeOpen(false);
         return;
       }
-      let wrapper = el.querySelector<HTMLElement>(`:scope > .${FIELD_FS_CLASS}`);
-      if (sizePx === null) {
-        // Reset UNIQUEMENT le device courant. Si l'autre device a
-        // toujours une valeur, on garde le wrapper. Sinon, on degage
-        // -> retour au defaut responsive du design system.
-        if (wrapper) {
-          wrapper.style.removeProperty(FS_VAR);
-          const other = previewDevice === "mobile" ? "--rt-fs-d" : "--rt-fs-m";
-          const hasOther = wrapper.style.getPropertyValue(other).trim();
-          if (!hasOther) {
-            while (wrapper.firstChild) el.insertBefore(wrapper.firstChild, wrapper);
-            el.removeChild(wrapper);
-          }
+
+      // ── 1. On repart d'un champ PROPRE ──
+      // Les tailles en vigueur sont celles de l'enveloppe la plus
+      // profonde (celle qui gagne en CSS). On les recupere, puis on
+      // retire TOUTES les enveloppes : quel que soit l'etat dans lequel
+      // le navigateur a laisse le champ, on en ressort avec zero.
+      const existing = fieldWrappers(el);
+      const deepest = existing[existing.length - 1];
+      const sizes = {
+        "--rt-fs-m": deepest?.style.getPropertyValue("--rt-fs-m").trim() ?? "",
+        "--rt-fs-d": deepest?.style.getPropertyValue("--rt-fs-d").trim() ?? "",
+      };
+      for (const w of existing) {
+        w.classList.remove(FIELD_FS_CLASS);
+        w.style.removeProperty("--rt-fs-m");
+        w.style.removeProperty("--rt-fs-d");
+        // Le div n'existait QUE pour porter la taille : on le deballe,
+        // sinon on laisse s'empiler un div inerte a chaque changement.
+        // Un div qui porte encore autre chose (un alignement) reste.
+        const noClass = !w.getAttribute("class")?.trim();
+        const noStyle = !w.getAttribute("style")?.trim();
+        if (w.tagName === "DIV" && noClass && noStyle && w.parentNode) {
+          const parent = w.parentNode;
+          while (w.firstChild) parent.insertBefore(w.firstChild, w);
+          parent.removeChild(w);
         }
-      } else {
-        if (!wrapper) {
-          // Premiere taille : on enveloppe TOUT le contenu existant dans
-          // un seul div. Si le champ est vide, on cree un wrapper vide
-          // (la frappe suivante ira dedans).
-          wrapper = document.createElement("div");
-          wrapper.className = FIELD_FS_CLASS;
-          while (el.firstChild) wrapper.appendChild(el.firstChild);
-          el.appendChild(wrapper);
-        }
-        wrapper.style.setProperty(FS_VAR, sizePx);
       }
+
+      // ── 2. On applique la nouvelle taille pour le device courant ──
+      sizes[FS_VAR] = sizePx ?? "";
+
+      if (sizes["--rt-fs-m"] || sizes["--rt-fs-d"]) {
+        // UNE seule enveloppe, enfant direct, qui contient tout.
+        const wrapper = document.createElement("div");
+        wrapper.className = FIELD_FS_CLASS;
+        while (el.firstChild) wrapper.appendChild(el.firstChild);
+        el.appendChild(wrapper);
+        for (const v of ["--rt-fs-m", "--rt-fs-d"] as const) {
+          if (sizes[v]) wrapper.style.setProperty(v, sizes[v]);
+        }
+        // Champ vide : sans caret A L'INTERIEUR de l'enveloppe, le
+        // navigateur cree le texte a cote et la taille ne s'applique pas.
+        if (!wrapper.firstChild && typeof window !== "undefined") {
+          const sel = window.getSelection();
+          const range = document.createRange();
+          range.selectNodeContents(wrapper);
+          range.collapse(true);
+          sel?.removeAllRanges();
+          sel?.addRange(range);
+        }
+      }
+      // Sinon : plus aucune taille custom sur aucun device. Le contenu
+      // reste a plat -> retour au defaut responsive du design system.
+
       setFontSizeOpen(false);
       // Commit live : le parent enregistre le nouveau HTML immediatement
       // (WYSIWYG + persistance sans attendre le blur).
       commitNow();
       ref.current?.focus();
     },
-    [commitNow, FS_VAR, previewDevice],
+    [commitNow, FS_VAR, fieldWrappers],
   );
 
   // Bug Adeline (18 mai 2026) : "j'ai du cliquer plusieurs fois pour
