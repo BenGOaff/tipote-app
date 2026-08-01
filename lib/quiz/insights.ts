@@ -15,6 +15,7 @@ import { buildClaudeMessageBody } from "@/lib/claudeRequest";
 import { sanitizeAiText } from "@/lib/aiTextSanitizer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { stripHtml } from "@/lib/richText";
+import { buildLiveFunnel } from "@/lib/quiz/funnel";
 import { aggregateSurvey, type AggregatedQuestion } from "@/lib/survey/analysis";
 
 const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
@@ -176,19 +177,19 @@ export async function aggregateQuizInsights(
     const texts = (qRows ?? []).map((q) =>
       stripHtml(String((q as { question_text?: string }).question_text ?? "")).trim(),
     );
-    let prev = 0;
-    rows.forEach((r, i) => {
-      const v = Number(r.views);
-      const drop = i === 0 || prev === 0 ? 0 : Math.max(0, Math.round(((prev - v) / prev) * 1000) / 10);
+    // Recalage sur les questions vivantes : une question supprimée ne doit
+    // pas se retrouver dans le diagnostic de l'IA (cf. lib/quiz/funnel.ts).
+    const { steps } = buildLiveFunnel(rows, texts.length);
+    for (const step of steps) {
+      if (!step.hasData) continue;
       funnel.push({
-        index: r.question_index,
-        text: texts[r.question_index] || `Question ${r.question_index + 1}`,
-        views: v,
-        answers: Number(r.answers),
-        dropPct: drop,
+        index: step.questionIndex,
+        text: texts[step.questionIndex] || `Question ${step.questionIndex + 1}`,
+        views: step.views,
+        answers: step.answers,
+        dropPct: step.dropFromPrevious,
       });
-      prev = v;
-    });
+    }
   } catch {
     // RPC absente : funnel vide, non bloquant.
   }

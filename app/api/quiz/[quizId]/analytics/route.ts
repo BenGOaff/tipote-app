@@ -14,6 +14,7 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { dateKeyForOffset, parseTzOffset } from "@/lib/dateKeys";
 import { stripHtml } from "@/lib/richText";
+import { buildLiveFunnel } from "@/lib/quiz/funnel";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -278,12 +279,17 @@ export async function GET(
   // between Q[n] and Q[n+1] = (views[n] - views[n+1]) / views[n].
   // The ratio is enough to flag the worst-performing question; we
   // expose absolute counts too so the UI can show "47% on Q3".
-  const funnel: {
+  let funnel: {
     questionIndex: number;
     views: number;
     answers: number;
     dropFromPrevious: number;
+    hasData: boolean;
   }[] = [];
+  // Questions supprimées depuis : leurs events existent encore mais ne
+  // correspondent plus à rien (cf. lib/quiz/funnel.ts, drame Adeline
+  // 1er août 2026 côté Tiquiz, même moteur ici).
+  let removedQuestions = 0;
   let totalSessions = 0;
   try {
     // Funnel agrégé DANS la base (RPC), sans plafond (avant : cap 50000).
@@ -300,23 +306,15 @@ export async function GET(
       answers: number;
     }[];
 
-    let prevViews = 0;
-    for (let i = 0; i < rows.length; i++) {
-      const r = rows[i]!;
-      const v = Number(r.views);
-      const drop =
-        i === 0 || prevViews === 0
-          ? 0
-          : Math.round(((prevViews - v) / prevViews) * 1000) / 10;
-      funnel.push({
-        questionIndex: r.question_index,
-        views: v,
-        answers: Number(r.answers),
-        dropFromPrevious: Math.max(0, drop),
-      });
-      prevViews = v;
-    }
-    totalSessions = funnel[0]?.views ?? 0;
+    // Structure VIVANTE = source de vérité.
+    const { count: liveQuestionCount } = await supabaseAdmin
+      .from("quiz_questions")
+      .select("id", { count: "exact", head: true })
+      .eq("quiz_id", quizId);
+    const live = buildLiveFunnel(rows, liveQuestionCount ?? 0);
+    funnel = live.steps;
+    removedQuestions = live.removedQuestions;
+    totalSessions = funnel.find((f) => f.hasData)?.views ?? 0;
   } catch (e) {
     // Table/RPC might not exist yet on a fresh deploy — fail-open with
     // an empty funnel rather than 500 the whole analytics endpoint.
@@ -348,5 +346,6 @@ export async function GET(
     leadsByDay,
     funnel,
     totalFunnelSessions: totalSessions,
+    funnelRemovedQuestions: removedQuestions,
   });
 }

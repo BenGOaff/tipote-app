@@ -4720,7 +4720,12 @@
     "previewCaptureDisableHint": "Passaggio di cattura email. Per nasconderlo, disattiva la cattura in Impostazioni.",
     "introCoverHint": "Layout copertina: questa immagine è lo sfondo a schermo intero (si regola in Design)",
     "hideBrandingLabel": "Nascondere completamente il link",
-    "hideBrandingHint": "Non mostrare nulla in fondo al quiz (né Tipote, né link personalizzato)."
+    "hideBrandingHint": "Non mostrare nulla in fondo al quiz (né Tipote, né link personalizzato).",
+    "averageRating": "Media: {value}",
+    "freeTextAll": "Tutte le risposte scritte, dalla più recente alla più vecchia.",
+    "freeTextShown": "Le {shown} risposte più recenti su {total}. Il pulsante Copia le prende tutte.",
+    "freeTextCopy": "Copia le risposte",
+    "freeTextCopied": "Copiato"
   },
   "contentStrategy": {
     "title": "Strategia di contenuto",

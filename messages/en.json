@@ -4720,7 +4720,12 @@
     "previewCaptureDisableHint": "Email capture step. To hide it, turn off capture in the Settings tab.",
     "introCoverHint": "Cover layout: this image is the full-screen background (set in Design)",
     "hideBrandingLabel": "Hide the link entirely",
-    "hideBrandingHint": "Show nothing at the bottom of the quiz (no Tipote, no custom link)."
+    "hideBrandingHint": "Show nothing at the bottom of the quiz (no Tipote, no custom link).",
+    "averageRating": "Average: {value}",
+    "freeTextAll": "Every written answer, newest first.",
+    "freeTextShown": "The {shown} most recent answers out of {total}. The Copy button takes them all.",
+    "freeTextCopy": "Copy the answers",
+    "freeTextCopied": "Copied"
   },
   "contentStrategy": {
     "title": "Content strategy",

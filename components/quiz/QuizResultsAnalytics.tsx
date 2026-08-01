@@ -7,7 +7,7 @@
 // computed client-side from data already loaded by the parent
 // (quiz_leads.answers JSONB + result_id) — no extra round trip.
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import {
   Area,
@@ -26,6 +26,8 @@ import {
   Eye,
   Play,
   CheckCircle,
+  Copy,
+  Check,
   Users,
   Share2,
   Download,
@@ -52,6 +54,12 @@ type Question = {
   question_text: string;
   options: { text: string; result_index: number }[];
   sort_order: number;
+  /** multiple_choice (défaut), yes_no, image_choice, free_text,
+   *  rating_scale, star_rating. Les trois derniers n'ont pas d'options :
+   *  sans ce champ, leur carte de résultats restait invisible (retour
+   *  Jocelyne, 1er août 2026). */
+  question_type?: string;
+  config?: Record<string, unknown> | null;
 };
 
 type Result = {
@@ -73,6 +81,12 @@ type Lead = {
     question_index: number;
     option_index?: number;
     option_indices?: number[];
+    // Questions sans options : la réponse est un texte, une note sur une
+    // échelle, ou un nombre d'étoiles. Stocké depuis toujours par la
+    // capture publique, mais jamais affiché avant.
+    text?: string;
+    rating?: number;
+    stars?: number;
   }[] | null;
   created_at: string;
 };
@@ -97,6 +111,11 @@ function formatPct(n: number, total: number): string {
   return `${((n / total) * 100).toFixed(0)}%`;
 }
 
+// Réponses libres : on affiche les plus récentes, pas les 3000 d'un quiz
+// qui tourne depuis un an (la page ramerait). Le bouton Copier, lui, prend
+// TOUT : c'est ce qui part dans le traitement de texte de l'autrice.
+const FREE_TEXT_DISPLAY_LIMIT = 200;
+
 // Truncate option labels so the legend doesn't blow out on long answers.
 function truncate(s: string, max = 60): string {
   if (!s) return "";
@@ -116,6 +135,17 @@ export default function QuizResultsAnalytics({
 }: Props) {
   const t = useTranslations("quizDetail");
   const locale = useLocale();
+  const [copiedQuestion, setCopiedQuestion] = useState<number | null>(null);
+
+  async function copyTexts(questionIndex: number, texts: string[]) {
+    try {
+      await navigator.clipboard.writeText(texts.join("\n\n"));
+      setCopiedQuestion(questionIndex);
+      setTimeout(() => setCopiedQuestion(null), 2000);
+    } catch {
+      /* presse-papier refusé : on ne casse rien, l'utilisateur peut sélectionner */
+    }
+  }
 
   // ─── Réconciliation des compteurs (invariant AGENTS.md) ────────────────
   // vues >= starts >= completions >= leads. Mirror Tiquiz, audit 7 juin 2026.
@@ -234,6 +264,61 @@ export default function QuizResultsAnalytics({
   // ─── Per-question answer distribution ────────────────────────────────────
   const questionStats = useMemo(() => {
     return questions.map((q, qIdx) => {
+      const type = q.question_type ?? "multiple_choice";
+      const base = {
+        questionIndex: qIdx,
+        questionText: stripHtml(q.question_text) || t("questionFallback", { n: qIdx + 1 }),
+      };
+
+      if (type === "free_text") {
+        // Ordre : la plus récente d'abord (les leads arrivent triés par
+        // date décroissante côté parent, on ne re-trie pas pour ne rien
+        // supposer, on garde l'ordre reçu).
+        const texts: string[] = [];
+        for (const lead of leads) {
+          if (!Array.isArray(lead.answers)) continue;
+          const answer = lead.answers.find((a) => a.question_index === qIdx);
+          const value = typeof answer?.text === "string" ? answer.text.trim() : "";
+          if (value) texts.push(value);
+        }
+        return { ...base, kind: "text" as const, totalAnswered: texts.length, texts, data: [] };
+      }
+
+      if (type === "rating_scale" || type === "star_rating") {
+        const cfg = (q.config ?? {}) as { min?: number; max?: number };
+        const min = type === "star_rating" ? 1 : Number.isFinite(cfg.min) ? Number(cfg.min) : 0;
+        const max = Number.isFinite(cfg.max) ? Number(cfg.max) : type === "star_rating" ? 5 : 10;
+        const counts = new Map<number, number>();
+        for (let v = min; v <= max; v++) counts.set(v, 0);
+        let sum = 0;
+        let n = 0;
+        for (const lead of leads) {
+          if (!Array.isArray(lead.answers)) continue;
+          const answer = lead.answers.find((a) => a.question_index === qIdx);
+          const raw = type === "star_rating" ? answer?.stars : answer?.rating;
+          if (typeof raw !== "number" || !Number.isFinite(raw)) continue;
+          const value = Math.round(raw);
+          counts.set(value, (counts.get(value) ?? 0) + 1);
+          sum += value;
+          n += 1;
+        }
+        const data = [...counts.entries()]
+          .sort((a, b) => a[0] - b[0])
+          .map(([value, count]) => ({
+            name: String(value),
+            fullName: String(value),
+            value: count,
+          }));
+        return {
+          ...base,
+          kind: "scale" as const,
+          totalAnswered: n,
+          average: n > 0 ? Math.round((sum / n) * 10) / 10 : null,
+          texts: [],
+          data,
+        };
+      }
+
       const optionCounts = q.options.map(() => 0);
       let totalAnswered = 0;
       for (const lead of leads) {
@@ -270,9 +355,10 @@ export default function QuizResultsAnalytics({
         };
       });
       return {
-        questionIndex: qIdx,
-        questionText: stripHtml(q.question_text) || t("questionFallback", { n: qIdx + 1 }),
+        ...base,
+        kind: "choice" as const,
         totalAnswered,
+        texts: [] as string[],
         data,
       };
     });
@@ -490,12 +576,60 @@ export default function QuizResultsAnalytics({
                       </span>
                       {q.questionText}
                     </p>
-                    {!hideCounts && (
-                      <span className="text-xs text-muted-foreground whitespace-nowrap">
-                        {t("answersCount", { count: q.totalAnswered })}
-                      </span>
-                    )}
+                    <span className="flex shrink-0 items-center gap-2 whitespace-nowrap text-xs text-muted-foreground">
+                      {q.kind === "scale" && q.average !== null && (
+                        <span className="font-medium text-foreground">
+                          {t("averageRating", { value: q.average })}
+                        </span>
+                      )}
+                      {!hideCounts && t("answersCount", { count: q.totalAnswered })}
+                    </span>
                   </div>
+
+                  {/* Réponses libres : on montre ce que les gens ont écrit.
+                      C'est la matière première des emails de l'autrice. */}
+                  {q.kind === "text" ? (
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-xs text-muted-foreground">
+                          {q.texts.length > FREE_TEXT_DISPLAY_LIMIT
+                            ? t("freeTextShown", {
+                                shown: FREE_TEXT_DISPLAY_LIMIT,
+                                total: q.texts.length,
+                              })
+                            : t("freeTextAll")}
+                        </p>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => copyTexts(q.questionIndex, q.texts)}
+                        >
+                          {copiedQuestion === q.questionIndex ? (
+                            <>
+                              <Check className="me-1.5 h-3.5 w-3.5" />
+                              {t("freeTextCopied")}
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="me-1.5 h-3.5 w-3.5" />
+                              {t("freeTextCopy")}
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                      <ul className="max-h-80 space-y-2 overflow-y-auto pe-1">
+                        {q.texts.slice(0, FREE_TEXT_DISPLAY_LIMIT).map((text, i) => (
+                          <li
+                            key={i}
+                            className="rounded-md border border-border bg-muted/30 px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap"
+                          >
+                            {text}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : (
                   <div className="space-y-3">
                     {q.data.map((opt, i) => {
                       const pct =
@@ -537,6 +671,7 @@ export default function QuizResultsAnalytics({
                       );
                     })}
                   </div>
+                  )}
                 </CardContent>
               </Card>
             );

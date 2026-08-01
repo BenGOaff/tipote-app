@@ -55,6 +55,9 @@ interface FunnelStep {
   answers: number;
   /** % of visitors lost compared to the previous question */
   dropFromPrevious: number;
+  /** false = question vivante mais sans aucun event (ajoutée après coup,
+   *  ou jamais atteinte). On ne l'affiche pas comme "0 visiteur". */
+  hasData?: boolean;
 }
 
 interface AnalyticsResponse {
@@ -384,14 +387,31 @@ function FunnelSection({
     );
   }
 
-  const baseline = funnel[0]!.views;
+  // Les questions sans donnée ne participent ni à l'échelle ni au calcul
+  // de la pire chute (cf. lib/quiz/funnel.ts).
+  const tracked = funnel.filter((f) => f.hasData !== false);
+  if (tracked.length === 0) {
+    return (
+      <Card className="p-4">
+        <h2 className="text-sm font-semibold mb-1 flex items-center gap-2">
+          <TrendingDown className="size-4 text-primary" />
+          Funnel par question
+        </h2>
+        <p className="text-xs text-muted-foreground">
+          Aucune donnée pour cette période. Le tracking par question
+          commence à enregistrer dès la prochaine visite.
+        </p>
+      </Card>
+    );
+  }
+  const baseline = tracked[0]!.views;
   // Worst drop-off (excluding Q1 where it's always 0). Highlighted in
   // the UI so the user knows immediately which question to fix.
   let worstIdx = -1;
   let worstDrop = -1;
-  for (let i = 1; i < funnel.length; i++) {
-    if (funnel[i]!.dropFromPrevious > worstDrop) {
-      worstDrop = funnel[i]!.dropFromPrevious;
+  for (let i = 1; i < tracked.length; i++) {
+    if (tracked[i]!.dropFromPrevious > worstDrop) {
+      worstDrop = tracked[i]!.dropFromPrevious;
       worstIdx = i;
     }
   }
@@ -418,7 +438,7 @@ function FunnelSection({
         <div className="rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 px-3 py-2 flex items-start gap-2">
           <AlertTriangle className="size-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
           <p className="text-xs text-amber-900 dark:text-amber-100">
-            Question {funnel[worstIdx]!.questionIndex + 1} fait perdre{" "}
+            Question {tracked[worstIdx]!.questionIndex + 1} fait perdre{" "}
             <span className="font-bold">{worstDrop}%</span> des visiteurs
             par rapport à la précédente. C&apos;est le point chaud à
             reformuler en priorité.
@@ -427,7 +447,7 @@ function FunnelSection({
       ) : null}
 
       <div className="space-y-1.5">
-        {funnel.map((step, i) => {
+        {tracked.map((step, i) => {
           const ratio = baseline > 0 ? step.views / baseline : 0;
           const isWorst = i === worstIdx && worstDrop >= 15;
           const widthPct = Math.max(6, ratio * 100);

@@ -98,6 +98,55 @@ tronquées." → source de vérité = `quiz_results` actuel.
 - `groupBy(result_title)` sans match au titre LIVE → anciens noms
   apparaissent en double après rename.
 
+## Funnel par question - RÈGLE UNIQUE (drame Adeline 1er août 2026)
+
+Tout affichage "où décrochent les répondants" DOIT être recalé sur la
+liste ACTUELLE des questions, jamais sur les seuls events.
+
+Adeline supprime sa 10e question. Les lignes de `quiz_question_events`
+gardent `question_index = 9`, et la RPC `quiz_question_funnel_detail`
+liste les index PRÉSENTS DANS LES EVENTS. Résultat : une "Question 10"
+fantôme, une "pire chute : 59% Q9 -> Q10" qui désigne une question
+supprimée, et un "restés jusqu'au bout" calculé sur elle.
+
+**Algorithme obligatoire :** passer par `buildLiveFunnel()`
+(`lib/quiz/funnel.ts`), qui :
+1. SEED les étapes sur les questions actuelles (0 à count-1) ;
+2. exclut les index >= count (questions supprimées) et les compte dans
+   `removedQuestions`, que l'UI affiche honnêtement ;
+3. marque `hasData: false` les questions vivantes sans event (ajoutées
+   après coup) : l'UI montre "pas encore de donnée", jamais "0 visiteur",
+   et ces étapes sont exclues du calcul de la pire chute ;
+4. `reachedLastQuestion()` pour "restés jusqu'au bout" : la dernière
+   question QUI A de la donnée.
+
+Fail-open : si le nombre de questions est inconnu (0), on renvoie les
+lignes brutes. Mieux vaut la donnée telle quelle qu'un écran vide.
+
+**Endroits à respecter (Tipote) :** `app/api/quiz/[quizId]/analytics/route.ts`,
+`lib/quiz/insights.ts` (l'IA commentait la question fantôme),
+`components/quiz/QuizAnalyticsClient.tsx`. Le module quiz est jumeau de
+celui de Tiquiz : toute correction ici doit être portée là-bas, et
+réciproquement.
+
+**Ce qu'on ne peut PAS réparer :** une question supprimée ou insérée AU
+MILIEU décale les index des events postérieurs. Les questions sont
+supprimées puis réinsérées à chaque sauvegarde (PATCH /api/quiz/[id]),
+donc ni `id` ni `created_at` ne survivent pour réaligner l'historique.
+On n'invente pas : on n'affiche que ce qui correspond à une question
+vivante.
+
+## Réponses sans options - à ne pas oublier (retour Jocelyne 1er août 2026)
+
+`free_text`, `rating_scale` et `star_rating` n'ont pas d'options. Toute
+synthèse par question qui ne compte que `option_index` / `option_indices`
+les fait DISPARAÎTRE de l'écran (leur `totalAnswered` reste à 0), alors
+que les réponses sont bien en base dans `quiz_leads.answers[].text` /
+`.rating` / `.stars`. Traiter les trois familles :
+- options -> compteur par option (existant) ;
+- texte libre -> la liste des réponses écrites + un bouton Copier ;
+- échelle -> répartition des notes + moyenne.
+
 ## Fichier env sur le serveur prod — À NE PAS CONFONDRE (drame 3 juin 2026)
 
 Sur le serveur prod, **les deux apps utilisent `.env`** (pas `.env.local`).
