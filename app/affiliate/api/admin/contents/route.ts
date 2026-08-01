@@ -27,10 +27,14 @@ export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const kind = url.searchParams.get("kind") ?? "article";
   const locale = url.searchParams.get("locale") ?? "fr";
+  // Produit promu : "tiquiz" par défaut, ce que sont toutes les lignes
+  // existantes (la colonne a été ajoutée avec ce défaut).
+  const product = url.searchParams.get("product") ?? "tiquiz";
   const { data, error } = await supabaseAdmin
     .from("affiliate_contents")
-    .select("id, kind, locale, title, body, meta, sort_order, published, updated_at")
+    .select("id, kind, product, locale, title, body, meta, sort_order, published, updated_at")
     .eq("kind", kind)
+    .eq("product", product)
     .eq("locale", locale)
     .order("sort_order", { ascending: true })
     .order("updated_at", { ascending: false });
@@ -64,6 +68,7 @@ export async function POST(req: NextRequest) {
   if (!KINDS.includes(kind)) return NextResponse.json({ ok: false, error: "Bad kind" }, { status: 400 });
   const row = {
     kind,
+    product: body.product === "atelier" ? "atelier" : "tiquiz",
     locale: typeof body.locale === "string" ? body.locale : "fr",
     // PAS de troncature silencieuse (retour Béné 2 juin 2026 : ses articles
     // étaient coupés avant la fin sans aucune alerte). La colonne body est
@@ -96,6 +101,7 @@ export async function PATCH(req: NextRequest) {
   if (typeof body.body === "string") patch.body = body.body;
   if (typeof body.meta === "object" && body.meta) patch.meta = body.meta;
   if (typeof body.locale === "string" && body.locale.length <= 10) patch.locale = body.locale;
+  if (body.product === "atelier" || body.product === "tiquiz") patch.product = body.product;
   if (Number.isFinite(Number(body.sort_order))) patch.sort_order = Number(body.sort_order);
   if (typeof body.published === "boolean") patch.published = body.published;
   const { error } = await supabaseAdmin.from("affiliate_contents").update(patch).eq("id", id);

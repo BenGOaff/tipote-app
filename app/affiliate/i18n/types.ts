@@ -126,8 +126,22 @@ export type AffiliateDict = {
   overview: {
     greeting: string; // "Bonjour {name} 👋"
     subtitle: string;
-    link_card_title: string;
-    link_card_help: string; // explication "?sa=" partout
+    // Bloc "Ce que tu peux promouvoir" : une carte par produit, avec son
+    // propre lien tracké. L'Atelier (70%) passe devant Tiquiz (40%) car
+    // c'est le produit prioritaire côté stratégie. Il remplace l'ancienne
+    // carte "lien d'affiliation" et l'ancienne carte "ta commission".
+    promote_title: string;
+    promote_subtitle: string;
+    promote_atelier_kind: string; // "La formation"
+    promote_atelier_badge: string; // "Le plus rentable"
+    promote_atelier_pitch: string;
+    promote_atelier_cta: string;
+    promote_tiquiz_kind: string; // "L'outil"
+    promote_tiquiz_pitch: string;
+    promote_tiquiz_cta: string;
+    promote_link_hint: string; // "Lien tracké avec ton ?sa={sa}"
+    promote_combo_title: string;
+    promote_combo_body: string;
     stat_clicks: string;
     stat_signups: string;
     stat_sales: string;
@@ -135,13 +149,6 @@ export type AffiliateDict = {
     gain_total: string;
     gain_pending: string;
     gain_paid: string;
-    tier_card_title: string; // @deprecated (paliers supprimés) - conservé pour compat
-    tier_current: string; // @deprecated
-    tier_remaining: string; // @deprecated
-    tier_current_badge: string; // @deprecated
-    commission_title: string; // "Ta commission"
-    commission_tiquiz_desc: string; // description du taux Tiquiz 40%
-    coming_soon: string;
     trial_cta_title: string;
     trial_cta_description: string;
     trial_cta_button: string;
@@ -275,15 +282,22 @@ export type AffiliateDict = {
     status_paid: string;
     status_cancelled: string;
     status_rejected: string;
+    // Simulateur : deux produits, prix et taux réels, aucun chiffre de
+    // conversion inventé (l'ancienne version annonçait une "moyenne
+    // observée sur le programme" qui n'existait pas).
     calculator_title: string;
     calculator_subtitle: string;
-    calculator_visitors: string;
-    calculator_conversion_rate: string;
-    calculator_rate_hint: string;
-    calculator_sales_per_month: string;
-    calculator_revenue_per_month: string;
-    calculator_revenue_per_year: string;
-    calculator_disclaimer: string;
+    calculator_atelier_sales: string;
+    calculator_tiquiz_subs: string;
+    calculator_tiquiz_plan: string;
+    calculator_plan_simple: string; // "Accès simple (9 €/mois)"
+    calculator_plan_plus: string; // "Plus (29 €/mois)"
+    calculator_month_total: string;
+    calculator_year_total: string;
+    calculator_breakdown: string; // "dont {atelier} … et {tiquiz} …"
+    calculator_per_unit: string; // "{atelierUnit} par vente, {tiquizUnit} par abonné"
+    calculator_per_unit_tiquiz: string; // variante sans l'Atelier
+    calculator_assumptions: string; // "{atelier}" + "{tiquiz}" = prix publics
   };
 
   // ─── Paiement (info-only : tout passe par Systeme.io) ────────────
@@ -314,6 +328,14 @@ export type AffiliateDict = {
     terms_card_title: string;
     terms_card_button: string;
     // FAQ entries
+    // Trois entrées d'entrée de gamme pour les affiliés qui débutent :
+    // par où commencer, quoi promouvoir, où est le matériel.
+    faq_start_q: string;
+    faq_start_a: string;
+    faq_which_product_q: string;
+    faq_which_product_a: string;
+    faq_where_material_q: string;
+    faq_where_material_a: string;
     faq_payment_q: string;
     faq_payment_a: string;
     faq_cookie_q: string;
@@ -334,6 +356,8 @@ export type AffiliateDict = {
     faq_first_revenue_a: string;
     faq_taxes_q: string;
     faq_taxes_a: string;
+    // Ex-"combien gagnent les affiliés en moyenne" : la réponse citait des
+    // moyennes jamais mesurées. Remplacée par le calcul réel par vente.
     faq_avg_earnings_q: string;
     faq_avg_earnings_a: string;
     faq_missing_commission_q: string;
@@ -464,6 +488,85 @@ export type AffiliateDict = {
     visual_alt: string; // "Visuel"
   };
 
+
+  // ─── Espace Contenu (dossiers par produit) ───────────────────────
+  content_space: {
+    page_title: string;
+    page_subtitle: string;
+    home_hint: string;
+    folder_promote: string; // "Promouvoir {product}"
+    folder_atelier_desc: string;
+    folder_tiquiz_desc: string;
+    folder_meta: string; // "{emails} emails · {posts} posts"
+    folder_subtitle: string; // "{rate} de commission…"
+    folder_hint: string; // rappel du ?sa={sa}
+    section_emails: string;
+    section_emails_desc: string;
+    section_reseaux: string;
+    section_reseaux_desc: string;
+    section_articles: string;
+    section_articles_desc: string;
+    section_logos: string;
+    section_logos_desc: string;
+    section_generer: string;
+    section_generer_desc: string;
+    count_emails: string;
+    count_posts: string;
+    count_articles: string;
+    count_articles_empty: string;
+    count_assets: string;
+    count_generer: string;
+    emails_subtitle: string; // "{product}"
+    emails_atelier_help: string;
+    plan_7: string;
+    plan_3: string;
+    plan_posts: string;
+    empty_emails: string;
+    empty_posts: string;
+    empty_generate_hint: string;
+    reseaux_subtitle: string;
+    reseaux_atelier_help: string;
+    articles_subtitle: string;
+    articles_empty_title: string;
+    articles_empty_body: string;
+    articles_empty_cta: string;
+    logos_subtitle: string;
+    logos_rules: string;
+    brand_logo_full: string;
+    brand_logo_dark_bg: string;
+    brand_logo_icon: string;
+    brand_cover: string;
+    brand_mockup: string;
+    brand_mockup_white: string;
+    brand_download: string;
+    generer_subtitle: string;
+    generer_help: string;
+    gen_format_email: string;
+    gen_format_post: string;
+    gen_format_article: string;
+    gen_format_script_court: string;
+    gen_format_script_long: string;
+    gen_label_format: string;
+    gen_label_audience: string;
+    gen_ph_audience: string;
+    gen_help_audience: string;
+    gen_label_angle: string;
+    gen_ph_angle: string;
+    gen_label_tone: string;
+    gen_ph_tone: string;
+    gen_loading: string;
+    gen_submit: string;
+    gen_retry: string;
+    gen_preview: string;
+    gen_copy_plain: string;
+    gen_copy_rich: string;
+    gen_make_visual: string;
+    gen_disclaimer: string;
+    gen_err_audience: string;
+    gen_err_rate: string; // "{minutes}"
+    gen_err_generic: string;
+    gen_err_network: string;
+  };
   // ─── EmailCard (preview composant) ───────────────────────────────
   email_card: {
     preheader_inline: string; // "Pré-header : "
@@ -474,6 +577,10 @@ export type AffiliateDict = {
     copy_preheader: string;
     copy_body: string;
     copy_all: string;
+    numbered: string; // "Email {n} ·"
+    alt_subjects: string; // "Autres objets à tester"
+    copy_rich: string; // copie qui garde le gras
+    copy_plain: string;
   };
 
   // ─── PostDayCard ─────────────────────────────────────────────────
@@ -486,6 +593,19 @@ export type AffiliateDict = {
     download_title: string;
     remove_title: string;
     copy_post: string; // "Copier le post {network}"
+    // Kit Atelier : un post = un texte + son visuel (image seule ou
+    // carrousel qui défile, avec PDF et zip des images).
+    badge_single: string;
+    badge_carousel: string; // "Carrousel {count} slides"
+    slide_alt: string; // "Slide {n} de {alt}"
+    go_to_slide: string; // "Aller à la slide {n}"
+    slide_position: string; // "Slide {n}/{total}"
+    download_pdf: string;
+    download_png_zip: string; // "Les {count} images (PNG)"
+    download_png: string;
+    copy_text: string;
+    comment_link_title: string; // "Ton lien, à coller en premier commentaire"
+    copy_link: string;
   };
 
   // ─── ArticleCard ─────────────────────────────────────────────────

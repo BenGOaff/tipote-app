@@ -23,6 +23,12 @@ export const dynamic = "force-dynamic";
 
 function buildFaq(s: AffiliateDict["support"]) {
   return [
+    // Les trois premières servent l'affilié qui débute : il tombe dessus
+    // avant les questions de paiement et de fiscalité.
+    { q: s.faq_start_q, a: s.faq_start_a },
+    { q: s.faq_which_product_q, a: s.faq_which_product_a },
+    { q: s.faq_where_material_q, a: s.faq_where_material_a },
+    { q: s.faq_avg_earnings_q, a: s.faq_avg_earnings_a },
     { q: s.faq_payment_q, a: s.faq_payment_a },
     { q: s.faq_cookie_q, a: s.faq_cookie_a },
     { q: s.faq_multi_link_q, a: s.faq_multi_link_a },
@@ -33,7 +39,6 @@ function buildFaq(s: AffiliateDict["support"]) {
     { q: s.faq_paid_ads_q, a: s.faq_paid_ads_a },
     { q: s.faq_first_revenue_q, a: s.faq_first_revenue_a },
     { q: s.faq_taxes_q, a: s.faq_taxes_a },
-    { q: s.faq_avg_earnings_q, a: s.faq_avg_earnings_a },
     { q: s.faq_missing_commission_q, a: s.faq_missing_commission_a },
   ];
 }

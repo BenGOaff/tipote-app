@@ -68,7 +68,7 @@ export default function CallbackClient() {
           });
           if (error) throw error;
         } else {
-          throw new Error("Aucun token reçu — lien invalide");
+          throw new Error("Aucun token reçu, lien invalide");
         }
 
         // Session établie côté Supabase. Maintenant on demande au serveur

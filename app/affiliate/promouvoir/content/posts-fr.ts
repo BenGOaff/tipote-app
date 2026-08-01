@@ -43,6 +43,7 @@ Tes leads tombent, déjà segmentés, déjà tagués.
 - Compte gratuit : 1 quiz, 10 réponses/mois
 - Mensuel : 9 €/mois sans engagement
 - Annuel : 90 €/an
+- Plus : 29 €/mois ou 290 €/an si tu gères plusieurs clients ou plusieurs marques
 
 Pas de carte bancaire pour le gratuit. Tu testes vraiment.
 
@@ -70,10 +71,11 @@ Compte gratuit pour tester (1 quiz, 10 réponses/mois, sans CB) : {AFFILIATE_LIN
 
 Quiz marketing → segmentation auto → tagging Systeme io natif → page de résultat personnalisée par profil.
 
-3 plans :
+4 plans :
 • Gratuit (1 quiz, 10 réponses/mois)
 • 9 €/mois illimité
 • 90 €/an illimité
+• Plus 29 €/mois ou 290 €/an (plusieurs clients, plusieurs marques)
 
 Sans CB pour le gratuit : {AFFILIATE_LINK}`,
       },
@@ -410,13 +412,15 @@ Lien en bio 👆`,
         network: "linkedin",
         caption: `Dernier post Tiquiz cette semaine.
 
-Je te résume les 3 chemins possibles :
+Je te résume les 4 chemins possibles :
 
 Chemin 1 - Compte gratuit. 0 €, sans CB, 1 quiz, 10 réponses/mois. Tu testes sur ton audience, tu décides ensuite.
 
 Chemin 2 - Mensuel à 9 €. Quiz illimités, sans engagement. Tu arrêtes quand tu veux.
 
 Chemin 3 - Annuel à 90 €. Tu économises 2 mois.
+
+Chemin 4 - Plus, 29 €/mois ou 290 €/an. Celui-là c'est si tu es agence, freelance qui vend des quiz à ses clients, ou si tu gères plusieurs marques : un espace par client, une clé Systeme io par projet, et l'analyse IA des réponses.
 
 Si tu décides de ne rien prendre, pas de souci. Je continue à partager les outils que je trouve solides.
 
@@ -428,10 +432,11 @@ Merci d'avoir lu cette série.
         network: "x",
         caption: `Dernier post Tiquiz cette semaine.
 
-3 chemins :
+4 chemins :
 • Gratuit (0 €, sans CB)
 • Mensuel 9 € sans engagement
 • Annuel 90 € (économise 2 mois)
+• Plus 29 €/mois ou 290 €/an (agences, multi-clients)
 
 Sinon, on se reparle sur autre chose. Merci d'avoir suivi.
 

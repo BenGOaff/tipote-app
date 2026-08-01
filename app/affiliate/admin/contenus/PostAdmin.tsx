@@ -60,11 +60,14 @@ function toDraft(it: PostItem): Draft {
 export function PostAdmin({
   initial,
   locale = "fr",
+  product = "tiquiz",
   seedable = false,
 }: {
   initial: PostItem[];
   /** Langue du CONTENU géré, transmise pour fetch + création. */
   locale?: string;
+  /** Produit promu par ce contenu ("tiquiz" ou "atelier"). */
+  product?: string;
   seedable?: boolean;
 }) {
   const t = useDict();
@@ -84,7 +87,7 @@ export function PostAdmin({
   }
 
   async function refresh() {
-    const r = await fetch(`/affiliate/api/admin/contents?kind=post&locale=${encodeURIComponent(locale)}`)
+    const r = await fetch(`/affiliate/api/admin/contents?kind=post&product=${encodeURIComponent(product)}&locale=${encodeURIComponent(locale)}`)
       .then((x) => x.json())
       .catch(() => null);
     if (r?.ok) setItems(r.items as PostItem[]);
@@ -98,7 +101,7 @@ export function PostAdmin({
       body: "",
       sort_order: draft.sort_order,
       published: draft.published,
-      ...(includeLocale ? { locale } : {}),
+      ...(includeLocale ? { locale, product } : {}),
       meta: {
         theme: draft.theme,
         hook: draft.hook,

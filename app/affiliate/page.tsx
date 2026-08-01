@@ -11,7 +11,7 @@ import { getDict, interpolate, normaliseLocale } from "./i18n";
 import { buildAffiliateLink } from "@/lib/affiliate/links";
 import { getLinkPath } from "@/lib/affiliate/linkDestinations";
 import type { AffiliateDict } from "./i18n/types";
-import { TrendingUp, MousePointerClick, Users, ShoppingCart, Sparkles, Award, ArrowRight, Gift } from "lucide-react";
+import { TrendingUp, MousePointerClick, Users, ShoppingCart, GraduationCap, Wrench, ArrowRight, Gift } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -119,10 +119,17 @@ export default async function AffiliateOverviewPage() {
   // /part-tiquiz).
   const mainPath = await getLinkPath("tiquiz_main");
   const linkUrl = buildAffiliateLink(session.locale, mainPath, session.sa);
+  // Lien Atelier du Quiz (formation, 70%). Bene 31 juillet 2026 : le
+  // dashboard donnait l'impression que seul Tiquiz comptait, alors que
+  // la priorite strategique est la formation. Les deux produits sont
+  // desormais presentes cote a cote, l'Atelier en premier. Formation
+  // vendue en FR uniquement -> carte affichee seulement en FR.
+  const atelierPath = await getLinkPath("atelier");
+  const atelierUrl = buildAffiliateLink(session.locale, atelierPath, session.sa);
   const conversionRate =
     stats.total_clicks > 0
       ? `${((stats.total_sales / stats.total_clicks) * 100).toFixed(1)}%`
-      : "—";
+      : "-";
 
   return (
     <>
@@ -134,20 +141,58 @@ export default async function AffiliateOverviewPage() {
           <p className="text-muted-foreground mt-1">{t.overview.subtitle}</p>
         </div>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-primary" />
-              {t.overview.link_card_title}
-            </CardTitle>
-            <CardDescription>
-              {interpolate(t.overview.link_card_help, { sa: session.sa })}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <AffiliateLinkCopy url={linkUrl} />
-          </CardContent>
-        </Card>
+        <section className="space-y-4">
+          <div>
+            <h2 className="text-lg font-semibold tracking-tight">{t.overview.promote_title}</h2>
+            <p className="text-sm text-muted-foreground mt-0.5">{t.overview.promote_subtitle}</p>
+          </div>
+
+          <div className={`grid gap-4 ${isFr ? "md:grid-cols-2" : ""}`}>
+            {/* L'Atelier du Quiz en premier : commission la plus haute et
+                produit prioritaire. Formation vendue en FR uniquement. */}
+            {isFr && (
+              <PromoteCard
+                icon={GraduationCap}
+                kind={t.overview.promote_atelier_kind}
+                name="L'Atelier du Quiz"
+                rate="70%"
+                badge={t.overview.promote_atelier_badge}
+                pitch={t.overview.promote_atelier_pitch}
+                url={atelierUrl}
+                hint={interpolate(t.overview.promote_link_hint, { sa: session.sa })}
+                ctaLabel={t.overview.promote_atelier_cta}
+                ctaHref="/contenus"
+                highlight
+              />
+            )}
+            <PromoteCard
+              icon={Wrench}
+              kind={t.overview.promote_tiquiz_kind}
+              name="Tiquiz"
+              rate="40%"
+              pitch={t.overview.promote_tiquiz_pitch}
+              url={linkUrl}
+              hint={interpolate(t.overview.promote_link_hint, { sa: session.sa })}
+              ctaLabel={t.overview.promote_tiquiz_cta}
+              ctaHref="/promouvoir"
+            />
+          </div>
+
+          {isFr && (
+            <Card className="border-dashed bg-muted/40">
+              <CardContent className="pt-5 text-sm text-muted-foreground">
+                <span className="font-semibold text-foreground">{t.overview.promote_combo_title}.</span>{" "}
+                {t.overview.promote_combo_body}
+              </CardContent>
+            </Card>
+          )}
+        </section>
+
+        {/* Guide de lancement AVANT les compteurs : un affilie qui debute
+            voit quoi faire, pas quatre statistiques a zero. Une fois les
+            6 etapes faites, la carte se reduit a un bandeau de felicitations
+            puis disparait (logique du composant). */}
+        <LaunchGuideCard sa={session.sa} locale={session.locale} />
 
         <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <StatCard icon={MousePointerClick} label={t.overview.stat_clicks} value={stats.total_clicks.toLocaleString("fr-FR")} />
@@ -162,51 +207,85 @@ export default async function AffiliateOverviewPage() {
           <GainCard label={t.overview.gain_paid} value={eur(stats.paid_commission_cents)} variant="success" />
         </section>
 
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Award className="h-5 w-5 text-primary" />
-              <CardTitle className="text-lg">{t.overview.commission_title}</CardTitle>
-            </div>
-            <CardDescription>{t.overview.commission_tiquiz_desc}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {/* Tiquiz : 40% fixe */}
-            <div className="flex items-center justify-between px-4 py-3 rounded-lg border border-primary bg-primary/5">
-              <span className="text-sm font-semibold">
-                {isFr ? "Tiquiz (l'outil)" : "Tiquiz"}
-              </span>
-              <Badge variant="default" className="text-base px-3 py-1">40%</Badge>
-            </div>
-
-            {/* Atelier du Quiz : 70% - FR uniquement (formation vendue en FR) */}
-            {isFr && (
-              <>
-                <div className="flex items-center justify-between px-4 py-3 rounded-lg border border-primary bg-primary/5">
-                  <span className="text-sm font-semibold">L&apos;Atelier du Quiz (la formation)</span>
-                  <Badge variant="default" className="text-base px-3 py-1">70%</Badge>
-                </div>
-                <div className="rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
-                  <span className="font-semibold text-foreground">Le combo malin.</span>{" "}
-                  Tu peux promouvoir l&apos;outil, la formation, ou les deux. La formation paie
-                  le plus (70%) et elle amène naturellement tes filleuls à utiliser Tiquiz :
-                  l&apos;Atelier du Quiz apprend à créer des quiz AVEC Tiquiz. Vendre la
-                  formation, c&apos;est vendre l&apos;outil derrière, sans forcer.
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-
         <TrialTipoteCard sa={session.sa} t={t} />
-
-        <LaunchGuideCard sa={session.sa} locale={session.locale} />
 
         <BadgesCard stats={stats} t={t} />
 
         <LeaderboardCard sa={session.sa} locale={session.locale} />
       </main>
     </>
+  );
+}
+
+/** Carte produit : un produit promouvable = une commission, un pitch, son
+ *  propre lien tracké, et le raccourci vers son matériel. `highlight`
+ *  marque le produit prioritaire (l'Atelier). */
+function PromoteCard({
+  icon: Icon,
+  kind,
+  name,
+  rate,
+  badge,
+  pitch,
+  url,
+  hint,
+  ctaLabel,
+  ctaHref,
+  highlight = false,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  kind: string;
+  name: string;
+  rate: string;
+  badge?: string;
+  pitch: string;
+  url: string;
+  hint: string;
+  ctaLabel: string;
+  ctaHref: string;
+  highlight?: boolean;
+}) {
+  return (
+    <Card className={highlight ? "border-primary bg-primary/5" : ""}>
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3 min-w-0">
+            <div
+              className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center ${
+                highlight ? "bg-primary/15" : "bg-muted"
+              }`}
+            >
+              <Icon className={`h-5 w-5 ${highlight ? "text-primary" : "text-muted-foreground"}`} />
+            </div>
+            <div className="min-w-0">
+              <span className="text-[11px] uppercase tracking-wider text-muted-foreground">{kind}</span>
+              <CardTitle className="text-lg leading-tight">{name}</CardTitle>
+            </div>
+          </div>
+          <div className="flex flex-col items-end gap-1 flex-shrink-0">
+            <Badge variant={highlight ? "default" : "secondary"} className="text-base px-3 py-1">
+              {rate}
+            </Badge>
+            {badge && (
+              <span className="text-[10px] uppercase tracking-wider font-semibold text-primary">
+                {badge}
+              </span>
+            )}
+          </div>
+        </div>
+        <CardDescription className="leading-relaxed pt-2">{pitch}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        <AffiliateLinkCopy url={url} />
+        <p className="text-xs text-muted-foreground">{hint}</p>
+        <Button variant={highlight ? "default" : "outline"} size="sm" asChild className="mt-1">
+          <Link href={ctaHref}>
+            {ctaLabel}
+            <ArrowRight className="ml-2 h-3.5 w-3.5" />
+          </Link>
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
 

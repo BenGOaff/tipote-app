@@ -194,7 +194,7 @@ export default async function RevenusPage() {
                           <TableCell className="text-sm">{formatDate(c.sale_at)}</TableCell>
                           <TableCell>
                             <div className="font-medium text-sm">
-                              {c.product_name ?? "—"}
+                              {c.product_name ?? "-"}
                             </div>
                             <Badge variant="outline" className="text-[10px] mt-1">
                               {c.source_app}
@@ -239,7 +239,9 @@ export default async function RevenusPage() {
             <CardDescription>{t.revenus.calculator_subtitle}</CardDescription>
           </CardHeader>
           <CardContent>
-            <RevenueCalculator currentTier={totals.total_sales} />
+            {/* L'Atelier n'est vendu qu'en français : hors FR, la simulation
+                ne montre que le récurrent Tiquiz. */}
+            <RevenueCalculator showAtelier={normaliseLocale(session.locale) === "fr"} />
           </CardContent>
         </Card>
       </main>
