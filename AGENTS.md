@@ -327,3 +327,31 @@ Playwright. Le harness vit dans le repo TIQUIZ (`npm run test:visual`,
 `tests/visual/`) : les deux viewers étant jumeaux, un changement porté ici
 doit être validé là-bas. Porter le harness dans ce repo au prochain gros
 chantier design du module quiz.
+
+## Taille de police d'un champ : UNE seule enveloppe (drame Jocelyne 1er août 2026)
+
+La taille de police au niveau du champ vit dans un `<div
+class="rt-field-fs" style="--rt-fs-m: Xpx; --rt-fs-d: Ypx">` qui
+enveloppe tout le contenu (cf. `RichTextEdit`, section dual-device).
+
+**Le piège :** le navigateur restructure le contenu d'un `contentEditable`
+à la moindre commande. Aligner, coller, appuyer sur Entrée enveloppe le
+bloc dans un `<div>`, et l'enveloppe de taille n'est alors PLUS enfant
+direct du champ. Le code cherchait `:scope > .rt-field-fs` : il ne la
+trouvait plus, en créait une SECONDE par-dessus, et comme la plus
+profonde porte sa propre variable CSS, c'est ELLE qui gagne. Résultat :
+le menu affiche la nouvelle taille, l'écran garde l'ancienne, et
+l'utilisatrice conclut que le bouton ne marche pas. Reproduit côté
+Tiquiz sur la 6e réponse d'une question, celle qui avait été centrée.
+
+**Règle :** `applyFieldFontSize()` cherche les enveloppes PARTOUT dans le
+champ (`querySelectorAll`), reprend les tailles de la **plus profonde**
+(celle qui gagne en CSS, donc celle que l'utilisatrice voit), les retire
+TOUTES, puis en recrée UNE SEULE en enfant direct. Un `<div>` qui
+n'existait que pour porter la taille est déballé ; un `<div>` qui porte
+autre chose (un alignement) est conservé tel quel. Effet de bord voulu :
+un champ déjà cassé se répare tout seul au premier clic sur une taille.
+
+**Ne jamais** revenir à un `:scope >` ni supposer que le DOM d'un
+contentEditable ressemble à ce qu'on y a écrit. Le module Tiquiz est
+jumeau : toute correction ici se porte là-bas.
