@@ -355,3 +355,85 @@ un champ déjà cassé se répare tout seul au premier clic sur une taille.
 **Ne jamais** revenir à un `:scope >` ni supposer que le DOM d'un
 contentEditable ressemble à ce qu'on y a écrit. Le module Tiquiz est
 jumeau : toute correction ici se porte là-bas.
+
+## Quiz scoré : les contrôles "profil" ne s'appliquent PAS (drame Véronique 1er août 2026)
+
+Deux mécaniques d'attribution du résultat coexistent, et elles ne se
+mélangent jamais :
+
+| Mode | Le résultat est choisi par | Ce qui compte sur l'option |
+|---|---|---|
+| profils (défaut) | `option.result_index` le plus voté | `result_index` |
+| scoring | la TRANCHE `[min_score, max_score]` | `points` |
+
+En scoring, `result_index` ne veut rien dire. Or deux analyses de
+l'éditeur sont bâties dessus :
+- `resultCoverage` ("combien de questions mènent à ce résultat") ;
+- `tieAnalysis` (ex-æquo entre profils).
+
+Sur un quiz scoré, elles répondaient zéro pour tout le monde, d'où le
+bandeau rouge **"Ce résultat ne peut jamais être attribué"** sur un quiz
+parfaitement fonctionnel : Véronique testait, obtenait le bon résultat,
+et voyait quand même l'alerte. Deux jours perdus, et un bouton
+"Rééquilibrer avec l'IA" qui aurait réécrit des `result_index` inutiles.
+
+**Règle : les deux analyses sortent en `ok` / vide dès que
+`quiz.mode === "scoring"`.** Le contrôle équivalent en scoring existe
+déjà et lui est correct : `trancheCoverage` (trous et chevauchements
+entre les tranches, comparés à la plage réellement atteignable via
+`computeReachableRange`).
+
+**Avant d'ajouter un contrôle de cohérence sur les résultats**, se
+demander de quelle mécanique il parle, et le gater sur `isScoring`. Le
+module Tipote est jumeau : toute correction ici se porte là-bas.
+
+## Filet de tests logique : OBLIGATOIRE avant push (1er août 2026)
+
+Trois bugs de suite sont partis en prod sous les yeux de vraies
+clientes : le funnel fantôme d'Adeline, la taille de police de Jocelyne,
+la fausse alerte de Véronique. Aucun n'était une faute de frappe. Tous
+les trois sont le MÊME défaut :
+
+> une logique écrite pour un cas est appliquée telle quelle à un autre,
+> et rien ne le contredit avant que la cliente ne le découvre.
+
+- Adeline : un index positionnel appliqué à un historique dont la
+  structure a bougé.
+- Jocelyne : un `:scope >` appliqué à un DOM que le navigateur a
+  restructuré.
+- Véronique : une analyse "profils" appliquée à un quiz scoré.
+
+Le filet visuel ne pouvait rien voir : il photographie le viewer public,
+alors que ces trois bugs vivent dans des fonctions.
+
+**La règle :**
+
+```bash
+npm run test:logic     # runner natif Node, ~1s, aucune dependance
+npm run test:visual    # 90/90, uniquement si le design/UX bouge
+npx tsc --noEmit       # exit 0
+```
+
+`npm run test:logic` tourne AVANT chaque push, sans exception et sans
+qu'on le demande. Les tests vivent dans `tests/logic/*.test.mts` et
+portent le nom de la cliente et ce qu'elle a vu : un test rouge, c'est
+une cliente qui va perdre confiance.
+
+**Corollaire, plus important que les tests eux-mêmes :** une logique
+enfermée dans un composant React n'est pas testable, donc elle n'est pas
+testée. Toute règle métier (cohérence, statistiques, manipulation DOM,
+conversion de format) sort dans `lib/` en fonction pure, et le composant
+se contente de l'appeler. C'est ce qui a été fait pour
+`lib/quizCoherence.ts` et `lib/richTextFieldSize.ts`.
+
+**Et quand un cas a deux mécaniques, la mécanique est un PARAMÈTRE
+OBLIGATOIRE**, pas une variable devinée à l'intérieur (cf.
+`analyzeResultCoverage(mode, ...)`). On ne peut plus appeler la fonction
+sans avoir dit de quoi on parle : c'est la seule protection qui survit
+au prochain qui touchera au fichier.
+
+**Un test qui clignote est pire que pas de test.** Le 1er août, une
+capture visuelle est sortie rouge puis verte au retry (hauteur de page
+pas encore stable). Corrigé à la source par `settle()` dans le spec :
+on attend que la hauteur du document ne bouge plus, au lieu d'un
+`waitForTimeout` qui dépend de la charge machine.

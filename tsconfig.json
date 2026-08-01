@@ -6,6 +6,11 @@
     "skipLibCheck": true,
     "strict": true,
     "noEmit": true,
+    // Les tests de logique (tests/logic/*.test.mts) sont executes par le
+    // runner natif de Node, qui resout les imports avec leur extension
+    // reelle. On l'autorise ici pour qu'ils restent typecheckes par le
+    // meme `tsc --noEmit` que le reste du code.
+    "allowImportingTsExtensions": true,
     "esModuleInterop": true,
     "module": "esnext",
     "moduleResolution": "bundler",

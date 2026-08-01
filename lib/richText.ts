@@ -46,10 +46,13 @@ const IMG_WIDTH_RE = /^\d{1,3}(?:\.\d+)?%$|^\d{1,4}px$/i;
 // style="--rt-fs-m: Xpx; --rt-fs-d: Ypx"> par champ, UNE taille par
 // device pour tout le bloc (jamais par mot -> rendu fiable). On
 // whiteliste la classe `rt-field-fs` et les valeurs --rt-fs-m/--rt-fs-d.
-const FIELD_FS_CLASS = "rt-field-fs";
-const FIELD_ALLOWED_SIZES = new Set([
-  "14px", "16px", "18px", "20px", "24px", "28px", "32px", "40px", "48px", "56px", "64px",
-]);
+// SOURCE UNIQUE des tailles, partagee avec la toolbar. Avant, la liste
+// etait ecrite ici ET dans rich-text-edit.tsx : ajouter une taille d'un
+// seul cote donnait une taille choisissable, visible a l'ecran, et jetee
+// en silence a la sauvegarde.
+import { FIELD_FONT_SIZES, FIELD_FS_CLASS } from "./richTextFieldSize.ts";
+
+const FIELD_ALLOWED_SIZES = new Set<string>(FIELD_FONT_SIZES);
 
 // Hook DOMPurify enregistré une seule fois au load du module. S'applique
 // à toutes les sanitisations suivantes (server + client).
