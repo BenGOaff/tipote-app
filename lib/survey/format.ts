@@ -17,8 +17,12 @@
 // ET côté serveur (route CSV + agrégat IA).
 
 import { stripHtml } from "@/lib/richText";
+import { buildQuestionPositions, indexAnswersByPosition } from "@/lib/quiz/questionIdentity";
 
 export type SurveyQuestionLike = {
+  /** Identité stable de la question. Sert à rattacher les réponses à la
+   *  BONNE question après une suppression ou un déplacement. */
+  id?: string | null;
   question_text?: string | null;
   question_type?: string | null;
   options?: Array<{ text?: string | null }> | null;
@@ -27,6 +31,9 @@ export type SurveyQuestionLike = {
 
 export type SurveyAnswerLike = {
   question_index?: number;
+  /** Identité stable de la question (cf. lib/quiz/questionIdentity.ts).
+   *  Absent sur les réponses écrites avant le 1er août 2026. */
+  question_id?: string | null;
   option_index?: number;
   option_indices?: number[];
   rating?: number;
@@ -119,17 +126,25 @@ export function formatSurveyAnswer(
 }
 
 /**
- * Construit une Map question_index -> réponse pour un répondant, à partir de
- * son tableau brut `answers`.
+ * Construit une Map "position ACTUELLE de la question" -> réponse, pour un
+ * répondant.
+ *
+ * `questions` = la liste vivante (triée par sort_order). Elle est
+ * indispensable : sans elle, une question supprimée au milieu décale toutes
+ * les réponses suivantes d'un cran, et le tableau affiche la réponse de Q6
+ * en face de Q5 (drame Adeline, 1er août 2026). Passer la liste vide garde
+ * le comportement historique (index brut), utile quand la structure n'a pas
+ * pu être chargée.
  */
 export function indexAnswers(
   answers: SurveyAnswerLike[] | null | undefined,
+  questions?: ReadonlyArray<{ id?: string | null }> | null,
 ): Map<number, SurveyAnswerLike> {
-  const byQ = new Map<number, SurveyAnswerLike>();
-  if (Array.isArray(answers)) {
-    for (const a of answers) {
-      if (typeof a?.question_index === "number") byQ.set(a.question_index, a);
-    }
-  }
-  return byQ;
+  const positions = buildQuestionPositions(questions);
+  const count = Array.isArray(questions) ? questions.length : 0;
+  return indexAnswersByPosition(
+    Array.isArray(answers) ? answers : [],
+    positions,
+    count,
+  );
 }

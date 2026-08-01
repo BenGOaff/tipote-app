@@ -12,6 +12,7 @@ import { callClaude, getClaudeApiKey } from "@/lib/claude";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { stripHtml } from "@/lib/richText";
 import { localizedYesNo, isAnswered } from "@/lib/survey/format";
+import { buildQuestionPositions, resolveQuestionPosition } from "@/lib/quiz/questionIdentity";
 import { fetchAllRows } from "@/lib/db/fetchAllRows";
 
 // Analyse de sondage = CONTENU exploitable (enseignements + actions).
@@ -26,6 +27,8 @@ export const SURVEY_AI_MIN_RESPONSES = 5;
 
 export interface SurveyAnswerRaw {
   question_index?: number;
+  /** Identité stable de la question (cf. lib/quiz/questionIdentity.ts). */
+  question_id?: string | null;
   option_index?: number;
   option_indices?: number[];
   rating?: number;
@@ -69,6 +72,7 @@ export interface SurveyAnalysisResult {
 }
 
 interface QuestionRow {
+  id: string;
   question_text: string | null;
   options: Array<{ text?: string }> | null;
   sort_order: number;
@@ -94,10 +98,19 @@ export async function aggregateSurvey(
 
   const { data: questionsRaw } = await supabaseAdmin
     .from("quiz_questions")
-    .select("question_text, options, sort_order, question_type")
+    .select("id, question_text, options, sort_order, question_type")
     .eq("quiz_id", quizId)
-    .order("sort_order", { ascending: true });
+    // Tri secondaire sur `id` : miroir EXACT du row_number() de la RPC SQL,
+    // pour que la position calculée ici soit la même partout en cas
+    // d'égalité de sort_order sur d'anciennes lignes.
+    .order("sort_order", { ascending: true })
+    .order("id", { ascending: true });
   const questions = (questionsRaw ?? []) as QuestionRow[];
+  // Identité stable : `question_id` -> position ACTUELLE. Sans ça, l'IA
+  // analysait les réponses de Q6 sous le libellé de Q5 dès qu'une question
+  // avait été supprimée au milieu (drame Adeline, 1er août 2026).
+  const positions = buildQuestionPositions(questions);
+  const questionCount = questions.length;
 
   // Analyse COMPLÈTE (pas de plafond 1000) : pagination serveur, sinon
   // l'IA analyse un échantillon tronqué et fausse ses conclusions.
@@ -127,7 +140,7 @@ export async function aggregateSurvey(
     if (!Array.isArray(answers)) continue;
     totalResponses += 1;
     for (const ans of answers) {
-      const qi = typeof ans.question_index === "number" ? ans.question_index : null;
+      const qi = resolveQuestionPosition(ans, positions, questionCount);
       if (qi === null) continue;
       if (!isAnswered(ans)) continue;
       answeredPerQ[qi] = (answeredPerQ[qi] ?? 0) + 1;
@@ -162,8 +175,8 @@ export async function aggregateSurvey(
   const yesNo = localizedYesNo(locale);
 
   const aggregatedQuestions: AggregatedQuestion[] = questions.map((q, idx) => {
-    // question_index = position 0-based dans l'ordre sort_order. On aligne sur
-    // l'index du tableau (cohérent avec PublicQuizClient + SurveyTrends).
+    // Les compteurs ci-dessus sont déjà rangés par POSITION ACTUELLE
+    // (resolveQuestionPosition), donc l'index du tableau suffit ici.
     const qi = idx;
     const type = String(q.question_type ?? "multiple_choice");
     const counts = totals[qi] ?? {};

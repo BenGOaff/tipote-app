@@ -69,15 +69,17 @@ export async function GET(
   if (format === "csv" || format === "xlsx") {
     const locale = (quiz as { locale?: string | null }).locale ?? "fr";
 
-    // Export brut : 1 ligne par répondant. Les réponses sont indexées par
-    // question_index = position 0-based dans l'ordre sort_order (même
-    // convention que PublicQuizClient + SurveyTrends). On itère les questions
-    // DANS cet ordre et on aligne sur l'index.
+    // Export brut : 1 ligne par répondant. On charge `id` : c'est lui qui
+    // rattache une réponse à SA question, même après une suppression ou un
+    // déplacement au milieu du sondage (cf. lib/quiz/questionIdentity.ts).
+    // L'ordre sort_order définit la position de la colonne ; l'index brut
+    // des réponses anciennes (sans id) reste le repli.
     const { data: questionsRaw } = await supabaseAdmin
       .from("quiz_questions")
-      .select("question_text, options, sort_order, question_type, config")
+      .select("id, question_text, options, sort_order, question_type, config")
       .eq("quiz_id", quizId)
-      .order("sort_order", { ascending: true });
+      .order("sort_order", { ascending: true })
+      .order("id", { ascending: true });
     const questions = (questionsRaw ?? []) as Array<SurveyQuestionLike>;
 
     // Export COMPLET (pas de plafond 1000) : pagination serveur, fichier
@@ -117,7 +119,7 @@ export async function GET(
         flagged?: boolean | null;
         answers?: SurveyAnswerLike[] | null;
       };
-      const byQ = indexAnswers(l.answers);
+      const byQ = indexAnswers(l.answers, questions);
       rows.push([
         l.created_at ? new Date(l.created_at).toLocaleDateString("fr-FR") : "",
         l.email ?? "",

@@ -1419,15 +1419,21 @@ export default function PublicQuizClient({
         if (trackedQuestionViewsRef.current.has(questionIndex)) return;
         trackedQuestionViewsRef.current.add(questionIndex);
       }
+      // IDENTITÉ STABLE (drame Adeline, 1er août 2026) : on envoie l'id de
+      // la question EN PLUS de sa position. L'index seul devient faux dès
+      // qu'une question est supprimée ou insérée au milieu ; l'id, lui,
+      // survit aux sauvegardes et permet de recaler l'historique sur la
+      // bonne question. L'index reste envoyé pour la compat serveur.
+      const questionId = quiz?.questions?.[questionIndex]?.id ?? null;
       fetch(`/api/quiz/${quizId}/track`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ event, questionIndex }),
+        body: JSON.stringify({ event, questionIndex, questionId }),
         keepalive: true,
         credentials: "same-origin",
       }).catch(() => {});
     },
-    [quizId, previewData],
+    [quizId, previewData, quiz],
   );
 
   // View event au mount — remplace l'ancien tracking server-side
@@ -2073,16 +2079,20 @@ export default function PublicQuizClient({
         // small but distinct so Tendances (survey) and lead-export (quiz)
         // can render the right widget without re-deriving the type.
         const answersPayload = (finalAnswers ?? answers).map((ans, qIdx) => {
-          if (!ans) return { question_index: qIdx };
-          if (ans.kind === "option") return { question_index: qIdx, option_index: ans.optionIndex };
+          // `question_id` = identité stable de la question (voir
+          // trackQuestionEvent). L'index reste écrit pour la compat des
+          // lecteurs historiques ; c'est l'id qui fait foi.
+          const ref = { question_index: qIdx, question_id: quiz?.questions?.[qIdx]?.id ?? null };
+          if (!ans) return ref;
+          if (ans.kind === "option") return { ...ref, option_index: ans.optionIndex };
           if (ans.kind === "options") {
             // Multi-select: send the full sorted array. Analytics
             // (SurveyTrends / QuizResultsAnalytics) handle either shape.
-            return { question_index: qIdx, option_indices: ans.optionIndices };
+            return { ...ref, option_indices: ans.optionIndices };
           }
-          if (ans.kind === "rating") return { question_index: qIdx, rating: ans.value };
-          if (ans.kind === "star") return { question_index: qIdx, stars: ans.value };
-          return { question_index: qIdx, text: ans.value };
+          if (ans.kind === "rating") return { ...ref, rating: ans.value };
+          if (ans.kind === "star") return { ...ref, stars: ans.value };
+          return { ...ref, text: ans.value };
         });
 
         const res = await fetch(`/api/quiz/${quizId}/public`, {

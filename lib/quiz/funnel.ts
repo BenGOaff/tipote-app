@@ -17,12 +17,19 @@
 // plus est exclu, silencieusement mais compté (`removedQuestions`) pour
 // que l'interface puisse le dire honnêtement.
 //
-// Ce qu'on ne peut PAS réparer : les questions supprimées ou insérées
-// AU MILIEU décalent les index des events postérieurs. Les questions
-// sont supprimées puis réinsérées à chaque sauvegarde (cf. PATCH
-// /api/quiz/[id]), donc ni `id` ni `created_at` ne survivent pour
-// réaligner l'historique. On ne devine pas : on n'affiche que ce qui
-// correspond à une question vivante.
+// Depuis le 1er août 2026, la RPC fait mieux que ça : les events portent
+// `question_id` et la RPC traduit cet id en POSITION ACTUELLE. Une
+// question déplacée, ou une question supprimée AU MILIEU, ne décale donc
+// plus l'historique postérieur (cf. supabase/migrations/
+// 20260801_question_identity.sql et lib/quiz/questionIdentity.ts). Les
+// events écrits AVANT ce chantier n'ont pas d'id : ils restent lus par
+// leur index, ce que ce module borne aux questions vivantes.
+//
+// La RPC renvoie une LIGNE SENTINELLE `question_index = -1` dont `views`
+// porte le nombre de questions distinctes présentes dans l'historique
+// mais absentes du quiz d'aujourd'hui. On la lit ici et on la transforme
+// en `removedQuestions`, pour que l'UI puisse le dire honnêtement au lieu
+// de faire disparaître des chiffres sans explication.
 
 export type RawFunnelRow = {
   question_index: number;
@@ -63,8 +70,18 @@ export function buildLiveFunnel(rows: RawFunnelRow[], questionCount: number): Li
 
   for (const row of rows) {
     const idx = Number(row.question_index);
-    if (!Number.isInteger(idx) || idx < 0) continue;
+    if (!Number.isInteger(idx)) continue;
+    // Ligne sentinelle de la RPC : `views` = nombre de questions de
+    // l'historique qui n'existent plus dans le quiz actuel.
+    if (idx === -1) {
+      removedQuestions += Math.max(0, Number(row.views) || 0);
+      continue;
+    }
+    if (idx < 0) continue;
     if (questionCount > 0 && idx >= questionCount) {
+      // Repli pour une base dont la migration n'est pas encore appliquée :
+      // la RPC renvoie alors des index bruts, y compris ceux des questions
+      // supprimées. On les compte ici plutôt que de les afficher.
       removedQuestions += 1;
       continue;
     }
@@ -87,7 +104,7 @@ export function buildLiveFunnel(rows: RawFunnelRow[], questionCount: number): Li
         hasData: true,
       };
     });
-    return { steps, removedQuestions: 0 };
+    return { steps, removedQuestions };
   }
 
   const steps: LiveFunnelStep[] = [];

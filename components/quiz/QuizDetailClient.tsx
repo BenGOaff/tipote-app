@@ -161,7 +161,7 @@ type IntroImagePosition = "top" | "after_title" | "after_intro" | "bottom";
 type BonusImagePosition = "top" | "after_heading" | "after_intro" | "bottom";
 const RESULT_IMAGE_POSITIONS: ResultImagePosition[] = ["top", "after_title", "after_description", "after_insight", "bottom"];
 type QuizResult = { id?: string; title: string; description: string | null; insight: string | null; projection: string | null; insight_heading?: string | null; projection_heading?: string | null; cta_text: string | null; cta_url: string | null; sio_tag_name: string | null; sio_tag_names?: string[] | null; sio_course_id: string | null; sio_community_id: string | null; sort_order: number; image_url?: string | null; image_position?: ResultImagePosition | null; image_width?: number | null; min_score?: number | null; max_score?: number | null };
-type QuizLead = { id: string; email: string; first_name: string | null; last_name: string | null; phone: string | null; country: string | null; result_id: string | null; result_title: string | null; answers: { question_index: number; option_index?: number; option_indices?: number[] }[] | null; scores?: unknown; has_shared: boolean; bonus_unlocked: boolean; created_at: string };
+type QuizLead = { id: string; email: string; first_name: string | null; last_name: string | null; phone: string | null; country: string | null; result_id: string | null; result_title: string | null; answers: { question_index: number; question_id?: string | null; option_index?: number; option_indices?: number[] }[] | null; scores?: unknown; has_shared: boolean; bonus_unlocked: boolean; created_at: string };
 type QuizData = {
   id: string; title: string; slug: string | null;
   introduction: string | null; cta_text: string | null; cta_url: string | null;
@@ -2044,6 +2044,11 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           toast_widget_id: selectedToastWidget || null,
           share_widget_id: selectedShareWidget || null,
           questions: editQuestions.map((q, i) => ({
+            // Identité stable (drame Adeline, 1er août 2026) : renvoyer l'id
+            // permet au PATCH de METTRE À JOUR la ligne existante au lieu de
+            // la recréer. Sans ça, chaque sauvegarde casserait le lien entre
+            // une question et son historique de statistiques.
+            ...(q.id ? { id: q.id } : {}),
             question_text: q.question_text,
             // Type de question (défaut multiple_choice). La colonne
             // quiz_questions.question_type accepte les 6 types.
