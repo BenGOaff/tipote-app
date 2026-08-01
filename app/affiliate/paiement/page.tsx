@@ -36,7 +36,7 @@ export default async function PaiementPage() {
   const t = getDict(normaliseLocale(session.locale));
 
   return (
-    <main className="max-w-3xl mx-auto px-6 py-8 space-y-6">
+    <main className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">{t.paiement.page_title}</h1>
         <p className="text-muted-foreground mt-1">{t.paiement.page_subtitle_sio}</p>

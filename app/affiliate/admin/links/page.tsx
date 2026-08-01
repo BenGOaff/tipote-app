@@ -24,7 +24,7 @@ export default async function AdminLinksPage() {
   const rows = await getAllLinkDestinations();
 
   return (
-    <main className="max-w-3xl mx-auto px-6 py-8 space-y-6">
+    <main className="space-y-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-2">
           <ShieldCheck className="h-5 w-5 text-primary" />

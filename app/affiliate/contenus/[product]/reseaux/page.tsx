@@ -123,7 +123,7 @@ export default async function ReseauxSectionPage({
   }
 
   return (
-    <main className="mx-auto max-w-5xl space-y-6 px-6 py-8">
+    <main className="space-y-6">
       <ContentBreadcrumb
         trail={[
           { label: cs.page_title, href: "/contenus" },

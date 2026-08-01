@@ -31,6 +31,22 @@ faire une navigation DURE (`window.location.assign`) et PAS
 que le cookie de session soit lisible côté serveur → `getAffiliateSession()`
 renvoie null → sidebar absente jusqu'au refresh.
 
+**Frontière serveur / client (drame 1er août 2026) :** un composant marqué
+`"use client"` ne peut PAS recevoir une référence de fonction depuis une
+page serveur. `FolderCard` prenait une icône en prop (`icon={GraduationCap}`,
+donc un composant React) : marqué côté client, /contenus plantait en prod
+sur "An error occurred in the Server Components render", sans message utile.
+Deux sorties possibles : garder le composant côté serveur quand il n'a ni
+état ni gestionnaire d'événement (choix retenu pour `ContentNav.tsx`), ou
+passer une clé sérialisable et résoudre l'icône côté client. Le typecheck
+ne voit RIEN de tout ça : ça ne pète qu'au rendu.
+
+**Gabarit de page :** la largeur, les marges et le padding de l'espace
+affilié vivent UNE seule fois, dans `app/affiliate/layout.tsx`
+(`max-w-6xl px-6 py-8`). Une page ne définit que son rythme vertical
+(`space-y-*`). Avant, chaque page avait son propre conteneur et Promouvoir
+paraissait plus étroite que les autres sans raison.
+
 ## Anti-IA writing — JAMAIS de tiret long (drame 7 juin 2026)
 
 Béné a une règle absolue dans tout le contenu user-visible (emails

@@ -128,7 +128,7 @@ export default async function RevenusPage() {
 
   return (
     <>
-      <main className="max-w-6xl mx-auto px-6 py-8 space-y-8">
+      <main className="space-y-8">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{t.revenus.page_title}</h1>
           <p className="text-muted-foreground mt-1">{t.revenus.page_subtitle}</p>
