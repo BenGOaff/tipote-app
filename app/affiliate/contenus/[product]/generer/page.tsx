@@ -42,7 +42,7 @@ export default async function GenererSectionPage({
   const displayName = session.display_name ?? session.email.split("@")[0];
 
   return (
-    <main className="mx-auto max-w-4xl space-y-6 px-6 py-8">
+    <main className="space-y-6">
       <ContentBreadcrumb
         trail={[
           { label: cs.page_title, href: "/contenus" },

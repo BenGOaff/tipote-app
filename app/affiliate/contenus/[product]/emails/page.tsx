@@ -105,7 +105,7 @@ export default async function EmailsSectionPage({
     `${label} ${plan.map((n) => `#${n}`).join(" · ")}`;
 
   return (
-    <main className="mx-auto max-w-4xl space-y-6 px-6 py-8">
+    <main className="space-y-6">
       <ContentBreadcrumb
         trail={[
           { label: cs.page_title, href: "/contenus" },

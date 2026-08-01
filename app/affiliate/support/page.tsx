@@ -52,7 +52,7 @@ export default async function SupportPage() {
 
   return (
     <>
-      <main className="max-w-4xl mx-auto px-6 py-8 space-y-6">
+      <main className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{t.support.page_title}</h1>
           <p className="text-muted-foreground mt-1">{t.support.page_subtitle}</p>

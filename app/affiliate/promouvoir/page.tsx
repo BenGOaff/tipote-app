@@ -119,7 +119,7 @@ export default async function PromouvoirPage({
   }
 
   return (
-    <main className="max-w-4xl mx-auto px-6 py-8 space-y-8">
+    <main className="space-y-8">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{t.promouvoir.page_title}</h1>

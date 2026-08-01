@@ -1,8 +1,16 @@
-"use client";
-
 // Fil d'Ariane + carte de dossier de l'espace Contenu. Même logique de
 // navigation que "Mes projets" côté Tiquiz : on descend dans des dossiers,
 // on remonte par le fil d'Ariane.
+//
+// Ces deux composants restent des composants SERVEUR, et ce n'est pas un
+// oubli : ils n'ont ni état ni gestionnaire d'événement, et les pages leur
+// passent une ICÔNE, c'est-à-dire une référence de composant React. Une
+// référence de fonction ne traverse pas la frontière serveur vers client.
+// Marqués côté client, /contenus et /contenus/[produit] plantaient en
+// production sur "An error occurred in the Server Components render"
+// (1er août 2026). Si un jour ce fichier a besoin d'interactivité, isoler
+// la partie interactive dans un composant client dédié plutôt que de
+// marquer tout le fichier.
 
 import Link from "next/link";
 import { ChevronRight, Folder } from "lucide-react";

@@ -4720,7 +4720,12 @@
     "previewCaptureDisableHint": "Étape de capture email. Pour la masquer, désactive la capture dans l'onglet Paramètres.",
     "introCoverHint": "Disposition couverture : cette image sert de fond plein écran (réglable dans Design)",
     "hideBrandingLabel": "Masquer complètement le lien",
-    "hideBrandingHint": "Ne rien afficher en bas du quiz (ni Tipote, ni lien personnalisé)."
+    "hideBrandingHint": "Ne rien afficher en bas du quiz (ni Tipote, ni lien personnalisé).",
+    "averageRating": "Moyenne : {value}",
+    "freeTextAll": "Toutes les réponses écrites, de la plus récente à la plus ancienne.",
+    "freeTextShown": "Les {shown} réponses les plus récentes sur {total}. Le bouton Copier les prend toutes.",
+    "freeTextCopy": "Copier les réponses",
+    "freeTextCopied": "Copié"
   },
   "contentStrategy": {
     "title": "Stratégie de contenu",

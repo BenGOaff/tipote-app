@@ -72,7 +72,7 @@ export default async function ArticlesSectionPage({
     product === "tiquiz" ? await fetchBlogArticles(blogMarket, 20) : [];
 
   return (
-    <main className="mx-auto max-w-4xl space-y-6 px-6 py-8">
+    <main className="space-y-6">
       <ContentBreadcrumb
         trail={[
           { label: cs.page_title, href: "/contenus" },

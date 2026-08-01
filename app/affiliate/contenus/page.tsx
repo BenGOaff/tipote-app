@@ -40,7 +40,7 @@ export default async function ContenusHomePage() {
   });
 
   return (
-    <main className="mx-auto max-w-5xl space-y-6 px-6 py-8">
+    <main className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">
           {t.content_space.page_title}

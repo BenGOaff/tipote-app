@@ -80,7 +80,14 @@ export default async function AffiliateLayout({ children }: { children: React.Re
             <AffiliateTour onboardedAt={onboardedAt} />
             <div className="min-h-screen lg:flex bg-background">
               <AffiliateSidebar displayName={displayName} isAdmin={isAdminEmail(session.email)} />
-              <div className="flex-1 min-w-0">{children}</div>
+              {/* Gabarit UNIQUE de l'espace : même largeur, mêmes marges,
+                  même padding sur toutes les pages authentifiées. Les pages
+                  ne définissent plus leur propre conteneur (avant, Promouvoir
+                  était en max-w-4xl et la vue d'ensemble en max-w-6xl : la
+                  page paraissait plus étroite sans raison). */}
+              <div className="flex-1 min-w-0">
+                <div className="mx-auto w-full max-w-6xl px-6 py-8">{children}</div>
+              </div>
             </div>
           </>
         ) : (
