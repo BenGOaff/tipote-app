@@ -44,14 +44,17 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import {
+  FIELD_FONT_SIZES,
+  FIELD_FS_CLASS,
+  applyFieldFontSize as applyFieldFontSizeToDom,
+  fieldWrapperIsEmpty,
+  readFieldFontSize,
+  type FieldFsVar,
+} from "@/lib/richTextFieldSize";
 
-// Tailles de police au niveau du champ (px). Source de verite partagee
-// avec le sanitizer (lib/richText.ts FIELD_ALLOWED_SIZES) et le CSS
-// (.rt-field-fs). Une seule taille par champ et par device, jamais par
-// mot. Drame Bene 8 juin 2026 : tailles mobile/desktop independantes.
-const FIELD_FONT_SIZES = [
-  "14px", "16px", "18px", "20px", "24px", "28px", "32px", "40px", "48px", "56px", "64px",
-] as const;
+// Tailles de police au niveau du champ : SOURCE UNIQUE dans
+// lib/richTextFieldSize.ts, lue aussi par le sanitizer.
 
 // Validation d'un code hex (#abc ou #aabbcc) pour l'input couleur perso.
 const HEX_RE = /^#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})$/;
@@ -430,31 +433,12 @@ export function RichTextEdit({
   // --rt-fs-d: Ypx">. Le device courant (du toggle Monitor/Smartphone)
   // decide a quelle variable on ecrit. Le CSS (globals.css) picke la
   // bonne variable selon la media query + l'override data-device-preview.
-  const FIELD_FS_CLASS = "rt-field-fs";
-  const FS_VAR = previewDevice === "mobile" ? "--rt-fs-m" : "--rt-fs-d";
+  const FS_VAR: FieldFsVar = previewDevice === "mobile" ? "--rt-fs-m" : "--rt-fs-d";
 
-  // Toutes les enveloppes de taille du champ, dans l'ordre du DOM.
-  // On ne cherche PLUS `:scope > .rt-field-fs` (drame Jocelyne, 1er août
-  // 2026) : le navigateur restructure le contenu a la moindre commande
-  // (aligner, coller, Entree), et l'enveloppe se retrouve imbriquee dans
-  // un <div> d'alignement. `:scope >` ne la trouvait alors plus, le clic
-  // suivant en creait une SECONDE par-dessus, et comme la plus profonde
-  // gagne en CSS (elle porte sa propre variable), la taille choisie
-  // n'avait aucun effet visible : le menu affichait la nouvelle taille,
-  // l'ecran gardait l'ancienne.
-  const fieldWrappers = useCallback((el: HTMLElement): HTMLElement[] => {
-    return Array.from(el.querySelectorAll<HTMLElement>(`.${FIELD_FS_CLASS}`));
-  }, []);
-
-  const getCurrentFieldSize = useCallback((): string | null => {
-    const el = ref.current;
-    if (!el) return null;
-    // La plus profonde est celle qui gagne a l'affichage : c'est donc
-    // elle qui porte la taille reellement vue par l'utilisatrice.
-    const all = fieldWrappers(el);
-    const v = all[all.length - 1]?.style.getPropertyValue(FS_VAR).trim();
-    return v || null;
-  }, [FS_VAR, fieldWrappers]);
+  const getCurrentFieldSize = useCallback(
+    (): string | null => (ref.current ? readFieldFontSize(ref.current, FS_VAR) : null),
+    [FS_VAR],
+  );
 
   const applyFieldFontSize = useCallback(
     (sizePx: string | null) => {
@@ -463,59 +447,22 @@ export function RichTextEdit({
         setFontSizeOpen(false);
         return;
       }
+      // Toute la manipulation DOM (normalisation vers UNE enveloppe) vit
+      // dans lib/richTextFieldSize.ts, qui est testee. Cf. le drame
+      // Jocelyne du 1er aout 2026.
+      applyFieldFontSizeToDom(el, FS_VAR, sizePx);
 
-      // ── 1. On repart d'un champ PROPRE ──
-      // Les tailles en vigueur sont celles de l'enveloppe la plus
-      // profonde (celle qui gagne en CSS). On les recupere, puis on
-      // retire TOUTES les enveloppes : quel que soit l'etat dans lequel
-      // le navigateur a laisse le champ, on en ressort avec zero.
-      const existing = fieldWrappers(el);
-      const deepest = existing[existing.length - 1];
-      const sizes = {
-        "--rt-fs-m": deepest?.style.getPropertyValue("--rt-fs-m").trim() ?? "",
-        "--rt-fs-d": deepest?.style.getPropertyValue("--rt-fs-d").trim() ?? "",
-      };
-      for (const w of existing) {
-        w.classList.remove(FIELD_FS_CLASS);
-        w.style.removeProperty("--rt-fs-m");
-        w.style.removeProperty("--rt-fs-d");
-        // Le div n'existait QUE pour porter la taille : on le deballe,
-        // sinon on laisse s'empiler un div inerte a chaque changement.
-        // Un div qui porte encore autre chose (un alignement) reste.
-        const noClass = !w.getAttribute("class")?.trim();
-        const noStyle = !w.getAttribute("style")?.trim();
-        if (w.tagName === "DIV" && noClass && noStyle && w.parentNode) {
-          const parent = w.parentNode;
-          while (w.firstChild) parent.insertBefore(w.firstChild, w);
-          parent.removeChild(w);
-        }
+      // Champ vide : sans caret A L'INTERIEUR de l'enveloppe, le
+      // navigateur cree le texte a cote et la taille ne s'applique pas.
+      const emptyWrapper = fieldWrapperIsEmpty(el);
+      if (emptyWrapper && typeof window !== "undefined") {
+        const sel = window.getSelection();
+        const range = document.createRange();
+        range.selectNodeContents(emptyWrapper);
+        range.collapse(true);
+        sel?.removeAllRanges();
+        sel?.addRange(range);
       }
-
-      // ── 2. On applique la nouvelle taille pour le device courant ──
-      sizes[FS_VAR] = sizePx ?? "";
-
-      if (sizes["--rt-fs-m"] || sizes["--rt-fs-d"]) {
-        // UNE seule enveloppe, enfant direct, qui contient tout.
-        const wrapper = document.createElement("div");
-        wrapper.className = FIELD_FS_CLASS;
-        while (el.firstChild) wrapper.appendChild(el.firstChild);
-        el.appendChild(wrapper);
-        for (const v of ["--rt-fs-m", "--rt-fs-d"] as const) {
-          if (sizes[v]) wrapper.style.setProperty(v, sizes[v]);
-        }
-        // Champ vide : sans caret A L'INTERIEUR de l'enveloppe, le
-        // navigateur cree le texte a cote et la taille ne s'applique pas.
-        if (!wrapper.firstChild && typeof window !== "undefined") {
-          const sel = window.getSelection();
-          const range = document.createRange();
-          range.selectNodeContents(wrapper);
-          range.collapse(true);
-          sel?.removeAllRanges();
-          sel?.addRange(range);
-        }
-      }
-      // Sinon : plus aucune taille custom sur aucun device. Le contenu
-      // reste a plat -> retour au defaut responsive du design system.
 
       setFontSizeOpen(false);
       // Commit live : le parent enregistre le nouveau HTML immediatement
@@ -523,7 +470,7 @@ export function RichTextEdit({
       commitNow();
       ref.current?.focus();
     },
-    [commitNow, FS_VAR, fieldWrappers],
+    [commitNow, FS_VAR],
   );
 
   // Bug Adeline (18 mai 2026) : "j'ai du cliquer plusieurs fois pour

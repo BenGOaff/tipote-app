@@ -54,7 +54,8 @@ import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { interpolateText, extractResultLabel } from "@/lib/quizPersonalization";
-import { analyzeTies, type TieConflict } from "@/lib/quizTieAnalysis";
+import { type TieConflict } from "@/lib/quizTieAnalysis";
+import { analyzeResultCoverage, analyzeResultTies, attributionMode } from "@/lib/quizCoherence";
 
 /** Same demo name used across both repos to substitute {name} placeholders
  *  in the editor preview canvas — gender-neutral, short, works in fr/en. */
@@ -2194,56 +2195,28 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   // Coverage health-check: how many questions have at least one option
   // pointing to each result. Drives the colored dot in the sidebar AND
   // the warning banner above the result detail block. Same math as Tiquiz.
-  type ResultCoverageSeverity = "ok" | "warn" | "danger";
-  const resultCoverage = useMemo(() => {
-    const N = editQuestions.length;
-    const R = Math.max(1, editResults.length);
-    const expected = Math.max(1, Math.ceil(N / R));
-    // MODE SCORING : le résultat est choisi par la TRANCHE DE POINTS, pas
-    // par le `result_index` des options (qui ne sert qu'aux quiz à
-    // profils). Compter "combien de questions mènent à ce résultat" n'a
-    // donc aucun sens ici, et répondait systématiquement zéro -> bandeau
-    // rouge "ce résultat ne peut jamais être attribué" sur des quiz
-    // parfaitement fonctionnels, alors que le test donnait le bon
-    // résultat (drame Véronique, 1er août 2026).
-    // Le contrôle équivalent en scoring existe déjà juste en dessous :
-    // `trancheCoverage`, qui compare les tranches à la plage réellement
-    // atteignable et signale trous et chevauchements.
-    if (isScoring) {
-      return editResults.map(() => ({
-        questionsLeading: N,
-        totalQuestions: N,
-        expected,
-        severity: "ok" as ResultCoverageSeverity,
-      }));
-    }
-    return editResults.map((_, ri) => {
-      const questionsLeading = editQuestions.reduce(
-        (acc, q) => acc + (q.options.some((o) => o.result_index === ri) ? 1 : 0),
-        0,
-      );
-      const severity: ResultCoverageSeverity =
-        questionsLeading === 0 ? "danger" : questionsLeading < expected ? "warn" : "ok";
-      return { questionsLeading, totalQuestions: N, expected, severity };
-    });
-  }, [editQuestions, editResults, isScoring]);
-
-  // Analyseur d'ex-æquo (Adeline, 19 mai 2026). Cf. lib/quizTieAnalysis.ts.
-  const tieAnalysis = useMemo(() => {
-    // Même raison qu'au-dessus : en scoring, deux résultats ne peuvent pas
-    // être ex-æquo par `result_index`, ils se départagent par tranche de
-    // points. L'analyse ne s'applique qu'aux quiz à profils.
-    if (isScoring) {
-      return { conflicts: [], totalCombinations: 0, analyzed: 0, truncated: false, hasSkipped: false };
-    }
-    return analyzeTies(
+  // Cohérence des résultats. La mécanique d'attribution (profils ou
+  // scoring) est passée EXPLICITEMENT : cf. lib/quizCoherence.ts, qui
+  // explique pourquoi ces deux analyses ne veulent rien dire en scoring.
+  const coherenceMode = attributionMode(quiz?.mode);
+  const coherenceQuestions = useMemo(
+    () =>
       editQuestions.map((q) => ({
         options: q.options.map((o) => ({ result_index: o.result_index, points: o.points })),
         config: (q.config ?? null) as { multi_select?: boolean } | null,
       })),
-      editResults.length,
-    );
-  }, [editQuestions, editResults, isScoring]);
+    [editQuestions],
+  );
+
+  const resultCoverage = useMemo(
+    () => analyzeResultCoverage(coherenceMode, coherenceQuestions, editResults.length),
+    [coherenceMode, coherenceQuestions, editResults.length],
+  );
+
+  const tieAnalysis = useMemo(
+    () => analyzeResultTies(coherenceMode, coherenceQuestions, editResults.length),
+    [coherenceMode, coherenceQuestions, editResults.length],
+  );
 
   // Couverture des tranches (mode scoring, Véronique juillet 2026) :
   // trous et chevauchements entre les [min_score, max_score] des
