@@ -437,3 +437,50 @@ capture visuelle est sortie rouge puis verte au retry (hauteur de page
 pas encore stable). Corrigé à la source par `settle()` dans le spec :
 on attend que la hauteur du document ne bouge plus, au lieu d'un
 `waitForTimeout` qui dépend de la charge machine.
+
+## Flèche retour = hiérarchie, jamais l'historique (drame Gwenn 1er août 2026)
+
+Gwenn clique sur les stats depuis Mes projets. La flèche des stats la
+ramène sur le quiz, la flèche du quiz la ramène sur les stats. "Et je
+tourne en boucle entre les deux, sans pouvoir en sortir."
+
+La page stats pointait EN DUR vers l'éditeur ; l'éditeur faisait
+`router.back()`, donc revenait aux stats. `router.back()` n'est pas une
+hiérarchie, c'est un historique : il renvoie là d'où on vient, y compris
+vers un écran qui renverra ici. Deux écrans qui se citent l'un l'autre =
+cycle, et la seule sortie (le bouton retour du navigateur) rejoue la
+même boucle.
+
+**Règle :** la flèche retour d'un écran de projet passe par
+`projectBackHref()` (`lib/nav/projectBack.ts`) et remonte à Mes contenus
+(`/contents` ici, `/quizzes` côté Tiquiz).
+La navigation LATÉRALE (stats <-> éditeur) existe toujours, mais par un
+lien nommé ("Modifier"), jamais par la flèche.
+
+**INTERDIT :** `router.back()` sur une flèche retour, et une destination
+qui dépend du referrer ou de `window.history`. Le test
+`tests/logic/project-navigation.test.mts` remonte de parent en parent et
+exige que ça s'arrête : un futur écran qui recréerait un cycle le fait
+rougir avant la cliente.
+
+## "Ne pas afficher le score" (retour Véronique 1er août 2026)
+
+Véronique décoche tout en mode Score, et le pourcentage reste affiché.
+Deux causes, les deux dans la même famille que les drames précédents :
+une combinaison de réglages relue à trois endroits du viewer.
+
+1. Sans jauge, la page affichait `X / Y` **et** une ligne de
+   pourcentage, alors que le panneau promet "à la place du simple texte
+   X / Y".
+2. Le sélecteur d'affichage était gaté par `showScoreGauge ||
+   scoringAxesEdit.length > 0` : sans jauge ni axes, elle n'avait
+   AUCUN contrôle.
+
+**Règle :** la décision vit dans `resolveScoreDisplay(mode, showGauge)`
+et `resolveAxisScoreDisplay(mode)` (`lib/quizScoring.ts`), jamais dans
+le JSX. `score_display_mode` vaut `"percent" | "label" | "hidden"`
+(pas de migration : la colonne existait). `"hidden"` retire le score
+GLOBAL et les barres d'axes ; les axes restent éditables (ils alimentent
+les variables `{score_axe}` et les tags Systeme.io).
+
+Le module Tiquiz est jumeau : toute correction ici se porte là-bas.

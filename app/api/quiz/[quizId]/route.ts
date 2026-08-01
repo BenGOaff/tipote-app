@@ -15,7 +15,7 @@ import {
 import { computeLockedLeadIds, redactLockedLead, type LeadLike } from "@/lib/leadLock";
 import { isPaidPlan } from "@/lib/planLimits";
 import { fetchAllRows } from "@/lib/db/fetchAllRows";
-import { normalizeScoringAxes } from "@/lib/quizScoring";
+import { normalizeScoringAxes, scoreDisplayMode } from "@/lib/quizScoring";
 
 export const dynamic = "force-dynamic";
 
@@ -285,7 +285,11 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       patch.show_score_gauge = patch.show_score_gauge === true;
     }
     if ("score_display_mode" in patch) {
-      patch.score_display_mode = patch.score_display_mode === "label" ? "label" : "percent";
+      // "percent" | "label" | "hidden" ("hidden" = aucun score affiché
+      // au visiteur). Même normalisation que le viewer, une seule source.
+      patch.score_display_mode = scoreDisplayMode(
+        typeof patch.score_display_mode === "string" ? patch.score_display_mode : null,
+      );
     }
     if ("score_labels" in patch) {
       const v = patch.score_labels as Record<string, unknown> | null;
