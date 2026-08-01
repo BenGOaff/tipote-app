@@ -87,6 +87,7 @@ import {
   type BrandFontChoice,
   type ShareNetwork,
 } from "@/lib/quizBranding";
+import { projectBackHref } from "@/lib/nav/projectBack";
 
 // Types
 // Surveys reuse the QuizDetailClient shell but specialise: questions carry a
@@ -1492,15 +1493,16 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
               <Menu className="w-5 h-5" />
             </Button>
           )}
-          <Button variant="ghost" size="icon" onClick={() => {
-              // Retour = revenir là d'où on vient (Mes projets, dashboard,
-              // stats...), pas toujours /dashboard (retour Béné 30 juil
-              // 2026 : depuis Mes projets, la flèche renvoyait au
-              // dashboard). Fallback dur si l'éditeur a été ouvert
-              // directement (nouvel onglet, lien collé).
-              if (window.history.length > 1) router.back();
-              else router.push("/dashboard");
-            }}><ArrowLeft className="w-5 h-5" /></Button>
+          {/* Retour = Mes contenus, TOUJOURS (cf. lib/nav/projectBack.ts).
+              C'était un router.back(), et la page stats pointait vers
+              l'éditeur : les deux écrans se renvoyaient la balle et on ne
+              pouvait plus en sortir (retour Gwenn, 1er août 2026). */}
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={t("backToProjects")}
+            onClick={() => router.push(projectBackHref("surveyEditor"))}
+          ><ArrowLeft className="w-5 h-5" /></Button>
           <span className="font-semibold text-sm truncate max-w-[160px] sm:max-w-[200px]">{title || "Mon quiz"}</span>
         </div>
         <nav className="hidden sm:flex items-center bg-muted rounded-lg p-0.5">

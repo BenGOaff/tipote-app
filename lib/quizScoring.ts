@@ -212,6 +212,57 @@ export function computeScoresSnapshot(
   return axes.length > 0 ? { global, axes: perAxis } : { global };
 }
 
+// ── Affichage du score au visiteur ──────────────────────────────────
+//
+// DEUX réglages se combinent, et leur combinaison décidait du rendu à
+// trois endroits différents dans le viewer. Résultat : la page de
+// résultat affichait un pourcentage alors que la créatrice avait tout
+// décoché, et que le panneau lui promettait "le simple texte X / Y"
+// (retour Véronique, 1er août 2026). La décision vit ici, une seule
+// fois, et elle est testée.
+//
+//   score_display_mode = "percent" | "label" | "hidden"
+//   show_score_gauge   = grande jauge visuelle, ou pas
+export type ScoreDisplayMode = "percent" | "label" | "hidden";
+
+export type ScoreDisplay =
+  /** Rien du tout : la créatrice ne veut pas montrer le score. */
+  | { kind: "none" }
+  /** Grande valeur + barre de progression. */
+  | { kind: "gauge"; asLabel: boolean }
+  /** Le texte historique "12 / 20", et RIEN d'autre. */
+  | { kind: "ratio" };
+
+/** `quizzes.score_display_mode` -> valeur sûre. Inconnu = pourcentage. */
+export function scoreDisplayMode(raw: string | null | undefined): ScoreDisplayMode {
+  return raw === "label" || raw === "hidden" ? raw : "percent";
+}
+
+export function resolveScoreDisplay(
+  rawMode: string | null | undefined,
+  showGauge: boolean | null | undefined,
+): ScoreDisplay {
+  const mode = scoreDisplayMode(rawMode);
+  if (mode === "hidden") return { kind: "none" };
+  if (showGauge === true) return { kind: "gauge", asLabel: mode === "label" };
+  // Pas de jauge : on affiche EXACTEMENT ce que le panneau annonce, le
+  // ratio brut. Pas de pourcentage en prime.
+  return { kind: "ratio" };
+}
+
+/**
+ * Barres par axe. "Ne pas afficher" vaut pour TOUS les scores, axes
+ * compris : une barre sans sa valeur ne dit plus rien (la couleur seule
+ * ne porte jamais l'information), donc on retire le bloc entier.
+ */
+export function resolveAxisScoreDisplay(
+  rawMode: string | null | undefined,
+): { kind: "none" } | { kind: "value"; asLabel: boolean } {
+  const mode = scoreDisplayMode(rawMode);
+  if (mode === "hidden") return { kind: "none" };
+  return { kind: "value", asLabel: mode === "label" };
+}
+
 // Pourcentage 0-100 d'un triplet, robuste aux points négatifs (la
 // position dans [min, max], pas points/max).
 export function scorePercent(s: AxisScore): number {

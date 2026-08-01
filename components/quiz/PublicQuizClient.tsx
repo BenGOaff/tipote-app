@@ -33,6 +33,8 @@ import {
   applyScorePlaceholders,
   scorePercent,
   scoreTranche,
+  resolveScoreDisplay,
+  resolveAxisScoreDisplay,
   type ScoresSnapshot,
   type ScorePlaceholderContext,
   type ScoringAxis,
@@ -3644,27 +3646,31 @@ export default function PublicQuizClient({
         <div className="flex-1 flex flex-col min-w-0">
         <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6 py-10 sm:py-16">
         <div className="max-w-2xl w-full space-y-8" style={readerSurfaceStyle}>
-            {/* Score (mode scoring). Deux rendus :
-                - jauge visuelle (opt-in show_score_gauge, Véronique juillet
-                  2026) : gros % OU libellé + barre de progression ;
-                - "X / Y" texte historique sinon (quiz existants inchangés). */}
-            {quiz.mode === "scoring" && resultScore && resultScore.max > 0 && (
-              quiz.show_score_gauge && scoreSnapshot ? (() => {
+            {/* Score global (mode scoring). Ce qu'on affiche est décidé
+                UNE fois, dans resolveScoreDisplay (lib/quizScoring.ts) :
+                rien / jauge / ratio. Avant, la combinaison des deux
+                réglages était relue ici, et la page montrait un
+                pourcentage alors que la créatrice avait tout décoché
+                (retour Véronique, 1er août 2026). */}
+            {quiz.mode === "scoring" && resultScore && resultScore.max > 0 && (() => {
+              const display = resolveScoreDisplay(quiz.score_display_mode, quiz.show_score_gauge);
+              if (display.kind === "none") return null;
+
+              if (display.kind === "gauge" && scoreSnapshot) {
                 const pct = scorePercent(scoreSnapshot.global);
-                const asLabel = quiz.score_display_mode === "label";
-                const display = asLabel ? scoreLabels[scoreTranche(pct)] : `${pct}%`;
+                const shown = display.asLabel ? scoreLabels[scoreTranche(pct)] : `${pct}%`;
                 return (
                   <div className="text-center space-y-3">
                     {/* Le libellé seul ne suffit pas à situer la barre :
                         role/aria portent toujours le pourcentage exact. */}
-                    <div className="text-5xl sm:text-6xl font-black text-primary">{display}</div>
+                    <div className="text-5xl sm:text-6xl font-black text-primary">{shown}</div>
                     <div
                       className="h-3 w-full max-w-md mx-auto rounded-full bg-muted overflow-hidden"
                       role="progressbar"
                       aria-valuenow={pct}
                       aria-valuemin={0}
                       aria-valuemax={100}
-                      aria-label={asLabel ? `${display} (${pct}%)` : display}
+                      aria-label={display.asLabel ? `${shown} (${pct}%)` : shown}
                     >
                       <div
                         className="h-full rounded-full transition-[width] duration-700"
@@ -3673,17 +3679,18 @@ export default function PublicQuizClient({
                     </div>
                   </div>
                 );
-              })() : (
-                <div className="text-center space-y-2">
+              }
+
+              // Ratio brut : EXACTEMENT ce que le panneau de l'éditeur
+              // annonce ("le simple texte X / Y"), sans pourcentage en prime.
+              return (
+                <div className="text-center">
                   <div className="text-5xl sm:text-6xl font-black text-primary">
                     {resultScore.value} <span className="text-muted-foreground">/ {resultScore.max}</span>
                   </div>
-                  <div className="text-sm font-semibold text-muted-foreground">
-                    {Math.round((resultScore.value / resultScore.max) * 100)}%
-                  </div>
                 </div>
-              )
-            )}
+              );
+            })()}
 
             {/* Barres multi-axes (Véronique, juillet 2026) : une barre par
                 axe défini par le créateur, HTML/CSS pur aux couleurs du
@@ -3697,7 +3704,9 @@ export default function PublicQuizClient({
                 if (s && s.max - s.min > 0) rows.push({ axis, s });
               }
               if (rows.length === 0) return null;
-              const asLabel = quiz.score_display_mode === "label";
+              const axisDisplay = resolveAxisScoreDisplay(quiz.score_display_mode);
+              if (axisDisplay.kind === "none") return null;
+              const asLabel = axisDisplay.asLabel;
               return (
                 <div className="p-5 rounded-2xl bg-card border shadow-sm space-y-4">
                   {rows.map(({ axis, s }) => {

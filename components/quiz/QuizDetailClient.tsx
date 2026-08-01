@@ -79,8 +79,10 @@ import {
   applyScorePlaceholders,
   computeReachableRange, analyzeTrancheCoverage, slugifyAxisLabel,
   MAX_SCORING_AXES,
-  type ScoringAxis, type ScoreLabels,
+  scoreDisplayMode as safeScoreDisplayMode,
+  type ScoringAxis, type ScoreLabels, type ScoreDisplayMode,
 } from "@/lib/quizScoring";
+import { projectBackHref } from "@/lib/nav/projectBack";
 import { UserPalettePicker, type PaletteList } from "@/components/editor/UserPalettePicker";
 import { ColorSwatchPicker } from "@/components/ui/ColorSwatchPicker";
 import { UserPalettesProvider } from "@/components/editor/PalettesContext";
@@ -614,7 +616,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   // depuis Tiquiz). Tout optionnel : pas d'axes + jauge off = historique.
   const [scoringAxesEdit, setScoringAxesEdit] = useState<ScoringAxis[]>([]);
   const [showScoreGauge, setShowScoreGauge] = useState(false);
-  const [scoreDisplayMode, setScoreDisplayMode] = useState<"percent" | "label">("percent");
+  const [scoreDisplayMode, setScoreDisplayMode] = useState<ScoreDisplayMode>("percent");
   const [scoreLabelsEdit, setScoreLabelsEdit] = useState<ScoreLabels>(() => resolveScoreLabels(null, "fr"));
   const [sioScoreTags, setSioScoreTags] = useState(false);
   const [showOtherResults, setShowOtherResults] = useState(false);
@@ -1038,7 +1040,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     if (typeof s.show_results_breakdown === "boolean") setShowResultsBreakdown(s.show_results_breakdown);
     if (Array.isArray(s.scoring_axes)) setScoringAxesEdit(normalizeScoringAxes(s.scoring_axes));
     if (typeof s.show_score_gauge === "boolean") setShowScoreGauge(s.show_score_gauge);
-    if (s.score_display_mode === "percent" || s.score_display_mode === "label") setScoreDisplayMode(s.score_display_mode);
+    if (typeof s.score_display_mode === "string") setScoreDisplayMode(safeScoreDisplayMode(s.score_display_mode));
     if (s.score_labels && typeof s.score_labels === "object") setScoreLabelsEdit(resolveScoreLabels(s.score_labels, typeof s.locale === "string" ? s.locale : null));
     if (typeof s.sio_score_tags === "boolean") setSioScoreTags(s.sio_score_tags);
     if (typeof s.show_other_results === "boolean") setShowOtherResults(s.show_other_results);
@@ -1339,10 +1341,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       // Scoring multi-axes : normalisé au chargement (JSONB non typé).
       setScoringAxesEdit(normalizeScoringAxes((q as { scoring_axes?: unknown }).scoring_axes));
       setShowScoreGauge((q as { show_score_gauge?: boolean | null }).show_score_gauge === true);
-      {
-        const sdm = (q as { score_display_mode?: string | null }).score_display_mode;
-        setScoreDisplayMode(sdm === "label" ? "label" : "percent");
-      }
+      setScoreDisplayMode(safeScoreDisplayMode((q as { score_display_mode?: string | null }).score_display_mode));
       setScoreLabelsEdit(resolveScoreLabels((q as { score_labels?: unknown }).score_labels, (q as { locale?: string | null }).locale ?? null));
       setSioScoreTags((q as { sio_score_tags?: boolean | null }).sio_score_tags === true);
       setShowOtherResults((q as { show_other_results?: boolean | null }).show_other_results === true);
@@ -2503,15 +2502,16 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
               <Menu className="w-5 h-5" />
             </Button>
           )}
-          <Button variant="ghost" size="icon" onClick={() => {
-              // Retour = revenir là d'où on vient (Mes projets, dashboard,
-              // stats...), pas toujours /dashboard (retour Béné 30 juil
-              // 2026 : depuis Mes projets, la flèche renvoyait au
-              // dashboard). Fallback dur si l'éditeur a été ouvert
-              // directement (nouvel onglet, lien collé).
-              if (window.history.length > 1) router.back();
-              else router.push("/dashboard");
-            }}><ArrowLeft className="w-5 h-5" /></Button>
+          {/* Retour = Mes contenus, TOUJOURS (cf. lib/nav/projectBack.ts).
+              C'était un router.back(), et la page stats pointait vers
+              l'éditeur : les deux écrans se renvoyaient la balle et on ne
+              pouvait plus en sortir (retour Gwenn, 1er août 2026). */}
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={t("backToProjects")}
+            onClick={() => router.push(projectBackHref("quizEditor"))}
+          ><ArrowLeft className="w-5 h-5" /></Button>
           <span className="font-semibold text-sm truncate max-w-[160px] sm:max-w-[200px]">{title || "Mon quiz"}</span>
         </div>
         <nav className="hidden sm:flex items-center bg-muted rounded-lg p-0.5">
@@ -3386,12 +3386,65 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                   {isScoring && (
                     <div className="mt-2 space-y-3 rounded-xl border p-3">
                       <p className="text-sm font-semibold">{t("scoringVisualTitle")}</p>
-                      <SettingsToggle
-                        label={t("optionScoreGauge")}
-                        hint={t("optionScoreGaugeHint")}
-                        checked={showScoreGauge}
-                        onChange={v => setShowScoreGauge(v)}
-                      />
+                      {/* Le choix d'affichage vient EN PREMIER et reste
+                          toujours visible : il était conditionné à la jauge
+                          ou aux axes, donc une créatrice sans ni l'un ni
+                          l'autre n'avait aucun moyen de retirer le score de
+                          la page (retour Véronique, 1er août 2026). */}
+                      <div className="space-y-1.5">
+                        <p className="text-xs font-semibold">{t("scoreDisplayLabel")}</p>
+                        <div className="flex flex-wrap items-center gap-3 text-sm">
+                          <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                            <input type="radio" name="score-display-mode" checked={scoreDisplayMode === "percent"} onChange={() => setScoreDisplayMode("percent")} className="accent-primary" />
+                            {t("scoreDisplayPercent")}
+                          </label>
+                          <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                            <input type="radio" name="score-display-mode" checked={scoreDisplayMode === "label"} onChange={() => setScoreDisplayMode("label")} className="accent-primary" />
+                            {t("scoreDisplayWord")}
+                          </label>
+                          <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                            <input type="radio" name="score-display-mode" checked={scoreDisplayMode === "hidden"} onChange={() => setScoreDisplayMode("hidden")} className="accent-primary" />
+                            {t("scoreDisplayHidden")}
+                          </label>
+                        </div>
+                        {scoreDisplayMode === "hidden" ? (
+                          <p className="text-[11px] text-muted-foreground leading-snug">{t("scoreDisplayHiddenHint")}</p>
+                        ) : (
+                          <>
+                            {scoreDisplayMode === "label" && (
+                              <div className="grid grid-cols-3 gap-1.5">
+                                <div className="space-y-0.5">
+                                  <p className="text-[10px] text-muted-foreground">{t("scoreLabelLow")}</p>
+                                  <Input value={scoreLabelsEdit.low} onChange={(e) => setScoreLabelsEdit((prev) => ({ ...prev, low: e.target.value }))} className="h-8 text-sm" />
+                                </div>
+                                <div className="space-y-0.5">
+                                  <p className="text-[10px] text-muted-foreground">{t("scoreLabelMid")}</p>
+                                  <Input value={scoreLabelsEdit.mid} onChange={(e) => setScoreLabelsEdit((prev) => ({ ...prev, mid: e.target.value }))} className="h-8 text-sm" />
+                                </div>
+                                <div className="space-y-0.5">
+                                  <p className="text-[10px] text-muted-foreground">{t("scoreLabelHigh")}</p>
+                                  <Input value={scoreLabelsEdit.high} onChange={(e) => setScoreLabelsEdit((prev) => ({ ...prev, high: e.target.value }))} className="h-8 text-sm" />
+                                </div>
+                              </div>
+                            )}
+                            <p className="text-[11px] text-muted-foreground leading-snug">{t("scoreLabelsHint")}</p>
+                          </>
+                        )}
+                      </div>
+                      {/* La jauge n'a plus de sens si le score n'est pas
+                          affiché : on retire le réglage au lieu de laisser
+                          une case cochée qui ne fait rien. */}
+                      {scoreDisplayMode !== "hidden" && (
+                        <SettingsToggle
+                          label={t("optionScoreGauge")}
+                          hint={t("optionScoreGaugeHint")}
+                          checked={showScoreGauge}
+                          onChange={v => setShowScoreGauge(v)}
+                        />
+                      )}
+                      {/* Les axes restent éditables même score masqué : ils
+                          alimentent aussi les variables {score_axe} des
+                          textes et les tags Systeme.io. */}
                       <div className="space-y-1.5">
                         <p className="text-xs font-semibold">{t("scoringAxesLabel")}</p>
                         <p className="text-[11px] text-muted-foreground leading-snug">{t("scoringAxesHint")}</p>
@@ -3420,38 +3473,6 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                           </Button>
                         )}
                       </div>
-                      {(showScoreGauge || scoringAxesEdit.length > 0) && (
-                        <div className="space-y-1.5">
-                          <p className="text-xs font-semibold">{t("scoreDisplayLabel")}</p>
-                          <div className="flex items-center gap-3 text-sm">
-                            <label className="inline-flex items-center gap-1.5 cursor-pointer">
-                              <input type="radio" name="score-display-mode" checked={scoreDisplayMode === "percent"} onChange={() => setScoreDisplayMode("percent")} className="accent-primary" />
-                              {t("scoreDisplayPercent")}
-                            </label>
-                            <label className="inline-flex items-center gap-1.5 cursor-pointer">
-                              <input type="radio" name="score-display-mode" checked={scoreDisplayMode === "label"} onChange={() => setScoreDisplayMode("label")} className="accent-primary" />
-                              {t("scoreDisplayWord")}
-                            </label>
-                          </div>
-                          {scoreDisplayMode === "label" && (
-                            <div className="grid grid-cols-3 gap-1.5">
-                              <div className="space-y-0.5">
-                                <p className="text-[10px] text-muted-foreground">{t("scoreLabelLow")}</p>
-                                <Input value={scoreLabelsEdit.low} onChange={(e) => setScoreLabelsEdit((prev) => ({ ...prev, low: e.target.value }))} className="h-8 text-sm" />
-                              </div>
-                              <div className="space-y-0.5">
-                                <p className="text-[10px] text-muted-foreground">{t("scoreLabelMid")}</p>
-                                <Input value={scoreLabelsEdit.mid} onChange={(e) => setScoreLabelsEdit((prev) => ({ ...prev, mid: e.target.value }))} className="h-8 text-sm" />
-                              </div>
-                              <div className="space-y-0.5">
-                                <p className="text-[10px] text-muted-foreground">{t("scoreLabelHigh")}</p>
-                                <Input value={scoreLabelsEdit.high} onChange={(e) => setScoreLabelsEdit((prev) => ({ ...prev, high: e.target.value }))} className="h-8 text-sm" />
-                              </div>
-                            </div>
-                          )}
-                          <p className="text-[11px] text-muted-foreground leading-snug">{t("scoreLabelsHint")}</p>
-                        </div>
-                      )}
                       {scoringAxesEdit.some((a) => a.label.trim()) && (
                         <p className="text-[11px] text-muted-foreground leading-snug">
                           {t("scoringVarsHint")}{" "}
