@@ -15,7 +15,9 @@ import {
 } from "@/lib/affiliate/contentSpace";
 import {
   GENERATOR_FORMATS,
+  FORMAT_REMINDER,
   buildSystemPrompt,
+  looksLikeFormat,
   type GeneratorFormat,
 } from "@/lib/affiliate/generatorBrief";
 
@@ -93,6 +95,10 @@ export async function POST(req: Request) {
   const tone = clean(payload.tone);
 
   const userPrompt = [
+    // Le format est rappelé EN PREMIER dans le message : c'est la
+    // consigne qui se perdait le plus souvent (un article demandé
+    // revenait en post).
+    FORMAT_REMINDER[format],
     `MON AUDIENCE : ${audience}`,
     angle
       ? `ANGLE DEMANDÉ : ${angle}`
@@ -103,18 +109,46 @@ export async function POST(req: Request) {
     .filter(Boolean)
     .join("\n");
 
+  const system = buildSystemPrompt(product, format);
+  const maxTokens = format === "article" || format === "script_long" ? 4000 : 1600;
+
   try {
     const raw = await callClaude({
       apiKey,
-      system: buildSystemPrompt(product, format),
+      system,
       user: userPrompt,
-      maxTokens: format === "article" || format === "script_long" ? 3000 : 1600,
+      maxTokens,
       temperature: 0.8,
     });
 
     // Filet de sécurité : même briefé, un modèle peut glisser un tiret
     // cadratin. La règle de Béné est absolue sur le contenu visible.
-    const text = raw.replace(/[—–]/g, "-").trim();
+    let text = raw.replace(/[—–]/g, "-").trim();
+
+    // GARDE-FOU DE FORMAT : un article sans titre ni sous-titres est un
+    // post déguisé. On le fait refaire UNE fois, en lui montrant ce
+    // qu'il vient de produire. Une seule reprise : au-delà, on rend ce
+    // qu'on a plutôt que de faire attendre l'affilié indéfiniment.
+    if (text && !looksLikeFormat(format, text)) {
+      console.warn("[affiliate/generate] format hors cible, reprise", format);
+      const retry = await callClaude({
+        apiKey,
+        system,
+        user: [
+          userPrompt,
+          "",
+          "Ta version précédente n'était pas au bon format (il manquait le titre en '# ' et les sous-titres en '## ', et c'était trop court pour un article) :",
+          "---",
+          text.slice(0, 2000),
+          "---",
+          "Réécris-la en ARTICLE DE BLOG complet, en respectant la structure obligatoire à la lettre. Renvoie uniquement l'article.",
+        ].join("\n"),
+        maxTokens,
+        temperature: 0.8,
+      });
+      const cleaned = retry.replace(/[—–]/g, "-").trim();
+      if (cleaned && looksLikeFormat(format, cleaned)) text = cleaned;
+    }
     const market = product === "atelier" ? "fr" : session.locale;
     const affiliateLink = await productAffiliateLink(
       product,
