@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, ArrowLeft, ArrowRight, Gift, CheckCircle2, Copy, Check, ChevronDown, Mail } from "lucide-react";
+import { Loader2, ArrowLeft, ArrowRight, Gift, CheckCircle2, Copy, Check, ChevronDown, Mail, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import ToastNotificationOverlay from "@/components/widgets/ToastNotificationOverlay";
 import SocialShareOverlay from "@/components/widgets/SocialShareOverlay";
@@ -40,6 +40,7 @@ import {
   type ScoringAxis,
   type AxisScore,
 } from "@/lib/quizScoring";
+import { resolveShareNetworks } from "@/lib/quiz/shareNetworks";
 import { ensureExternalUrl } from "@/lib/url";
 import { celebrate } from "@/lib/celebrate";
 import { generateResultCard } from "@/lib/resultCard";
@@ -1162,35 +1163,36 @@ export default function PublicQuizClient({
   // Genere une image "Je suis [profil]" et la partage (fichier via
   // navigator.share sur mobile) ou la telecharge. Sert la viralite.
   const [sharingCard, setSharingCard] = useState(false);
+  // Panneau de partage de l'ecran resultat (ferme par defaut : la page
+  // garde son bouton unique tant que le visiteur ne l'a pas ouvert).
+  const [resultShareOpen, setResultShareOpen] = useState(false);
+
+  /**
+   * URL a partager depuis l'ecran de resultat.
+   *
+   * share_result_page (defaut ON) : l'URL ?rp= dont l'apercu social met en
+   * avant le profil obtenu (retour Jocelyne 28 juillet 2026, "sur FB mon
+   * partage montre le quiz, pas le profil que j'ai eu"). Decoche : l'URL
+   * du quiz seul.
+   */
+  const resultShareUrl = (): string => {
+    if (typeof window === "undefined") return "";
+    const base = `${window.location.origin}${window.location.pathname}`;
+    if (quiz?.share_result_page !== false && resultProfile) {
+      return `${base}?rp=${resultProfile.id}`;
+    }
+    return base;
+  };
+
+  // Carte de resultat en PNG : le comportement historique de
+  // share_result_page = false. Le partage par LIEN, lui, passe par les
+  // boutons reseaux de l'ecran de resultat.
   const handleShareResultCard = async () => {
     if (!quiz || !resultProfile) return;
     setSharingCard(true);
     try {
       const resultTitle = stripHtml(interp(resultProfile.title || "")).trim();
       const quizTitle = stripHtml(interp(quiz.title || "")).trim();
-
-      // Partage du profil obtenu (defaut ON) : on partage l'URL ?rp= dont
-      // l'apercu social (og:title "J'ai obtenu..." + visuel genere) met en
-      // avant le profil. Retour Jocelyne 28 juillet 2026 : "sur FB, mon
-      // partage montre le quiz, mais pas le profil que j'ai obtenu".
-      // share_result_page === false -> comportement historique (carte PNG).
-      if (quiz.share_result_page !== false && typeof window !== "undefined") {
-        const resultUrl = `${window.location.origin}${window.location.pathname}?rp=${resultProfile.id}`;
-        const shareText = quiz.share_message?.trim()
-          ? stripHtml(quiz.share_message)
-          : t.defaultShareMessage(quizTitle);
-        try {
-          if (typeof navigator.share === "function") {
-            await navigator.share({ title: quizTitle, text: shareText, url: resultUrl });
-          } else {
-            await navigator.clipboard.writeText(`${shareText}\n${resultUrl}`);
-            toast.success(t.copied);
-          }
-        } catch {
-          /* annulation utilisateur : silencieux */
-        }
-        return;
-      }
       const blob = await generateResultCard({
         primaryColor: branding.primaryColor,
         logoUrl: branding.logoUrl,
@@ -2186,10 +2188,13 @@ export default function PublicQuizClient({
   // Copy time used to gate the confirmation button (prevents 1-click cheat).
   const [copyTimestamp, setCopyTimestamp] = useState(0);
 
-  const getShareData = () => {
+  // urlOverride : l'ecran de resultat partage l'URL ?rp= (qui met en
+  // avant le profil obtenu), pas l'URL du quiz.
+  const getShareData = (urlOverride?: string) => {
     const shareText =
       quiz?.share_message || t.defaultShareMessage(quiz?.title ?? "");
-    const shareUrl = typeof window !== "undefined" ? window.location.href : "";
+    const shareUrl =
+      urlOverride || (typeof window !== "undefined" ? window.location.href : "");
     return { shareText, shareUrl };
   };
 
@@ -2231,8 +2236,8 @@ export default function PublicQuizClient({
   const MIN_SHARE_DWELL_MS = 3500;
   const MIN_COPY_DWELL_MS = 5000;
 
-  const shareOn = (platform: string) => {
-    const { shareText, shareUrl } = getShareData();
+  const shareOn = (platform: string, urlOverride?: string) => {
+    const { shareText, shareUrl } = getShareData(urlOverride);
     const encoded = encodeURIComponent(shareUrl);
     const text = encodeURIComponent(shareText);
 
@@ -2272,7 +2277,9 @@ export default function PublicQuizClient({
     const url = urls[platform];
     if (!url) return;
 
-    if (platform === "instagram") void copyShareLink();
+    // Instagram n'a pas d'URL de partage : on copie le lien REELLEMENT
+    // partage (celui du resultat depuis l'ecran de resultat).
+    if (platform === "instagram") void copyShareLink(urlOverride);
 
     setShareWarning(false);
     const openedAt = Date.now();
@@ -2308,8 +2315,8 @@ export default function PublicQuizClient({
     document.addEventListener("visibilitychange", onReturn);
   };
 
-  const copyShareLink = async () => {
-    const { shareText, shareUrl } = getShareData();
+  const copyShareLink = async (urlOverride?: string) => {
+    const { shareText, shareUrl } = getShareData(urlOverride);
     await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
     setLinkCopied(true);
     setCopyConfirmVisible(true);
@@ -3376,9 +3383,7 @@ export default function PublicQuizClient({
     const hasCustomHeading = stripHtml(quiz.bonus_heading).length > 0;
     const customBonusIntroHtml = sanitizeRichText(quiz.bonus_intro_text);
     const hasCustomIntro = stripHtml(quiz.bonus_intro_text).length > 0;
-    const allowedNetworks = (quiz.share_networks && quiz.share_networks.length > 0)
-      ? quiz.share_networks
-      : ["x", "facebook", "linkedin", "whatsapp", "threads"];
+    const allowedNetworks = resolveShareNetworks(quiz.share_networks);
     const canWebShare =
       typeof navigator !== "undefined" && typeof navigator.share === "function";
     const proceedToResult = () => setStep("result");
@@ -3474,7 +3479,7 @@ export default function PublicQuizClient({
               <div className="flex flex-wrap gap-2 justify-center">
                 <ShareNetworkButtons allowed={allowedNetworks} onShare={shareOn} />
                 <button
-                  onClick={copyShareLink}
+                  onClick={() => void copyShareLink()}
                   className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-muted text-foreground text-sm font-medium hover:opacity-80 transition-opacity border"
                 >
                   {linkCopied ? <Check className="w-4 h-4 text-green-600 dark:text-green-400" /> : <Copy className="w-4 h-4" />}
@@ -4031,17 +4036,58 @@ export default function PublicQuizClient({
           {/* Carte de resultat partageable (image) : sert la viralite, le
               visiteur partage "Je suis [profil]" sur ses reseaux. Uniquement
               en mode profil (resultProfile present). */}
+          {/* Partage du resultat. Le bouton NE FAISAIT RIEN de visible hors
+              mobile : il appelait navigator.share (absent des navigateurs
+              desktop), retombait sur un copier-coller presse-papier, et
+              tout echec etait avale par un catch silencieux (retour Bene,
+              1er aout 2026). Il ouvre maintenant les reseaux choisis par
+              la creatrice, tous si elle n'en a choisi aucun. Le panneau est
+              ferme par defaut : la page garde son bouton unique.
+              share_result_page = false garde la carte image historique. */}
           {resultProfile && quiz.show_result_share !== false && (
-            <Button
-              variant="outline"
-              size="lg"
-              className={`w-full min-h-[48px] h-auto py-3 px-6 text-base rounded-full ${btnShapeClass}`}
-              disabled={sharingCard}
-              onClick={handleShareResultCard}
-            >
-              {sharingCard ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ArrowRight className="w-4 h-4 mr-2" />}
-              {t.resultCardShare}
-            </Button>
+            quiz.share_result_page === false ? (
+              <Button
+                variant="outline"
+                size="lg"
+                className={`w-full min-h-[48px] h-auto py-3 px-6 text-base rounded-full ${btnShapeClass}`}
+                disabled={sharingCard}
+                onClick={handleShareResultCard}
+              >
+                {sharingCard ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ArrowRight className="w-4 h-4 mr-2" />}
+                {t.resultCardShare}
+              </Button>
+            ) : (
+              <div className="space-y-3">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className={`w-full min-h-[48px] h-auto py-3 px-6 text-base rounded-full ${btnShapeClass}`}
+                  aria-expanded={resultShareOpen}
+                  onClick={() => setResultShareOpen((v) => !v)}
+                >
+                  <Share2 className="w-4 h-4 mr-2" />
+                  {t.resultCardShare}
+                </Button>
+                {resultShareOpen && (
+                  <div className="flex flex-wrap gap-2 justify-center">
+                    <ShareNetworkButtons
+                      allowed={resolveShareNetworks(quiz.share_networks)}
+                      onShare={(platform) => shareOn(platform, resultShareUrl())}
+                    />
+                    {/* Repli universel : marche meme si le visiteur n'utilise
+                        aucun des reseaux proposes. */}
+                    <button
+                      type="button"
+                      onClick={() => void copyShareLink(resultShareUrl())}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border bg-background text-sm font-medium hover:bg-muted transition-colors"
+                    >
+                      {linkCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                      {linkCopied ? t.copied : t.copyLink}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )
           )}
 
           {/* Confirm bonus unlock (if the visitor shared on the previous step).
