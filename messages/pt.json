@@ -2527,6 +2527,8 @@
     "tagsSeparator": "Separa por vírgulas.",
     "brief": "Briefing",
     "briefTip": "Dica: sê preciso (alvo, objetivo, tom, restrições). Podes colar um exemplo a imitar.",
+    "briefRestored": "Brief retomado da tua última geração. Muda o que mudou.",
+    "briefRestoredReset": "Voltar ao brief automático",
     "generating": "A gerar…",
     "generate": "Gerar",
     "viewContents": "Ver os meus conteúdos",

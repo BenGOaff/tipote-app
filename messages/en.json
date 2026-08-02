@@ -2527,6 +2527,8 @@
     "tagsSeparator": "Separate with commas.",
     "brief": "Brief",
     "briefTip": "Tip: be specific (audience, goal, tone, constraints). You can paste an example to follow.",
+    "briefRestored": "Brief carried over from your last generation. Change what needs changing.",
+    "briefRestoredReset": "Back to the automatic brief",
     "generating": "Generating…",
     "generate": "Generate",
     "viewContents": "View my content",

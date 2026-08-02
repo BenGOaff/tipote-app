@@ -12,6 +12,7 @@ import { getTranslations } from "next-intl/server";
 import AppShell from "@/components/AppShell";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { ContentGenerator } from "@/components/content/ContentGenerator";
+import { loadBrief } from "@/lib/generatorBriefServer";
 
 type Props = {
   params: Promise<{ type: string }>;
@@ -152,6 +153,10 @@ export default async function CreateTypePage(props: Props) {
 
   const defaultPrompt = templatePrompt ? `${defaultPromptBase}\n\n${templatePrompt}` : defaultPromptBase;
 
+  // Brief retenu de la derniere generation : il prime sur le
+  // pre-remplissage automatique (demande Christelle, 2 aout 2026).
+  const savedBrief = await loadBrief("content");
+
   return (
     <AppShell userEmail={userEmail}>
       <div className="space-y-6">
@@ -190,7 +195,11 @@ export default async function CreateTypePage(props: Props) {
           </div>
         </div>
 
-        <ContentGenerator type={params.type} defaultPrompt={defaultPrompt} />
+        <ContentGenerator
+          type={params.type}
+          defaultPrompt={defaultPrompt}
+          savedBrief={savedBrief}
+        />
       </div>
     </AppShell>
   );
