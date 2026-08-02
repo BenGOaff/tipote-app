@@ -519,3 +519,39 @@ même lien (pas celui du quiz).
 
 Le partage de fin de quiz reste désactivable : `show_result_share`,
 toggle "Afficher le bouton de partage" dans l'éditeur.
+
+## Un lien envoyé par email pointe sur NOTRE domaine (drame Véronique sur Tiquiz, 2 août 2026)
+
+"Je demande un nouveau mot de passe, je clique sur le bouton, et
+j'arrive sur `localhost n'autorise pas la connexion`. Bref, je tourne en
+rond. PS : je n'ai pas de proxy et pas de pare-feu."
+
+Elle avait raison sur toute la ligne : le lien lui demandait vraiment
+d'ouvrir un serveur sur SA machine.
+
+**Pourquoi.** Le lien de `generateLink` passe d'abord par Supabase
+(`/auth/v1/verify?...&redirect_to=...`). Supabase ne redirige vers
+`redirect_to` que si l'URL est dans sa liste blanche ; sinon il retombe
+sur le **Site URL** du projet. Un Site URL resté sur
+`http://localhost:3000` (la valeur par défaut d'un projet Supabase)
+envoie donc TOUS les utilisateurs sur leur propre ordinateur.
+
+**Règle : on n'envoie jamais le lien Supabase.** On envoie le nôtre,
+construit avec `properties.hashed_token` :
+`${APP_URL}/auth/callback?token_hash=...&type=recovery`. `/auth/callback`
+consomme le jeton lui-même (`verifyOtp`). Plus de liste blanche, plus de
+Site URL entre l'utilisatrice et son compte.
+
+**Et le domaine ne vient jamais d'une constante de build seule.**
+`resolveAppUrl()` (`lib/authLinks.ts`) refuse toute adresse locale
+(localhost, 127.x, ::1, .local) et retombe sur l'origine de la requête,
+puis sur le domaine canonique. Un `.env` de prod mal renseigné ne peut
+plus produire un email cassé. Côté client, `window.location.origin`
+remplace `process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"` :
+le domaine où l'utilisatrice navigue vraiment.
+
+**Restent dépendants de la config Supabase** (rien à faire côté code) :
+les emails que Supabase envoie lui-même, c'est à dire le lien magique et
+la confirmation d'inscription. Vérifier dans le dashboard que le Site
+URL est `https://app.tipote.com` et que les Redirect URLs contiennent
+`https://app.tipote.com/auth/callback`.
