@@ -19,12 +19,13 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { buildAuthCallbackUrl, resolveAppUrl } from "@/lib/authLinks";
 import { sendEmail } from "@/lib/email";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://app.tipote.com").trim().replace(/\/$/, "");
+
 const COOLDOWN_MS = 60_000;
 
 const lastRequestAt = new Map<string, number>();
@@ -104,7 +105,7 @@ function pickCopy(locale?: string | null): ResetCopy {
 }
 
 /** Fallback : email de reset envoyé par Supabase (template global). */
-async function sendViaSupabaseTemplate(email: string): Promise<void> {
+async function sendViaSupabaseTemplate(email: string, appUrl: string): Promise<void> {
   try {
     const { createClient } = await import("@supabase/supabase-js");
     const anonClient = createClient(
@@ -113,7 +114,7 @@ async function sendViaSupabaseTemplate(email: string): Promise<void> {
       { auth: { persistSession: false } },
     );
     await anonClient.auth.resetPasswordForEmail(email, {
-      redirectTo: `${SITE_URL}/auth/callback`,
+      redirectTo: `${appUrl}/auth/callback`,
     });
   } catch (e) {
     console.error("[forgot-password] fallback Supabase failed:", (e as Error).message);
@@ -121,6 +122,12 @@ async function sendViaSupabaseTemplate(email: string): Promise<void> {
 }
 
 export async function POST(req: NextRequest) {
+  // Domaine a mettre dans l'email. Si la variable d'environnement est
+  // absente ou pointe sur une adresse locale, on prend le domaine par
+  // lequel la demande arrive : jamais un lien vers la machine de celui
+  // qui recoit l'email (drame Veronique sur Tiquiz, 2 aout 2026).
+  const appUrl = resolveAppUrl(process.env.NEXT_PUBLIC_SITE_URL, req.nextUrl.origin);
+
   let email = "";
   let locale: string | null = null;
   try {
@@ -141,15 +148,23 @@ export async function POST(req: NextRequest) {
     const { data, error } = await supabaseAdmin.auth.admin.generateLink({
       type: "recovery",
       email,
-      options: { redirectTo: `${SITE_URL}/auth/callback` },
+      options: { redirectTo: `${appUrl}/auth/callback` },
     });
-    const actionLink = data?.properties?.action_link;
+    // On envoie NOTRE lien, pas celui de Supabase. Le lien Supabase passe
+    // par /auth/v1/verify puis redirige vers le "Site URL" du projet quand
+    // redirect_to n'est pas en liste blanche : c'est ce qui envoyait
+    // Veronique sur localhost cote Tiquiz. Avec le hashed_token,
+    // /auth/callback consomme le jeton lui-meme.
+    const hashedToken = data?.properties?.hashed_token;
+    const actionLink = hashedToken
+      ? buildAuthCallbackUrl(appUrl, { tokenHash: hashedToken, type: "recovery" })
+      : data?.properties?.action_link;
 
     if (error || !actionLink) {
       const msg = (error?.message ?? "").toLowerCase();
       if (!msg.includes("not found") && !msg.includes("not exist")) {
         console.warn("[forgot-password] generateLink failed:", error?.message);
-        await sendViaSupabaseTemplate(email);
+        await sendViaSupabaseTemplate(email, appUrl);
       }
       return NextResponse.json({ ok: true });
     }
@@ -167,11 +182,11 @@ export async function POST(req: NextRequest) {
       category: "password-reset",
     });
     if (!sent.ok) {
-      await sendViaSupabaseTemplate(email);
+      await sendViaSupabaseTemplate(email, appUrl);
     }
   } catch (e) {
     console.error("[forgot-password]", (e as Error).message);
-    await sendViaSupabaseTemplate(email);
+    await sendViaSupabaseTemplate(email, appUrl);
   }
 
   return NextResponse.json({ ok: true });
