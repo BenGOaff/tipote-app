@@ -546,6 +546,8 @@ export type AffiliateDict = {
     gen_format_article: string;
     gen_format_script_court: string;
     gen_format_script_long: string;
+    gen_brief_restored: string;
+    gen_brief_clear: string;
     gen_label_format: string;
     gen_label_audience: string;
     gen_ph_audience: string;

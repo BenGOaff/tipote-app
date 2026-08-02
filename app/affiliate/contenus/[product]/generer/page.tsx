@@ -18,6 +18,7 @@ import {
   productAffiliateLink,
 } from "@/lib/affiliate/contentSpace";
 import { resolveAffiliateMarket } from "@/lib/affiliate/contentLocales";
+import { loadBrief } from "@/lib/generatorBriefServer";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +41,9 @@ export default async function GenererSectionPage({
       : resolveAffiliateMarket(undefined, session.locale);
   const link = await productAffiliateLink(product, market, session.sa);
   const displayName = session.display_name ?? session.email.split("@")[0];
+  // Brief de la derniere generation : les champs arrivent deja remplis,
+  // sans clignotement (demande Christelle, 2 aout 2026).
+  const savedBrief = await loadBrief(`affiliate:${product}`);
 
   return (
     <main className="space-y-6">
@@ -70,6 +74,7 @@ export default async function GenererSectionPage({
         product={product}
         affiliateLink={link}
         displayName={displayName}
+        savedBrief={savedBrief}
       />
     </main>
   );

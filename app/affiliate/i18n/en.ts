@@ -531,6 +531,8 @@ export const EN: AffiliateDict = {
     gen_format_article: "An article",
     gen_format_script_court: "Short video script",
     gen_format_script_long: "Long video script",
+    gen_brief_restored: "Brief carried over from your last generation. Change what needs changing.",
+    gen_brief_clear: "Start from scratch",
     gen_label_format: "What do you want to write?",
     gen_label_audience: "Who you're talking to",
     gen_ph_audience: "E.g. independent fitness coaches with 500 to 2000 Instagram followers, selling online programmes, struggling to move beyond one-to-one selling.",

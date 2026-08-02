@@ -531,6 +531,8 @@ export const AR: AffiliateDict = {
     gen_format_article: "مقال",
     gen_format_script_court: "نص فيديو قصير",
     gen_format_script_long: "نص فيديو طويل",
+    gen_brief_restored: "تم استرجاع الملخص من آخر توليد لك. عدّل ما تغيّر.",
+    gen_brief_clear: "البدء من الصفر",
     gen_label_format: "ماذا تريد أن تكتب؟",
     gen_label_audience: "مع من تتحدث",
     gen_ph_audience: "مثال: مدرّبون رياضيون مستقلون لديهم بين 500 و2000 متابع على إنستغرام، يبيعون برامج عبر الإنترنت ويجدون صعوبة في تجاوز البيع المباشر.",

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 
 import { emitCreditsUpdated } from '@/lib/credits/client'
+import { retargetPromptType, type GeneratorBrief } from '@/lib/generatorBrief'
 import { useCreditsBalance } from '@/lib/credits/useCreditsBalance'
 import { ImageUploader, type UploadedImage } from '@/components/content/ImageUploader'
 import { PostActionButtons } from '@/components/content/PostActionButtons'
@@ -19,6 +20,15 @@ type Props = {
    * Ne remplace jamais un texte déjà saisi par l'utilisateur.
    */
   defaultPrompt?: string
+  /**
+   * Brief de la derniere generation (table generator_briefs, scope
+   * "content"). Il prime sur le pre-remplissage automatique : c'est le
+   * texte que l'utilisatrice avait ELLE-MEME ajuste.
+   *
+   * Demande Christelle (2 aout 2026) : ecrire un mail, un post et un
+   * article sur le meme theme sans tout retaper a chaque fois.
+   */
+  savedBrief?: GeneratorBrief
 }
 
 type GenerateResponse = {
@@ -80,7 +90,7 @@ function metaForType(type: string, t: (key: string) => string) {
   }
 }
 
-export function ContentGenerator({ type, defaultPrompt }: Props) {
+export function ContentGenerator({ type, defaultPrompt, savedBrief }: Props) {
   const router = useRouter()
   const t = useTranslations('contentGenerator')
   const { refresh: refreshCredits } = useCreditsBalance({ auto: false })
@@ -88,10 +98,25 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
   const meta = useMemo(() => metaForType(type, t), [type, t])
 
   const [channel, setChannel] = useState<string>(meta.defaultChannel)
-  const [tags, setTags] = useState<string>(() => (meta.defaultTags ?? []).join(', '))
+  const [tags, setTags] = useState<string>(
+    () => (savedBrief?.tags ?? '').trim() || (meta.defaultTags ?? []).join(', '),
+  )
 
-  const [prompt, setPrompt] = useState<string>(() => (defaultPrompt ?? '').trim() || '')
-  const [didPrefill, setDidPrefill] = useState<boolean>(() => !!(defaultPrompt ?? '').trim())
+  // Brief repris > pre-remplissage automatique > vide. La ligne "Génère
+  // un contenu de type X" est recalee sur le type COURANT : reprise
+  // telle quelle, elle annoncerait "email" pendant qu'on ecrit un post.
+  const restoredPrompt = useMemo(
+    () => retargetPromptType((savedBrief?.prompt ?? '').trim(), normalizeType(type)),
+    [savedBrief?.prompt, type],
+  )
+  const [prompt, setPrompt] = useState<string>(
+    () => restoredPrompt || (defaultPrompt ?? '').trim() || '',
+  )
+  const [didPrefill, setDidPrefill] = useState<boolean>(
+    () => !!restoredPrompt || !!(defaultPrompt ?? '').trim(),
+  )
+  // Un brief repris est ANNONCE, jamais restaure en douce.
+  const [restored, setRestored] = useState<boolean>(() => !!restoredPrompt)
 
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<GenerateResponse | null>(null)
@@ -221,6 +246,34 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
     return !loading && (prompt ?? '').trim().length > 0
   }, [loading, prompt])
 
+  const saveBrief = async (currentPrompt: string) => {
+    try {
+      await fetch('/api/me/brief', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scope: 'content',
+          brief: { prompt: currentPrompt, tags: (tags ?? '').trim() },
+        }),
+      })
+    } catch {
+      // Confort : un brief non enregistre ne merite pas d'alerte.
+    }
+  }
+
+  // Repartir du brief automatique (profil business + plan), c'est-a-dire
+  // oublier ce qu'on avait ajuste la fois d'avant.
+  const resetBrief = () => {
+    setPrompt((defaultPrompt ?? '').trim())
+    setTags((meta.defaultTags ?? []).join(', '))
+    setRestored(false)
+    void fetch('/api/me/brief', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scope: 'content', brief: {} }),
+    }).catch(() => {})
+  }
+
   const onGenerate = async () => {
     setBillingSyncMsg(null)
 
@@ -234,6 +287,10 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
 
     setLoading(true)
     setResult(null)
+
+    // On retient le brief QUI A SERVI : le format changera la prochaine
+    // fois, le contexte non (demande Christelle, 2 aout 2026).
+    void saveBrief(safePrompt)
 
     try {
       const res = await fetch('/api/content/generate', {
@@ -361,6 +418,18 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
 
           <div className="md:col-span-2 grid gap-2">
             <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('brief')}</label>
+            {restored ? (
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-primary/25 bg-primary/5 px-3 py-2">
+                <p className="text-[11px] text-slate-700 dark:text-slate-300">{t('briefRestored')}</p>
+                <button
+                  type="button"
+                  onClick={resetBrief}
+                  className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-card px-2.5 py-1 text-[11px] font-semibold hover:bg-slate-50"
+                >
+                  {t('briefRestoredReset')}
+                </button>
+              </div>
+            ) : null}
             <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}

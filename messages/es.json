@@ -2527,6 +2527,8 @@
     "tagsSeparator": "Separa con comas.",
     "brief": "Brief",
     "briefTip": "Consejo: sé preciso (audiencia, objetivo, tono, restricciones). Puedes pegar un ejemplo a imitar.",
+    "briefRestored": "Brief recuperado de tu última generación. Cambia lo que haga falta.",
+    "briefRestoredReset": "Volver al brief automático",
     "generating": "Generando…",
     "generate": "Generar",
     "viewContents": "Ver mis contenidos",

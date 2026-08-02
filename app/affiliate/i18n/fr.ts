@@ -538,6 +538,8 @@ export const FR: AffiliateDict = {
     gen_format_article: "Un article",
     gen_format_script_court: "Script vidéo courte",
     gen_format_script_long: "Script vidéo longue",
+    gen_brief_restored: "Brief repris de ta dernière génération. Modifie ce qui a changé.",
+    gen_brief_clear: "Repartir de zéro",
     gen_label_format: "Qu'est-ce que tu veux écrire ?",
     gen_label_audience: "À qui tu parles",
     gen_ph_audience: "Ex : des coachs sportifs indépendants qui ont entre 500 et 2000 abonnés Instagram, qui vendent des programmes en ligne et qui galèrent à sortir de la vente en direct.",

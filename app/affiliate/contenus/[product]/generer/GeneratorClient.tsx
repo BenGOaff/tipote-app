@@ -6,7 +6,7 @@
 // jamais à écrire à la main.
 
 import { useState } from "react";
-import { Check, Loader2, Pencil, Sparkles, Wand2 } from "lucide-react";
+import { Check, Eraser, Loader2, Pencil, Sparkles, Wand2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,7 @@ import { CopyButton } from "../../../promouvoir/components/CopyButton";
 import { CopyRichButton } from "../../../promouvoir/components/CopyRichButton";
 import { StudioLauncher } from "../../../promouvoir/components/StudioLauncher";
 import { useDict } from "../../../i18n/context";
+import { briefIsEmpty, type GeneratorBrief } from "@/lib/generatorBrief";
 import { interpolate } from "../../../i18n";
 import { toHtml, toPlain, resolveVars } from "@/lib/affiliate/markdownLite";
 import type { ContentProduct } from "@/lib/affiliate/contentSpace";
@@ -32,18 +33,29 @@ export function GeneratorClient({
   product,
   affiliateLink,
   displayName,
+  savedBrief,
 }: {
   product: ContentProduct;
   affiliateLink: string;
   displayName: string;
+  /** Brief de la derniere generation, repris pour ne pas tout retaper
+   *  (demande Christelle, 2 aout 2026). Vide au premier passage. */
+  savedBrief: GeneratorBrief;
 }) {
   const t = useDict();
   const cs = t.content_space;
 
+  // Le FORMAT n'est jamais repris : c'est precisement ce qui change
+  // quand on ecrit un mail, puis un post, puis un article sur le meme
+  // sujet. Le contexte, lui, est repris.
   const [format, setFormat] = useState<GeneratorFormat>("post");
-  const [audience, setAudience] = useState("");
-  const [angle, setAngle] = useState("");
-  const [tone, setTone] = useState("");
+  const [audience, setAudience] = useState(savedBrief.audience ?? "");
+  const [angle, setAngle] = useState(savedBrief.angle ?? "");
+  const [tone, setTone] = useState(savedBrief.tone ?? "");
+  // Un brief repris est ANNONCE, jamais restaure en douce : un contexte
+  // perime applique en silence donne un texte a cote de la plaque sans
+  // que personne ne le voie.
+  const [restored, setRestored] = useState(!briefIsEmpty(savedBrief));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<string | null>(null);
@@ -92,11 +104,42 @@ export function GeneratorClient({
       }
       setResult(data.text);
       setEditing(false);
+      // On retient le brief QUI A SERVI, pas les frappes en cours : ce
+      // qu'on reprendra est ce qui a produit un texte.
+      void saveBrief();
     } catch {
       setError(cs.gen_err_network);
     } finally {
       setLoading(false);
     }
+  }
+
+  async function saveBrief() {
+    try {
+      await fetch("/api/me/brief", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          scope: `affiliate:${product}`,
+          brief: { audience, angle, tone },
+        }),
+      });
+    } catch {
+      // Confort : un brief non enregistre ne merite pas un message
+      // d'erreur par-dessus un texte qui, lui, est bien la.
+    }
+  }
+
+  function clearBrief() {
+    setAudience("");
+    setAngle("");
+    setTone("");
+    setRestored(false);
+    void fetch("/api/me/brief", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ scope: `affiliate:${product}`, brief: {} }),
+    }).catch(() => {});
   }
 
   const resolved = result
@@ -109,6 +152,16 @@ export function GeneratorClient({
     <div className="space-y-6">
       <Card>
         <CardContent className="space-y-5 pt-6">
+          {restored && (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2">
+              <p className="text-sm">{cs.gen_brief_restored}</p>
+              <Button type="button" size="sm" variant="ghost" onClick={clearBrief}>
+                <Eraser className="mr-1.5 h-3.5 w-3.5" />
+                {cs.gen_brief_clear}
+              </Button>
+            </div>
+          )}
+
           <div>
             <p className="mb-2 text-sm font-medium">{cs.gen_label_format}</p>
             <div className="flex flex-wrap gap-2">

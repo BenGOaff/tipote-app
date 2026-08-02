@@ -2527,6 +2527,8 @@
     "tagsSeparator": "Separa con virgole.",
     "brief": "Brief",
     "briefTip": "Consiglio: sii preciso (target, obiettivo, tono, vincoli). Puoi incollare un esempio da seguire.",
+    "briefRestored": "Brief ripreso dalla tua ultima generazione. Cambia ciò che è cambiato.",
+    "briefRestoredReset": "Torna al brief automatico",
     "generating": "Generazione…",
     "generate": "Genera",
     "viewContents": "Vedi i miei contenuti",
