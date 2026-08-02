@@ -568,3 +568,25 @@ les emails que Supabase envoie lui-même, c'est à dire le lien magique et
 la confirmation d'inscription. Vérifier dans le dashboard que le Site
 URL est `https://app.tipote.com` et que les Redirect URLs contiennent
 `https://app.tipote.com/auth/callback`.
+
+## Mode scoring : le visiteur ne doit JAMAIS voir une page vide
+
+Trouvé en auditant le scoring. Le viewer faisait
+`ranges.find(...) ?? null` : un score qui tombe dans un TROU entre deux
+tranches, ou un quiz dont aucun résultat n'a de tranche (le cas d'une
+débutante qui n'a pas encore touché aux bornes), donnait
+`resultProfile = null`. Tout l'écran de résultat étant en
+`resultProfile?.`, le visiteur répondait à tout, laissait son email, et
+arrivait sur une page sans titre, sans texte, sans bouton. En silence.
+
+**Règle : `pickScoringResultIndex()` (`lib/quizScoring.ts`) rend toujours
+un résultat dès qu'il en existe un.** Tranche qui contient le score,
+sinon la tranche la plus proche, sinon le premier résultat.
+`analyzeTrancheCoverage` reste là pour prévenir la créatrice : il
+l'avertit, il ne sauve pas le visiteur.
+
+**Et poser des tranches est un calcul, pas une décision de créatrice.**
+La plage de points atteignable est affichée en permanence (plus seulement
+quand quelque chose cloche), et un bouton "Répartir les tranches" découpe
+la plage en tranches contiguës via `splitRangeIntoTranches()`, la MÊME
+fonction que la finalisation d'un quiz généré par l'IA.

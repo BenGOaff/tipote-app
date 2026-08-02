@@ -412,6 +412,44 @@ export function formatScoresSummary(raw: unknown): string {
 // la plage atteignable et on découpe les tranches en N segments
 // contigus. Couverture garantie : zéro trou, zéro chevauchement.
 
+/**
+ * Découpe une plage de points en N tranches contiguës, de la plus basse
+ * à la plus haute. Zéro trou, zéro chevauchement, par construction.
+ *
+ * Sert à DEUX endroits, et il est important qu'ils soient identiques :
+ *   - la finalisation d'un quiz scoré généré par l'IA ;
+ *   - le bouton "Répartir les tranches" de l'éditeur (retour Véronique,
+ *     2 août 2026 : "je ne comprends pas la manière de scorer").
+ *
+ * Poser 4 tranches contiguës à la main est un calcul, pas une décision
+ * de créatrice : c'est au logiciel de le faire.
+ *
+ * Le reliquat va aux tranches HAUTES : le meilleur diagnostic est un peu
+ * plus dur à atteindre, jamais l'inverse.
+ */
+export function splitRangeIntoTranches(
+  range: { min: number; max: number },
+  count: number,
+): { min_score: number; max_score: number }[] {
+  const n = Math.max(0, Math.trunc(count));
+  if (n === 0) return [];
+  const lo = Math.min(range.min, range.max);
+  const hi = Math.max(range.min, range.max);
+  const total = hi - lo + 1;
+  const base = Math.floor(total / n);
+  const remainder = total - base * n;
+  const out: { min_score: number; max_score: number }[] = [];
+  let cursor = lo;
+  for (let i = 0; i < n; i++) {
+    const width = Math.max(1, base + (i >= n - remainder ? 1 : 0));
+    const min = Math.min(cursor, hi);
+    const max = i === n - 1 ? hi : Math.min(cursor + width - 1, hi);
+    out.push({ min_score: min, max_score: Math.max(min, max) });
+    cursor = max + 1;
+  }
+  return out;
+}
+
 export function finalizeAiScoringQuiz(
   rawQuestions: Record<string, unknown>[],
   rawResults: Record<string, unknown>[],
@@ -463,21 +501,73 @@ export function finalizeAiScoringQuiz(
   // aux tranches HAUTES (le meilleur diagnostic est un peu plus dur à
   // atteindre, jamais l'inverse).
   const range = computeReachableRange(questions as ScoringQuestion[]);
-  const n = Math.max(1, rawResults.length);
-  const total = range.max - range.min + 1;
-  const base = Math.floor(total / n);
-  const remainder = total - base * n;
-  const results: Record<string, unknown>[] = [];
-  let cursor = range.min;
-  for (let i = 0; i < n; i++) {
-    const width = Math.max(1, base + (i >= n - remainder ? 1 : 0));
-    const min = Math.min(cursor, range.max);
-    const max = i === n - 1 ? range.max : Math.min(cursor + width - 1, range.max);
-    results.push({ ...rawResults[i], min_score: min, max_score: max });
-    cursor = max + 1;
-  }
+  const tranches = splitRangeIntoTranches(range, rawResults.length);
+  const results = rawResults.map((r, i) => ({ ...r, ...tranches[i] }));
 
   return { questions, results, axes };
+}
+
+// ── Choix du résultat en mode scoring ───────────────────────────────
+//
+// LE VISITEUR NE DOIT JAMAIS TOMBER SUR UNE PAGE VIDE.
+//
+// Le viewer faisait `ranges.find(...) ?? null`. Un score qui tombe dans
+// un TROU entre deux tranches, ou un quiz dont aucun résultat n'a de
+// tranche, donnait `profile = null` : le visiteur répondait à tout,
+// laissait son email, et arrivait sur un écran sans titre, sans texte,
+// sans bouton. La créatrice, elle, ne voyait rien du tout.
+//
+// La règle ci-dessous est totale : dès qu'il existe au moins un
+// résultat, il y a un résultat affiché. Le contrôle de cohérence de
+// l'éditeur (analyzeTrancheCoverage) reste là pour signaler le trou,
+// mais il prévient la créatrice, il ne sauve pas le visiteur.
+
+export type ScoringResultRange = {
+  min_score?: number | null;
+  max_score?: number | null;
+};
+
+/**
+ * Index du résultat à afficher pour un score donné.
+ *
+ * 1. la première tranche (par min croissant) qui CONTIENT le score ;
+ * 2. sinon la tranche la plus PROCHE : en dessous de tout -> la plus
+ *    basse, au dessus de tout -> la plus haute, dans un trou -> celle
+ *    dont la borne est la plus proche, la basse en cas d'égalité ;
+ * 3. aucune tranche définie nulle part -> le premier résultat.
+ *
+ * Retourne -1 seulement s'il n'y a AUCUN résultat, cas où il n'y a de
+ * toute façon rien à afficher.
+ */
+export function pickScoringResultIndex(
+  results: ScoringResultRange[],
+  score: number,
+): number {
+  if (results.length === 0) return -1;
+
+  const bounded = results
+    .map((r, i) => ({ i, min: r.min_score, max: r.max_score }))
+    .filter((r) => r.min != null || r.max != null)
+    .map((r) => ({ i: r.i, min: r.min ?? -Infinity, max: r.max ?? Infinity }))
+    .sort((a, b) => a.min - b.min);
+
+  if (bounded.length === 0) return 0;
+
+  const hit = bounded.find((r) => score >= r.min && score <= r.max);
+  if (hit) return hit.i;
+
+  // Distance à la tranche : 0 si dedans (déjà traité), sinon l'écart à
+  // la borne franchie. `<` strict pour garder la plus basse à égalité.
+  let best = bounded[0];
+  let bestDistance = Infinity;
+  for (const r of bounded) {
+    const distance = score < r.min ? r.min - score : score - r.max;
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      best = r;
+    }
+  }
+  return best.i;
 }
 
 // ── Couverture des tranches (mode scoring) ──────────────────────────

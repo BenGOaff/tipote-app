@@ -78,6 +78,7 @@ import {
   normalizeScoringAxes, resolveScoreLabels, formatScoresSummary, scorePlaceholderList,
   applyScorePlaceholders,
   computeReachableRange, analyzeTrancheCoverage, slugifyAxisLabel,
+  splitRangeIntoTranches,
   MAX_SCORING_AXES,
   scoreDisplayMode as safeScoreDisplayMode,
   type ScoringAxis, type ScoreLabels, type ScoreDisplayMode,
@@ -1874,6 +1875,20 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     } finally {
       setUploadingBonusImage(false);
     }
+  }
+
+  // Repartir les tranches sur la plage REELLEMENT atteignable. Poser 4
+  // bornes contigues a la main est un calcul, pas une decision de
+  // creatrice (retour Veronique sur Tiquiz, 2 aout 2026).
+  function autoSplitTranches() {
+    if (!trancheCoverage || editResults.length === 0) return;
+    const tranches = splitRangeIntoTranches(trancheCoverage.range, editResults.length);
+    setEditResults((prev) =>
+      prev.map((r, i) =>
+        tranches[i] ? { ...r, min_score: tranches[i].min_score, max_score: tranches[i].max_score } : r,
+      ),
+    );
+    toast.success(t("trancheAutoSplitDone"));
   }
 
   function toggleShareNetwork(n: ShareNetwork) {
@@ -4614,6 +4629,28 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
               {/* Couverture des tranches (mode scoring) : trous /
                   chevauchements / bornes manquantes, avec la plage
                   atteignable calculée depuis les points des questions. */}
+              {/* La plage de points est affichee EN PERMANENCE, pas
+                  seulement quand quelque chose cloche : sans elle, il faut
+                  inventer des bornes sans savoir sur quelle echelle. Et le
+                  bouton fait la repartition, parce que c'est un calcul. */}
+              {isScoring && (
+                <div className="px-6 sm:px-12">
+                  <div className="max-w-2xl mx-auto rounded-xl border bg-muted/30 px-4 py-3 my-4 flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs">
+                      {trancheCoverage
+                        ? t("trancheReachable", { min: trancheCoverage.range.min, max: trancheCoverage.range.max })
+                        : t("trancheNoPoints")}
+                    </p>
+                    {trancheCoverage && (
+                      <Button type="button" size="sm" variant="outline" onClick={autoSplitTranches}>
+                        <Wand2 className="w-3.5 h-3.5 mr-1.5" />
+                        {t("trancheAutoSplit")}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {trancheCoverage && trancheCoverage.issues.length > 0 && (
                 <div className="px-6 sm:px-12">
                   <div className="max-w-2xl mx-auto rounded-xl border border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-100 px-4 py-3 my-4">
