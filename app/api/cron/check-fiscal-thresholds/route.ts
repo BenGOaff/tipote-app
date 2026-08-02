@@ -24,6 +24,7 @@ import { timingSafeEqual } from "node:crypto";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { sendEmail } from "@/lib/email";
 import { ADMIN_EMAILS } from "@/lib/adminEmails";
+import { resolveAppUrl } from "@/lib/authLinks";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -205,7 +206,7 @@ export async function GET(req: NextRequest) {
   }
 
   // Email aux admins Tipote
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.tipote.com";
+  const appUrl = resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL);
   const issueRows = issues
     .map(
       (i) =>

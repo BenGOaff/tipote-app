@@ -6,9 +6,10 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { timingSafeEqual } from "crypto";
 import { getSignatureMode, verifySioSignature } from "@/lib/sioWebhookSig";
 import { attributeSale } from "@/lib/affiliate/attribution";
+import { resolveAppUrl } from "@/lib/authLinks";
 
 const WEBHOOK_SECRET = process.env.SYSTEME_IO_WEBHOOK_SECRET;
-const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "https://app.tipote.com").trim();
+const APP_URL = resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL);
 
 /**
  * Constant-time secret comparison. The previous `received !== expected`

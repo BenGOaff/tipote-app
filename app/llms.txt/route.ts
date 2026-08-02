@@ -4,6 +4,7 @@
 import { headers } from "next/headers";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { stripHtml } from "@/lib/richText";
+import { resolvePublicUrl } from "@/lib/authLinks";
 
 const CUSTOM_HOST_HEADER = "x-tipote-custom-host";
 export const revalidate = 3600;
@@ -104,7 +105,7 @@ async function buildCustomDomainLlmsTxt(host: string): Promise<string> {
 }
 
 async function buildMainHostLlmsTxt(): Promise<string> {
-  const base = (process.env.NEXT_PUBLIC_SITE_URL || "https://app.tipote.com").replace(/\/$/, "");
+  const base = resolvePublicUrl(process.env.NEXT_PUBLIC_SITE_URL, "https://app.tipote.com");
   const lines: string[] = [];
   lines.push("# Tipote");
   lines.push("");

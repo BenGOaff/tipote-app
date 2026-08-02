@@ -13,6 +13,7 @@ import assert from "node:assert/strict";
 
 import {
   resolveAppUrl,
+  resolvePublicUrl,
   buildAuthCallbackUrl,
   CANONICAL_APP_URL,
 } from "../../lib/authLinks.ts";
@@ -83,6 +84,32 @@ describe("Le lien de l'email pointe sur NOTRE page", () => {
     assert.ok(
       buildAuthCallbackUrl("https://app.tipote.com/", { tokenHash: "x", type: "magiclink" })
         .startsWith("https://app.tipote.com/auth/callback?"),
+    );
+  });
+});
+
+describe("Tout ce qui sort de l'app est protégé, pas seulement les emails", () => {
+  test("la variable de prod pointait VRAIMENT sur localhost", () => {
+    // Le lien reçu par Véronique portait
+    // redirect_to=http://localhost:3000/auth/callback : ce n'était pas un
+    // repli de Supabase, c'est nous qui l'avions écrit. Tout ce qui se
+    // construit sur cette variable partait donc faux : retours de
+    // paiement, emails de notification, liens revendeur, sitemap.
+    assert.equal(
+      resolvePublicUrl("http://localhost:3000", "https://app.tipote.com"),
+      "https://app.tipote.com",
+    );
+  });
+
+  test("le domaine de repli dépend du contexte", () => {
+    assert.equal(resolvePublicUrl(null, "https://app.tipote.com"), "https://app.tipote.com");
+    assert.equal(resolvePublicUrl(null, "https://app.tipote.com"), "https://app.tipote.com");
+  });
+
+  test("une origine de requête valable passe avant le repli", () => {
+    assert.equal(
+      resolvePublicUrl("http://localhost:3000", "https://app.tipote.com", "https://quiz.tipote.com"),
+      "https://quiz.tipote.com",
     );
   });
 });

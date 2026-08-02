@@ -46,6 +46,26 @@ function isUsableOrigin(raw: string | null | undefined): boolean {
 }
 
 /**
+ * URL publique, pour tout ce qui sort de l'app : liens d'email, retours
+ * de paiement, adresses dans le sitemap.
+ *
+ * `fallback` = le domaine canonique du contexte (l'app, ou le site
+ * vitrine). Le reste de la logique est commun : une adresse locale n'est
+ * JAMAIS une réponse valable, quelle que soit sa provenance.
+ */
+export function resolvePublicUrl(
+  envUrl: string | null | undefined,
+  fallback: string,
+  requestOrigin?: string | null,
+): string {
+  const trimmedEnv = (envUrl ?? "").trim().replace(/\/$/, "");
+  if (isUsableOrigin(trimmedEnv)) return trimmedEnv;
+  const trimmedReq = (requestOrigin ?? "").trim().replace(/\/$/, "");
+  if (isUsableOrigin(trimmedReq)) return trimmedReq;
+  return fallback.replace(/\/$/, "");
+}
+
+/**
  * URL publique de l'app pour un lien envoyé par email.
  *
  * Ordre : la variable d'environnement si elle est exploitable, sinon
@@ -59,11 +79,7 @@ export function resolveAppUrl(
   envUrl: string | null | undefined,
   requestOrigin?: string | null,
 ): string {
-  const trimmedEnv = (envUrl ?? "").trim().replace(/\/$/, "");
-  if (isUsableOrigin(trimmedEnv)) return trimmedEnv;
-  const trimmedReq = (requestOrigin ?? "").trim().replace(/\/$/, "");
-  if (isUsableOrigin(trimmedReq)) return trimmedReq;
-  return CANONICAL_APP_URL;
+  return resolvePublicUrl(envUrl, CANONICAL_APP_URL, requestOrigin);
 }
 
 export type AuthLinkType = "recovery" | "magiclink" | "invite" | "signup";

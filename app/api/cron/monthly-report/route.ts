@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { sendEmail } from "@/lib/email";
 import { getWallOfWinsPayload } from "@/lib/wallOfWins/stats";
+import { resolveAppUrl } from "@/lib/authLinks";
 
 // Formateur EUR partagé avec le frontend WallOfWins (Intl.NumberFormat
 // est créé une fois au module-load = quasi gratuit par appel).
@@ -44,7 +45,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.tipote.com";
+  const appUrl = resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL);
   const now = new Date();
 
   // Last month range

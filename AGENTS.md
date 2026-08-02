@@ -529,12 +529,25 @@ rond. PS : je n'ai pas de proxy et pas de pare-feu."
 Elle avait raison sur toute la ligne : le lien lui demandait vraiment
 d'ouvrir un serveur sur SA machine.
 
-**Pourquoi.** Le lien de `generateLink` passe d'abord par Supabase
-(`/auth/v1/verify?...&redirect_to=...`). Supabase ne redirige vers
-`redirect_to` que si l'URL est dans sa liste blanche ; sinon il retombe
-sur le **Site URL** du projet. Un Site URL resté sur
-`http://localhost:3000` (la valeur par défaut d'un projet Supabase)
-envoie donc TOUS les utilisateurs sur leur propre ordinateur.
+**Pourquoi.** Le lien reçu portait
+`redirect_to=http://localhost:3000/auth/callback`. Ce n'était pas un
+repli de Supabase : c'est NOUS qui l'avions écrit. En prod,
+`NEXT_PUBLIC_APP_URL` vaut `http://localhost:3000`, et le code faisait
+`process.env.NEXT_PUBLIC_APP_URL ?? "https://app.tipote.com"`. Un `??`
+ne protège que du MANQUANT, jamais du FAUX.
+
+**Le `??` avec une valeur par défaut est un faux garde-fou.** Quand une
+variable a une valeur INTERDITE, il faut la valider, pas lui donner un
+défaut. Tout ce qui produit un lien VU par un humain (emails de cron,
+notifications, invitations admin, login, sitemap/robots/llms) passe
+maintenant par `resolveAppUrl()` / `resolvePublicUrl()`
+(`lib/authLinks.ts`).
+
+**Exception assumée : les `redirect_uri` OAuth et les `callback_url` de
+webhooks ne sont PAS filtrés.** Ils doivent correspondre au caractère
+près à ce qui est enregistré chez le fournisseur, et `localhost` y est
+légitime en développement. Les réécrire casserait les connexions
+sociales en local.
 
 **Règle : on n'envoie jamais le lien Supabase.** On envoie le nôtre,
 construit avec `properties.hashed_token` :

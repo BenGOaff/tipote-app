@@ -24,6 +24,7 @@ import "server-only";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { sendEmail, canSendEmailToday } from "@/lib/email";
 import { createNotification } from "@/lib/notifications";
+import { resolveAppUrl } from "@/lib/authLinks";
 
 const PLATFORM_NAMES: Record<string, string> = {
   instagram: "Instagram",
@@ -35,7 +36,7 @@ const PLATFORM_NAMES: Record<string, string> = {
   threads: "Threads",
 };
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://app.tipote.com";
+const APP_URL = resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL);
 
 /** Détecte si une erreur ressemble à du "token mort". On reste large
  *  parce que les API SDK ne remontent pas toujours un code propre. */
