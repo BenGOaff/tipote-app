@@ -51,6 +51,13 @@
     --background: 0 0% 100%;          /* #FFFFFF — page bg, brightest */
     --foreground: 231 41% 31%;        /* #2E386E — default text color */
 
+    /* Couleur du CHROME d'edition (toolbar riche et ses menus). Variable
+       DISTINCTE de --foreground, et c'est tout l'interet : l'apercu de
+       l'editeur reecrit --foreground avec la couleur de texte choisie par
+       la creatrice, ce qui rendrait le chrome illisible des qu'elle
+       choisit un texte clair. Cf. .rt-chrome plus bas. */
+    --rt-chrome-fg: 231 41% 31%;
+
     --card: 225 33% 97%;              /* #F4F5FA — gray-blue card surface */
     --card-foreground: 231 41% 31%;
 
@@ -136,6 +143,7 @@
   .dark {
     --background: 214 77% 12%;
     --foreground: 0 0% 95%;
+    --rt-chrome-fg: 0 0% 95%;
 
     --card: 230 41% 18%;
     --card-foreground: 0 0% 95%;
@@ -495,6 +503,57 @@
 [data-device-preview="desktop"] .rt-field-fs,
 [data-device-preview="desktop"] .rt-field-fs * {
   font-size: var(--rt-fs-d, var(--rt-fs-m, inherit)) !important;
+}
+
+/* ─── LE CHROME D'EDITION N'HERITE JAMAIS DU PREVIEW ────────────────────
+ * (drame Jocelyne, 3 aout 2026 : "je voudrais grossir les polices sur les
+ * boutons, mais ce n'est pas possible, menu deroulant vide".)
+ *
+ * L'editeur est du WYSIWYG : le champ editable vit DANS l'apercu, donc a
+ * l'interieur des elements qui portent le style du visiteur. Le bouton
+ * CTA d'un resultat, c'est litteralement :
+ *
+ *   <button class="... text-white font-semibold text-lg ...">
+ *     <RichTextEdit />          <- toolbar + popovers ICI DEDANS
+ *   </button>
+ *
+ * La toolbar et ses menus sont donc des descendants d'un element qui
+ * impose `color: white`. Les entrees du menu de taille n'avaient aucune
+ * classe de couleur : elles heritaient du blanc, sur un panneau
+ * `bg-background` blanc. Le menu s'ouvrait bel et bien, avec ses 11
+ * tailles, ecrites en blanc sur blanc. D'ou "menu deroulant vide" - et
+ * d'ou le fait que ca n'arrivait QUE sur les boutons, les seuls endroits
+ * ou l'apercu force une couleur de texte.
+ *
+ * La correction ne peut pas etre "ajouter text-foreground sur ce menu" :
+ * le prochain popover ajoute a la toolbar reintroduirait le bug. On
+ * coupe donc l'heritage A LA RACINE du chrome. Toutes les proprietes
+ * listees ici sont HERITEES : les fixer sur la racine suffit, les
+ * descendants qui n'imposent rien reprennent ces valeurs, et ceux qui
+ * imposent la leur gagnent comme avant.
+ *
+ * Ne pas ajouter `!important` : les classes utilitaires des enfants
+ * doivent continuer a passer devant. */
+.rt-chrome {
+  /* --rt-chrome-fg et PAS --foreground : l'apercu reecrit --foreground
+     avec la couleur de texte du quiz, donc s'en servir ici ramenerait
+     exactement le bug pour toute creatrice ayant choisi un texte clair. */
+  color: hsl(var(--rt-chrome-fg));
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    "Noto Sans", sans-serif;
+  font-size: 0.875rem;
+  font-weight: 400;
+  font-style: normal;
+  font-variant: normal;
+  line-height: 1.4;
+  letter-spacing: normal;
+  word-spacing: normal;
+  text-transform: none;
+  /* `start` et pas `left` : l'interface existe en arabe. */
+  text-align: start;
+  text-indent: 0;
+  text-shadow: none;
+  white-space: normal;
 }
 
 /* ──────────────────────────────────────────────────────────────

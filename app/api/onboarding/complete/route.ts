@@ -19,6 +19,7 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { sendEmail } from "@/lib/email";
+import { resolveAppUrl } from "@/lib/authLinks";
 
 function isMissingColumnError(message: string | null | undefined) {
   const m = (message ?? "").toLowerCase();
@@ -233,7 +234,7 @@ async function sendWelcomeEmail(userId: string) {
 
   const locale = profile?.content_locale || "fr";
   const name = profile?.first_name || "";
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.tipote.com";
+  const appUrl = resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL);
 
   const greetings: Record<string, string> = {
     fr: name ? `${name}, bienvenue sur Tipote !` : "Bienvenue sur Tipote !",

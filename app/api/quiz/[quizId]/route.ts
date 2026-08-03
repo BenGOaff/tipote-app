@@ -3,6 +3,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { classifyDeleteError, deleteRefusalReason, deleteRefusalStatus } from "@/lib/quizDelete";
 import { sanitizeRichText } from "@/lib/richText";
 import { sanitizeSlug, sanitizeShareNetworks, BRAND_FONT_CHOICES, QUIZ_GRADIENTS, sanitizePanelMediaConfig } from "@/lib/quizBranding";
 import { isReservedPublicSlug } from "@/lib/publicSlug";
@@ -847,8 +848,39 @@ export async function DELETE(_req: NextRequest, context: RouteContext) {
       .eq("id", quizId)
       .eq("user_id", user.id);
 
-    if (error) {
-      return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
+    // Un refus n'est pas une panne. Cf. lib/quizDelete.ts : un quiz
+    // reutilise comme question dans une video interactive est retenu par
+    // la cle etrangere `popquiz_cues.quiz_id` (ON DELETE RESTRICT), et le
+    // client doit pouvoir DIRE laquelle plutot que d'afficher un echec nu.
+    const refusal = classifyDeleteError(error);
+    if (refusal.kind !== "ok") {
+      let usedBy: string[] = [];
+      if (refusal.kind === "used_by_popquiz") {
+        const { data: cues } = await supabase
+          .from("popquiz_cues")
+          .select("popquizzes(title)")
+          .eq("quiz_id", quizId);
+        usedBy = Array.from(
+          new Set(
+            (cues ?? [])
+              .map((row) => {
+                const pq = (row as { popquizzes?: { title?: string | null } | { title?: string | null }[] }).popquizzes;
+                const one = Array.isArray(pq) ? pq[0] : pq;
+                return (one?.title ?? "").trim();
+              })
+              .filter(Boolean),
+          ),
+        );
+      }
+      return NextResponse.json(
+        {
+          ok: false,
+          reason: deleteRefusalReason(refusal),
+          usedBy,
+          error: refusal.kind === "failed" ? refusal.detail : undefined,
+        },
+        { status: deleteRefusalStatus(refusal) },
+      );
     }
 
     return NextResponse.json({ ok: true });

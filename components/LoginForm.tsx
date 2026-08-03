@@ -16,8 +16,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 import { Eye, EyeOff, Mail, Lock, ArrowRight, ExternalLink, AlertTriangle } from 'lucide-react';
+import { resolvePublicUrl } from "@/lib/authLinks";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://app.tipote.com';
+const SITE_URL = resolvePublicUrl(process.env.NEXT_PUBLIC_SITE_URL, 'https://app.tipote.com');
 
 type Mode = 'password' | 'magic';
 

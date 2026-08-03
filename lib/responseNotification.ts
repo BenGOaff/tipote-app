@@ -11,8 +11,9 @@
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { sendEmail, canSendEmailToday } from "@/lib/email";
+import { resolveAppUrl } from "@/lib/authLinks";
 
-const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "https://app.tipote.com").trim().replace(/\/$/, "");
+const APP_URL = resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL);
 
 function esc(s: string): string {
   return s

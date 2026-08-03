@@ -4486,6 +4486,9 @@
     "tieOrderHint": "On a perfect tie between two profiles, the profile highest in the list wins. Move up the one that should win.",
     "trancheCoverageTitle": "Score ranges to review",
     "trancheReachable": "Possible scores on this quiz: {min} to {max} points.",
+    "trancheAutoSplit": "Split the ranges",
+    "trancheAutoSplitDone": "Ranges split across the whole point scale.",
+    "trancheNoPoints": "No points are set yet: tick the answers that earn points in your questions.",
     "trancheGapItem": "No result covers scores {from} to {to}: a visitor landing there will see no message.",
     "trancheOverlapItem": "{a} and {b} overlap on scores {from} to {to}: the range highest in the list wins.",
     "trancheUnbounded": "No min-max range is set on your results: fill in the range fields of each result.",
@@ -4675,6 +4678,7 @@
     "resultUnreachable": "This result can never be assigned",
     "resultLowChance": "Low chance of being assigned - {leading}/{total} questions lead there",
     "resultCoverageHint": "For a result to be chosen, several questions must lead there. Consider adjusting your question options or asking AI to rebalance.",
+    "resultCoverageHintTooFewOptions": "Your questions only offer {options} answers while you have {results} profiles. On those questions a visitor simply cannot pick this profile: it needs an answer of its own. The AI rebalance can write it for you.",
     "resultRebalanceAi": "Rebalance with AI",
     "resultSioTagTitle": "Systeme.io tag for this result",
     "rebalanceDialogTitle": "Rebalance your quiz",
@@ -4731,7 +4735,8 @@
     "freeTextAll": "Every written answer, newest first.",
     "freeTextShown": "The {shown} most recent answers out of {total}. The Copy button takes them all.",
     "freeTextCopy": "Copy the answers",
-    "freeTextCopied": "Copied"
+    "freeTextCopied": "Copied",
+    "rebalanceAdded": "Answer added"
   },
   "contentStrategy": {
     "title": "Content strategy",
@@ -5429,6 +5434,9 @@
       "deleteQuizDesc": "\"{title}\" and all associated leads will be permanently deleted. This action is irreversible.",
       "quizDeleted": "Quiz deleted",
       "deleteFailed": "Delete failed",
+      "deleteBlockedPopquiz": "This quiz is used as a question inside an interactive video. Remove it from the video, then delete it.",
+      "deleteBlockedPopquizNamed": "This quiz is used as a question inside the interactive video: {names}. Remove it from the video, then delete it.",
+      "deleteBlockedReferenced": "This quiz is still used elsewhere in your account, so it cannot be deleted yet.",
       "createPage": "Create a page",
       "untitledPage": "Untitled page",
       "pageOnline": "Live",

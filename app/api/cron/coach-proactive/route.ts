@@ -40,6 +40,7 @@ import { generateProactiveBrief } from "@/lib/coach/proactiveBriefer";
 import { renderBriefAsEmailBody } from "@/lib/coach/render";
 import { canSendEmailToday, sendEmail } from "@/lib/email";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { resolveAppUrl } from "@/lib/authLinks";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -86,7 +87,7 @@ export async function GET(req: NextRequest) {
 
   const now = new Date();
   const weekKey = isoWeek(now);
-  const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://app.tipote.com").replace(/\/$/, "");
+  const appUrl = resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL);
 
   // 1. Récupère TOUS les users Pro / Elite / Beta. Source = profiles.plan.
   const { data: eligibleProfiles, error: profErr } = await supabaseAdmin

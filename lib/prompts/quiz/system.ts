@@ -207,15 +207,17 @@ Chaque option de type choix porte un champ "points" (entier de 0 à 3) = l'INTEN
 - Utilise TOUTE l'échelle 0-3 sur l'ensemble du quiz, pas seulement 1-2.
 - L'ordre d'affichage des options ne doit PAS suivre l'ordre des points (ne mets pas toujours la meilleure réponse en premier) : mélange pour que le quiz ne soit pas devinable.
 - Les points doivent refléter une vraie gradation métier, pas un barème scolaire : la "bonne" réponse est celle qui témoigne de la situation la plus saine/avancée sur le sujet.` : `QUESTIONS — RÈGLES :
-- La MAJORITÉ des questions sont des choix (3 à 5 options), chaque option mappée vers un profil résultat via result_index (entre 0 et ${resultCount - 1}). C'est ce qui détermine le profil, donc garde-les majoritaires pour que le résultat reste pertinent.
+- La MAJORITÉ des questions sont des choix, chaque option mappée vers un profil résultat via result_index (entre 0 et ${resultCount - 1}). C'est ce qui détermine le profil, donc garde-les majoritaires pour que le résultat reste pertinent.
+- UNE RÉPONSE PAR PROFIL. Chaque question de type "multiple_choice" propose EXACTEMENT ${resultCount} options, et les ${resultCount} result_index (0 à ${resultCount - 1}) apparaissent CHACUN UNE FOIS dans la question. Un profil qui n'a pas de réponse à une question ne peut pas être choisi à cette question : avec moins d'options que de profils, un profil finit par n'être jamais attribué.
 - Chaque question porte un champ "question_type". Formats disponibles :
-  - "multiple_choice" (défaut) : 3 à 5 options, chacune avec un result_index.
+  - "multiple_choice" (défaut) : exactement ${resultCount} options, une par profil, chacune avec un result_index distinct.
   - "yes_no" : exactement 2 options, "Oui" puis "Non", chacune avec son result_index.
   - "rating_scale" (échelle 0-10) ou "star_rating" (étoiles) : question d'engagement. En quiz par profil elle est collectée mais ne détermine PAS le profil. À utiliser avec parcimonie (0 à 1 par quiz), et JAMAIS scolaire.
   - "free_text" : réponse libre, jamais comptée dans le résultat. Très rare.
 - Pour "rating_scale" ajoute "config": { "min": 0, "max": 10 } ; pour "star_rating" ajoute "config": { "max": 5 }. Ces types (et free_text) n'ont PAS d'options (mets "options": []).
 - Varie les formulations : Vrai/Faux, scénarios, mises en situation.
 - Répartis les result_index de façon équilibrée parmi les options pour que chaque profil ait des chances égales.
+- Ne fais JAMAIS apparaître deux fois le même result_index dans une même question de type "multiple_choice" : un profil aurait deux réponses et un autre aucune.
 
 PONDÉRATION ANTI-ÉGALITÉ (déterminant, à soigner) :
 Chaque option de type choix porte un champ "points" (entier de 1 à 3) qui pondère sa contribution au profil de son result_index. Le profil révélé est celui dont la somme des points est la plus haute. Ton job : pondérer avec finesse pour qu'un vrai répondant tombe TOUJOURS sur un profil net, jamais sur une égalité, et sans que tout le monde atterrisse au même endroit.
@@ -294,13 +296,15 @@ FORMAT DE SORTIE : JSON strict uniquement. Pas de markdown, pas de commentaires,
   userParts.push(`FORME D'ADRESSE : ${formality === "vous" ? "Vouvoiement (vous)" : "Tutoiement (tu)"}`);
   userParts.push(
     `\nCONSIGNES STRICTES :`,
-    `- Génère exactement ${questionCount} questions, en MAJORITÉ des choix (3 à 5 options).`,
+    isScoring
+      ? `- Génère exactement ${questionCount} questions, en MAJORITÉ des choix (3 à 5 options).`
+      : `- Génère exactement ${questionCount} questions, en MAJORITÉ des choix, avec EXACTEMENT ${resultCount} options par question de choix (une par profil, un result_index distinct par option).`,
     isScoring
       ? `- Génère exactement ${resultCount} tranches de résultat, ordonnées du score le plus bas au plus haut, SANS bornes chiffrées.`
       : `- Génère exactement ${resultCount} profils résultat.`,
     isScoring
       ? `- Pour les questions de type choix, result_index vaut toujours 0 et chaque option porte un "points" (0 à 3) qui traduit l'intensité de la réponse ; toutes les options d'une question ont des points différents et l'ordre d'affichage ne suit pas l'ordre des points.${scoringAxes.length > 0 ? ` Chaque question de choix ou d'échelle porte un champ "axes" avec 1 ou 2 ids parmi : ${scoringAxes.map((a) => a.id).join(", ")}.` : ""}`
-      : `- Pour les questions de type choix, chaque option a un result_index entre 0 et ${resultCount - 1}, répartis équilibré, ET un "points" (1 à 3) pondéré pour éviter toute égalité entre profils (poids fort sur les 2-3 questions les plus déterminantes, poids 1 ailleurs, une signature distincte par profil).`,
+      : `- Pour les questions de type choix, les ${resultCount} result_index (0 à ${resultCount - 1}) apparaissent CHACUN UNE FOIS par question, ET chaque option porte un "points" (1 à 3) pondéré pour éviter toute égalité entre profils (poids fort sur les 2-3 questions les plus déterminantes, poids 1 ailleurs, une signature distincte par profil).`,
     `- Ajoute "question_type" à chaque question (défaut "multiple_choice"). Échelle/étoiles/texte libre avec parcimonie (ne déterminent pas le profil).`,
     `- Tout le contenu DOIT être en ${langLabel}.`,
     `- Les résultats doivent être TRANSFORMATIFS, pas génériques.`,

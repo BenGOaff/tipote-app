@@ -1,3 +1,4 @@
+import { resolveAppUrl } from "@/lib/authLinks";
 // lib/email.ts
 // Reusable email helper using Resend API with branded Tipote HTML template.
 // Used for: social alerts, credits alerts, weekly digest, milestones, etc.
@@ -73,7 +74,7 @@ export async function sendEmail(params: SendEmailParams): Promise<{ ok: boolean;
   }
 
   const fromEmail = process.env.SUPPORT_FROM_EMAIL || "hello@tipote.com";
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.tipote.com";
+  const appUrl = resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL);
   const locale = params.locale || "fr";
   const prefsUrl = `${appUrl}/settings?tab=profile`;
 

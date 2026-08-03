@@ -1097,9 +1097,25 @@ export default function MyContentLovableClient({
                               setDeleteQuizConfirm(null);
                               try {
                                 const res = await fetch(`/api/quiz/${id}`, { method: "DELETE" });
-                                if (res.ok) {
+                                const data = await res.json().catch(() => null);
+                                if (res.ok && data?.ok) {
                                   router.refresh();
                                   toast({ title: t("ui.quizDeleted") });
+                                } else if (data?.reason === "used_by_popquiz") {
+                                  // Retenu par une video interactive (ON DELETE
+                                  // RESTRICT). Dire LAQUELLE, sinon on renvoie
+                                  // chercher parmi tous ses contenus.
+                                  const names = Array.isArray(data.usedBy)
+                                    ? (data.usedBy as string[]).filter(Boolean)
+                                    : [];
+                                  toast({
+                                    title: names.length > 0
+                                      ? t("ui.deleteBlockedPopquizNamed", { names: names.join(", ") })
+                                      : t("ui.deleteBlockedPopquiz"),
+                                    variant: "destructive" as const,
+                                  });
+                                } else if (data?.reason === "still_referenced") {
+                                  toast({ title: t("ui.deleteBlockedReferenced"), variant: "destructive" as const });
                                 } else {
                                   toast({ title: t("ui.deleteFailed"), variant: "destructive" as const });
                                 }

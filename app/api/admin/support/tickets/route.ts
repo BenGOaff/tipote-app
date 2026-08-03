@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { isAdminEmail } from "@/lib/adminEmails";
+import { resolveAppUrl } from "@/lib/authLinks";
 
 export const runtime = "nodejs";
 
@@ -124,7 +125,7 @@ async function sendReplyEmail(
   }
 
   const fromEmail = process.env.SUPPORT_FROM_EMAIL || "hello@tipote.com";
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.tipote.com";
+  const appUrl = resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL);
 
   const greeting = name ? name : (locale === "fr" ? "Bonjour" : locale === "es" ? "Hola" : locale === "it" ? "Ciao" : locale === "ar" ? "مرحبًا" : "Hello");
 

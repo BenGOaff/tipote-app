@@ -24,6 +24,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { sendEmail, canSendEmailToday } from "@/lib/email";
 import { createNotification } from "@/lib/notifications";
 import { buildBusinessContext } from "@/lib/compta/businessContext";
+import { resolveAppUrl } from "@/lib/authLinks";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -176,7 +177,7 @@ async function maybeSendMilestone(
   const firstName =
     (profile as { first_name?: string | null } | null)?.first_name?.trim() ?? "";
   const greeting = firstName ? `${firstName},` : "Bonjour,";
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.tipote.com";
+  const appUrl = resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL);
 
   // Compose le contenu selon le type
   let subject = "";

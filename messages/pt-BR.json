@@ -4486,6 +4486,9 @@
     "tieOrderHint": "Em caso de empate perfeito entre dois perfis, ganha o perfil mais acima na lista. Suba aquele que deve ganhar.",
     "trancheCoverageTitle": "Faixas de pontuação para verificar",
     "trancheReachable": "Pontuações possíveis neste quiz: de {min} a {max} pontos.",
+    "trancheAutoSplit": "Distribuir as faixas",
+    "trancheAutoSplitDone": "Faixas distribuídas por toda a escala de pontos.",
+    "trancheNoPoints": "Ainda não há pontos atribuídos: marque as respostas que dão pontos nas suas perguntas.",
     "trancheGapItem": "Nenhum resultado cobre as pontuações de {from} a {to}: um visitante nessa zona não verá nenhuma mensagem.",
     "trancheOverlapItem": "{a} e {b} se sobrepõem nas pontuações {from} a {to}: ganha a faixa mais acima na lista.",
     "trancheUnbounded": "Nenhuma faixa min-max está definida nos seus resultados: preencha os campos de faixa de cada resultado.",
@@ -4675,6 +4678,7 @@
     "resultUnreachable": "Este resultado nunca pode ser atribuído",
     "resultLowChance": "Baixa chance de ser atribuído - {leading}/{total} perguntas levam até lá",
     "resultCoverageHint": "Para que um resultado seja escolhido, várias perguntas devem levar até ele. Considere ajustar as opções de suas perguntas ou pedir à IA para reequilibrar.",
+    "resultCoverageHintTooFewOptions": "Suas perguntas só oferecem {options} respostas e você tem {results} perfis. Nessas perguntas o visitante não consegue escolher este perfil: falta uma resposta para ele. O reequilíbrio com IA pode escrevê-la para você.",
     "resultRebalanceAi": "Reequilibrar com IA",
     "resultSioTagTitle": "Tag Systeme.io para este resultado",
     "rebalanceDialogTitle": "Reequilibrar seu quiz",
@@ -4731,7 +4735,8 @@
     "freeTextAll": "Todas as respostas escritas, da mais recente à mais antiga.",
     "freeTextShown": "As {shown} respostas mais recentes de {total}. O botão Copiar leva todas.",
     "freeTextCopy": "Copiar as respostas",
-    "freeTextCopied": "Copiado"
+    "freeTextCopied": "Copiado",
+    "rebalanceAdded": "Resposta adicionada"
   },
   "contentStrategy": {
     "title": "Estratégia de conteúdo",
@@ -5429,6 +5434,9 @@
       "deleteQuizDesc": "«{title}» e todos os leads associados serão excluídos permanentemente. Esta ação é irreversível.",
       "quizDeleted": "Quiz excluído",
       "deleteFailed": "Falha na exclusão",
+      "deleteBlockedPopquiz": "Este quiz é usado como pergunta em um vídeo interativo. Remova-o do vídeo e depois exclua-o.",
+      "deleteBlockedPopquizNamed": "Este quiz é usado como pergunta no vídeo interativo: {names}. Remova-o do vídeo e depois exclua-o.",
+      "deleteBlockedReferenced": "Este quiz ainda é usado em outro lugar da sua conta, por isso ainda não pode ser excluído.",
       "createPage": "Criar uma página",
       "untitledPage": "Página sem título",
       "pageOnline": "No ar",

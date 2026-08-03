@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { sendEmail } from "@/lib/email";
+import { resolveAppUrl } from "@/lib/authLinks";
 
 const INTERNAL_KEY = process.env.NOTIFICATIONS_INTERNAL_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
@@ -29,7 +30,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.tipote.com";
+  const appUrl = resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL);
   const now = new Date();
   const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
   const in7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);

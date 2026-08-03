@@ -10,6 +10,7 @@
 import type { MetadataRoute } from "next";
 import { headers } from "next/headers";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { resolvePublicUrl } from "@/lib/authLinks";
 
 const CUSTOM_HOST_HEADER = "x-tipote-custom-host";
 
@@ -120,7 +121,7 @@ async function buildCustomDomainSitemap(host: string): Promise<MetadataRoute.Sit
 }
 
 async function buildMainHostSitemap(): Promise<MetadataRoute.Sitemap> {
-  const base = (process.env.NEXT_PUBLIC_SITE_URL || "https://app.tipote.com").replace(/\/$/, "");
+  const base = resolvePublicUrl(process.env.NEXT_PUBLIC_SITE_URL, "https://app.tipote.com");
 
   const staticRoutes = ["", "/legal/extension", "/legal/privacy", "/legal/mentions"];
   const entries: MetadataRoute.Sitemap = staticRoutes.map((route) => ({

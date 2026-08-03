@@ -37,6 +37,7 @@ import {
   type Locale,
 } from "@/lib/reengagement/templates";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { resolveAppUrl } from "@/lib/authLinks";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -73,7 +74,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://app.tipote.com").replace(/\/$/, "");
+  const appUrl = resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL);
   const now = new Date();
   const dedupCutoff = new Date(now.getTime() - DEDUP_WINDOW_DAYS * 24 * 60 * 60 * 1000);
 

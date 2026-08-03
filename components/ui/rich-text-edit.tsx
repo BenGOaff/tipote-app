@@ -777,7 +777,15 @@ export function RichTextEdit({
     return (
       <>
       <div className="space-y-1">
-        <div className="flex flex-wrap items-center gap-0.5 rounded-lg border bg-background p-1 shadow-sm sticky top-2 z-20">
+        {/* `rt-chrome` : la toolbar et TOUS ses menus vivent a l'interieur
+            de l'apercu, donc a l'interieur des elements qui portent le
+            style du visiteur. Sur un bouton CTA (`text-white`), les
+            entrees du menu de taille heritaient du blanc sur un panneau
+            blanc : le menu s'ouvrait vide aux yeux de Jocelyne, le 3 aout
+            2026. La classe coupe l'heritage a la racine (cf. globals.css)
+            plutot que de recolorer un menu a la fois, sinon le prochain
+            popover ajoute ici ramenerait le bug. */}
+        <div className="rt-chrome flex flex-wrap items-center gap-0.5 rounded-lg border bg-background p-1 shadow-sm sticky top-2 z-20">
           <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("bold"); }} title={t("rteBold")}><Bold className="w-3.5 h-3.5" /></ToolbarBtn>
           <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("italic"); }} title={t("rteItalic")}><Italic className="w-3.5 h-3.5" /></ToolbarBtn>
           <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("underline"); }} title={t("rteUnderline")}><UnderlineIcon className="w-3.5 h-3.5" /></ToolbarBtn>
@@ -1050,7 +1058,7 @@ export function RichTextEdit({
             {/* Boutons superposes haut-droite, identiques aux images de
                 slot : rogner + supprimer. */}
             <div
-              className="absolute flex gap-1.5 z-30"
+              className="rt-chrome absolute flex gap-1.5 z-30"
               style={{ left: imgBox.left + imgBox.width - 8, top: imgBox.top + 8, transform: "translateX(-100%)" }}
             >
               <button
@@ -1077,7 +1085,7 @@ export function RichTextEdit({
                 pendant le glisser) ; au mouseup on committe, on refocus
                 l'editeur et on leve la pause. */}
             <div
-              className="absolute z-30 flex items-center gap-2 rounded-full bg-background/95 border shadow px-2.5 py-1"
+              className="rt-chrome absolute z-30 flex items-center gap-2 rounded-full bg-background/95 border shadow px-2.5 py-1"
               style={{ left: imgBox.left + imgBox.width / 2, top: imgBox.top + imgBox.height - 6, transform: "translate(-50%, -100%)" }}
               onMouseDown={() => {
                 dialogPausedRef.current = true;

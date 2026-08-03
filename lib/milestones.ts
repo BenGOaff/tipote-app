@@ -6,6 +6,7 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { createNotification } from "@/lib/notifications";
 import { sendEmail } from "@/lib/email";
+import { resolveAppUrl } from "@/lib/authLinks";
 
 type MilestoneType =
   | "first_content_published"
@@ -218,7 +219,7 @@ export async function checkMilestone(userId: string, type: MilestoneType, projec
       const { data: { user } } = await supabaseAdmin.auth.admin.getUserById(userId);
       if (!user?.email) return;
 
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.tipote.com";
+      const appUrl = resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL);
       const greeting = name ? `${name},` : (locale === "fr" ? "Félicitations !" : "Congratulations!");
 
       await sendEmail({

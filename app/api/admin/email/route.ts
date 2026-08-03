@@ -18,6 +18,7 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { isAdminEmail } from "@/lib/adminEmails";
 import { sendEmail } from "@/lib/email";
+import { resolveAppUrl } from "@/lib/authLinks";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
@@ -48,7 +49,7 @@ export async function POST(req: NextRequest) {
   if (isPreview) {
     // Generate a preview by calling sendEmail with a fake address
     // Instead, we'll construct the preview directly
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.tipote.com";
+    const appUrl = resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL);
     const prefsUrl = `${appUrl}/settings?tab=profile`;
     const preheaderHtml = preheader
       ? `<div style="display:none;font-size:1px;color:#fafafa;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;">${preheader}</div>`

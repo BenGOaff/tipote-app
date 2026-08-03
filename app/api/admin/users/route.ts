@@ -10,6 +10,7 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { isAdminEmail } from "@/lib/adminEmails";
 import { ensureUserCredits, addBonusCredits } from "@/lib/credits";
+import { resolveAppUrl } from "@/lib/authLinks";
 
 type UserRow = {
   id: string;
@@ -349,7 +350,7 @@ export async function PUT(req: NextRequest) {
           process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
           { auth: { persistSession: false } },
         );
-        const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://app.tipote.com").trim();
+        const appUrl = resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL);
         const { error: otpErr } = await anonClient.auth.signInWithOtp({
           email,
           options: {
@@ -434,7 +435,7 @@ export async function PATCH(req: NextRequest) {
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
         { auth: { persistSession: false } },
       );
-      const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://app.tipote.com").trim();
+      const appUrl = resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL);
       const { error: otpErr } = await anonClient.auth.signInWithOtp({
         email,
         options: { emailRedirectTo: `${appUrl}/auth/callback`, shouldCreateUser: false },

@@ -4486,6 +4486,9 @@
     "tieOrderHint": "In caso di parità perfetta tra due profili, vince il profilo più in alto nella lista. Sposta in alto quello che deve vincere.",
     "trancheCoverageTitle": "Fasce di punteggio da verificare",
     "trancheReachable": "Punteggi possibili in questo quiz: da {min} a {max} punti.",
+    "trancheAutoSplit": "Distribuire le fasce",
+    "trancheAutoSplitDone": "Fasce distribuite su tutta la scala di punti.",
+    "trancheNoPoints": "Nessun punto assegnato per ora: spunta le risposte che danno punti nelle tue domande.",
     "trancheGapItem": "Nessun risultato copre i punteggi da {from} a {to}: un visitatore in quella zona non vedrà alcun messaggio.",
     "trancheOverlapItem": "{a} e {b} si sovrappongono sui punteggi da {from} a {to}: vince la fascia più in alto nella lista.",
     "trancheUnbounded": "Nessuna fascia min-max è definita sui tuoi risultati: compila i campi fascia di ogni risultato.",
@@ -4675,6 +4678,7 @@
     "resultUnreachable": "Questo risultato non può mai essere assegnato",
     "resultLowChance": "Bassa probabilità di essere assegnato - {leading}/{total} domande ci portano",
     "resultCoverageHint": "Affinché un risultato venga scelto, più domande devono portarci. Considera di regolare le opzioni delle tue domande o di chiedere all'IA di riequilibrare.",
+    "resultCoverageHintTooFewOptions": "Le tue domande offrono solo {options} risposte mentre hai {results} profili. In quelle domande un visitatore non può scegliere questo profilo: gli manca una risposta. Il riequilibrio con l'IA può scriverla per te.",
     "resultRebalanceAi": "Riequilibra con l'IA",
     "resultSioTagTitle": "Tag Systeme.io per questo risultato",
     "rebalanceDialogTitle": "Riequilibra il tuo quiz",
@@ -4731,7 +4735,8 @@
     "freeTextAll": "Tutte le risposte scritte, dalla più recente alla più vecchia.",
     "freeTextShown": "Le {shown} risposte più recenti su {total}. Il pulsante Copia le prende tutte.",
     "freeTextCopy": "Copia le risposte",
-    "freeTextCopied": "Copiato"
+    "freeTextCopied": "Copiato",
+    "rebalanceAdded": "Risposta aggiunta"
   },
   "contentStrategy": {
     "title": "Strategia di contenuto",
@@ -5429,6 +5434,9 @@
       "deleteQuizDesc": "«{title}» e tutti i lead associati saranno eliminati definitivamente. Questa azione è irreversibile.",
       "quizDeleted": "Quiz eliminato",
       "deleteFailed": "Eliminazione fallita",
+      "deleteBlockedPopquiz": "Questo quiz è usato come domanda in un video interattivo. Rimuovilo dal video, poi eliminalo.",
+      "deleteBlockedPopquizNamed": "Questo quiz è usato come domanda nel video interattivo: {names}. Rimuovilo dal video, poi eliminalo.",
+      "deleteBlockedReferenced": "Questo quiz è ancora usato altrove nel tuo account, quindi non può ancora essere eliminato.",
       "createPage": "Crea una pagina",
       "untitledPage": "Pagina senza titolo",
       "pageOnline": "Online",
