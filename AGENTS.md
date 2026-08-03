@@ -590,3 +590,90 @@ La plage de points atteignable est affichée en permanence (plus seulement
 quand quelque chose cloche), et un bouton "Répartir les tranches" découpe
 la plage en tranches contiguës via `splitRangeIntoTranches()`, la MÊME
 fonction que la finalisation d'un quiz généré par l'IA.
+
+## Un `ok: false` produit TOUJOURS quelque chose à l'écran (3 août 2026)
+
+Côté Tiquiz, Béné supprime un projet : rien. Elle recommence : rien. La
+seule trace était un `400` nu dans la console. Le quiz n'était PAS
+supprimé : `popquiz_cues.quiz_id` référence `quizzes(id)` en **ON DELETE
+RESTRICT** (20260504_popquiz_module.sql), Postgres refusait, la
+transaction était annulée. Le même code vivait ici.
+
+Deux fautes empilées, et la deuxième est la plus grave : la migration
+promettait un avertissement dans l'éditeur qui n'a jamais existé, et le
+client ne montrait rien du tout dans le cas `ok: false`.
+
+**Règle : une réponse `ok: false` DOIT produire un message visible.** Un
+échec silencieux coûte plus cher que le bug qu'il masque, parce qu'il
+envoie l'utilisatrice chercher au mauvais endroit.
+
+**Règle : un refus n'est pas une panne.** `classifyDeleteError()`
+(`lib/quizDelete.ts`) traduit l'erreur Postgres en raison exploitable ;
+la route répond **409** (l'état des données s'y oppose) et jamais 400,
+avec un `reason` que le client traduit et le nom des vidéos qui
+retiennent le quiz. Le serveur renvoie la RAISON, jamais la phrase :
+l'interface existe en 7 langues.
+
+## Le chrome d'édition n'hérite jamais de l'aperçu (drame Jocelyne 3 août 2026)
+
+"Je voudrais grossir les polices sur les boutons, mais ce n'est pas
+possible, menu déroulant vide."
+
+Le menu n'était pas vide : il s'ouvrait avec ses 11 tailles, écrites en
+BLANC sur un panneau BLANC. L'éditeur est du WYSIWYG, donc la toolbar de
+`RichTextEdit` vit DANS l'aperçu, donc à l'intérieur du
+`<button class="text-white">` du CTA. Les entrées du menu n'avaient
+aucune classe de couleur : elles héritaient du blanc. Seul l'en-tête, qui
+porte `text-muted-foreground`, restait visible. Et ça n'arrivait QUE sur
+les boutons, les seuls endroits où l'aperçu force une couleur de texte.
+
+**Règle : la classe `rt-chrome` (globals.css) est posée à la RACINE de
+tout élément de chrome rendu dans l'aperçu** (toolbar, popovers, barre
+d'image). Elle neutralise les propriétés HÉRITÉES (couleur, taille,
+graisse, casse, interlettrage, alignement) : les descendants qui
+imposent la leur gagnent comme avant.
+
+**Ne pas recolorer un menu à la fois** : le prochain popover ajouté à la
+toolbar ramènerait le bug. Et **ne pas utiliser `--foreground`** : le
+`<main>` de l'aperçu le réécrit avec la couleur de texte du quiz, ce qui
+rejouerait le bug pour toute créatrice ayant choisi un texte clair. D'où
+la variable dédiée `--rt-chrome-fg`, définie en clair ET en sombre.
+Garde-fou : `tests/logic/editor-chrome.test.mts`.
+
+## Moins de réponses que de profils (escalade Véronique 3 août 2026)
+
+"Configuration 2 axes croisés pour 4 profils. Comme il n'y a que 3
+réponses possibles par question et 4 résultats, forcément ça déconne."
+
+Elle a raison. En mode profils, une voix ne peut venir que d'une option
+portant le `result_index` du profil. Une question à 3 réponses ne peut
+voter que pour 3 profils sur 4 : à cette question, le 4e est hors course.
+Répété sur tout le quiz, ça donne le bandeau rouge "Ce résultat ne peut
+jamais être attribué".
+
+Trois corrections, et les trois comptent :
+
+1. **À la source.** Le prompt de génération demande, en mode profils,
+   EXACTEMENT `resultCount` options par question de choix, avec les
+   `resultCount` result_index apparaissant chacun UNE fois.
+2. **Nommer la cause.** `analyzeOptionSupply(mode, questions, count)`
+   (`lib/quizCoherence.ts`) détecte le cas, et l'alerte dit qu'il MANQUE
+   des réponses. "Ajuste les options ou demande à l'IA de rééquilibrer"
+   était vrai mais indevinable : déplacer un `result_index` d'un profil
+   vers un autre laisse toujours un profil découvert.
+3. **Rendre l'action capable.** `/rebalance` ne savait que DÉPLACER des
+   `result_index`. Il renvoie maintenant aussi des `additions` (nouvelles
+   réponses rédigées dans la langue et le ton de la question), validées
+   côté serveur : jamais plus d'une réponse par profil, jamais un doublon
+   d'une réponse existante, jamais sur une question déjà complète.
+
+**Il n'ajoute JAMAIS de question** : leur nombre est une décision de la
+créatrice, pas un trou à combler.
+
+`analyzeOptionSupply` est gaté sur le mode : en scoring, `result_index`
+ne veut rien dire. `yes_no` et les types sans options (`free_text`,
+`rating_scale`, `star_rating`) sont exclus : deux réponses ou zéro
+réponse, c'est leur principe, pas un manque.
+
+Le module quiz de Tiquiz est jumeau : ces trois corrections y vivent
+aussi, toute évolution se porte des deux côtés.

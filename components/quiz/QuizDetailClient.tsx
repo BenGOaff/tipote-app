@@ -55,7 +55,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { interpolateText, extractResultLabel } from "@/lib/quizPersonalization";
 import { type TieConflict } from "@/lib/quizTieAnalysis";
-import { analyzeResultCoverage, analyzeResultTies, attributionMode } from "@/lib/quizCoherence";
+import { analyzeOptionSupply, analyzeResultCoverage, analyzeResultTies, attributionMode } from "@/lib/quizCoherence";
 
 /** Same demo name used across both repos to substitute {name} placeholders
  *  in the editor preview canvas — gender-neutral, short, works in fr/en. */
@@ -1203,7 +1203,16 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   // persists until the creator clicks "Apply" — the AI cannot silently
   // mutate their data.
   type RebalanceChange = { question_index: number; option_index: number; from: number; to: number };
-  type RebalanceProposal = { changes: RebalanceChange[]; rationale: string | null };
+  // Une reponse AJOUTEE a une question qui en manquait (escalade
+  // Veronique, 3 aout 2026). Le reequilibrage ne savait que DEPLACER des
+  // result_index : quand une question offre moins de reponses qu'il n'y a
+  // de profils, deplacer laisse forcement un profil sans reponse.
+  type RebalanceAddition = { question_index: number; text: string; result_index: number };
+  type RebalanceProposal = {
+    changes: RebalanceChange[];
+    additions: RebalanceAddition[];
+    rationale: string | null;
+  };
   const [rebalanceTarget, setRebalanceTarget] = useState<number | null>(null);
   const [rebalanceIntent, setRebalanceIntent] = useState("");
   const [rebalanceLoading, setRebalanceLoading] = useState(false);
@@ -1242,6 +1251,9 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           // du rebalance, sinon 400 "out of range" sur le nouveau resultat.
           questions: editQuestions.map((q) => ({
             question_text: q.question_text,
+            // Le type conditionne les ajouts : oui/non a deux reponses par
+            // nature, texte libre et echelles n'en ont aucune.
+            question_type: q.question_type ?? "multiple_choice",
             options: (q.options ?? []).map((o) => ({ text: o.text, result_index: o.result_index })),
           })),
           results: editResults.map((r) => ({ title: r.title, description: r.description })),
@@ -1254,6 +1266,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       }
       setRebalanceProposal({
         changes: Array.isArray(data.changes) ? data.changes : [],
+        additions: Array.isArray(data.additions) ? data.additions : [],
         rationale: typeof data.rationale === "string" ? data.rationale : null,
       });
     } catch (e: any) {
@@ -1263,24 +1276,39 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     }
   }, [quizId, rebalanceTarget, rebalanceIntent, rebalanceLoading, editQuestions, editResults]);
 
+  const rebalanceTotal = (rebalanceProposal?.changes.length ?? 0) + (rebalanceProposal?.additions.length ?? 0);
+
   const applyRebalance = useCallback(() => {
-    if (!rebalanceProposal || rebalanceProposal.changes.length === 0) return;
+    if (!rebalanceProposal) return;
+    const total = rebalanceProposal.changes.length + rebalanceProposal.additions.length;
+    if (total === 0) return;
     setEditQuestions((prev) => {
       const map = new Map<string, number>();
       for (const c of rebalanceProposal.changes) {
         map.set(`${c.question_index}:${c.option_index}`, c.to);
       }
-      return prev.map((q, qi) => ({
-        ...q,
-        options: q.options.map((o, oi) => {
+      // Les reponses a AJOUTER, groupees par question. Appliquees APRES
+      // les reassignations, donc les option_index des changes designent
+      // toujours les memes options.
+      const added = new Map<number, RebalanceAddition[]>();
+      for (const a of rebalanceProposal.additions) {
+        added.set(a.question_index, [...(added.get(a.question_index) ?? []), a]);
+      }
+      return prev.map((q, qi) => {
+        const options = q.options.map((o, oi) => {
           const target = map.get(`${qi}:${oi}`);
           return target !== undefined ? { ...o, result_index: target } : o;
-        }),
-      }));
+        });
+        for (const a of added.get(qi) ?? []) {
+          // `points: 1` = le poids neutre du mode profils.
+          options.push({ text: a.text, result_index: a.result_index, points: 1 });
+        }
+        return { ...q, options };
+      });
     });
-    toast.success(t("toastRebalanceApplied", { count: rebalanceProposal.changes.length }));
+    toast.success(t("toastRebalanceApplied", { count: total }));
     closeRebalance();
-  }, [rebalanceProposal, closeRebalance]);
+  }, [rebalanceProposal, t, closeRebalance]);
 
   const scrollToSection = (id: string) => {
     let el: HTMLDivElement | null = null;
@@ -2219,6 +2247,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       editQuestions.map((q) => ({
         options: q.options.map((o) => ({ result_index: o.result_index, points: o.points })),
         config: (q.config ?? null) as { multi_select?: boolean } | null,
+        question_type: q.question_type ?? null,
       })),
     [editQuestions],
   );
@@ -2230,6 +2259,16 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
 
   const tieAnalysis = useMemo(
     () => analyzeResultTies(coherenceMode, coherenceQuestions, editResults.length),
+    [coherenceMode, coherenceQuestions, editResults.length],
+  );
+
+  // Moins de reponses que de profils (escalade Veronique, 3 aout 2026).
+  // C'est la CAUSE la plus frequente du bandeau rouge, et celle que le
+  // message d'aide ne nommait pas : avec 3 reponses et 4 profils, une
+  // question ne peut voter que pour 3 profils, donc le 4e finit orphelin
+  // quoi qu'on deplace. Cf. lib/quizCoherence.ts.
+  const optionSupply = useMemo(
+    () => analyzeOptionSupply(coherenceMode, coherenceQuestions, editResults.length),
     [coherenceMode, coherenceQuestions, editResults.length],
   );
 
@@ -4759,8 +4798,21 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                               ? t("resultUnreachable")
                               : t("resultLowChance", { leading: cov.questionsLeading, total: cov.totalQuestions })}
                           </p>
+                          {/* Nommer la CAUSE, pas seulement le symptome
+                              (escalade Veronique, 3 aout 2026). "Ajuste
+                              les options ou demande a l'IA de
+                              reequilibrer" est vrai mais indevinable
+                              quand le vrai probleme est qu'il MANQUE des
+                              reponses : deplacer un result_index d'un
+                              profil a l'autre laisse toujours un profil
+                              decouvert. */}
                           <p className="text-xs opacity-90 mt-0.5">
-                            {t("resultCoverageHint")}
+                            {optionSupply.short
+                              ? t("resultCoverageHintTooFewOptions", {
+                                  options: optionSupply.minOptions,
+                                  results: optionSupply.resultCount,
+                                })
+                              : t("resultCoverageHint")}
                           </p>
                           <Button
                             type="button"
@@ -5016,12 +5068,35 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                   {rebalanceProposal.rationale && (
                     <p className="text-sm text-muted-foreground italic">&quot;{rebalanceProposal.rationale}&quot;</p>
                   )}
-                  {rebalanceProposal.changes.length === 0 ? (
+                  {rebalanceTotal === 0 ? (
                     <div className="rounded-lg border bg-muted/30 px-3 py-2 text-sm">
-                      L&apos;IA estime qu&apos;aucun changement n&apos;est nécessaire — ton quiz est déjà équilibré.
+                      L&apos;IA estime qu&apos;aucun changement n&apos;est nécessaire, ton quiz est déjà équilibré.
                     </div>
                   ) : (
                     <div className="rounded-lg border bg-muted/30 max-h-64 overflow-y-auto">
+                      {/* Les AJOUTS d'abord : ce sont des reponses qui
+                          n'existaient pas, donc ce que la creatrice doit
+                          relire en priorite avant d'accepter. */}
+                      {rebalanceProposal.additions.length > 0 && (
+                        <ul className="divide-y border-b">
+                          {rebalanceProposal.additions.map((a, i) => {
+                            const qText = cleanPlaceholdersForLabel(editQuestions[a.question_index]?.question_text).replace(/<[^>]*>/g, "").trim() || `Q${a.question_index + 1}`;
+                            const toTitle = cleanPlaceholdersForLabel(editResults[a.result_index]?.title).replace(/<[^>]*>/g, "").trim() || `${a.result_index + 1}`;
+                            return (
+                              <li key={`add-${i}`} className="px-3 py-2 text-xs">
+                                <div className="font-medium truncate">{qText}</div>
+                                <div className="mt-0.5 flex items-center gap-1.5 text-[11px]">
+                                  <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-100 font-medium shrink-0">
+                                    {t("rebalanceAdded")}
+                                  </span>
+                                  <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium shrink-0">{toTitle}</span>
+                                </div>
+                                <div className="mt-1">&quot;{a.text}&quot;</div>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
                       <ul className="divide-y">
                         {rebalanceProposal.changes.map((c, i) => {
                           const qText = cleanPlaceholdersForLabel(editQuestions[c.question_index]?.question_text).replace(/<[^>]*>/g, "").trim() || `Q${c.question_index + 1}`;
@@ -5056,9 +5131,9 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     Analyser
                   </Button>
                 ) : (
-                  <Button onClick={applyRebalance} disabled={rebalanceProposal.changes.length === 0}>
+                  <Button onClick={applyRebalance} disabled={rebalanceTotal === 0}>
                     <Sparkles className="w-4 h-4 mr-2" />
-                    Appliquer ({rebalanceProposal.changes.length} changements)
+                    Appliquer ({rebalanceTotal} changements)
                   </Button>
                 )}
               </DialogFooter>

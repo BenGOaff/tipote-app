@@ -41,7 +41,7 @@ function getModel(): string {
   // Sonnet for the rebalance decision: a one-shot semantic-fit choice across
   // the whole quiz benefits from the better model. Cost is bounded — N
   // questions × M options is a few hundred tokens of input + a small JSON
-  // out, even for a long quiz. Safety net IDs legacy via lib.
+  // out, even for a long quiz. Safety net contre les IDs legacy via lib.
   return resolveAnthropicModel(process.env.ANTHROPIC_REBALANCE_MODEL, "sonnet");
 }
 
@@ -52,8 +52,29 @@ type RebalanceChange = {
   to: number;
 };
 
+/**
+ * Une REPONSE AJOUTEE a une question qui en manquait.
+ *
+ * Escalade Veronique, 3 aout 2026 : "comme il n'y a que 3 reponses
+ * possibles par question et 4 resultats, forcement ca deconne." Elle a
+ * raison, et le reequilibrage ne pouvait rien pour elle : il ne faisait
+ * que DEPLACER des result_index d'un profil vers un autre. Quand une
+ * question offre moins de reponses qu'il n'y a de profils, deplacer
+ * laisse toujours un profil decouvert. Il faut AJOUTER.
+ *
+ * On n'ajoute jamais de QUESTION : ca changerait la longueur du quiz que
+ * la creatrice a choisie. Une reponse manquante, c'est un trou ; une
+ * question en plus, c'est une decision qui lui appartient.
+ */
+type RebalanceAddition = {
+  question_index: number;
+  text: string;
+  result_index: number;
+};
+
 type RebalanceResponse = {
   changes: RebalanceChange[];
+  additions?: RebalanceAddition[];
   rationale?: string;
 };
 
@@ -104,12 +125,16 @@ export async function POST(
   // pas sur la base (sinon "targetResultIndex out of range" des qu'un
   // resultat n'existe que dans l'editeur). Fallback : la base. L'instantane
   // ne sert QU'A construire le prompt, aucune ecriture n'en derive.
-  const cap = (v: unknown, n: number) => String(v ?? "").slice(0, n);
+  const cap = (s: unknown, n: number) => String(s ?? "").slice(0, n);
   const snapshotQuestions = Array.isArray(body.questions)
     ? body.questions.slice(0, 60).map((q) => {
         const qq = (q ?? {}) as Record<string, unknown>;
         return {
           question_text: cap(qq.question_text, 600),
+          // Le TYPE decide si un manque de reponses est un defaut :
+          // yes_no en a deux par nature, free_text / rating_scale /
+          // star_rating n'en ont aucune (retour Jocelyne, 1er aout).
+          question_type: cap(qq.question_type, 40) || "multiple_choice",
           options: Array.isArray(qq.options)
             ? qq.options.slice(0, 10).map((o) => {
                 const oo = (o ?? {}) as Record<string, unknown>;
@@ -150,7 +175,7 @@ export async function POST(
   const [{ data: dbQuestions }, { data: dbResults }] = await Promise.all([
     supabaseAdmin
       .from("quiz_questions")
-      .select("question_text, options, sort_order")
+      .select("question_text, question_type, options, sort_order")
       .eq("quiz_id", quizId)
       .order("sort_order"),
     supabaseAdmin
@@ -185,12 +210,23 @@ export async function POST(
   const questionsJson = (questions ?? []).map((q: any, qi: number) => ({
     index: qi,
     text: stripHtml(q.question_text),
+    question_type: String(q.question_type ?? "multiple_choice") || "multiple_choice",
     options: (Array.isArray(q.options) ? q.options : []).map((o: any, oi: number) => ({
       index: oi,
       text: stripHtml(o?.text),
       result_index: Number(o?.result_index ?? 0),
     })),
   }));
+
+  // Questions ou le profil cible n'a AUCUNE reponse ET ou il reste de la
+  // place pour lui en creer une. On exclut yes_no (deux reponses, c'est
+  // le principe du type) et les types sans options.
+  const roomForTarget = (q: (typeof questionsJson)[number]) =>
+    q.question_type === "multiple_choice" &&
+    q.options.length > 0 &&
+    q.options.length < R &&
+    !q.options.some((o: { result_index: number }) => o.result_index === targetResultIndex);
+  const shortQuestions = questionsJson.filter(roomForTarget);
   const resultsJson = (results ?? []).map((r: any, ri: number) => ({
     index: ri,
     title: stripHtml(r.title),
@@ -203,8 +239,8 @@ export async function POST(
   const targetTitle = resultsJson[targetResultIndex]?.title || `Résultat ${targetResultIndex + 1}`;
 
   const systemPrompt = isFr
-    ? `Tu es un expert en design de quiz de personnalité. Ton rôle : redistribuer les "result_index" des options d'un quiz EXISTANT pour qu'un résultat sous-représenté devienne atteignable, SANS modifier le texte des questions, des options ou des résultats. Tu dois choisir, parmi les options actuelles, celles qui correspondent SÉMANTIQUEMENT le mieux au résultat cible et leur réassigner result_index. Garde aussi un équilibre raisonnable pour les autres résultats — chaque résultat doit avoir au moins ${expected} questions qui mènent à lui (au moins une option avec son result_index).`
-    : `You are a personality-quiz design expert. Your job: redistribute the "result_index" of options on an EXISTING quiz so an under-represented result becomes reachable, WITHOUT touching any question, option, or result text. Pick the options that semantically fit the target result best and reassign their result_index. Keep a reasonable balance across all results — every result should have at least ${expected} questions leading to it (at least one option carrying its result_index).`;
+    ? `Tu es un expert en design de quiz de personnalité. Ton rôle : rendre atteignable un résultat sous-représenté d'un quiz EXISTANT, SANS modifier le texte des questions, des options ou des résultats existants. Deux leviers, dans cet ordre : (1) réassigner le "result_index" des options qui correspondent SÉMANTIQUEMENT le mieux au résultat cible ; (2) quand une question offre moins de réponses qu'il n'y a de profils, AJOUTER la réponse qui manque au profil cible, rédigée dans la langue, le ton et la forme d'adresse du quiz. Garde un équilibre raisonnable pour les autres résultats — chaque résultat doit avoir au moins ${expected} questions qui mènent à lui.`
+    : `You are a personality-quiz design expert. Your job: make an under-represented result reachable on an EXISTING quiz, WITHOUT rewriting any existing question, option, or result text. Two levers, in this order: (1) reassign the "result_index" of the options that semantically fit the target result best; (2) when a question offers fewer answers than there are profiles, ADD the answer the target profile is missing, written in the quiz's language, tone and address form. Keep a reasonable balance across all results — every result should have at least ${expected} questions leading to it.`;
 
   const userPrompt = isFr
     ? `Quiz actuel (${N} questions, ${R} résultats) :
@@ -217,17 +253,24 @@ ${JSON.stringify(resultsJson, null, 2)}
 
 OBJECTIF : faire en sorte que le résultat à l'index ${targetResultIndex} ("${targetTitle}") soit atteignable. Il doit recevoir au moins ${expected} options pointant vers lui (idéalement une option par question minimum sur ${expected} questions différentes).
 
-${intent ? `INTENTION DE L'AUTRICE : "${intent}"\n` : ""}RÈGLES STRICTES :
-- NE TOUCHE PAS au texte des questions, des options, ni des résultats.
-- NE renvoie QUE les CHANGEMENTS (option dont le result_index doit changer).
-- Pour chaque changement, indique : question_index, option_index, from (l'ancien result_index), to (le nouveau).
+${intent ? `INTENTION DE L'AUTRICE : "${intent}"\n` : ""}${shortQuestions.length > 0 ? `RÉPONSES MANQUANTES :
+Ces questions offrent moins de réponses qu'il n'y a de profils (${R}), et aucune ne mène au profil cible. Un visiteur ne peut donc PAS choisir ce profil à ces questions : index ${shortQuestions.map((q) => q.index).join(", ")}.
+Pour chacune, AJOUTE une réponse qui mène au profil cible, dans "additions". Le texte doit être écrit dans la même langue, le même ton et la même forme d'adresse que les réponses existantes de cette question, avoir la même longueur environ, et être une vraie alternative plausible (jamais une reformulation d'une réponse déjà présente, jamais le nom du profil).
+` : ""}RÈGLES STRICTES :
+- NE RÉÉCRIS PAS le texte des questions, des options existantes, ni des résultats.
+- Dans "changes", ne mets QUE les options dont le result_index doit changer : question_index, option_index, from (l'ancien result_index), to (le nouveau).
+- Dans "additions", ne mets QUE des réponses NOUVELLES : question_index, text, result_index.
+- N'ajoute JAMAIS de question. Le nombre de questions est un choix de l'autrice.
 - Choisis les options qui correspondent sémantiquement au résultat cible (et aux autres si tu en réassignes).
-- Garde tous les résultats atteignables — pas seulement le résultat cible.
+- Garde tous les résultats atteignables, pas seulement le résultat cible.
 
 Réponds STRICTEMENT en JSON valide, sans texte autour, dans ce format exact :
 {
   "changes": [
     { "question_index": 0, "option_index": 1, "from": 0, "to": ${targetResultIndex} }
+  ],
+  "additions": [
+    { "question_index": 2, "text": "La réponse qui manquait", "result_index": ${targetResultIndex} }
   ],
   "rationale": "Une phrase courte expliquant la logique générale."
 }`
@@ -241,17 +284,24 @@ ${JSON.stringify(resultsJson, null, 2)}
 
 GOAL: make the result at index ${targetResultIndex} ("${targetTitle}") reachable. It must receive at least ${expected} options pointing to it (ideally at least one option each on ${expected} different questions).
 
-${intent ? `AUTHOR INTENT: "${intent}"\n` : ""}STRICT RULES:
-- DO NOT touch the question, option, or result text.
-- ONLY return CHANGES (options whose result_index needs to change).
-- For each change, return: question_index, option_index, from (the previous result_index), to (the new one).
+${intent ? `AUTHOR INTENT: "${intent}"\n` : ""}${shortQuestions.length > 0 ? `MISSING ANSWERS:
+These questions offer fewer answers than there are profiles (${R}), and none of them leads to the target profile, so a visitor simply cannot pick it there: index ${shortQuestions.map((q) => q.index).join(", ")}.
+For each one, ADD an answer leading to the target profile, in "additions". Write it in the same language, tone and address form as that question's existing answers, at roughly the same length, as a genuine plausible alternative (never a rewording of an existing answer, never the profile's name).
+` : ""}STRICT RULES:
+- DO NOT rewrite existing question, option, or result text.
+- In "changes", return ONLY options whose result_index must change: question_index, option_index, from (the previous result_index), to (the new one).
+- In "additions", return ONLY brand-new answers: question_index, text, result_index.
+- NEVER add a question. How many questions there are is the author's choice.
 - Pick options that semantically match the target result (and any others you reassign).
-- Keep every result reachable — not just the target.
+- Keep every result reachable, not just the target.
 
 Respond STRICTLY with valid JSON, no surrounding text, in this exact shape:
 {
   "changes": [
     { "question_index": 0, "option_index": 1, "from": 0, "to": ${targetResultIndex} }
+  ],
+  "additions": [
+    { "question_index": 2, "text": "The answer that was missing", "result_index": ${targetResultIndex} }
   ],
   "rationale": "One short sentence explaining the overall logic."
 }`;
@@ -270,7 +320,9 @@ Respond STRICTLY with valid JSON, no surrounding text, in this exact shape:
       signal: ctrl.signal,
       body: JSON.stringify({
         model: getModel(),
-        max_tokens: 2000,
+        // 3000 depuis que la reponse peut porter des ajouts (du texte
+        // redige), et plus seulement des paires d'entiers.
+        max_tokens: 3000,
         temperature: 0.3, // Low temp — we want consistent semantic mapping, not creativity.
         system: systemPrompt,
         messages: [{ role: "user", content: userPrompt }],
@@ -344,9 +396,43 @@ Respond STRICTLY with valid JSON, no surrounding text, in this exact shape:
     }
   }
 
+  // Meme severite pour les AJOUTS. Une reponse inventee est du contenu
+  // que le visiteur va lire : on n'en laisse passer aucune qui soit vide,
+  // hors sujet, ou qui deborde du nombre de profils.
+  const safeAdditions: RebalanceAddition[] = [];
+  const addedPerQuestion = new Map<number, number>();
+  if (Array.isArray(parsed.additions)) {
+    for (const raw of parsed.additions) {
+      const qi = Number((raw as any).question_index);
+      const ri = Number((raw as any).result_index);
+      const text = String((raw as any).text ?? "").replace(/<[^>]*>/g, "").trim().slice(0, 300);
+      if (!text) continue;
+      if (!Number.isInteger(qi) || qi < 0 || qi >= N) continue;
+      if (!Number.isInteger(ri) || ri < 0 || ri >= R) continue;
+      const q = questionsJson[qi];
+      if (q.question_type !== "multiple_choice" || q.options.length === 0) continue;
+      // Uniquement la ou il y avait vraiment un trou : pas de reponse en
+      // plus sur une question qui propose deja un choix par profil.
+      if (q.options.length >= R) continue;
+      // Et pas une deuxieme reponse vers le profil cible s'il y menait deja.
+      if (q.options.some((o: { result_index: number }) => o.result_index === ri)) continue;
+      // Jamais au dela d'une reponse par profil.
+      const already = addedPerQuestion.get(qi) ?? 0;
+      if (q.options.length + already >= R) continue;
+      // Ni un doublon d'une reponse existante, ni d'une reponse deja
+      // ajoutee dans le meme lot.
+      const norm = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+      if (q.options.some((o: { text: string }) => norm(o.text) === norm(text))) continue;
+      if (safeAdditions.some((a) => a.question_index === qi && norm(a.text) === norm(text))) continue;
+      safeAdditions.push({ question_index: qi, text, result_index: ri });
+      addedPerQuestion.set(qi, already + 1);
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     changes: safeChanges,
+    additions: safeAdditions,
     rationale: typeof parsed.rationale === "string" ? parsed.rationale.slice(0, 500) : null,
     target_result_index: targetResultIndex,
   });

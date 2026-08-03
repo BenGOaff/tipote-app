@@ -4678,6 +4678,7 @@
     "resultUnreachable": "Este resultado nunca puede asignarse",
     "resultLowChance": "Pocas probabilidades de asignarse - {leading}/{total} preguntas llevan ahí",
     "resultCoverageHint": "Para que un resultado sea elegido, varias preguntas deben llevar a él. Considera ajustar las opciones de tus preguntas o pedir a la IA que reequilibre.",
+    "resultCoverageHintTooFewOptions": "Tus preguntas solo ofrecen {options} respuestas y tienes {results} perfiles. En esas preguntas el visitante no puede elegir este perfil: le falta una respuesta propia. El reequilibrio con IA puede redactarla por ti.",
     "resultRebalanceAi": "Reequilibrar con IA",
     "resultSioTagTitle": "Etiqueta Systeme.io para este resultado",
     "rebalanceDialogTitle": "Reequilibrar tu quiz",
@@ -4734,7 +4735,8 @@
     "freeTextAll": "Todas las respuestas escritas, de la más reciente a la más antigua.",
     "freeTextShown": "Las {shown} respuestas más recientes de {total}. El botón Copiar las coge todas.",
     "freeTextCopy": "Copiar las respuestas",
-    "freeTextCopied": "Copiado"
+    "freeTextCopied": "Copiado",
+    "rebalanceAdded": "Respuesta añadida"
   },
   "contentStrategy": {
     "title": "Estrategia de contenido",
@@ -5432,6 +5434,9 @@
       "deleteQuizDesc": "«{title}» y todos sus leads asociados se eliminarán permanentemente. Esta acción es irreversible.",
       "quizDeleted": "Quiz eliminado",
       "deleteFailed": "Error al eliminar",
+      "deleteBlockedPopquiz": "Este quiz se usa como pregunta en un vídeo interactivo. Quítalo del vídeo y luego elimínalo.",
+      "deleteBlockedPopquizNamed": "Este quiz se usa como pregunta en el vídeo interactivo: {names}. Quítalo del vídeo y luego elimínalo.",
+      "deleteBlockedReferenced": "Este quiz todavía se usa en otro lugar de tu cuenta, por eso no se puede eliminar aún.",
       "createPage": "Crear una página",
       "untitledPage": "Página sin título",
       "pageOnline": "En línea",
