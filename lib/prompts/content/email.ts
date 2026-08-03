@@ -75,7 +75,7 @@ function clean(s: unknown, max = 1200) {
 
 function formatPriceFromMinMax(priceMin: number | null, priceMax: number | null): string {
   if (priceMin === null && priceMax === null) return "";
-  if (priceMin !== null && priceMax !== null) return priceMin === priceMax ? `${priceMin}€` : `${priceMin}–${priceMax}€`;
+  if (priceMin !== null && priceMax !== null) return priceMin === priceMax ? `${priceMin}€` : `${priceMin}-${priceMax}€`;
   if (priceMin !== null) return `${priceMin}€`;
   if (priceMax !== null) return `${priceMax}€`;
   return "";
@@ -197,7 +197,7 @@ export function buildEmailPrompt(params: EmailPromptParams): string {
   lines.push(`Tutoiement/Vouvoiement: ${formality}.`);
   lines.push("");
   // Blair Warren persuasion framework
-  lines.push("CADRE DE PERSUASION (Blair Warren) — intègre naturellement dans chaque email :");
+  lines.push("CADRE DE PERSUASION (Blair Warren), intègre naturellement dans chaque email :");
   lines.push("1. Encourage les rêves du lecteur (sa transformation est possible).");
   lines.push("2. Justifie ses échecs passés (il n'avait pas la bonne méthode).");
   lines.push("3. Apaise ses peurs (réassurance concrète).");
@@ -304,7 +304,7 @@ export function buildEmailPrompt(params: EmailPromptParams): string {
     manual: lm.manual ?? null,
   });
 
-  lines.push("Type: Onboarding (3 emails) — Know / Like / Trust + délivrance du lead magnet.");
+  lines.push("Type: Onboarding (3 emails) : Know / Like / Trust + délivrance du lead magnet.");
   lines.push("Objectif: accueillir, créer un lien, donner confiance, et faire consommer le lead magnet.");
   lines.push("Rends 3 emails.");
   lines.push("Email 1: Bienvenue + délivrance lead magnet + cadrage + bénéfices + attentes + micro-CTA (répondre/whitelist).");

@@ -113,7 +113,7 @@ export function buildArticlePrompt(params: ArticlePromptParams): string {
   lines.push("Règles de format (STRICT):");
   lines.push(`- Texte en ${language}.`);
   lines.push("- Mets UNE ligne vide après chaque paragraphe.");
-  lines.push("- Intertitres autorisés (ex: 'Partie 1 — ...').");
+  lines.push("- Intertitres autorisés (ex: 'Partie 1 : ...').");
   lines.push("- Tu n'utilises PAS de markdown, sauf UNE exception: tu mets les mots-clés SEO en gras avec **mot clé**.");
   lines.push("- Ne mets jamais d'autres éléments markdown (pas de #, pas de listes numérotées '1.', pas de tableaux).");
   lines.push("- Évite les listes à puces. Si nécessaire, maximum 6 puces et format '•' (pas de markdown).");
@@ -167,7 +167,7 @@ export function buildArticlePrompt(params: ArticlePromptParams): string {
   }
 
   if (step === "plan") {
-    lines.push("TA MISSION (ETAPE 1 — PLAN UNIQUEMENT):");
+    lines.push("TA MISSION (ETAPE 1 : PLAN UNIQUEMENT):");
     lines.push("- Tu ne rédiges PAS l'article.");
     lines.push("- Tu proposes un plan optimisé SEO pour viser le top 3 + featured snippet.");
     lines.push("- Tu proposes une structure claire et une promesse forte.");
@@ -196,7 +196,7 @@ export function buildArticlePrompt(params: ArticlePromptParams): string {
   }
 
   // step === "write"
-  lines.push("TA MISSION (ETAPE 2 — REDACTION COMPLETE):");
+  lines.push("TA MISSION (ETAPE 2 : REDACTION COMPLETE):");
   lines.push("- Tu rédiges l'article complet à partir du plan validé ci-dessous.");
   lines.push("- Tu respectes strictement les volumes minimums:");
   lines.push("  - Introduction: 150 mots minimum");

@@ -235,7 +235,7 @@ export function buildOfferPrompt(params: OfferPromptParams): string {
 
   // ✅ Posture V2 (dynamique par catégorie d’offre)
   const roleAndPosture = [
-    "RÔLE & POSTURE (V2 — OFFRES / STRUCTURATION BUSINESS) :",
+    "RÔLE & POSTURE (V2 : OFFRES / STRUCTURATION BUSINESS) :",
     `Tu es ${catCtx.roleDesc}.`,
     `Tu structures des ${catCtx.label}s alignées avec la réalité du marché, la maturité de l’audience et les objectifs business.`,
     "Tu vises une valeur perçue exceptionnelle (niveau premium), sans blabla ni remplissage.",
@@ -435,7 +435,7 @@ export function buildOfferPrompt(params: OfferPromptParams): string {
                 "- Paliers de prix :",
                 ...sourceOffer.pricing.map(
                   (t, i) =>
-                    `  ${i + 1}. ${t.label || "Palier"} : ${t.price}${t.period ? ` (${t.period})` : ""}${t.description ? ` — ${t.description}` : ""}`,
+                    `  ${i + 1}. ${t.label || "Palier"} : ${t.price}${t.period ? ` (${t.period})` : ""}${t.description ? ` : ${t.description}` : ""}`,
                 ),
               ]
             : []),
@@ -549,8 +549,8 @@ function buildOfferImprovementPrompt(params: OfferPromptParams): string {
       : "L'utilisateur veut améliorer cette offre globalement. Identifie les axes les plus impactants.",
     "",
     "CONTEXTE À EXPLOITER :",
-    "- Persona client idéal (douleurs, désirs, objections, vocabulaire) — injecté par l'API.",
-    "- Business profile + business plan (si disponibles) — utilise-les UNIQUEMENT pour comprendre le contexte global, PAS pour mélanger les offres.",
+    "- Persona client idéal (douleurs, désirs, objections, vocabulaire) : injecté par l'API.",
+    "- Business profile + business plan (si disponibles) : utilise-les UNIQUEMENT pour comprendre le contexte global, PAS pour mélanger les offres.",
     "- Ressources Tipote Knowledge (si présentes).",
     "- Tu croises ces infos avec l'offre pour identifier les gaps et les opportunités.",
     salesPageText

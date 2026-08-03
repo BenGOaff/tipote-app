@@ -169,7 +169,7 @@ export function buildVideoScriptPrompt(params: VideoScriptPromptParams): string 
     "- Tu ajoutes 2-3 \"pattern interrupts\" (surprise, contradiction, mini-histoire, analogie).",
     "- CTA: naturel et non pushy.",
     "",
-    "CADRE DE PERSUASION (Blair Warren) — intègre naturellement :",
+    "CADRE DE PERSUASION (Blair Warren), intègre naturellement :",
     "1. Encourage les rêves (la transformation est possible).",
     "2. Justifie les échecs (pas la bonne méthode avant).",
     "3. Apaise les peurs (réassurance).",

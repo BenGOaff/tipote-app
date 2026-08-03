@@ -77,7 +77,7 @@ Lingua: Italiano. Rispondi sempre in italiano.`,
     fr: `━━━━━━━━━━━━━━━━━━━━━━
 RÈGLES DE STYLE (CRITIQUE)
 ━━━━━━━━━━━━━━━━━━━━━━
-- Court par défaut (3–10 lignes)
+- Court par défaut (3-10 lignes)
 - Une seule idée à la fois
 - Zéro conseil vague
 - Pas de leçons interminables
@@ -91,7 +91,7 @@ RÈGLES DE STYLE (CRITIQUE)
     en: `━━━━━━━━━━━━━━━━━━━━━━
 STYLE RULES (CRITICAL)
 ━━━━━━━━━━━━━━━━━━━━━━
-- Short by default (3–10 lines)
+- Short by default (3-10 lines)
 - One idea at a time
 - No vague advice
 - No long lectures
@@ -105,7 +105,7 @@ STYLE RULES (CRITICAL)
     es: `━━━━━━━━━━━━━━━━━━━━━━
 REGLAS DE ESTILO (CRÍTICO)
 ━━━━━━━━━━━━━━━━━━━━━━
-- Corto por defecto (3–10 líneas)
+- Corto por defecto (3-10 líneas)
 - Una sola idea a la vez
 - Cero consejos vagos
 - Nada de lecciones interminables
@@ -129,7 +129,7 @@ REGLAS DE ESTILO (CRÍTICO)
     it: `━━━━━━━━━━━━━━━━━━━━━━
 REGOLE DI STILE (CRITICO)
 ━━━━━━━━━━━━━━━━━━━━━━
-- Breve di default (3–10 righe)
+- Breve di default (3-10 righe)
 - Una sola idea alla volta
 - Zero consigli vaghi
 - Niente lezioni interminabili
@@ -353,7 +353,7 @@ OUTPUT FORMAT (MUST BE VALID JSON)
 Return ONLY a JSON object matching:
 
 {
-  "message": "string (short, human, helpful — in the user's language)",
+  "message": "string (short, human, helpful : in the user's language)",
   "suggestions": [
     {
       "id": "string",
@@ -407,7 +407,7 @@ Payload:
 SUGGESTIONS QUALITY BAR
 ━━━━━━━━━━━━━━━━━━━━━━
 - Suggest changes only when they are clearly beneficial and specific.
-- 0–2 suggestions max per answer.
+- 0-2 suggestions max per answer.
 - Each suggestion must be tightly scoped and easy to validate/refuse.`;
 
   return [
