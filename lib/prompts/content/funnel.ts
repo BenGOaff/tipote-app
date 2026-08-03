@@ -94,7 +94,7 @@ function buildPremiumJsonPrompt(params: FunnelPromptParams): string {
   lines.push("");
 
   // ---- CADRE DE PERSUASION Blair Warren ----
-  lines.push("CADRE DE PERSUASION (Blair Warren — fil conducteur du copywriting) :");
+  lines.push("CADRE DE PERSUASION (Blair Warren : fil conducteur du copywriting) :");
   lines.push("Le contenu doit naturellement intégrer ces 5 leviers psychologiques :");
   lines.push("1. ENCOURAGER LES RÊVES : Montre au prospect que son rêve est atteignable. Peins le tableau de sa transformation.");
   lines.push("2. JUSTIFIER LES ÉCHECS : Explique pourquoi ses tentatives passées n'ont pas fonctionné (pas la bonne méthode/le bon outil).");
@@ -106,15 +106,15 @@ function buildPremiumJsonPrompt(params: FunnelPromptParams): string {
   // ---- 5 CRITÈRES D'UN CONTENU DE VALEUR ----
   lines.push("5 CRITÈRES DE CONTENU (chaque texte doit cocher les 5) :");
   lines.push("- UTILE : Bénéfice concret et immédiat pour le lecteur.");
-  lines.push("- SPÉCIFIQUE : Une stratégie, un outil, une méthode précise — jamais de vague.");
+  lines.push("- SPÉCIFIQUE : Une stratégie, un outil, une méthode précise : jamais de vague.");
   lines.push("- CIBLÉ : S'adresse à UNE seule audience avec SES mots, SES problèmes, SES rêves.");
   lines.push("- APPLICABLE : Le lecteur repart avec une action concrète.");
-  lines.push("- UNIQUE : Reflète la personnalité de l'auteur — pas un contenu interchangeable.");
+  lines.push("- UNIQUE : Reflète la personnalité de l'auteur : pas un contenu interchangeable.");
   lines.push("");
 
   lines.push("RÈGLES CRITIQUES :");
   lines.push("- ZÉRO markdown (pas de **, ##, >, -, etc.).");
-  lines.push("- ZÉRO balise HTML (<br>, <span>, <strong>, <p>, <div>, etc.) — texte brut uniquement.");
+  lines.push("- ZÉRO balise HTML (<br>, <span>, <strong>, <p>, <div>, etc.) : texte brut uniquement.");
   lines.push("- ZÉRO emoji.");
   lines.push("- Pas de retours à la ligne dans les strings (une ligne par champ).");
   lines.push("- Ne mets pas de guillemets typographiques. Utilise \" si nécessaire.");
@@ -205,7 +205,7 @@ function buildLegacyTextPrompt(params: FunnelPromptParams): string {
 
   const formalityLegacy = params.formality === "vous" ? "vous" : "tu";
 
-  lines.push(`${pageName} — Copywriting premium.`);
+  lines.push(`${pageName} : Copywriting premium.`);
   lines.push("IMPORTANT: Retourne uniquement le contenu final, sans explication, sans markdown.");
   if (params.language && params.language !== "fr") {
     lines.push(`LANGUE OBLIGATOIRE: ${params.language}. Tout le contenu doit être rédigé dans cette langue.`);
