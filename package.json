@@ -12,7 +12,7 @@
     "build": "next build",
     "postbuild": "node scripts/postbuild-standalone-static.cjs",
     "start": "next start",
-    "test:logic": "node --test --experimental-strip-types \"tests/logic/*.test.mts\"",
+    "test:logic": "node --test --experimental-strip-types --import ./tests/logic/register-alias.mjs \"tests/logic/*.test.mts\"",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
