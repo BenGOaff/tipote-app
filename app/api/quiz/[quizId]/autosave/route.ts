@@ -98,6 +98,18 @@ export async function PUT(req: NextRequest, context: RouteContext) {
   }
 }
 
+// POST = STRICTEMENT LA MEME CHOSE QUE PUT, et ce n'est pas un doublon
+// de confort. Quand la creatrice quitte la page, le hook envoie la
+// derniere sauvegarde via `navigator.sendBeacon`, la seule methode que
+// le navigateur garantit d'acheminer pendant un dechargement. Or
+// sendBeacon envoie TOUJOURS un POST, on ne peut pas le lui faire
+// changer. La route ne connaissant que PUT, chaque depart de page
+// rendait 405 et la derniere sauvegarde etait perdue. Pire : le code
+// voit le beacon comme parti (`beaconOk === true`) et ne tente donc meme
+// pas le repli en PUT. Perte silencieuse, a chaque fois.
+// (405 vu par Bene dans sa console cote Tiquiz, 3 aout 2026.)
+export const POST = PUT;
+
 export async function DELETE(_req: NextRequest, context: RouteContext) {
   try {
     const { quizId } = await context.params;
