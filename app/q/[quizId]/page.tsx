@@ -18,6 +18,7 @@ import { TrackingPixels } from "@/components/tracking/TrackingPixels";
 import { resolveEffectivePixels } from "@/lib/effectivePixels";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { stripHtml } from "@/lib/richText";
+import { toShareLine } from "@/lib/quiz/shareText";
 import { interpolateText } from "@/lib/quizPersonalization";
 import { buildCanonicalUrl, fetchOwnerBranding } from "@/lib/publicUrl";
 
@@ -96,7 +97,7 @@ export async function generateMetadata({ params, searchParams }: RouteContext): 
     // seul l'apercu du lien est visible. Le message de partage du createur
     // sert donc de description d'apercu par defaut (retour Jocelyne
     // 28 juillet 2026) ; une description OG explicite garde la priorite.
-    const shareMsgPlain = stripHtml((data as { share_message?: string | null }).share_message).trim();
+    const shareMsgPlain = toShareLine((data as { share_message?: string | null }).share_message);
     const introPlain = stripHtml(data.introduction).slice(0, 160);
     const description = (ogDescPlain || shareMsgPlain || introPlain).trim() || undefined;
 
