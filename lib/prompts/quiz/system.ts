@@ -4,7 +4,7 @@
 
 import { buildLanguageDirective } from "@/lib/quizLanguages";
 import { slugifyAxisLabel } from "@/lib/quizScoring";
-import { HOOK_CRAFT_BLOCK, RESULT_BEATS_BLOCK } from "@/lib/prompts/quiz/copywriting";
+import { HOOK_CRAFT_BLOCK, RESULT_BEATS_BLOCK, estimateQuizMinutes, introSubtitleBlock } from "@/lib/prompts/quiz/copywriting";
 
 // Bloc d'écriture NATURELLE 2026 — l'arme anti « ça fait IA ». Réutilisé par la
 // génération de quiz ET de sondage. Cible précisément les tics qui trahissent un
@@ -13,11 +13,11 @@ import { HOOK_CRAFT_BLOCK, RESULT_BEATS_BLOCK } from "@/lib/prompts/quiz/copywri
 // valent pour toutes les langues — l'IA les transpose.)
 export const NATURAL_WRITING_BLOCK = `EXIGENCE D'ÉCRITURE - NATUREL, PAS "IA" (CRITIQUE) :
 
-RÈGLE ABSOLUE #1 : N'UTILISE JAMAIS de tiret cadratin (em-dash : —) ni de tiret demi-cadratin (en-dash : –). Ces caractères sont la signature stylistique #1 des LLM et révèlent immédiatement un texte généré. Pour une incise, utilise une virgule, deux-points, parenthèses, ou une nouvelle phrase. Pour un bullet, utilise un simple tiret hyphen (-). Cette règle est non négociable et passe avant tout le reste.
+RÈGLE ABSOLUE #1 : N'UTILISE JAMAIS de tiret cadratin (em-dash : :) ni de tiret demi-cadratin (en-dash : -). Ces caractères sont la signature stylistique #1 des LLM et révèlent immédiatement un texte généré. Pour une incise, utilise une virgule, deux-points, parenthèses, ou une nouvelle phrase. Pour un bullet, utilise un simple tiret hyphen (-). Cette règle est non négociable et passe avant tout le reste.
 
 On doit lire un humain expert, pas un assistant. Écris comme on parle, avec du rythme et des aspérités.
 À BANNIR absolument (marqueurs typiques d'un texte IA) :
-- Les tirets cadratins (—) et demi-cadratins (–) sous TOUTES leurs formes - voir règle #1 ci-dessus.
+- Les tirets cadratins (:) et demi-cadratins (-) sous TOUTES leurs formes - voir règle #1 ci-dessus.
 - Le patron "Ce n'est pas X, c'est Y" / "Il ne s'agit pas de X, mais de Y".
 - La sur-ponctuation décorative.
 - Les verbes/mots brochure : "optimiser", "booster", "libérer ton potentiel", "passer au niveau supérieur", "révolutionner", "plonger dans", "à l'ère de", "dans un monde où", "découvrez".
@@ -134,24 +134,24 @@ export function buildQuizGenerationPrompt(params: QuizPromptParams): {
 
   const objectiveEntry = QUIZ_OBJECTIVES.find((o) => o.value === objective);
   const objectiveLabel = objectiveEntry
-    ? `${objectiveEntry.labelFr} — ${objectiveEntry.desc}`
+    ? `${objectiveEntry.labelFr} : ${objectiveEntry.desc}`
     : objective;
 
   const system = `Tu es un expert en création de quiz viraux et à forte conversion, spécialisé en lead generation, copywriting et marketing digital.
 
 RÔLE : Tu crées des quiz engageants conçus pour capturer des emails via une page de capture. Le quiz doit susciter la curiosité et inciter le visiteur à donner son adresse email pour voir ses résultats, recevoir une analyse personnalisée ou obtenir une ressource bonus.
 
-CONTEXTE PRODUIT : Ce quiz est créé sur Tipote, la plateforme qui permet aux entrepreneurs, coachs et créateurs de contenu de créer des quiz engageants pour qualifier leurs prospects, capturer des leads et booster leurs ventes — sans compétences techniques. Chaque quiz doit refléter l'expertise et l'unicité du créateur, jamais paraître générique ou automatisé.
+CONTEXTE PRODUIT : Ce quiz est créé sur Tipote, la plateforme qui permet aux entrepreneurs, coachs et créateurs de contenu de créer des quiz engageants pour qualifier leurs prospects, capturer des leads et booster leurs ventes : sans compétences techniques. Chaque quiz doit refléter l'expertise et l'unicité du créateur, jamais paraître générique ou automatisé.
 
 LANGUE : Tout le contenu du quiz (titre, introduction, questions, options, résultats, CTA, share_message) DOIT être rédigé en ${langLabel}.
 
 OBJECTIF STRATÉGIQUE : ${objectiveLabel}
 ${intention ? `\nINTENTION BUSINESS DU CRÉATEUR : ${intention}\nChaque résultat doit amener le participant, de manière naturelle et personnalisée, vers CETTE intention business. Le CTA de chaque résultat doit servir cet objectif concret (et non un CTA générique).\n` : ""}
-FORMAT : ${isShort ? "Quiz COURT (3 à 5 questions) → conversions rapides, légèreté, curiosité maximale." : "Quiz LONG (6 à 10 questions) → plus de valeur, meilleur diagnostic, profondeur d'analyse."}
+FORMAT : ${isShort ? "Quiz COURT → conversions rapides, légèreté, curiosité maximale." : "Quiz LONG → plus de valeur, meilleur diagnostic, profondeur d'analyse."} Le nombre exact de questions est donné plus bas et fait foi.
 
 ${isScoring ? `TYPE DE QUIZ : SCORÉ (diagnostic). Le participant obtient un SCORE global (affiché en jauge et en pourcentage)${scoringAxes.length > 0 ? " et un score par axe (barres)" : ""}, pas un profil de personnalité. Les résultats sont des TRANCHES de score ordonnées, du diagnostic le plus fragile au plus avancé. N'écris JAMAIS de bornes chiffrées, de notes ni de pourcentages dans les textes (titres, descriptions, insights) : les tranches exactes sont calculées automatiquement par la plateforme.${axesDirective}` : `SEGMENTATION : ${segmentation === "level" ? "Par NIVEAU (débutant, intermédiaire, expert…). Le scoring classe le participant selon son degré de maîtrise." : "Par PROFIL (types de personnalité, styles, archétypes…). Le scoring révèle un profil valorisant et personnalisé."}`}
 ${(askFirstName || askGender) ? `
-PERSONNALISATION DYNAMIQUE — OBLIGATOIRE :
+PERSONNALISATION DYNAMIQUE : OBLIGATOIRE :
 Le quiz capture ${askFirstName && askGender ? "le prénom ET le genre" : askFirstName ? "le prénom" : "le genre"} du visiteur avant la première question. Tu DOIS produire des textes qui exploitent ces variables dans les questions, options, résultats et CTA.
 
 Syntaxe exacte à utiliser (ne JAMAIS l'échapper, ne JAMAIS la traduire) :
@@ -164,9 +164,9 @@ ${askFirstName ? "  • {name} → sera remplacé par le prénom du visiteur (ex
     Pour l'arabe, produire les mêmes 3 variantes avec les verbes et adjectifs correctement accordés (ex : "{جاهز|جاهزة|جاهز}").
 ` : ""}
 Règles :
-- Le texte doit rester naturel et lisible — pas plus de 1 placeholder de genre par phrase courte.
-- N'utilise JAMAIS la syntaxe pour les placeholders factices (comme \`{choix}\` ou \`{option}\`) — uniquement pour le prénom et les 3 variantes de genre.
-- Les intros, share_message, bonus n'ont pas besoin des variables — focalise-toi sur questions, options, titres + descriptions de résultats, et CTA par résultat.
+- Le texte doit rester naturel et lisible : pas plus de 1 placeholder de genre par phrase courte.
+- N'utilise JAMAIS la syntaxe pour les placeholders factices (comme \`{choix}\` ou \`{option}\`) : uniquement pour le prénom et les 3 variantes de genre.
+- Les intros, share_message, bonus n'ont pas besoin des variables : focalise-toi sur questions, options, titres + descriptions de résultats, et CTA par résultat.
 ` : ""}
 PRINCIPES CRÉATIFS :
 - Chaque quiz doit donner une VRAIE valeur : insight, prise de conscience, révélation.
@@ -181,8 +181,10 @@ ${NATURAL_WRITING_BLOCK}
 
 ${HOOK_CRAFT_BLOCK}
 
+${introSubtitleBlock({ formality, minutes: estimateQuizMinutes(questionCount), bonus })}
+
 ${RESULT_BEATS_BLOCK}
-${brandVoice ? `\nVOIX DE LA MARQUE — écris DANS cette voix (ne recopie jamais ces éléments tels quels, inspire-t'en pour le ton et les angles) :\n${brandVoice}\n` : ""}${copyHint ? `\n${copyHint}\n` : ""}
+${brandVoice ? `\nVOIX DE LA MARQUE : écris DANS cette voix (ne recopie jamais ces éléments tels quels, inspire-t'en pour le ton et les angles) :\n${brandVoice}\n` : ""}${copyHint ? `\n${copyHint}\n` : ""}
 FORME D'ADRESSE : ${formality === "vous" ? "VOUVOYER le lecteur dans TOUT le contenu. Utiliser systématiquement « vous » et ses formes associées." : "TUTOYER le lecteur dans TOUT le contenu. Utiliser systématiquement « tu » et ses formes associées."}
 
 STRATÉGIE SELON LE FORMAT :
@@ -190,13 +192,13 @@ ${isShort
     ? `- Quiz court → Maximiser la curiosité et la légèreté.
 - Chaque question doit donner envie de voir la suivante.
 - Les résultats sont punchy, valorisants, avec un CTA rapide.
-- L'introduction doit accrocher en 1-2 phrases max.`
+- L'introduction tient en 1-2 phrases (cf. la règle SOUS-TITRE plus haut).`
     : `- Quiz long → Miser sur l'analyse, l'ego et la profondeur.
 - Le participant doit sentir que le quiz "le comprend vraiment".
 - Les résultats sont riches, détaillés, avec insight + projection + CTA.
 - L'introduction installe le contexte et promet une révélation personnalisée.`}
 
-${isScoring ? `QUESTIONS — RÈGLES :
+${isScoring ? `QUESTIONS : RÈGLES :
 - La MAJORITÉ des questions sont des choix (3 à 5 options). En quiz scoré, result_index vaut TOUJOURS 0 (il n'est pas utilisé) : c'est le champ "points" qui compte.
 - Chaque question porte un champ "question_type". Formats disponibles :
   - "multiple_choice" (défaut) : 3 à 5 options.
@@ -211,7 +213,7 @@ Chaque option de type choix porte un champ "points" (entier de 0 à 3) = l'INTEN
 - Toutes les options d'une même question ont des points DIFFÉRENTS (jamais deux fois la même valeur dans une question) : chaque réponse doit déplacer le score.
 - Utilise TOUTE l'échelle 0-3 sur l'ensemble du quiz, pas seulement 1-2.
 - L'ordre d'affichage des options ne doit PAS suivre l'ordre des points (ne mets pas toujours la meilleure réponse en premier) : mélange pour que le quiz ne soit pas devinable.
-- Les points doivent refléter une vraie gradation métier, pas un barème scolaire : la "bonne" réponse est celle qui témoigne de la situation la plus saine/avancée sur le sujet.` : `QUESTIONS — RÈGLES :
+- Les points doivent refléter une vraie gradation métier, pas un barème scolaire : la "bonne" réponse est celle qui témoigne de la situation la plus saine/avancée sur le sujet.` : `QUESTIONS : RÈGLES :
 - La MAJORITÉ des questions sont des choix, chaque option mappée vers un profil résultat via result_index (entre 0 et ${resultCount - 1}). C'est ce qui détermine le profil, donc garde-les majoritaires pour que le résultat reste pertinent.
 - UNE RÉPONSE PAR PROFIL. Chaque question de type "multiple_choice" propose EXACTEMENT ${resultCount} options, et les ${resultCount} result_index (0 à ${resultCount - 1}) apparaissent CHACUN UNE FOIS dans la question. Un profil qui n'a pas de réponse à une question ne peut pas être choisi à cette question : avec moins d'options que de profils, un profil finit par n'être jamais attribué.
 - Chaque question porte un champ "question_type". Formats disponibles :
@@ -232,12 +234,12 @@ Chaque option de type choix porte un champ "points" (entier de 1 à 3) qui pond�
 - N'attribue jamais le même poids partout (ça recrée des égalités et un biais vers le premier profil). Varie intelligemment, mais garde les poids modérés (1 à 3) pour qu'aucun profil n'écrase les autres d'entrée.
 - Les questions rating_scale / star_rating / free_text ne portent pas de points (elles ne déterminent pas le profil).`}
 
-RÉSULTATS — RÈGLES :
+RÉSULTATS : RÈGLES :
 - Chaque résultat doit être TRANSFORMATIF : révéler un élément caché, bloquant ou valorisant.
 - Mettre en valeur l'expertise de l'auteur du quiz.
 - Le CTA de chaque résultat doit s'intégrer naturellement après le résultat, jamais plaqué artificiellement.
 - Chaque cta_text est UNIQUE au profil : il doit refléter la promesse adaptée à CE résultat (et servir l'intention business du créateur si elle est fournie). Jamais un CTA générique type "En savoir plus".
-- Format du cta_text : **3 à 6 mots maximum**, formulation verbe + bénéfice. Ex: "Réserver mon audit gratuit", "Découvrir la méthode". JAMAIS de phrase longue ou explicative — le CTA tient sur UNE ligne dans un bouton.
+- Format du cta_text : **3 à 6 mots maximum**, formulation verbe + bénéfice. Ex: "Réserver mon audit gratuit", "Découvrir la méthode". JAMAIS de phrase longue ou explicative : le CTA tient sur UNE ligne dans un bouton.
 ${isScoring
     ? `- Les résultats sont les TRANCHES, ordonnées du score le plus BAS au plus HAUT. Le PREMIER résultat s'adresse au participant en difficulté (bienveillant, jamais culpabilisant : il repart avec un premier pas concret), le DERNIER au participant avancé (valorisant, avec le défi d'après). Chaque tranche reste TRANSFORMATIVE : insight + projection + CTA propres.
 - N'écris PAS de champs "min_score" / "max_score" : les bornes sont calculées automatiquement.`
@@ -248,7 +250,7 @@ ${isScoring
 FORMAT DE SORTIE : JSON strict uniquement. Pas de markdown, pas de commentaires, pas de texte autour.
 {
   "title": "Titre accrocheur du quiz",
-  "introduction": "Texte d'intro engageant (${isShort ? "1-2 phrases" : "2-3 phrases"})",
+  "introduction": "Le bénéfice pour le visiteur + la durée${bonus ? " + le bonus reçu" : ""} (cf. règle SOUS-TITRE, ${isShort ? "1-2 phrases" : "2 phrases"})",
   "questions": [
     {
       "question_text": "La question",
@@ -264,7 +266,7 @@ FORMAT DE SORTIE : JSON strict uniquement. Pas de markdown, pas de commentaires,
         { "text": "Option A", "result_index": 0, "points": 2 },
         { "text": "Option B", "result_index": 1, "points": 1 },
         { "text": "Option C", "result_index": 2, "points": 3 },
-        { "text": "Option D", "result_index": 0, "points": 1 }
+        { "text": "Option D", "result_index": 3, "points": 1 }
       ]`}
     }
   ],
@@ -277,7 +279,7 @@ FORMAT DE SORTIE : JSON strict uniquement. Pas de markdown, pas de commentaires,
       "projection_heading": "Titre du CHEMIN (3-7 mots)",
       "bridge_heading": "Titre du PONT (3-7 mots)",
       "bridge": "LE PONT : 2-3 phrases orientées bénéfices, cohérentes avec cta_text.",
-      "projection": "${formality === "vous" ? "Et si vous..." : "Et si tu..."}  — projection motivante vers l'action",
+      "projection": "${formality === "vous" ? "Et si vous..." : "Et si tu..."}  : projection motivante vers l'action",
       "cta_text": "Texte du CTA personnalisé pour ce profil"
     }
   ],
@@ -289,7 +291,7 @@ FORMAT DE SORTIE : JSON strict uniquement. Pas de markdown, pas de commentaires,
     `OBJECTIF DU QUIZ : ${objectiveLabel}`,
     `CIBLE PRÉCISE : ${target}`,
     `TON SOUHAITÉ : ${tone}`,
-    `FORMAT : ${isShort ? "Court (3-5 questions)" : "Long (8-12 questions)"}`,
+    `FORMAT : ${isShort ? "Court" : "Long"}`,
     isScoring ? `TYPE : Quiz scoré (diagnostic)${scoringAxes.length > 0 ? ` avec axes : ${scoringAxes.map((a) => `${a.label} (id: ${a.id})`).join(", ")}` : ""}` : `SEGMENTATION : ${segmentation === "level" ? "Par niveau" : "Par profil"}`,
     `NOMBRE DE QUESTIONS : ${questionCount}`,
     isScoring ? `NOMBRE DE TRANCHES DE RÉSULTAT : ${resultCount} (ordonnées du score le plus bas au plus haut)` : `NOMBRE DE PROFILS RÉSULTAT : ${resultCount}`,
@@ -347,14 +349,17 @@ RÈGLES D'OR :
 - Si le source n'a pas de résultats explicites, déduis 3 profils cohérents à partir du ton et des questions (ex: débutant / intermédiaire / expert).
 - Pondère les options avec un "points" (1 à 3) pour éviter les égalités entre profils : poids fort sur les réponses les plus caractéristiques d'un profil, poids 1 sur les réponses neutres. Une signature distincte par profil, jamais le même poids partout.
 - Si certains champs manquent (introduction, CTA, share_message), génère-les de façon brève et cohérente avec le contenu.
+- Le TITRE du source est reprenable tel quel s'il est bon. Le SOUS-TITRE ("introduction"), lui, est presque toujours absent d'un document de travail : rédige-le en suivant la règle ci-dessous.
 - NE TRADUIS PAS le contenu si le source est déjà dans la bonne langue. La langue de sortie est ${langLabel}.
 - Forme d'adresse : ${formality === "vous" ? "VOUVOYER" : "TUTOYER"}. Conserve la forme du source si elle est claire.
 - Ton : ${tone}.
 
+${introSubtitleBlock({ formality, minutes: null })}
+
 FORMAT DE SORTIE : JSON strict uniquement, sans markdown, sans commentaires.
 {
   "title": "Titre accrocheur du quiz",
-  "introduction": "Texte d'intro engageant (1-3 phrases)",
+  "introduction": "Le bénéfice pour le visiteur + la durée (cf. règle ci-dessus)",
   "questions": [
     {
       "question_text": "La question",
@@ -363,7 +368,7 @@ FORMAT DE SORTIE : JSON strict uniquement, sans markdown, sans commentaires.
         { "text": "Option A", "result_index": 0, "points": 2 },
         { "text": "Option B", "result_index": 1, "points": 1 },
         { "text": "Option C", "result_index": 2, "points": 3 },
-        { "text": "Option D", "result_index": 0, "points": 1 }
+        { "text": "Option D", "result_index": 3, "points": 1 }
       ]
     }
   ],
@@ -455,12 +460,12 @@ export function buildSurveyGenerationPrompt(params: SurveyPromptParams): {
 
   const objectiveEntry = SURVEY_OBJECTIVES.find((o) => o.value === objective);
   const objectiveLabel = objectiveEntry
-    ? `${objectiveEntry.labelFr} — ${objectiveEntry.desc}`
+    ? `${objectiveEntry.labelFr} : ${objectiveEntry.desc}`
     : objective;
 
   const system = `Tu es un expert en recherche utilisateur, en feedback client et en méthodologie de sondage. Tu sais traduire un objectif business en un sondage court, exploitable et qui maximise le taux de réponse.
 
-RÔLE : Tu crées un sondage (différent d'un quiz : pas de résultat / profil / scoring) qui collecte des données qualitatives et quantitatives auprès de l'audience du créateur. Le sondage se termine par un écran de remerciement et un CTA optionnel — pas par un profil révélé.
+RÔLE : Tu crées un sondage (différent d'un quiz : pas de résultat / profil / scoring) qui collecte des données qualitatives et quantitatives auprès de l'audience du créateur. Le sondage se termine par un écran de remerciement et un CTA optionnel : pas par un profil révélé.
 
 CONTEXTE PRODUIT : Ce sondage est créé sur Tiquiz. Le moteur de rendu sait afficher 6 types de questions :
   • multiple_choice (4 options classiques)
@@ -468,7 +473,7 @@ CONTEXTE PRODUIT : Ce sondage est créé sur Tiquiz. Le moteur de rendu sait aff
   • star_rating (1 à 5 étoiles, idéale pour CSAT)
   • yes_no (oui/non binaire)
   • free_text (réponse libre, courte ou paragraphe)
-  • image_choice (sélection avec visuel — ne l'utilise QUE si la valeur visuelle est évidente)
+  • image_choice (sélection avec visuel : ne l'utilise QUE si la valeur visuelle est évidente)
 
 LANGUE : Tout le contenu DOIT être rédigé en ${langLabel}.
 
@@ -486,26 +491,26 @@ MÉTHODOLOGIE PAR OBJECTIF :
 - feedback → free_text dominantes + 1 star_rating global.
 
 PRINCIPES :
-- BREF : un bon sondage tient en ${questionCount} questions. Refuse l'inflation — chaque question doit avoir un usage analytique clair.
+- BREF : un bon sondage tient en ${questionCount} questions. Refuse l'inflation : chaque question doit avoir un usage analytique clair.
 - NEUTRE : pas de questions orientées (biais de formulation), pas de CTA déguisé, pas de jugement.
 - RYTHMÉ : alterner les types pour éviter la monotonie. Ne pas enchaîner 5 free_text d'affilée.
 - CONCRET : chaque question doit produire de la donnée actionnable, pas du remplissage.
 - TONALITÉ : ${tone}. ${formality === "vous" ? "Vouvoyer." : "Tutoyer."}
 
 ${NATURAL_WRITING_BLOCK}
-${brandVoice ? `\nVOIX DE LA MARQUE — écris DANS cette voix (inspire-t'en, ne recopie pas) :\n${brandVoice}\n` : ""}
+${brandVoice ? `\nVOIX DE LA MARQUE : écris DANS cette voix (inspire-t'en, ne recopie pas) :\n${brandVoice}\n` : ""}
 
-CONFIG PAR TYPE — Quand tu utilises un type non-classique, fournis une "config" minimale :
+CONFIG PAR TYPE : Quand tu utilises un type non-classique, fournis une "config" minimale :
   • rating_scale : { "min": 0, "max": 10, "minLabel": "Pas du tout probable", "maxLabel": "Extrêmement probable" }
   • star_rating  : { "max": 5 }
   • free_text    : { "maxLength": 500 }
   • multiple_choice / yes_no / image_choice : pas besoin de config (laisse {} ou omets-la).
 
-OPTIONS — RÈGLES :
+OPTIONS : RÈGLES :
   • Pour multiple_choice / image_choice : 3 à 5 options pertinentes. Couvrir l'éventail réaliste (sans "Autre" sauf si pertinent).
   • Pour yes_no : NE PAS fournir d'options, le moteur les génère automatiquement.
   • Pour rating_scale / star_rating / free_text : laisser "options": [].
-  • result_index n'a aucun sens dans un sondage — laisser à 0 systématiquement (le moteur l'ignore en mode survey).
+  • result_index n'a aucun sens dans un sondage : laisser à 0 systématiquement (le moteur l'ignore en mode survey).
 
 FORMAT DE SORTIE : JSON strict uniquement. Pas de markdown, pas de commentaires.
 {
@@ -573,7 +578,7 @@ LANGUE DE SORTIE : ${langLabel}. NE TRADUIS PAS si le source est déjà dans cet
 FORME D'ADRESSE : ${formality === "vous" ? "VOUVOYER" : "TUTOYER"}. Conserve la forme du source si elle est claire.
 TON : ${tone}.
 
-DÉTECTION DE TYPE — heuristiques :
+DÉTECTION DE TYPE : heuristiques :
   • "Sur une échelle de X à Y" / "Note de 0 à 10" / "NPS" → rating_scale (config min/max/labels).
   • "★ ★ ★ ★ ★" / "1-5 étoiles" / "Note ce/cette … sur 5" → star_rating (config max).
   • "Oui / Non" sans nuance → yes_no (NE PAS fournir d'options).

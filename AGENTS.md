@@ -879,3 +879,57 @@ toujours par mentir.**
 
 Le module quiz de Tiquiz est jumeau : ces trois corrections y vivent
 aussi, toute évolution se porte des deux côtés.
+
+## Le sous-titre du quiz dit un BÉNÉFICE, jamais la fiche technique (retour Béné 3 août 2026)
+
+"À chaque fois, l'IA génère un truc comme ça dans le sous titre du quiz :
+'9 questions, un diagnostic, un truc concret à faire ce soir.' Franchement
+on s'en fout du nombre de questions."
+
+**La cause n'était pas la ligne qu'on croit.** Aucune consigne ne demandait
+le nombre de questions. Le problème était l'inverse : rien ne disait ce
+que le sous-titre DOIT contenir. Les deux seules mentions étaient
+"accrocher en 1-2 phrases" et "texte d'intro engageant". À un modèle à qui
+on demande d'être "engageant" sans dire sur quoi, il ne reste que les
+faits du brief, et `NOMBRE DE QUESTIONS : 9` y est écrit. Il recopiait la
+fiche technique faute de mieux.
+
+**Règle : `introSubtitleBlock()` (`lib/prompts/quiz/copywriting.ts`)**,
+branché sur la génération ET sur l'import (Béné a vu le problème sur les
+deux). Bénéfice pour le visiteur, verbe d'ouverture ("Découvre pourquoi",
+"Regarde si tu", "Apprends comment"), durée, et le bonus du créateur
+quand il existe.
+
+**La DURÉE est voulue, le NOMBRE DE QUESTIONS est interdit.** Les deux se
+ressemblent et les confondre referait le bug dans l'autre sens : la durée
+lève une objection ("ça me prend combien de temps ?"), le nombre de
+questions ne dit rien au visiteur. La durée est CALCULÉE
+(`estimateQuizMinutes`, ~20 s par question) et non laissée au modèle,
+sinon il annonce 5 minutes sur un quiz de 3 questions.
+
+## Un prompt est du CODE : il se teste (3 août 2026)
+
+En relisant `lib/prompts/quiz/system.ts` pour le retour ci-dessus, trois
+incohérences y vivaient sans que personne les voie :
+
+1. un **tiret cadratin dans le gabarit de sortie** (`"Nom du profil — LE
+   MIROIR"`), dans un prompt qui bannit les tirets cadratins dix lignes
+   plus haut. On montrait au modèle exactement ce qu'on lui interdit ;
+2. l'**exemple d'options contredisait sa propre règle** : `result_index`
+   0 deux fois alors que la consigne dit "chacun UNE fois". C'est le cas
+   exact qui a fait remonter Véronique (un profil jamais attribuable) ;
+3. `FORMAT : Quiz COURT (3 à 5 questions)` **et** `NOMBRE DE QUESTIONS :
+   9`, dans le même prompt.
+
+**Règle : `tests/logic/quiz-prompt.test.mts`.** Un prompt produit une
+sortie et régresse en silence quand on le retouche : il se teste comme le
+reste. Les assertions portent sur ce qui compte (la règle est présente,
+le gabarit n'a pas d'em-dash, les `result_index` de l'exemple sont
+distincts, aucune fourchette ne contredit le compte demandé).
+
+Pour que ce soit possible, `npm run test:logic` résout maintenant l'alias
+`@/` (`tests/logic/register-alias.mjs`). Sans ça, tout module qui importe
+`@/lib/...` restait hors de portée du runner natif, donc non testé, donc
+exactement là où les bugs s'installent.
+
+Le module quiz de Tiquiz est jumeau : ces corrections y vivent aussi.
