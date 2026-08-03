@@ -40,6 +40,7 @@ import PopquizPlayClient from "@/app/pq/[popquizId]/PopquizPlayClient";
 import PublicPageClient from "@/components/pages/PublicPageClient";
 import { isReservedPublicSlug } from "@/lib/publicSlug";
 import { stripHtml } from "@/lib/richText";
+import { toShareLine } from "@/lib/quiz/shareText";
 import { interpolateText } from "@/lib/quizPersonalization";
 import { buildCanonicalUrl, fetchOwnerBranding } from "@/lib/publicUrl";
 
@@ -169,7 +170,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
     // FB/LinkedIn n'affichent que l'apercu du lien : le message de partage
     // sert de description par defaut (retour Jocelyne 28 juillet 2026),
     // parite avec /q/[quizId].
-    const shareMsgPlain = stripHtml((r.meta as { share_message?: string | null }).share_message ?? "").trim();
+    const shareMsgPlain = toShareLine((r.meta as { share_message?: string | null }).share_message);
     const introPlain = stripHtml(r.meta.introduction ?? "").slice(0, 160);
     const description = (ogDescPlain || shareMsgPlain || introPlain).trim() || undefined;
     const plainTitle = stripHtml(r.meta.title ?? "");
