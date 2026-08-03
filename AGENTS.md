@@ -677,3 +677,54 @@ réponse, c'est leur principe, pas un manque.
 
 Le module quiz de Tiquiz est jumeau : ces trois corrections y vivent
 aussi, toute évolution se porte des deux côtés.
+
+## Titre et sous-titre partagent UN bord, calculé UNE fois (drame Béné 3 août 2026)
+
+"Je ne comprends pas pourquoi il y a toujours ce décalage entre le titre
+et le sous-titre. On a déjà parlé de ça mille fois et ça n'a pas été
+corrigé. Je veux juste que si j'aligne mon texte à gauche, le titre et le
+sous-titre commencent au même endroit à gauche, je ne veux pas de
+décalage par défaut."
+
+Le "mille fois" est la vraie information. Le décalage venait d'un
+`max-w-xl mx-auto` écrit en dur sur le sous-titre : `max-w-xl` borne la
+longueur de ligne (utile, il reste), mais `mx-auto` CENTRE le bloc quoi
+qu'il arrive. Tant que le titre est centré, invisible. Dès qu'elle aligne
+son titre à gauche, le titre part du bord et le sous-titre reste centré,
+donc commence plus à droite.
+
+Et si ça n'avait jamais été corrigé partout, c'est que la règle
+n'existait nulle part : elle était réécrite en ternaires dans chaque
+écran de chaque composant. Le viewer avait été corrigé, l'éditeur non.
+L'écran de question avait été corrigé, l'écran d'accueil non. Chaque
+passage en oubliait un, donc le bug revenait.
+
+**Règle : `lib/quiz/textAlign.ts`, et personne ne réécrit de ternaire
+d'alignement.**
+
+- `resolveBlockAlign(ownHtml, titleHtml, layout)` : son propre alignement
+  -> celui du TITRE -> la disposition. Le titre sert de référence parce
+  que c'est lui qui donne le ton de l'écran ; l'alignement propre du bloc
+  passe devant parce qu'aligner le sous-titre exprès est un choix.
+- `alignTextClass` / `alignBlockMarginClass` / `alignJustifyClass` pour
+  le texte, la marge du bloc (JAMAIS `mx-auto` en dur) et les conteneurs
+  flex (logo, bouton).
+- `richTextAlign` renvoie `null` quand la créatrice n'a jamais touché à
+  l'alignement du champ. Ce null n'est pas un détail : sans lui, un champ
+  jamais aligné imposerait la gauche et recasserait tous les quiz
+  centrés.
+
+**Endroits à respecter :** `PublicQuizClient.tsx` (écran d'accueil),
+`QuizDetailClient.tsx` et `SurveyDetailClient.tsx` (aperçu d'accueil).
+Le module quiz de Tiquiz est jumeau : toute évolution se porte des deux
+côtés.
+Exception assumée : en disposition "couverture" (image plein écran), le
+viewer centre tout sans condition, et l'aperçu fait pareil.
+
+**INTERDIT :** `mx-auto` sur un bloc de texte de l'écran d'accueil, et
+tout `align === "center" ? … : …` recopié dans un composant. Le test
+`tests/logic/intro-align.test.mts` fige la règle.
+
+Corollaire général, déjà vrai pour les réseaux de partage et le score :
+**quand l'aperçu de l'éditeur recalcule une décision au lieu d'appeler la
+même fonction que le viewer, il finit toujours par mentir.**
