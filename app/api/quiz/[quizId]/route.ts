@@ -202,6 +202,8 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       "notify_responses",
       "start_button_text", "result_insight_heading", "result_projection_heading", "result_bridge_heading",
       "result_layout",
+      // Logo independant du titre + largeur du bloc d'accueil (3 aout 2026).
+      "brand_logo_align", "brand_logo_width", "intro_text_width",
       "custom_footer_text", "custom_footer_url",
       "hide_branding",
       "brand_font", "brand_color_primary", "brand_color_background", "brand_color_text",
