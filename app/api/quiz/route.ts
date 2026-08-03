@@ -46,6 +46,22 @@ export async function GET() {
 }
 
 // POST — create a quiz with questions and results
+/**
+ * Le contenu recu porte-t-il un PONT redige ?
+ *
+ * C'est ce qui decide si le quiz nait en page "4 temps" ou en page
+ * classique. On ne se fie pas a "ca vient de l'IA" : un import ou une
+ * creation manuelle passent par la meme route, et une mise en page batie
+ * sur un bloc absent donnerait une page bancale au visiteur.
+ */
+function hasBridgeContent(results: unknown): boolean {
+  if (!Array.isArray(results)) return false;
+  return results.some((r) => {
+    const bridge = (r as Record<string, unknown> | null)?.bridge;
+    return typeof bridge === "string" && bridge.replace(/<[^>]*>/g, "").trim().length > 0;
+  });
+}
+
 export async function POST(req: NextRequest) {
   try {
     const supabase = await getSupabaseServerClient();
@@ -155,6 +171,11 @@ export async function POST(req: NextRequest) {
         ...(mode === "scoring" && Array.isArray(body.scoring_axes) && normalizeScoringAxes(body.scoring_axes).length > 0
           ? { scoring_axes: normalizeScoringAxes(body.scoring_axes) }
           : {}),
+        // Page de resultat en 4 temps : uniquement quand le contenu recu
+        // porte VRAIMENT un pont. Un quiz cree a la main ou importe n'en a
+        // pas ; le defaut de la colonne ('classic') couvre tout le reste,
+        // y compris les quiz existants.
+        ...(hasBridgeContent(body.results) ? { result_layout: "beats" } : {}),
         title,
         introduction: body.introduction ?? null,
         cta_text: body.cta_text ?? null,
@@ -257,6 +278,13 @@ export async function POST(req: NextRequest) {
           title: String(r.title ?? ""),
           description: r.description ?? null,
           insight: r.insight ?? null,
+          // Les 4 temps de la page de resultat (3 aout 2026). Titres de
+          // bloc ecrits PAR PROFIL par l'IA. Absents -> NULL -> repli sur
+          // le titre commun du quiz.
+          insight_heading: r.insight_heading ?? null,
+          projection_heading: r.projection_heading ?? null,
+          bridge: r.bridge ?? null,
+          bridge_heading: r.bridge_heading ?? null,
           projection: r.projection ?? null,
           cta_text: r.cta_text ?? null,
           cta_url: r.cta_url ?? null,

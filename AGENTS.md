@@ -728,3 +728,77 @@ tout `align === "center" ? … : …` recopié dans un composant. Le test
 Corollaire général, déjà vrai pour les réseaux de partage et le score :
 **quand l'aperçu de l'éditeur recalcule une décision au lieu d'appeler la
 même fonction que le viewer, il finit toujours par mentir.**
+
+## La page de résultat suit les 4 temps de l'Atelier (3 août 2026)
+
+Béné : "je voudrais retravailler la page résultat des quiz pour intégrer
+cette logique : le miroir, la cause, le chemin, le pont. Comme ça on met
+Tiquiz raccord avec ce qui est enseigné dans l'Atelier, ce qui n'est pas
+le cas avec la présentation actuelle."
+
+Le décalage était réel, et il ne venait pas d'un manque de champs : trois
+des quatre temps existaient DÉJÀ en base, sous des noms produit qui ne
+disaient pas à quoi ils servent.
+
+| Temps | Champ | Ce qu'il fait |
+|---|---|---|
+| le miroir | `title` + `description` | il se reconnaît, donc il continue à lire |
+| la cause | `insight` (+ `insight_heading`) | ce qui bloque vraiment, souvent autre chose que ce qu'il croyait |
+| le chemin | `projection` (+ `projection_heading`) | les étapes, il voit que c'est faisable |
+| le pont | `bridge` (+ `bridge_heading`) **nouveau** | l'offre comme suite logique, pas comme une pub |
+
+Ce qui manquait vraiment, c'était le PONT (`cta_text` est le libellé du
+bouton, 3 à 6 mots : il ne peut pas porter de bénéfices) et surtout
+l'INTENTION : le prompt ne disait nulle part que ces blocs forment une
+progression, donc l'IA écrivait quatre paragraphes interchangeables.
+
+**Règle : `lib/quiz/resultBeats.ts` décide, personne d'autre.**
+`buildResultBeats()` dit quels blocs, dans quel ordre, avec quel titre ;
+`beatShell()` dit à quoi ils ressemblent. Le viewer public ET l'aperçu de
+l'éditeur appellent les deux. Un aperçu qui recalcule l'allure du viewer
+finit toujours par mentir (les réseaux de partage, le score, l'alignement
+du sous-titre : trois fois le même bug).
+
+**Règle : `quizzes.result_layout` porte la garantie "on ne touche pas aux
+quiz existants".** Défaut `'classic'` en base, et `resultLayoutMode()` ne
+renvoie `'beats'` que sur la valeur explicite. Colonne absente, valeur
+inconnue, migration pas encore passée : page historique. Un quiz naît en
+`'beats'` uniquement quand le contenu reçu porte VRAIMENT un pont
+(`hasBridgeContent`), donc jamais sur un import ni une création manuelle.
+
+**Le visuel :** trois temps sobres (filet vertical à la couleur de
+marque, aucun fond), le pont seul en bloc plein. C'est la réponse à
+"sans forcément créer 4 cartes de couleurs trop IA" : le rythme se voit,
+un seul bloc appelle l'oeil, et tout est dérivé de `primary` donc
+n'importe quel branding marche sans réglage. La couleur du texte du pont
+vient de `bridgeTextColor(isColorDark(primary))`, jamais du blanc en dur.
+
+**Images :** `quiz_results.beat_media` (JSONB) porte une image PAR temps,
+avec `mode: "with" | "only"` ("only" = l'image remplace le texte).
+Sanitizé par `sanitizeBeatMedia()` : ce champ finit dans un `<img src>`
+public, donc jamais écrit brut.
+
+**Le vocabulaire de la méthode ne sort JAMAIS côté visiteur.** "miroir",
+"cause", "chemin", "pont" vivent dans l'aide de l'éditeur et dans le
+prompt, pas dans le texte produit. Le prompt l'interdit explicitement :
+sinon le visiteur lit le squelette au lieu du message.
+
+## Les titres générés s'inspirent des ressources, sans les recopier (3 août 2026)
+
+Béné : "ce serait pas mal aussi d'upgrader la qualité des titres et sous
+titres générés par l'IA, pour le moment ils sont pas ouf. Peut être en
+lui demandant de s'inspirer des 104 hooks."
+
+`lib/prompts/quiz/copywriting.ts` distille `copywriting-claude/` (104
+hooks, triggers psychologiques, puces promesses) en MÉCANIQUES, pas en
+accroches à recopier. Coller les 104 lignes coûterait des tokens à chaque
+génération et, surtout, produirait des quiz qui se ressemblent tous : un
+modèle à qui on donne une liste finie recopie la liste.
+
+Deux blocs, ajoutés au prompt existant sans y toucher par ailleurs :
+`HOOK_CRAFT_BLOCK` (7 mécaniques d'accroche + déclencheurs + règles de
+forme) et `RESULT_BEATS_BLOCK` (les 4 temps). Le reste du prompt de
+génération, qui fonctionne bien, est inchangé.
+
+Le module quiz de Tiquiz est jumeau : toute évolution se porte des deux
+côtés.

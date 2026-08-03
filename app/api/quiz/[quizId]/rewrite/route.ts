@@ -45,7 +45,7 @@ function getModel(): string {
 
 const ALLOWED_KINDS = new Set([
   "question", "option", "result_title", "result_description",
-  "result_insight", "result_projection", "intro", "title", "generic",
+  "result_insight", "result_projection", "result_bridge", "intro", "title", "generic",
 ]);
 
 const MAX_TEXT_CHARS = 1000;
@@ -130,6 +130,9 @@ export async function POST(
     result_description: "Description du résultat : 1-3 phrases empathiques qui parlent à la personne.",
     result_insight: "Insight clé sur ce profil : 1-2 phrases qui résonnent.",
     result_projection: "Projection encourageante : 1-2 phrases positives sur le futur.",
+    // LE PONT : le seul champ du résultat qui a le droit de vendre, et
+    // il vend en bénéfices, pas en pression.
+    result_bridge: "Le pont vers l'offre : 2-3 phrases orientées bénéfices concrets, qui donnent envie de cliquer le bouton juste en dessous. Jamais de pression ni de fausse urgence.",
     intro: "Introduction du quiz : 1-2 phrases qui donnent envie de commencer.",
     title: "Titre du quiz : court et accrocheur.",
     generic: "Texte cohérent avec le ton du quiz.",
@@ -141,6 +144,7 @@ export async function POST(
     result_description: "Result description: 1-3 empathetic sentences speaking to the person.",
     result_insight: "Key insight on this profile: 1-2 resonant sentences.",
     result_projection: "Encouraging projection: 1-2 positive sentences about the future.",
+    result_bridge: "The bridge to the offer: 2-3 benefit-driven sentences that make the reader want to click the button right below. Never pressure, never fake urgency.",
     intro: "Quiz introduction: 1-2 sentences that make people want to start.",
     title: "Quiz title: short and catchy.",
     generic: "Text consistent with the quiz tone.",
