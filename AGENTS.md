@@ -802,3 +802,80 @@ génération, qui fonctionne bien, est inchangé.
 
 Le module quiz de Tiquiz est jumeau : toute évolution se porte des deux
 côtés.
+
+## Le logo n'est pas un bloc de texte (retour Béné 3 août 2026)
+
+"Si je centre mon titre à gauche, il centre aussi le logo : on doit
+pouvoir centrer, aligner à gauche ou à droite le logo indépendamment du
+titre ET on doit aussi pouvoir l'agrandir et le rétrécir comme pour les
+gif et les images."
+
+En calant tout l'écran d'accueil sur le bord du titre (correctif de la
+veille), on avait réglé un décalage et créé une contrainte : le logo
+n'avait plus de vie propre. Beaucoup de marques le veulent centré au
+dessus d'un titre aligné à gauche.
+
+**Règle : `lib/quiz/introLayout.ts`.** `resolveLogoAlign(setting,
+titleAlign)` et `logoRender(align, widthPct)` décident, le viewer ET
+l'aperçu appellent les deux. `brand_logo_align` vaut `'auto'` par défaut
+(= suit le titre, comportement d'avant), `brand_logo_width` vaut NULL
+(= `max-h-16 w-auto`, la taille d'avant). Aucun quiz existant ne bouge.
+
+## Titre et sous-titre : la borne est sur le CONTENEUR, jamais sur un champ
+
+Deuxième passage de Béné sur le même écran : "pourquoi la case du sous
+titre est plus courte que celle du titre ?? Elle a une marge à droite que
+le titre n'a pas."
+
+Le `mx-auto` avait été retiré la veille, mais pas le `max-w-xl` posé à
+côté. Le titre vivait dans un conteneur `max-w-2xl` (42rem), le
+sous-titre portait EN PLUS sa propre borne à 36rem. **Mesuré avant
+correction : titre 672px (bord droit 1056), sous-titre 576px (bord droit
+960).** Tant que tout est centré les 96px se répartissent et ça ne se
+voit pas ; aligné à gauche, ça saute aux yeux, et aucun réglage ne
+pouvait le rattraper puisque la borne était en dur.
+
+**Règle : la largeur du bloc d'accueil vit sur le CONTENEUR COMMUN**
+(`intro_text_width`, NULL = pleine largeur), réglable à la poignée (le
+même mécanisme que la largeur des colonnes du split, qu'elle a demandé
+nommément). Le bloc est positionné par le TITRE pour les deux champs ;
+l'alignement propre du sous-titre pilote SON TEXTE, pas la position de sa
+boîte. **INTERDIT : tout `max-w-*` ou `mx-auto` sur le titre ou le
+sous-titre de l'accueil.**
+
+**Le filet de captures ne pouvait pas le voir**, et c'est la leçon
+principale : le sous-titre de la fixture se coupait au même mot à 576px
+et à 672px, donc les pixels étaient identiques alors que les bords ne
+l'étaient pas. Les 90 captures sont passées au vert pendant tout le bug.
+Le garde-fou est `tests/visual/intro-bounds.spec.ts`, qui MESURE les
+boîtes au lieu de les photographier.
+
+## Liste ou colonnes : l'aperçu ignorait le réglage (retour Béné 3 août 2026)
+
+"Le WYSIWYG de la présentation sous forme de liste ou de colonnes des
+réponses ne fonctionne pas : j'ai choisi liste et je vois toujours mes
+colonnes c'est PAS bon."
+
+Le viewer public lisait bien `answer_layout`. C'est l'APERÇU qui avait sa
+propre règle écrite en dur, sans aucune trace du réglage :
+
+```
+q.options.length >= 3 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"
+```
+
+Cocher "Liste" ne pouvait donc rien changer à l'écran. Et même en "Auto",
+les deux côtés comptaient les options à des endroits différents.
+
+**Règle : `lib/quiz/answerLayout.ts`.** `resolveAnswerLayout(quizLayout,
+questionOverride)` puis `answerGridClass(layout, count, {stacked})`. Le
+`stacked` sert l'aperçu mobile : le canvas y est étroit mais le VIEWPORT
+ne l'est pas, donc les classes `sm:` resteraient actives et montreraient
+deux colonnes que le visiteur ne verra jamais (même piège que le split).
+
+Quatrième fois que le même défaut sort, après les réseaux de partage,
+l'affichage du score et l'alignement du sous-titre. **Quand l'aperçu
+recalcule une décision au lieu d'appeler la fonction du viewer, il finit
+toujours par mentir.**
+
+Le module quiz de Tiquiz est jumeau : ces trois corrections y vivent
+aussi, toute évolution se porte des deux côtés.
