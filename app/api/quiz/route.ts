@@ -2,6 +2,7 @@
 // CRUD for quizzes (authenticated). GET list, POST create.
 
 import { NextRequest, NextResponse } from "next/server";
+import { applyFrenchTypographyDeep } from "@/lib/frenchTypography";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { isPaidPlan, FREE_LIMITS } from "@/lib/planLimits";
@@ -82,6 +83,14 @@ export async function POST(req: NextRequest) {
     } catch {
       return NextResponse.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
     }
+
+    // TYPOGRAPHIE FRANCAISE, AU SEUL POINT D'ENTREE (retour Bene, 3 aout
+    // 2026). La creation n'en appliquait AUCUNE : tout ce qui venait de la
+    // generation IA ou d'un import arrivait sans l'espace insecable et le
+    // restait. On traite le corps ENTIER ici, AVANT toute lecture (le
+    // titre et les enfants sont lus plus bas). Liste noire cote lib, donc
+    // une colonne ajoutee demain est couverte d'office.
+    body = applyFrenchTypographyDeep(body, body?.locale);
 
     const title = String(body.title ?? "").trim();
     if (!title) {

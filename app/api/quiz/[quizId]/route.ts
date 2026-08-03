@@ -11,8 +11,8 @@ import { isReservedPublicSlug } from "@/lib/publicSlug";
 import { findCrossTypeSlugConflict } from "@/lib/publicSlugServer";
 import {
   applyFrenchTypography,
+  applyFrenchTypographyDeep,
   applyFrenchTypographyToHtml,
-  isFrenchLocale,
 } from "@/lib/frenchTypography";
 import { computeLockedLeadIds, redactLockedLead, type LeadLike } from "@/lib/leadLock";
 import { isPaidPlan } from "@/lib/planLimits";
@@ -33,20 +33,10 @@ const RICH_TEXT_FIELDS = [
 // Plain-text quiz fields that benefit from French typography. Capture
 // fields are stored as rich text on tipote (above), so they're handled by
 // the rich-text pass below — we don't list them here.
-const FR_TYPO_PLAIN_FIELDS = [
-  "title",
-  "cta_text",
-  "consent_text",
-  "share_message",
-  "bonus_description",
-  "bonus_heading",
-  "bonus_intro_text",
-  "start_button_text",
-  "result_insight_heading",
-  "result_bridge_heading",
-  "result_projection_heading",
-  "og_description",
-] as const;
+// La liste blanche des colonnes a typographier a ete SUPPRIMEE le 3 aout
+// 2026 : toute colonne ajoutee depuis sa derniere mise a jour etait
+// oubliee en silence. lib/frenchTypography.ts travaille en liste noire.
+// NE PAS la reintroduire.
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -444,18 +434,11 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       typeof patch.locale === "string"
         ? patch.locale
         : ((existing as { locale?: string | null }).locale ?? null);
-    if (isFrenchLocale(effectiveLocale)) {
-      for (const field of FR_TYPO_PLAIN_FIELDS) {
-        if (typeof patch[field] === "string") {
-          patch[field] = applyFrenchTypography(patch[field] as string, effectiveLocale);
-        }
-      }
-      for (const field of RICH_TEXT_FIELDS) {
-        if (typeof patch[field] === "string") {
-          patch[field] = applyFrenchTypographyToHtml(patch[field] as string, effectiveLocale);
-        }
-      }
-    }
+    // LISTE NOIRE, PLUS DE LISTE BLANCHE (retour Bene, 3 aout 2026 : "un
+    // probleme qu'on avait corrige et qui revient"). Les deux boucles
+    // d'avant parcouraient des listes de colonnes ecrites a la main :
+    // toute colonne ajoutee depuis etait oubliee en silence.
+    Object.assign(patch, applyFrenchTypographyDeep(patch, effectiveLocale));
 
     const { error } = await supabase.from("quizzes").update(patch).eq("id", quizId);
 

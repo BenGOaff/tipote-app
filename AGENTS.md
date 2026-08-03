@@ -933,3 +933,41 @@ Pour que ce soit possible, `npm run test:logic` résout maintenant l'alias
 exactement là où les bugs s'installent.
 
 Le module quiz de Tiquiz est jumeau : ces corrections y vivent aussi.
+
+## Typographie française : liste NOIRE, et l'espace s'INSÈRE (3 août 2026)
+
+Béné : "en français on laisse un espace entre un mot et des guillemets, ou
+un mot et un point d'interrogation. Là ça n'est plus le cas. Ce genre de
+petits détails est chiant et long à corriger, on peut se l'éviter ?"
+
+Oui, mais pas en recorrigeant : en retirant les DEUX causes.
+
+**Cause 1 : la règle ne faisait que CONVERTIR une espace déjà présente.**
+`Prêt ?` devenait `Prêt<nbsp>?` ; `Prêt?` restait `Prêt?`. Or un modèle de
+langue écrit très souvent le français sans l'espace, donc tout le contenu
+généré arrivait fautif et le restait après n'importe quel nombre de
+sauvegardes. `fixFragment` INSÈRE désormais l'espace manquante.
+
+**Cause 2 : elle n'était appliquée qu'à la MISE À JOUR, sur une liste
+blanche de colonnes.** La CRÉATION (génération IA, import) n'appliquait
+RIEN. Et une liste blanche oublie toute colonne ajoutée après elle : c'est
+la mécanique même du "problème qui revient".
+
+**Règle : `applyFrenchTypographyDeep(payload, locale)` au SEUL point
+d'entrée**, sur `POST /api/quiz` (avant toute lecture du corps) et sur le
+PATCH. Liste NOIRE de noms de champs + garde sur la FORME de la valeur.
+Un champ nouveau est couvert d'office. **Les deux listes blanches ont été
+supprimées, pas vidées : ne pas les réintroduire.**
+
+**Insérer est plus dangereux que convertir**, d'où les gardes, tous
+testés : on n'insère que devant une ponctuation qui TERMINE (suivie d'une
+espace, d'une fermeture ou de la fin). Ça protège le `?` d'une query
+(`a?b=1`), le `:` d'un schéma (`https://`), les heures (`12:30`), le CSS
+(`color:red`). Le `:` exige en plus une LETTRE devant, jamais un chiffre.
+`applyFrenchTypographyToHtml` découpe sur les balises ET les entités :
+sans ça, `&nbsp;` deviendrait `&nbsp ;`.
+
+**Aucune autre langue n'est touchée** (`isFrenchLocale`), c'est testé pour
+les 7 locales.
+
+Le module quiz de Tiquiz est jumeau : cette correction y vit aussi.
