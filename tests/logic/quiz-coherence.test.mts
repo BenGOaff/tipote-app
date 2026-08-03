@@ -37,7 +37,7 @@ describe("Véronique : un quiz SCORÉ ne doit jamais crier au faux problème", (
   });
 
   test("aucun ex-æquo n'est signalé", () => {
-    const ties = analyzeResultTies("scoring", scoredQuestions, 4);
+    const ties = analyzeResultTies("scoring", scoredQuestions, 4, "answers");
     assert.equal(ties.conflicts.length, 0);
   });
 

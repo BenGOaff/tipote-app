@@ -196,6 +196,9 @@ export async function POST(req: NextRequest) {
         bonus_heading: isSurvey ? null : (body.bonus_heading ?? null),
         bonus_intro_text: isSurvey ? null : (body.bonus_intro_text ?? null),
         share_message: body.share_message ?? null,
+        // Les quiz NES aujourd'hui departagent les egalites sur les
+        // reponses du visiteur ; les anciens gardent 'first'.
+        tie_break: "answers",
         locale: body.locale ?? "fr",
         sio_share_tag_name: body.sio_share_tag_name ?? null,
         capture_heading: body.capture_heading ?? null,

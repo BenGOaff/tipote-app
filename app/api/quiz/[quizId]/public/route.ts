@@ -318,8 +318,25 @@ export async function GET(_req: NextRequest, context: RouteContext) {
       return NextResponse.json({ ok: false, error: "Quiz not found or inactive" }, { status: 404 });
     }
 
-    const [quizRes, questionsRes, resultsRes] = await Promise.all([
-      admin.from("quizzes").select("id,user_id,project_id,status,title,slug,introduction,cta_text,cta_url,privacy_url,consent_text,virality_enabled,bonus_description,bonus_heading,bonus_intro_text,bonus_image_url,bonus_image_position,bonus_image_width,bonus_unlocked_message,share_message,share_networks,locale,address_form,views_count,capture_heading,capture_subtitle,capture_submit_text,capture_before_questions,survey_thanks_heading,survey_thanks_body,capture_first_name,capture_last_name,capture_phone,capture_country,phone_required,first_name_required,last_name_required,country_required,ask_first_name,ask_gender,start_button_text,og_description,og_image_url,custom_footer_text,custom_footer_url,hide_branding,result_insight_heading,result_projection_heading,result_bridge_heading,show_result_bridge,result_layout,capture_enabled,brand_font,brand_color_primary,brand_color_background,brand_color_text,brand_logo_url,hide_brand_logo,brand_logo_align,brand_logo_width,intro_text_width,toast_widget_id,share_widget_id,show_consent_checkbox,show_results_breakdown,show_other_results,meta_pixel_id,ga4_measurement_id,google_ads_conversion_id,google_ads_conversion_label,mode,intro_image_url,intro_image_position,intro_image_width,background_style,background_gradient,background_image_url,intro_layout,button_shape,question_layout,split_image_url,split_side,panel_media,answer_layout,show_result_insight,show_result_projection,show_result_share,share_result_page,close_enabled,close_action,close_redirect_url,close_message,close_cta_text,close_cta_url,scoring_axes,show_score_gauge,score_display_mode,score_labels").eq("id", quizId).maybeSingle(),
+    // LA COLONNE NEUVE NE PEUT PAS METTRE LES QUIZ HORS LIGNE.
+    //
+    // PostgREST refuse TOUTE la requete quand une colonne du `select`
+    // n'existe pas encore : le 2 juin 2026, une colonne deployee avant sa
+    // migration a rendu 404 sur TOUS les quiz publics pendant deux
+    // heures. On liste la colonne du jour a part, et on rejoue sans elle
+    // si elle manque.
+    const QUIZ_COLS = "id,user_id,project_id,status,title,slug,introduction,cta_text,cta_url,privacy_url,consent_text,virality_enabled,bonus_description,bonus_heading,bonus_intro_text,bonus_image_url,bonus_image_position,bonus_image_width,bonus_unlocked_message,share_message,share_networks,locale,address_form,views_count,capture_heading,capture_subtitle,capture_submit_text,capture_before_questions,survey_thanks_heading,survey_thanks_body,capture_first_name,capture_last_name,capture_phone,capture_country,phone_required,first_name_required,last_name_required,country_required,ask_first_name,ask_gender,start_button_text,og_description,og_image_url,custom_footer_text,custom_footer_url,hide_branding,result_insight_heading,result_projection_heading,result_bridge_heading,show_result_bridge,result_layout,capture_enabled,brand_font,brand_color_primary,brand_color_background,brand_color_text,brand_logo_url,hide_brand_logo,brand_logo_align,brand_logo_width,intro_text_width,toast_widget_id,share_widget_id,show_consent_checkbox,show_results_breakdown,show_other_results,meta_pixel_id,ga4_measurement_id,google_ads_conversion_id,google_ads_conversion_label,mode,intro_image_url,intro_image_position,intro_image_width,background_style,background_gradient,background_image_url,intro_layout,button_shape,question_layout,split_image_url,split_side,panel_media,answer_layout,show_result_insight,show_result_projection,show_result_share,share_result_page,close_enabled,close_action,close_redirect_url,close_message,close_cta_text,close_cta_url,scoring_axes,show_score_gauge,score_display_mode,score_labels";
+    let quizRes = await admin
+      .from("quizzes")
+      .select(`${QUIZ_COLS},tie_break`)
+      .eq("id", quizId)
+      .maybeSingle();
+    if (quizRes.error) {
+      console.error("[quiz/public] select complet refuse, repli :", quizRes.error.message);
+      quizRes = await admin.from("quizzes").select(QUIZ_COLS).eq("id", quizId).maybeSingle();
+    }
+
+    const [questionsRes, resultsRes] = await Promise.all([
       admin.from("quiz_questions").select("id,question_text,options,sort_order,question_type,config").eq("quiz_id", quizId).order("sort_order"),
       admin.from("quiz_results").select("id,title,description,insight,projection,insight_heading,projection_heading,bridge,bridge_heading,beat_media,cta_text,cta_url,sort_order,image_url,image_position,image_width,min_score,max_score").eq("quiz_id", quizId).order("sort_order"),
     ]);

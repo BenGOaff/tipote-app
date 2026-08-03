@@ -27,6 +27,7 @@
 // imports comme le fait le navigateur (pas de resolution "magique" sans
 // extension). C'est ce qui permet de tester ce module sans bundler.
 import { analyzeTies, type TieAnalysis } from "./quizTieAnalysis.ts";
+import { type TieBreak } from "./quiz/profileWinner.ts";
 
 export type QuizAttributionMode = "profiles" | "scoring";
 
@@ -109,14 +110,23 @@ export function analyzeResultTies(
   mode: QuizAttributionMode,
   questions: CoherenceQuestion[],
   resultCount: number,
+  /**
+   * Comment CE quiz tranche une egalite. Parametre obligatoire, comme le
+   * mode : devine a l'interieur, il finirait par ne plus correspondre a
+   * ce que vit le visiteur, et l'editeur alerterait sur des cas qui
+   * n'arrivent jamais.
+   */
+  tieBreak: TieBreak,
 ): TieAnalysis {
   if (mode === "scoring") return EMPTY_TIES;
   return analyzeTies(
     questions.map((q) => ({
       options: q.options.map((o) => ({ result_index: o.result_index, points: o.points })),
       config: q.config ?? null,
+      question_type: q.question_type ?? null,
     })),
     resultCount,
+    tieBreak,
   );
 }
 
