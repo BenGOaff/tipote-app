@@ -1,15 +1,34 @@
 // Ex-æquo detector pour les quiz (Adeline, 19 mai 2026).
 //
 // Énumère toutes les combinaisons possibles de réponses (cap 100k) et
-// détecte celles qui produisent un ex-æquo entre 2+ résultats. Surface
-// les conflits à l'éditeur via un warning banner pour que le créateur
-// puisse ajuster les points avant de publier.
+// détecte celles où le viewer ne saurait PAS trancher entre 2 profils.
 //
-// Tiebreaker runtime : déjà déterministe côté visiteur — `computeResult`
-// utilise `if (s > maxScore)` (strict GT), donc le résultat avec le
-// `sort_order` le plus bas gagne en cas d'ex-æquo. Pas "arbitraire",
-// mais l'auteur ignore souvent que c'est ce qui se passe. Le warning
-// le rend visible.
+// CE QU'IL SIGNALE A CHANGÉ LE 3 AOÛT 2026, et c'est le coeur du retour
+// de Béné ("cette histoire d'ex-æquo, c'est chiant à mourir").
+//
+// Avant, il signalait toute égalité de SCORE. Le viewer, lui, tranchait
+// silencieusement par l'ordre des profils : le premier gagnait toujours.
+// L'analyseur avait donc raison sur le fond (le résultat ne dépendait
+// pas des réponses) mais il listait des dizaines de chemins sans jamais
+// dire quoi en faire, et aucune redistribution de points ne pouvait les
+// faire disparaître.
+//
+// Depuis, le départage se fait sur les RÉPONSES du visiteur
+// (lib/quiz/profileWinner.ts). Un chemin n'est plus un problème dès que
+// cette chaîne sait le trancher, et il ne reste à signaler que les
+// profils strictement indiscernables sur toute la copie : là, oui, la
+// créatrice doit intervenir.
+//
+// L'analyseur appelle LA fonction du viewer, il ne la réimplémente pas.
+// Recopiée, elle divergerait, et le bandeau se remettrait à parler
+// d'égalités qui n'arrivent jamais.
+
+import {
+  pickProfileWinner,
+  tallyVotes,
+  type ProfileVote,
+  type TieBreak,
+} from "./quiz/profileWinner.ts";
 
 export type AnalyzerQuestion = {
   options: { result_index: number; points?: number | null }[];
@@ -52,6 +71,13 @@ const MAX_CONFLICTS_REPORTED = 5;
 export function analyzeTies(
   questions: AnalyzerQuestion[],
   resultCount: number,
+  /**
+   * Le MÊME réglage que le quiz publié. Paramètre OBLIGATOIRE : deviné
+   * à l'intérieur, il finirait par ne plus correspondre à ce que vit le
+   * visiteur, et l'éditeur mentirait (cf. la règle du 1er août sur les
+   * mécaniques passées en paramètre).
+   */
+  tieBreak: TieBreak,
 ): TieAnalysis {
   if (resultCount < 2 || questions.length === 0) {
     return { conflicts: [], totalCombinations: 0, analyzed: 0, truncated: false, hasSkipped: false };
@@ -89,39 +115,34 @@ export function analyzeTies(
   const seenPairs = new Set<string>();
 
   const idx = new Array(slots.length).fill(0);
-  const scores = new Array(resultCount).fill(0);
+  const votes: ProfileVote[] = [];
 
   for (let n = 0; n < analyzed; n++) {
-    scores.fill(0);
+    votes.length = 0;
     for (let q = 0; q < slots.length; q++) {
       const opt = slots[q].options[idx[q]];
-      const ri = opt.result_index;
-      const weight = typeof opt.points === "number" ? opt.points : 1;
-      if (ri >= 0 && ri < resultCount) scores[ri] += weight;
+      votes.push({
+        resultIndex: opt.result_index,
+        // Poids de la reponse (defaut 1) : coherent avec computeResult
+        // cote visiteur qui somme `points` (mode profil pondere).
+        weight: typeof opt.points === "number" ? opt.points : 1,
+        questionIndex: q,
+      });
     }
-    // Find max
-    let maxScore = -1;
-    for (let i = 0; i < resultCount; i++) {
-      if (scores[i] > maxScore) maxScore = scores[i];
-    }
-    // Need at least one option contributing to flag a tie — pure-zero
-    // scores (e.g. all skipped questions) aren't a real conflict.
-    if (maxScore > 0) {
-      const tied: number[] = [];
-      for (let i = 0; i < resultCount; i++) {
-        if (scores[i] === maxScore) tied.push(i);
-      }
-      if (tied.length > 1) {
-        const key = tied.join("-");
-        if (!seenPairs.has(key)) {
-          seenPairs.add(key);
-          conflicts.push({
-            resultIndices: tied,
-            answers: [...idx],
-            score: maxScore,
-          });
-          if (conflicts.length >= MAX_CONFLICTS_REPORTED) break;
-        }
+    // LE depouillement du viewer, pas une copie. `tiedAfter` ne porte
+    // que les profils que la chaine de departage n'a PAS su separer.
+    const tally = tallyVotes(votes, resultCount);
+    const { index, tiedAfter } = pickProfileWinner(tally, tieBreak);
+    if (tiedAfter.length > 1) {
+      const key = tiedAfter.join("-");
+      if (!seenPairs.has(key)) {
+        seenPairs.add(key);
+        conflicts.push({
+          resultIndices: tiedAfter,
+          answers: [...idx],
+          score: tally.scores[index] ?? 0,
+        });
+        if (conflicts.length >= MAX_CONFLICTS_REPORTED) break;
       }
     }
 

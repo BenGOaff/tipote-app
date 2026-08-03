@@ -55,6 +55,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { interpolateText, extractResultLabel } from "@/lib/quizPersonalization";
 import { type TieConflict } from "@/lib/quizTieAnalysis";
+import { tieBreakMode } from "@/lib/quiz/profileWinner";
 import { analyzeOptionSupply, analyzeResultCoverage, analyzeResultTies, attributionMode } from "@/lib/quizCoherence";
 import { alignBlockMarginClass, alignJustifyClass, alignTextClass, resolveBlockAlign } from "@/lib/quiz/textAlign";
 import { answerGridClass, resolveAnswerLayout } from "@/lib/quiz/answerLayout";
@@ -617,6 +618,11 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const [resultBridgeHeading, setResultBridgeHeading] = useState("");
   const [showResultBridge, setShowResultBridge] = useState(true);
   const [resultLayout, setResultLayout] = useState<"classic" | "beats">("classic");
+  // DEPARTAGE DES EGALITES (retour Bene sur Tiquiz, 3 aout 2026).
+  // "first" = l'ordre des profils, le comportement historique ;
+  // "answers" = a partir des reponses du visiteur. La colonne porte la
+  // garantie que rien ne bouge sur les quiz existants.
+  const [tieBreak, setTieBreak] = useState<"first" | "answers">("first");
   // Le logo a sa PROPRE vie (retour Béné 3 août 2026). "auto" = suit le
   // titre, donc c'est le défaut, donc aucun quiz existant ne bouge.
   const [brandLogoAlign, setBrandLogoAlign] = useState<LogoAlign>("auto");
@@ -1004,6 +1010,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     result_bridge_heading: resultBridgeHeading,
     show_result_bridge: showResultBridge,
     result_layout: resultLayout,
+    tie_break: tieBreak,
     brand_logo_align: brandLogoAlign,
     brand_logo_width: brandLogoWidth,
     intro_text_width: introTextWidth,
@@ -1467,6 +1474,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       setResultBridgeHeading((q as { result_bridge_heading?: string | null }).result_bridge_heading ?? "");
       setShowResultBridge((q as { show_result_bridge?: boolean | null }).show_result_bridge !== false);
       setResultLayout(resultLayoutMode((q as { result_layout?: string | null }).result_layout));
+      setTieBreak(tieBreakMode((q as { tie_break?: string | null }).tie_break));
       setBrandLogoAlign(logoAlignSetting((q as { brand_logo_align?: string | null }).brand_logo_align));
       setBrandLogoWidth(logoWidthPct((q as { brand_logo_width?: number | null }).brand_logo_width));
       setIntroTextWidth(introTextWidthPct((q as { intro_text_width?: number | null }).intro_text_width));
@@ -2128,6 +2136,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           result_bridge_heading: resultBridgeHeading.trim() || null,
           show_result_bridge: showResultBridge,
           result_layout: resultLayout,
+    tie_break: tieBreak,
           brand_logo_align: brandLogoAlign,
           brand_logo_width: brandLogoWidth,
           intro_text_width: introTextWidth,
@@ -2370,8 +2379,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   );
 
   const tieAnalysis = useMemo(
-    () => analyzeResultTies(coherenceMode, coherenceQuestions, editResults.length),
-    [coherenceMode, coherenceQuestions, editResults.length],
+    () => analyzeResultTies(coherenceMode, coherenceQuestions, editResults.length, tieBreak),
+    [coherenceMode, coherenceQuestions, editResults.length, tieBreak],
   );
 
   // Moins de reponses que de profils (escalade Veronique, 3 aout 2026).
@@ -4891,14 +4900,32 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                 </div>
               )}
 
-              {/* Phrase d'arbitrage TOUJOURS visible (expert 30 juil
-                  2026) : le tiebreak existe et est déterministe, mais
-                  personne ne le sait. Une ligne discrète, pas un banner. */}
+              {/* COMMENT ON DEPARTAGE UNE EGALITE. La regle existe et est
+                  deterministe, mais personne ne la connait : on la dit, et
+                  on rend la BONNE reglable. Le mode "first" (l'ordre des
+                  profils) reste par defaut sur les quiz deja crees, et la
+                  bascule est un bouton, jamais un effet de bord d'une
+                  sauvegarde. */}
               {!isScoring && editResults.length > 1 && (
                 <div className="px-6 sm:px-12">
-                  <p className="max-w-2xl mx-auto text-[11px] text-muted-foreground mt-2 mb-1 leading-snug">
-                    {t("tieOrderHint")}
-                  </p>
+                  <div className="max-w-2xl mx-auto rounded-xl border bg-muted/30 px-4 py-3 my-4 flex flex-wrap items-center justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-medium">
+                        {t(tieBreak === "answers" ? "tieBreakAnswersTitle" : "tieBreakFirstTitle")}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
+                        {t(tieBreak === "answers" ? "tieBreakAnswersHelp" : "tieBreakFirstHelp")}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={tieBreak === "answers" ? "outline" : "default"}
+                      onClick={() => setTieBreak(tieBreak === "answers" ? "first" : "answers")}
+                    >
+                      {t(tieBreak === "answers" ? "tieBreakRevert" : "tieBreakSwitch")}
+                    </Button>
+                  </div>
                 </div>
               )}
 
