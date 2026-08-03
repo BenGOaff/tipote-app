@@ -70,6 +70,7 @@ import { EditorPreviewDeviceProvider } from "@/components/editor/EditorPreviewDe
 import { RestoreDraftDialog } from "@/components/editor/RestoreDraftDialog";
 import { useAutosave } from "@/hooks/use-autosave";
 import { stripHtml } from "@/lib/richText";
+import { alignBlockMarginClass, alignJustifyClass, alignTextClass, resolveBlockAlign } from "@/lib/quiz/textAlign";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { useTutorial } from "@/hooks/useTutorial";
 // SidebarProvider / AppSidebar intentionally NOT imported — the survey
@@ -1871,7 +1872,13 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
             <div data-device-preview={device} className={`mx-auto transition-all duration-300 ${device === "mobile" ? "max-w-sm" : "w-full"}`}>
 
               {/* ── INTRO SECTION ── */}
-              <div ref={introRef} className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-16 text-center">
+              {/* Bord commun titre / sous-titre / logo / bouton (drame Bene,
+                  3 aout 2026). Meme regle que l'editeur de quiz, via
+                  lib/quiz/textAlign.ts. "centered" en repli : c'est
+                  exactement ce qu'encodait le `text-center` ecrit ici, et
+                  les sondages n'ont pas de reglage de disposition. Rien ne
+                  bouge tant que la creatrice n'a pas aligne son titre. */}
+              <div ref={introRef} className={`min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-16 ${alignTextClass(resolveBlockAlign(title, title, "centered"))}`}>
                 <div className="max-w-2xl w-full space-y-6">
                   {/* Hidden file input partagé pour le picker intro image */}
                   <input
@@ -1938,7 +1945,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                   )}
 
                   {brandLogoUrl && (
-                    <div className="flex justify-center">
+                    <div className={`flex ${alignJustifyClass(resolveBlockAlign(title, title, "centered"))}`}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={brandLogoUrl} alt="" className="max-h-16 w-auto object-contain" />
                     </div>
@@ -1972,7 +1979,10 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                       onDrop={() => { setIntroImagePosition("after_title"); setDraggingIntroImage(false); }} />
                   )}
 
-                  <RichTextEdit value={introduction} onChange={setIntroduction} onAIRewrite={aiRewriteIntro} onImageUpload={handleRichTextImageUpload} previewTransform={previewInterpolate} className="text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto" placeholder="Texte d'introduction…" />
+                  {/* `max-w-xl` borne la longueur de ligne et reste ; c'est
+                      le `mx-auto` d'a cote qui centrait le bloc quoi qu'il
+                      arrive, d'ou le decalage sous un titre a gauche. */}
+                  <RichTextEdit value={introduction} onChange={setIntroduction} onAIRewrite={aiRewriteIntro} onImageUpload={handleRichTextImageUpload} previewTransform={previewInterpolate} className={`text-lg text-muted-foreground leading-relaxed max-w-xl ${alignBlockMarginClass(resolveBlockAlign(introduction, title, "centered"))} ${alignTextClass(resolveBlockAlign(introduction, title, "centered"))}`} placeholder="Texte d'introduction…" />
 
                   {/* slot AFTER_INTRO — entre intro text et bouton */}
                   {introImageUrl && introImagePosition === "after_intro" && (
@@ -1987,7 +1997,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                       onDrop={() => { setIntroImagePosition("after_intro"); setDraggingIntroImage(false); }} />
                   )}
 
-                  <div className="flex justify-center">
+                  <div className={`flex ${alignJustifyClass(resolveBlockAlign(title, title, "centered"))}`}>
                     <div className="px-10 py-4 rounded-full text-white font-semibold text-lg shadow-lg transition-opacity hover:opacity-90" style={{ backgroundColor: pc }}>
                       <InlineEdit
                         value={startButtonText}

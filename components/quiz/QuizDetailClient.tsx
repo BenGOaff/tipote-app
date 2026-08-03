@@ -56,6 +56,7 @@ import {
 import { interpolateText, extractResultLabel } from "@/lib/quizPersonalization";
 import { type TieConflict } from "@/lib/quizTieAnalysis";
 import { analyzeOptionSupply, analyzeResultCoverage, analyzeResultTies, attributionMode } from "@/lib/quizCoherence";
+import { alignBlockMarginClass, alignJustifyClass, alignTextClass, resolveBlockAlign } from "@/lib/quiz/textAlign";
 
 /** Same demo name used across both repos to substitute {name} placeholders
  *  in the editor preview canvas — gender-neutral, short, works in fr/en. */
@@ -736,6 +737,26 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const [themeId, setThemeId] = useState<string | null>(null);
   // Disposition des questions (façon Tally). 'centered' = rendu historique.
   const [questionLayout, setQuestionLayout] = useState<QuizQuestionLayout>("centered");
+
+  // ── Bord commun de l'ecran d'accueil (drame Bene, 3 aout 2026) ──
+  // Titre, sous-titre, logo et bouton se calent sur le MEME bord. La
+  // regle vit dans lib/quiz/textAlign.ts et sert aussi au viewer : c'est
+  // la seule facon que l'apercu ne mente pas. Avant, le sous-titre
+  // portait `mx-auto` en dur, donc il restait centre sous un titre cale a
+  // gauche, et commencait visiblement plus a droite que lui.
+  //
+  // Exception couverture : quand l'accueil est une image plein ecran, le
+  // viewer centre tout sans condition. On fait pareil.
+  const introIsCover = introLayout === "cover" && !!introImageUrl;
+  const introAlign = introIsCover ? "center" as const : resolveBlockAlign(title, title, questionLayout);
+  const introAlignTextClass = alignTextClass(introAlign);
+  const introJustifyClass = alignJustifyClass(introAlign);
+  // Le sous-titre peut avoir SON propre alignement : dans ce cas il gagne,
+  // pour lui seul. L'aligner exprès à gauche sous un titre centré est un
+  // choix, pas un accident.
+  const introBodyAlign = introIsCover ? "center" as const : resolveBlockAlign(introduction, title, questionLayout);
+  const introBodyAlignTextClass = alignTextClass(introBodyAlign);
+  const introBodyMarginClass = alignBlockMarginClass(introBodyAlign);
   // splitImageUrl : conserve pour retro-compatibilite (fallback quand
   // panel_media est null). Plus d'UI d'upload dediee : remplacee par
   // PanelMediaEditor. On garde la valeur chargee/persistee telle quelle.
@@ -3678,7 +3699,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                   clair. L'apercu doit montrer EXACTEMENT ca. */}
               <div
                 ref={introRef}
-                className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-16 text-center"
+                className={`min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-16 ${introAlignTextClass}`}
                 style={introLayout === "cover" && introImageUrl ? {
                   backgroundImage: `linear-gradient(rgba(15,23,42,0.55), rgba(15,23,42,0.55)), url("${introImageUrl}")`,
                   backgroundSize: "cover",
@@ -3783,7 +3804,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                   )}
 
                   {effectiveLogoUrl && (
-                    <div className="flex justify-center">
+                    <div className={`flex ${introJustifyClass}`}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={effectiveLogoUrl} alt="" className="max-h-16 w-auto object-contain" />
                     </div>
@@ -3817,7 +3838,12 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                       onDrop={() => { setIntroImagePosition("after_title"); setDraggingIntroImage(false); }} />
                   )}
 
-                  <RichTextEdit value={introduction} onChange={setIntroduction} onAIRewrite={aiRewriteIntro} onImageUpload={handleRichTextImageUpload} previewTransform={previewInterpolate} className="text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto" placeholder="Texte d'introduction…" />
+                  {/* `max-w-xl` borne la LONGUEUR DE LIGNE et reste ; c'est
+                      le `mx-auto` d'a cote qui centrait le bloc quoi qu'il
+                      arrive, d'ou le sous-titre decale sous un titre cale a
+                      gauche. La marge vient de lib/quiz/textAlign.ts, la MEME
+                      fonction que le viewer, sinon l'apercu ment. */}
+                  <RichTextEdit value={introduction} onChange={setIntroduction} onAIRewrite={aiRewriteIntro} onImageUpload={handleRichTextImageUpload} previewTransform={previewInterpolate} className={`text-lg text-muted-foreground leading-relaxed max-w-xl ${introBodyMarginClass} ${introBodyAlignTextClass}`} placeholder="Texte d'introduction…" />
 
                   {/* slot AFTER_INTRO — entre intro text et bouton */}
                   {introLayout !== "cover" && introImageUrl && introImagePosition === "after_intro" && (
@@ -3832,7 +3858,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                       onDrop={() => { setIntroImagePosition("after_intro"); setDraggingIntroImage(false); }} />
                   )}
 
-                  <div className="flex justify-center">
+                  <div className={`flex ${introJustifyClass}`}>
                     <div className="px-10 py-4 rounded-full text-white font-semibold text-lg shadow-lg transition-opacity hover:opacity-90" style={{ backgroundColor: pc }}>
                       <InlineEdit
                         value={startButtonText}
