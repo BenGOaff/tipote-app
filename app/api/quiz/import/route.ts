@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { ensureUserCredits, consumeCredits } from "@/lib/credits";
 import { resolveAnthropicModel } from "@/lib/anthropicModel";
+import { buildClaudeMessageBody } from "@/lib/claudeRequest";
 import { sanitizeAiQuizPayload } from "@/lib/aiTextSanitizer";
 
 export const runtime = "nodejs";
@@ -213,18 +214,31 @@ export async function POST(req: NextRequest) {
         "x-api-key": apiKey,
         "anthropic-version": "2023-06-01",
       },
-      body: JSON.stringify({
-        model: getClaudeModel(),
-        max_tokens: 8000,
-        temperature: 0.3,
-        system: SYSTEM_PROMPT,
-        messages: [
-          {
-            role: "user",
-            content: `Voici le contenu du fichier "${file.name}" :\n\n${text}`,
-          },
-        ],
-      }),
+      // buildClaudeMessageBody retire temperature/top_p/top_k pour les
+      // modeles qui les rejettent (Opus 4.7+, sinon 400 "temperature is
+      // deprecated for this model"). Cette route etait la seule a
+      // construire son body a la main : elle serait tombee au prochain
+      // changement de modele, sur un import qui marchait la veille.
+      body: JSON.stringify(
+        buildClaudeMessageBody({
+          model: getClaudeModel(),
+          max_tokens: 8000,
+          temperature: 0.3,
+          system: SYSTEM_PROMPT,
+          messages: [
+            {
+              role: "user",
+              content: `Voici le contenu du fichier "${file.name}" :\n\n${text}`,
+            },
+          ],
+        }),
+      ),
+      // ON REND LA MAIN AVANT CLOUDFLARE. Sa limite est a ~100 s et elle
+      // rend une page 524 que nous ne controlons pas : l'utilisatrice
+      // voit une panne d'infrastructure au lieu de notre message.
+      // L'analyse d'un document long peut approcher cette limite ; a 85 s
+      // c'est NOUS qui repondons, avec une phrase et un bouton.
+      signal: AbortSignal.timeout(85_000),
     });
 
     if (!res.ok) {
@@ -283,6 +297,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, quiz: cleanedQuiz });
   } catch (err: any) {
     console.error("[quiz/import] Error:", err);
+    // Un abandon sur delai n'est pas une panne : le document est trop
+    // long pour une seule analyse. On le DIT, avec la sortie a prendre,
+    // au lieu d'un "Erreur lors de l'analyse" qui laisse chercher.
+    if (String(err?.name ?? "") === "TimeoutError" || String(err?.name ?? "") === "AbortError") {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "L'analyse a pris trop de temps : ton document est sans doute très long. Réessaie, ou importe-le en deux parties.",
+        },
+        { status: 504 },
+      );
+    }
     return NextResponse.json(
       { ok: false, error: err.message || "Erreur lors de l'analyse du fichier." },
       { status: 500 },
