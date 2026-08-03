@@ -4,6 +4,7 @@
 
 import { buildLanguageDirective } from "@/lib/quizLanguages";
 import { slugifyAxisLabel } from "@/lib/quizScoring";
+import { HOOK_CRAFT_BLOCK, RESULT_BEATS_BLOCK } from "@/lib/prompts/quiz/copywriting";
 
 // Bloc d'écriture NATURELLE 2026 — l'arme anti « ça fait IA ». Réutilisé par la
 // génération de quiz ET de sondage. Cible précisément les tics qui trahissent un
@@ -177,6 +178,10 @@ PRINCIPES CRÉATIFS :
 - Le ton doit être ${tone}, jamais condescendant, jamais scolaire.
 
 ${NATURAL_WRITING_BLOCK}
+
+${HOOK_CRAFT_BLOCK}
+
+${RESULT_BEATS_BLOCK}
 ${brandVoice ? `\nVOIX DE LA MARQUE — écris DANS cette voix (ne recopie jamais ces éléments tels quels, inspire-t'en pour le ton et les angles) :\n${brandVoice}\n` : ""}${copyHint ? `\n${copyHint}\n` : ""}
 FORME D'ADRESSE : ${formality === "vous" ? "VOUVOYER le lecteur dans TOUT le contenu. Utiliser systématiquement « vous » et ses formes associées." : "TUTOYER le lecteur dans TOUT le contenu. Utiliser systématiquement « tu » et ses formes associées."}
 
@@ -267,7 +272,11 @@ FORMAT DE SORTIE : JSON strict uniquement. Pas de markdown, pas de commentaires,
     {
       "title": "${isScoring ? "Nom de la tranche (du plus bas au plus haut)" : "Nom du profil ou niveau"}",
       "description": "Description valorisante (2-3 phrases)",
-      "insight": "Prise de conscience forte et spécifique — ce que la personne ne voyait pas",
+      "insight_heading": "Titre de LA CAUSE (3-7 mots)",
+      "insight": "LA CAUSE : 2-3 phrases, une seule cause nommée précisément.",
+      "projection_heading": "Titre du CHEMIN (3-7 mots)",
+      "bridge_heading": "Titre du PONT (3-7 mots)",
+      "bridge": "LE PONT : 2-3 phrases orientées bénéfices, cohérentes avec cta_text.",
       "projection": "${formality === "vous" ? "Et si vous..." : "Et si tu..."}  — projection motivante vers l'action",
       "cta_text": "Texte du CTA personnalisé pour ce profil"
     }

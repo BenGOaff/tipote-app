@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { classifyDeleteError, deleteRefusalReason, deleteRefusalStatus } from "@/lib/quizDelete";
 import { sanitizeRichText } from "@/lib/richText";
+import { sanitizeBeatMedia, type BeatMedia } from "@/lib/quiz/resultBeats";
 import { sanitizeSlug, sanitizeShareNetworks, BRAND_FONT_CHOICES, QUIZ_GRADIENTS, sanitizePanelMediaConfig } from "@/lib/quizBranding";
 import { isReservedPublicSlug } from "@/lib/publicSlug";
 import { findCrossTypeSlugConflict } from "@/lib/publicSlugServer";
@@ -42,6 +43,7 @@ const FR_TYPO_PLAIN_FIELDS = [
   "bonus_intro_text",
   "start_button_text",
   "result_insight_heading",
+  "result_bridge_heading",
   "result_projection_heading",
   "og_description",
 ] as const;
@@ -198,7 +200,8 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       "show_results_breakdown",
       "hide_response_counts",
       "notify_responses",
-      "start_button_text", "result_insight_heading", "result_projection_heading",
+      "start_button_text", "result_insight_heading", "result_projection_heading", "result_bridge_heading",
+      "result_layout",
       "custom_footer_text", "custom_footer_url",
       "hide_branding",
       "brand_font", "brand_color_primary", "brand_color_background", "brand_color_text",
@@ -207,7 +210,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       "background_style", "background_gradient", "background_image_url",
       "intro_layout", "button_shape", "theme_id",
       "question_layout", "split_image_url", "split_side", "panel_media",
-      "answer_layout", "show_result_insight", "show_result_projection", "show_result_share", "share_result_page",
+      "answer_layout", "show_result_insight", "show_result_projection", "show_result_bridge", "show_result_share", "share_result_page",
       "close_enabled", "close_action", "close_redirect_url", "close_message",
       "close_cta_text", "close_cta_url",
       // Scoring multi-axes (Véronique juillet 2026). Re-validé ci-dessous.
@@ -307,7 +310,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     }
     // Cartes resultat masquables + bouton de partage optionnel. Booleens
     // stricts ; default true cote DB -> absence = comportement historique.
-    for (const key of ["show_result_insight", "show_result_projection", "show_result_share", "share_result_page"] as const) {
+    for (const key of ["show_result_insight", "show_result_projection", "show_result_bridge", "show_result_share", "share_result_page"] as const) {
       if (key in patch) patch[key] = patch[key] !== false;
     }
 
@@ -641,6 +644,9 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         insight: string | null;
         projection: string | null;
         insight_heading: string | null;
+        bridge: string | null;
+        bridge_heading: string | null;
+        beat_media: BeatMedia | null;
         projection_heading: string | null;
         cta_text: string | null;
         cta_url: string | null;
@@ -689,6 +695,20 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
               : null,
           // Overrides de titres de blocs par profil (Gwenn 13 juin 2026,
           // miroir Tiquiz). Vide apres trim = NULL (titre commun).
+          // LE PONT (4e temps, 3 aout 2026). NULL sur tous les profils
+          // d'avant, donc bloc absent : c'est ce qui fait qu'un quiz
+          // existant ne bouge pas.
+          bridge:
+            typeof r.bridge === "string"
+              ? applyFrenchTypographyToHtml(sanitizeRichText(r.bridge), effectiveLocale)
+              : null,
+          bridge_heading:
+            typeof r.bridge_heading === "string" && r.bridge_heading.trim()
+              ? applyFrenchTypographyToHtml(sanitizeRichText(r.bridge_heading), effectiveLocale)
+              : null,
+          // Image par temps, sanitize par lib/quiz/resultBeats.ts : ce
+          // champ finit dans un <img src> public.
+          beat_media: sanitizeBeatMedia(r.beat_media),
           insight_heading:
             typeof r.insight_heading === "string" && r.insight_heading.trim()
               ? applyFrenchTypographyToHtml(sanitizeRichText(r.insight_heading), effectiveLocale)

@@ -57,6 +57,12 @@ import { interpolateText, extractResultLabel } from "@/lib/quizPersonalization";
 import { type TieConflict } from "@/lib/quizTieAnalysis";
 import { analyzeOptionSupply, analyzeResultCoverage, analyzeResultTies, attributionMode } from "@/lib/quizCoherence";
 import { alignBlockMarginClass, alignJustifyClass, alignTextClass, resolveBlockAlign } from "@/lib/quiz/textAlign";
+import {
+  beatShell,
+  bridgeTextColor,
+  resultLayoutMode,
+  type BeatMedia,
+} from "@/lib/quiz/resultBeats";
 
 /** Same demo name used across both repos to substitute {name} placeholders
  *  in the editor preview canvas — gender-neutral, short, works in fr/en. */
@@ -125,6 +131,7 @@ import {
   type PanelMediaConfig,
   type QuizBranding,
   quizContentIsDark,
+  isColorDark,
 } from "@/lib/quizBranding";
 import { QuizPanelMedia } from "@/components/quiz/QuizPanelMedia";
 import { PanelMediaEditor } from "@/components/quiz/PanelMediaEditor";
@@ -166,7 +173,7 @@ type IntroImagePosition = "top" | "after_title" | "after_intro" | "bottom";
 // titre du bonus) | "after_heading" | "after_intro" | "bottom".
 type BonusImagePosition = "top" | "after_heading" | "after_intro" | "bottom";
 const RESULT_IMAGE_POSITIONS: ResultImagePosition[] = ["top", "after_title", "after_description", "after_insight", "bottom"];
-type QuizResult = { id?: string; title: string; description: string | null; insight: string | null; projection: string | null; insight_heading?: string | null; projection_heading?: string | null; cta_text: string | null; cta_url: string | null; sio_tag_name: string | null; sio_tag_names?: string[] | null; sio_course_id: string | null; sio_community_id: string | null; sort_order: number; image_url?: string | null; image_position?: ResultImagePosition | null; image_width?: number | null; min_score?: number | null; max_score?: number | null };
+type QuizResult = { id?: string; title: string; description: string | null; insight: string | null; projection: string | null; insight_heading?: string | null; projection_heading?: string | null; bridge?: string | null; bridge_heading?: string | null; beat_media?: BeatMedia | null; cta_text: string | null; cta_url: string | null; sio_tag_name: string | null; sio_tag_names?: string[] | null; sio_course_id: string | null; sio_community_id: string | null; sort_order: number; image_url?: string | null; image_position?: ResultImagePosition | null; image_width?: number | null; min_score?: number | null; max_score?: number | null };
 type QuizLead = { id: string; email: string; first_name: string | null; last_name: string | null; phone: string | null; country: string | null; result_id: string | null; result_title: string | null; answers: { question_index: number; question_id?: string | null; option_index?: number; option_indices?: number[] }[] | null; scores?: unknown; has_shared: boolean; bonus_unlocked: boolean; created_at: string };
 type QuizData = {
   id: string; title: string; slug: string | null;
@@ -591,6 +598,12 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   // visiteur voit la string i18n par défaut.
   const [captureSubmitText, setCaptureSubmitText] = useState("");
   const [resultInsightHeading, setResultInsightHeading] = useState("");
+  // LES 4 TEMPS (demande Béné, 3 août 2026). `resultLayout` reste
+  // "classic" pour tous les quiz existants : c'est la colonne qui porte
+  // la garantie, pas une heuristique.
+  const [resultBridgeHeading, setResultBridgeHeading] = useState("");
+  const [showResultBridge, setShowResultBridge] = useState(true);
+  const [resultLayout, setResultLayout] = useState<"classic" | "beats">("classic");
   const [resultProjectionHeading, setResultProjectionHeading] = useState("");
   // Capture email optionnelle en mode quiz (juillet 2026, port miroir
   // Tiquiz). Default true = comportement historique (l'email est demande
@@ -930,6 +943,9 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     capture_subtitle: captureSubtitle,
     capture_submit_text: captureSubmitText,
     result_insight_heading: resultInsightHeading,
+    result_bridge_heading: resultBridgeHeading,
+    show_result_bridge: showResultBridge,
+    result_layout: resultLayout,
     result_projection_heading: resultProjectionHeading,
     capture_enabled: captureEnabled,
     capture_first_name: captureFirstName,
@@ -1217,6 +1233,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const aiRewriteResultDesc = useCallback((p: string) => aiRewrite(p, "result_description"), [aiRewrite]);
   const aiRewriteResultInsight = useCallback((p: string) => aiRewrite(p, "result_insight"), [aiRewrite]);
   const aiRewriteResultProjection = useCallback((p: string) => aiRewrite(p, "result_projection"), [aiRewrite]);
+  const aiRewriteResultBridge = useCallback((p: string) => aiRewrite(p, "result_bridge"), [aiRewrite]);
 
   // AI rebalance modal state. The creator clicks "Rééquilibrer avec
   // l'IA" on a low-coverage result, the server asks Claude to redistribute
@@ -1385,6 +1402,9 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       setCaptureHeading(q.capture_heading ?? ""); setCaptureSubtitle(q.capture_subtitle ?? "");
       setCaptureSubmitText(q.capture_submit_text ?? "");
       setResultInsightHeading(q.result_insight_heading ?? ""); setResultProjectionHeading(q.result_projection_heading ?? "");
+      setResultBridgeHeading((q as { result_bridge_heading?: string | null }).result_bridge_heading ?? "");
+      setShowResultBridge((q as { show_result_bridge?: boolean | null }).show_result_bridge !== false);
+      setResultLayout(resultLayoutMode((q as { result_layout?: string | null }).result_layout));
       setCaptureEnabled((q as { capture_enabled?: boolean | null }).capture_enabled !== false);
       setCaptureFirstName(q.capture_first_name ?? false); setCaptureLastName(q.capture_last_name ?? false);
       setShowConsentCheckbox((q as { show_consent_checkbox?: boolean | null }).show_consent_checkbox !== false);
@@ -2040,6 +2060,9 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           capture_heading: captureHeading || null, capture_subtitle: captureSubtitle || null,
           capture_submit_text: captureSubmitText || null,
           result_insight_heading: resultInsightHeading.trim() || null,
+          result_bridge_heading: resultBridgeHeading.trim() || null,
+          show_result_bridge: showResultBridge,
+          result_layout: resultLayout,
           result_projection_heading: resultProjectionHeading.trim() || null,
           capture_enabled: captureEnabled,
           capture_first_name: captureFirstName, capture_last_name: captureLastName,
@@ -2137,7 +2160,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
             // any plain object and DB column is JSONB.
             config: q.config ?? {},
           })),
-          results: editResults.map((r, i) => ({ id: r.id, title: r.title, description: r.description, insight: r.insight, projection: r.projection, insight_heading: r.insight_heading ?? null, projection_heading: r.projection_heading ?? null, cta_text: r.cta_text, cta_url: r.cta_url, sio_tag_name: (r.sio_tag_names && r.sio_tag_names.length > 0 ? r.sio_tag_names[0] : r.sio_tag_name) || null, sio_tag_names: r.sio_tag_names ?? (r.sio_tag_name ? [r.sio_tag_name] : []), sio_course_id: r.sio_course_id || null, sio_community_id: r.sio_community_id || null, sort_order: i, image_url: r.image_url ?? null, image_position: r.image_position ?? "top", image_width: r.image_width ?? null, min_score: r.min_score ?? null, max_score: r.max_score ?? null })),
+          results: editResults.map((r, i) => ({ id: r.id, title: r.title, description: r.description, insight: r.insight, projection: r.projection, insight_heading: r.insight_heading ?? null, projection_heading: r.projection_heading ?? null, bridge: r.bridge ?? null, bridge_heading: r.bridge_heading ?? null, beat_media: r.beat_media ?? null, cta_text: r.cta_text, cta_url: r.cta_url, sio_tag_name: (r.sio_tag_names && r.sio_tag_names.length > 0 ? r.sio_tag_names[0] : r.sio_tag_name) || null, sio_tag_names: r.sio_tag_names ?? (r.sio_tag_name ? [r.sio_tag_name] : []), sio_course_id: r.sio_course_id || null, sio_community_id: r.sio_community_id || null, sort_order: i, image_url: r.image_url ?? null, image_position: r.image_position ?? "top", image_width: r.image_width ?? null, min_score: r.min_score ?? null, max_score: r.max_score ?? null })),
         }),
       });
       const json = await res.json();
@@ -3429,6 +3452,53 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                       facon Tally. Cartes insight / projection masquables +
                       bouton de partage optionnel. Default TRUE -> quiz
                       existants inchanges. */}
+                  {/* ── LES 4 TEMPS (demande Béné, 3 août 2026) ──
+                      La page de résultat suit ce que l'Atelier enseigne :
+                      le miroir, la cause, le chemin, le pont. Ces noms
+                      vivent ICI, dans l'aide de l'éditeur, et JAMAIS dans
+                      le texte que le visiteur lit. */}
+                  <div className="mt-2 space-y-3 rounded-xl border p-3">
+                    <p className="text-sm font-semibold">Structure de la page (méthode Atelier)</p>
+                    <p className="text-xs text-muted-foreground">
+                      Une page de résultat qui convertit suit 4 temps. Les noms ci-dessous sont là pour toi, ils n&apos;apparaissent jamais chez ton visiteur.
+                    </p>
+                    <ol className="space-y-2 text-xs">
+                      {([
+                        ["Le miroir.", "Le nom du profil et sa description. Tu lui redis où il en est, avec ses mots. Il se reconnaît, donc il continue à lire."],
+                        ["La cause.", "Tu nommes ce qui bloque vraiment. C'est souvent autre chose que ce qu'il croyait."],
+                        ["Le chemin.", "Tu montres les étapes pour s'en sortir. Il voit que c'est faisable."],
+                        ["Le pont.", "Tu proposes ton offre comme la suite logique de ce qu'il vient de lire. Pas comme une pub."],
+                      ] as const).map(([name, help], i) => (
+                        <li key={name} className="flex gap-2.5">
+                          <span
+                            className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[11px] font-bold"
+                            style={{ backgroundColor: `${pc}1a`, color: pc }}
+                            aria-hidden
+                          >
+                            {i + 1}
+                          </span>
+                          <span>
+                            <span className="font-semibold">{name}</span>
+                            <span className="text-muted-foreground"> {help}</span>
+                          </span>
+                        </li>
+                      ))}
+                    </ol>
+                    <SettingsToggle
+                      label="Page de résultat en 4 temps"
+                      hint="Sépare visuellement les 4 temps, à tes couleurs. Décoché, ta page garde sa mise en page actuelle."
+                      checked={resultLayout === "beats"}
+                      onChange={(v) => setResultLayout(v ? "beats" : "classic")}
+                    />
+                    {resultLayout === "beats" && (
+                      <SettingsToggle
+                        label="Afficher le pont"
+                        hint="Le bloc qui relie le résultat à ton offre, juste avant le bouton."
+                        checked={showResultBridge}
+                        onChange={(v) => setShowResultBridge(v)}
+                      />
+                    )}
+                  </div>
                   <SettingsToggle
                     label={t("optionShowResultInsight")}
                     hint={t("optionShowResultInsightHint")}
@@ -4747,6 +4817,13 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
 
               {/* ── RESULTS ── */}
               {editResults.map((r, ri) => {
+                // L'habillage des temps vient de beatShell : la MÊME
+                // fonction que le viewer public. Un aperçu qui recalcule
+                // l'allure du viewer finit toujours par mentir.
+                const bridgeInk = bridgeTextColor(isColorDark(pc));
+                const shellCause = beatShell(resultLayout, "cause", pc, bridgeInk);
+                const shellPath = beatShell(resultLayout, "path", pc, bridgeInk);
+                const shellBridge = beatShell(resultLayout, "bridge", pc, bridgeInk);
                 const insightPersonalized = editResults.some(rr => rr.insight_heading != null);
                 const projectionPersonalized = editResults.some(rr => rr.projection_heading != null);
                 const cov = resultCoverage[ri] ?? { questionsLeading: 0, totalQuestions: editQuestions.length, expected: 1, severity: "danger" as const };
@@ -4912,12 +4989,13 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                       <ResultPositionDropZone label={t("resultImagePos_after_description")}
                         onDrop={() => { updateResultImagePosition(ri, "after_description"); setDraggingResultImageRi(null); }} />
                     )}
-                    <div className="p-5 rounded-xl bg-muted/50 border">
+                    <div className={shellCause.containerClass} style={shellCause.containerStyle}>
                       <div className="mb-2">
                         <InlineEdit
                           value={insightPersonalized ? (r.insight_heading ?? "") : (resultInsightHeading || "Prise de conscience")}
                           onChange={insightPersonalized ? (v: string) => updateR(ri, "insight_heading", v ?? "") : setResultInsightHeading}
-                          className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+                          className={shellCause.headingClass}
+                          style={shellCause.headingStyle}
                           placeholder={insightPersonalized ? (resultInsightHeading.trim() || "Prise de conscience") : "Titre du bloc insight…"}
                         />
                         <button type="button"
@@ -4939,13 +5017,13 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                       <ResultPositionDropZone label={t("resultImagePos_after_insight")}
                         onDrop={() => { updateResultImagePosition(ri, "after_insight"); setDraggingResultImageRi(null); }} />
                     )}
-                    <div className="p-5 rounded-xl border" style={{ backgroundColor: `${pc}08`, borderColor: `${pc}30` }}>
+                    <div className={shellPath.containerClass} style={shellPath.containerStyle}>
                       <div className="mb-2">
                         <InlineEdit
                           value={projectionPersonalized ? (r.projection_heading ?? "") : (resultProjectionHeading || "Et si...")}
                           onChange={projectionPersonalized ? (v: string) => updateR(ri, "projection_heading", v ?? "") : setResultProjectionHeading}
-                          className="text-xs font-bold uppercase tracking-widest"
-                          style={{ color: `${pc}99` }}
+                          className={shellPath.headingClass}
+                          style={shellPath.headingStyle}
                           placeholder={projectionPersonalized ? (resultProjectionHeading.trim() || "Et si...") : "Titre du bloc projection…"}
                         />
                         <button type="button"
@@ -4957,6 +5035,35 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                       </div>
                       <RichTextEdit value={r.projection ?? ""} onChange={(v) => updateR(ri, "projection", v || null)} onGenderize={genderize} onAIRewrite={aiRewriteResultProjection} availableVars={resultVars} previewTransform={previewInterpolate} onImageUpload={handleRichTextImageUpload} className="text-sm leading-relaxed" placeholder="Projection…" />
                     </div>
+
+                    {/* LE PONT, 4e temps (demande Béné, 3 août 2026).
+                        Visible seulement en page "4 temps" : un quiz
+                        classique n'a pas ce bloc, et lui en montrer un
+                        vide dans l'aperçu serait mentir. */}
+                    {resultLayout === "beats" && showResultBridge && (
+                      <div className={shellBridge.containerClass} style={shellBridge.containerStyle}>
+                        <div className="mb-2">
+                          <InlineEdit
+                            value={r.bridge_heading ?? (resultBridgeHeading || "Et maintenant")}
+                            onChange={(v: string) => updateR(ri, "bridge_heading", v ?? "")}
+                            className={shellBridge.headingClass}
+                            style={shellBridge.headingStyle}
+                            placeholder="Titre du pont…"
+                          />
+                        </div>
+                        <RichTextEdit
+                          value={r.bridge ?? ""}
+                          onChange={(v) => updateR(ri, "bridge", v || null)}
+                          onGenderize={genderize}
+                          onAIRewrite={aiRewriteResultBridge}
+                          availableVars={resultVars}
+                          previewTransform={previewInterpolate}
+                          onImageUpload={handleRichTextImageUpload}
+                          className="text-sm leading-relaxed"
+                          placeholder="Ce que ça change pour lui, concrètement, s'il passe à la suite."
+                        />
+                      </div>
+                    )}
                     {r.image_url && r.image_position === "bottom" && (
                       <ResultDraggableImage url={r.image_url} ri={ri}
                         onDragStart={() => setDraggingResultImageRi(ri)}
