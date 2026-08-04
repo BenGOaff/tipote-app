@@ -16,7 +16,13 @@ import { sanitizeAiText } from "@/lib/aiTextSanitizer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { stripHtml } from "@/lib/richText";
 import { buildLiveFunnel } from "@/lib/quiz/funnel";
-import { readFunnelSignal, type FunnelSignal } from "@/lib/quiz/funnelSignal";
+import { readFunnelSignal, type FunnelSignal, type FunnelStepLike } from "@/lib/quiz/funnelSignal";
+import {
+  biggestLeak,
+  buildFullFunnel,
+  renderFullFunnelVerdict,
+  type FullFunnelStep,
+} from "@/lib/quiz/fullFunnel";
 import { aggregateSurvey, type AggregatedQuestion } from "@/lib/survey/analysis";
 
 const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
@@ -41,6 +47,10 @@ export interface QuizInsightsAggregate {
   metrics: {
     views: number;
     viewsReliable: boolean;
+    /** Clics sur le bouton de depart. La marche entre l'arrivee et la
+     *  premiere question, la plus grosse de tout le parcours chez
+     *  Jocelyne, et la seule qu'on ne montrait pas. */
+    starts: number;
     completions: number;
     completionRate: number | null;
     leads: number;
@@ -55,6 +65,14 @@ export interface QuizInsightsAggregate {
    *  reformulation sur trois visiteurs, en designant qui plus est la
    *  question suivante (drame Jocelyne, 4 aout 2026). */
   funnelSignal: FunnelSignal;
+  /** Le parcours ENTIER : arrivee -> demarrage -> questions -> email.
+   *  Le funnel par question ne montrait que le milieu, soit 14% du
+   *  probleme chez Jocelyne (cf. lib/quiz/fullFunnel.ts). */
+  fullFunnel: FullFunnelStep[];
+  /** La marche qui perd le plus de MONDE, en personnes. C'est elle qui
+   *  impose la priorite du rapport, l'IA n'a pas le droit d'en choisir
+   *  une autre. */
+  worstLeak: FullFunnelStep | null;
   questions: AggregatedQuestion[];
   totalAnswered: number;
 }
@@ -93,7 +111,7 @@ export async function aggregateQuizInsights(
 ): Promise<QuizInsightsAggregate | null> {
   const { data: quiz } = await supabaseAdmin
     .from("quizzes")
-    .select("id, user_id, title, mode, views_count, completions_count")
+    .select("id, user_id, title, mode, views_count, starts_count, completions_count")
     .eq("id", quizId)
     .maybeSingle();
   if (!quiz || quiz.user_id !== userId) return null;
@@ -120,7 +138,7 @@ export async function aggregateQuizInsights(
   const exported = exportedCount ?? 0;
 
   // ── Vues + completions : max(compteur denormalise, quiz_events) ──
-  const [viewsEv, completesEv] = await Promise.all([
+  const [viewsEv, startsEv, completesEv] = await Promise.all([
     supabaseAdmin
       .from("quiz_events")
       .select("id", { count: "exact", head: true })
@@ -130,9 +148,15 @@ export async function aggregateQuizInsights(
       .from("quiz_events")
       .select("id", { count: "exact", head: true })
       .eq("quiz_id", quizId)
+      .eq("event_type", "start"),
+    supabaseAdmin
+      .from("quiz_events")
+      .select("id", { count: "exact", head: true })
+      .eq("quiz_id", quizId)
       .eq("event_type", "complete"),
   ]);
   const trackedViews = Math.max((quiz.views_count as number) ?? 0, viewsEv.error ? 0 : viewsEv.count ?? 0);
+  const starts = Math.max((quiz.starts_count as number) ?? 0, startsEv.error ? 0 : startsEv.count ?? 0);
   const completions = Math.max((quiz.completions_count as number) ?? 0, completesEv.error ? 0 : completesEv.count ?? 0);
 
   const viewsReliable = trackedViews >= leads;
@@ -186,6 +210,7 @@ export async function aggregateQuizInsights(
 
   // ── Drop-off par question ──
   const funnel: QuizInsightsAggregate["funnel"] = [];
+  let liveSteps: FunnelStepLike[] = [];
   let funnelSignal: FunnelSignal = {
     kind: "no-data",
     bestSample: 0,
@@ -211,6 +236,7 @@ export async function aggregateQuizInsights(
     // pas se retrouver dans le diagnostic de l'IA (cf. lib/quiz/funnel.ts).
     const { steps } = buildLiveFunnel(rows, texts.length);
     funnelSignal = readFunnelSignal(steps);
+    liveSteps = steps;
     for (const step of steps) {
       if (!step.hasData) continue;
       funnel.push({
@@ -225,15 +251,32 @@ export async function aggregateQuizInsights(
     // RPC absente : funnel vide, non bloquant.
   }
 
+  // ── Le parcours ENTIER (arrivee -> demarrage -> questions -> email) ──
+  //
+  // Le funnel par question commence a la Q1 et s'arrete a la derniere :
+  // chez Jocelyne, il montrait 14% du probleme. Les deux marches
+  // manquantes etaient en base depuis toujours, on ne les mettait juste
+  // pas dans la meme image.
+  const fullFunnel = buildFullFunnel({
+    views,
+    starts,
+    questions: liveSteps,
+    leads,
+    viewsReliable,
+  });
+  const worstLeak = biggestLeak(fullFunnel);
+
   const survey = await aggregateSurvey(quizId, userId);
 
   return {
     title: stripHtml(String(quiz.title ?? "")).trim() || "Sans titre",
     mode,
-    metrics: { views, viewsReliable, completions, completionRate, leads, captureRate, exportedSio: exported },
+    metrics: { views, viewsReliable, starts, completions, completionRate, leads, captureRate, exportedSio: exported },
     resultDistribution,
     funnel,
     funnelSignal,
+    fullFunnel,
+    worstLeak,
     questions: survey?.questions ?? [],
     totalAnswered: survey?.totalResponses ?? 0,
   };
@@ -289,6 +332,7 @@ function renderAggregateForPrompt(a: QuizInsightsAggregate): string {
     "",
     "CHIFFRES (cumul depuis le debut) :",
     `- Vues${m.viewsReliable ? "" : " (partiellement trackees, taux a interpreter avec prudence)"} : ${m.views}`,
+    ...(m.starts > 0 ? [`- Ont clique sur commencer : ${m.starts}`] : []),
     `- Completions : ${m.completions}${m.completionRate !== null ? ` (${m.completionRate}% des vues)` : ""}`,
     `- Leads captures : ${m.leads}${m.captureRate !== null ? ` (taux de capture ${m.captureRate}% des vues)` : " (taux de capture non fiable : vues incompletes)"}`,
     `- Leads exportes vers Systeme.io : ${m.exportedSio}`,
@@ -299,6 +343,13 @@ function renderAggregateForPrompt(a: QuizInsightsAggregate): string {
     for (const r of a.resultDistribution) lines.push(`- ${r.title} : ${r.pct}% (${r.count})`);
     lines.push("");
   }
+  // Le parcours entier AVANT le detail par question : c'est le cadrage
+  // qui manquait, et il doit etre lu en premier.
+  const parcours = renderFullFunnelVerdict(a.fullFunnel);
+  if (parcours) {
+    lines.push(parcours, "");
+  }
+
   if (a.funnel.length > 0) {
     lines.push("DROP-OFF PAR QUESTION (sessions atteignant chaque question) :");
     for (const f of a.funnel)
@@ -335,6 +386,7 @@ export async function generateQuizInsights(aggregate: QuizInsightsAggregate): Pr
     "Tu te bases UNIQUEMENT sur les chiffres fournis, sans jamais inventer de donnees.",
     "REGLES de lecture des chiffres :",
     "- Un taux de capture sous ~10% = fuite a corriger (capture mal placee, promesse du resultat trop faible). 20%+ = bon, 40%+ = excellent.",
+    "- LE PARCOURS ENTIER PASSE AVANT LES QUESTIONS. Le quiz commence a l'ecran d'accueil, pas a la question 1. Le bloc VERDICT DU PARCOURS est CALCULE et non negociable : la marche qu'il designe EST la priorite du rapport. Une creatrice peut passer des semaines a reecrire des questions pendant que la moitie de ses visiteurs repartent avant d'en lire une seule.",
     "- LE FUNNEL PAR QUESTION : tu suis le bloc VERDICT DU FUNNEL a la lettre. Il est CALCULE, il n'est pas negociable, et il prime sur ta propre lecture des chiffres bruts. S'il dit qu'il n'y a pas assez de donnees, tu ne nommes AUCUNE question, meme si un pourcentage te saute aux yeux.",
     "- Perdre des gens en cours de quiz est NORMAL et SAIN : ceux qui s'arretent sont d'abord les visiteurs non qualifies, et le quiz fait son travail en les filtrant. Aucun quiz ne vise 100% de completion. Ne presente jamais un abandon comme une faute de la creatrice, ni un taux de completion imparfait comme un probleme a corriger.",
     "- PROTOCOLE DE MESURE, a rappeler des que tu proposes de modifier le quiz : UNE SEULE modification a la fois, puis attendre au moins 20 a 30 nouvelles reponses avant de juger. Enchainer plusieurs changements (le texte, les reponses, l'ordre) rend l'effet de chacun illisible, et juger sur 3 ou 4 personnes ne mesure que le hasard.",
@@ -347,9 +399,9 @@ export async function generateQuizInsights(aggregate: QuizInsightsAggregate): Pr
     "Tu reponds STRICTEMENT en JSON valide, sans texte autour, au format :",
     '{ "summary": string, "funnel": string, "audience": string, "priority": { "title": string, "why": string, "how": string }, "improvements": string[], "actions": string[] }',
     "- summary : 2 a 4 phrases, le diagnostic global honnete (ce qui marche, ce qui coince). Commence par ce qui MARCHE quand quelque chose marche : une creatrice qui se croit nulle ne corrige rien.",
-    "- funnel : 2 a 4 phrases sur le parcours (vues -> completion -> capture), ou on perd des gens et pourquoi.",
+    "- funnel : 2 a 4 phrases sur le parcours ENTIER (arrivee -> demarrage -> questions -> email), ou on perd des gens et pourquoi. Cite les marches dans l'ordre pour qu'elle voie ou ca se joue vraiment.",
     "- audience : 2 a 4 phrases sur le profil des visiteurs deduit des resultats et des reponses (qui ils sont, ce qu'ils veulent). Si aucune donnee de profil, dis-le et propose comment en obtenir.",
-    "- priority.title : LA seule chose a faire maintenant, en une phrase a l'imperatif. Le plus gros trou du funnel passe avant tout le reste : corriger une etape qui perd la moitie des visiteurs rapporte toujours plus que peaufiner une question qui en perd trois.",
+    "- priority.title : LA seule chose a faire maintenant, en une phrase a l'imperatif. Elle porte OBLIGATOIREMENT sur la marche designee par le VERDICT DU PARCOURS quand il en designe une. Corriger une etape qui perd la moitie des visiteurs rapporte toujours plus : corriger une etape qui perd la moitie des visiteurs rapporte toujours plus que peaufiner une question qui en perd trois.",
     "- priority.why : 1 a 2 phrases, avec SES chiffres a elle, pour qu'elle voie l'enjeu. Donne le gain attendu en nombre de personnes, pas seulement en pourcentage.",
     "- priority.how : 2 a 4 phrases tres concretes sur la maniere de s'y prendre. Termine TOUJOURS en rappelant de ne changer que cette chose la, puis d'attendre 20 a 30 nouvelles reponses avant de juger.",
     "- improvements : 2 a 3 MAXIMUM, et uniquement ce qui vaut la peine APRES la priorite. Jamais un doublon de la priorite. Si tu n'as que la priorite a dire, renvoie un tableau vide : c'est un bon rapport, pas un rapport incomplet.",

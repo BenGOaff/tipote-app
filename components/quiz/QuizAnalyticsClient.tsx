@@ -19,6 +19,7 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { readFunnelSignal, stepLoss } from "@/lib/quiz/funnelSignal";
+import { biggestLeak, buildFullFunnel } from "@/lib/quiz/fullFunnel";
 import {
   Area,
   AreaChart,
@@ -69,6 +70,8 @@ interface AnalyticsResponse {
   period: Period;
   metrics: {
     viewsCount: number;
+    /** Visiteurs ayant cliqué sur le bouton de départ. */
+    startsCount?: number;
     completionsCount: number;
     leadsCount: number;
     exportedSioCount: number;
@@ -374,6 +377,10 @@ export function QuizAnalyticsClient({ quizId, initial, hideCounts = false }: Pro
       <FunnelSection
         funnel={data.funnel ?? []}
         totalSessions={data.totalFunnelSessions ?? 0}
+        views={data.metrics.viewsCount}
+        starts={data.metrics.startsCount ?? 0}
+        leads={data.metrics.leadsCount}
+        viewsReliable={data.metrics.viewsReliable !== false}
       />
 
       {/* Analyse IA strategique de ce quiz (funnel + capture + profils +
@@ -386,9 +393,17 @@ export function QuizAnalyticsClient({ quizId, initial, hideCounts = false }: Pro
 function FunnelSection({
   funnel,
   totalSessions,
+  views,
+  starts,
+  leads,
+  viewsReliable,
 }: {
   funnel: FunnelStep[];
   totalSessions: number;
+  views: number;
+  starts: number;
+  leads: number;
+  viewsReliable: boolean;
 }) {
   if (funnel.length === 0) {
     return (
@@ -422,6 +437,12 @@ function FunnelSection({
       </Card>
     );
   }
+  // Le parcours ENTIER : arrivée -> démarrage -> questions -> email.
+  // La carte s'arrêtait aux questions, donc la plus grosse fuite de la
+  // plupart des quiz (l'écran d'accueil) n'apparaissait nulle part.
+  // Jocelyne a cherché trois semaines dans les 14% qu'on lui montrait.
+  const full = buildFullFunnel({ views, starts, questions: funnel, leads, viewsReliable });
+  const leak = biggestLeak(full);
   const baseline = tracked[0]!.views;
   // Worst drop-off (excluding Q1 where it's always 0). Highlighted in
   // the UI so the user knows immediately which question to fix.
@@ -450,6 +471,38 @@ function FunnelSection({
           {totalSessions} session{totalSessions > 1 ? "s" : ""} commencées
         </div>
       </div>
+
+      {/* La plus grosse fuite du parcours ENTIER, en nombre de personnes.
+          Elle passe avant le point chaud par question : corriger une
+          étape qui perd la moitié des visiteurs rapporte toujours plus
+          que peaufiner une question qui en perd trois. */}
+      {leak && leak.stage !== "question" ? (
+        <div className="rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 px-3 py-2 flex items-start gap-2">
+          <AlertTriangle className="size-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+          <p className="text-xs text-amber-900 dark:text-amber-100">
+            {leak.stage === "capture" ? (
+              <>
+                <span className="font-bold">
+                  {leak.lost} personnes sur {leak.people}
+                </span>{" "}
+                terminent tes questions et ne laissent pas leur email (
+                {leak.lostPct}%). Ta promesse de résultat ou ton formulaire les
+                arrête juste avant la ligne d&apos;arrivée.
+              </>
+            ) : (
+              <>
+                <span className="font-bold">
+                  {leak.lost} visiteurs sur {leak.people}
+                </span>{" "}
+                repartent de ton écran d&apos;accueil sans jamais voir ta
+                première question ({leak.lostPct}%). C&apos;est souvent la plus
+                grosse fuite d&apos;un quiz, et elle se corrige sur un seul
+                écran.
+              </>
+            )}
+          </p>
+        </div>
+      ) : null}
 
       {signal.kind === "hotspot" && signal.hotspot ? (
         <div className="rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 px-3 py-2 flex items-start gap-2">
@@ -516,6 +569,18 @@ function FunnelSection({
       ) : null}
 
       <div className="space-y-1.5">
+        {full
+          .filter((s) => s.stage === "arrival" || s.stage === "start")
+          .map((s) => (
+            <FullFunnelRow
+              key={s.stage}
+              label={s.stage === "arrival" ? "Arrivée" : "Démarrage"}
+              people={s.people}
+              lost={s.lost}
+              lostPct={s.lostPct}
+              highlight={leak?.stage === s.stage}
+            />
+          ))}
         {tracked.map((step, i) => {
           const ratio = baseline > 0 ? step.views / baseline : 0;
           const isWorst = step.questionIndex === hotspotIndex;
@@ -566,8 +631,72 @@ function FunnelSection({
             </div>
           );
         })}
+        {full
+          .filter((s) => s.stage === "capture")
+          .map((s) => (
+            <FullFunnelRow
+              key={s.stage}
+              label="Email laissé"
+              people={s.people}
+              lost={s.lost}
+              lostPct={s.lostPct}
+              highlight={leak?.stage === s.stage}
+            />
+          ))}
       </div>
     </Card>
+  );
+}
+
+/**
+ * Une marche du parcours qui n'est PAS une question : l'arrivée sur le
+ * quiz, le clic sur "commencer", l'email laissé.
+ *
+ * Elles existaient en base depuis toujours et n'apparaissaient nulle
+ * part, alors que la plus grosse fuite d'un quiz s'y trouve presque
+ * toujours (audit du quiz de Jocelyne, 4 août 2026 : 73 personnes
+ * perdues sur l'écran d'accueil, contre 9 sur ses huit questions).
+ */
+function FullFunnelRow({
+  label,
+  people,
+  lost,
+  lostPct,
+  highlight,
+}: {
+  label: string;
+  people: number;
+  lost: number | null;
+  lostPct: number | null;
+  highlight: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-3 text-xs">
+      <div className="w-20 shrink-0 text-muted-foreground truncate" title={label}>
+        {label}
+      </div>
+      <div className="flex-1 relative h-7 rounded-md bg-muted/40 overflow-hidden">
+        <div className={`h-full w-full ${highlight ? "bg-amber-400/70" : "bg-primary/25"}`} />
+        <span className="absolute inset-0 flex items-center px-2 font-medium tabular-nums">
+          {people}
+        </span>
+      </div>
+      <div className="w-28 shrink-0 text-right tabular-nums">
+        {lost && lost > 0 && lostPct ? (
+          <span
+            className={
+              highlight
+                ? "text-amber-700 dark:text-amber-300 font-semibold"
+                : "text-muted-foreground"
+            }
+          >
+            -{lostPct}% ({lost})
+          </span>
+        ) : (
+          <span className="text-muted-foreground">-</span>
+        )}
+      </div>
+    </div>
   );
 }
 
