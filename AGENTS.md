@@ -1141,3 +1141,78 @@ de hauteurs différentes. C'est voulu. La grille porte donc `items-start`
 
 Le filet de captures ne pouvait pas le voir : la fixture `/visual-test`
 n'a aucune réponse illustrée. À ajouter à la matrice au prochain passage.
+
+## Ton process de déploiement, et ce qu'il implique pour moi (4 août 2026)
+
+Béné : "c'est mon process, et je ne le changerai pas."
+
+**Ce que TU fais, pour chaque app :**
+
+```bash
+# sur ta machine
+cd C:\Users\hello\Desktop\tipote
+git fetch origin
+git pull origin main
+git status
+git add .
+git commit -m "claude todo 4 aout 4"
+git push origin main
+
+# sur le serveur
+cd /home/tipote/tipote-app
+git stash
+git pull origin main
+npm ci
+npm run build
+pm2 restart tipote-prod --update-env
+```
+
+Tu prends ma branche, tu copies le code dans ton dossier local, tu pousses
+sur `main`, puis le serveur tire `main`. `main` est donc la branche de
+PROD, et je n'y touche jamais : je pousse sur ma branche, tu fais le
+reste.
+
+**Ce que ça implique pour moi, et c'est le point à ne pas oublier :**
+
+- Le copier-coller ne détecte pas les FICHIERS NOUVEAUX ni les
+  SUPPRESSIONS. **Quand j'ajoute ou je supprime un fichier, je le dis
+  explicitement dans mon message final**, avec son chemin. Sinon il
+  n'arrive jamais en prod et on cherche pendant une heure pourquoi une
+  commande "n'existe pas".
+- Sur le serveur, un `git pull` peut afficher **"Already up to date"**
+  alors que le fetch vient de télécharger des commits : c'est normal,
+  `main` est à jour même quand `origin/claude/...` bouge. Ce n'est PAS un
+  signe que le déploiement a raté.
+- `npm ci` réinstalle depuis `package-lock.json` : toute nouvelle
+  dépendance doit être committée AVEC son lock, sinon le build casse en
+  prod et pas chez toi.
+
+## Voir l'écran d'une cliente au lieu de la déranger (4 août 2026)
+
+Jocelyne signalait un problème qu'aucun écran ne reproduisait de notre
+côté. On a diagnostiqué à l'aveugle, on lui a fait faire une manip qui
+n'a rien donné, et il a fallu quatre allers-retours pour comprendre que
+son Atelier était relié au mauvais compte. Voir SON écran aurait tranché
+en dix secondes.
+
+```bash
+cd /home/tipote/tipote-app
+node scripts/login-link.mjs adresse@de-la-cliente.fr
+```
+
+Le script affiche un lien de connexion à usage unique dans le terminal.
+Il **n'envoie aucun email** (c'est l'app qui poste le message dans le flux
+normal, pas la génération du lien), et il ne touche ni au mot de passe ni
+à la session en cours. Il existe dans les TROIS repos.
+
+**Trois règles, réimprimées à chaque exécution :** fenêtre privée (sinon
+on remplace sa propre session par la sienne sans s'en rendre compte), on
+regarde sans rien modifier, on ferme en partant.
+
+**Deux choix techniques à ne pas défaire.** Le script n'a AUCUNE
+dépendance (`createClient` de supabase-js monte un client temps réel qui
+exige un WebSocket natif, absent de Node 20 : ça plantait avant de rien
+faire). Et il lit le `.env` lui-même, en ne cherchant QUE les deux clés
+dont il a besoin : `set -a; . .env; set +a` demande à bash d'interpréter
+tout le fichier, et une clé d'API sans rapport contenant des caractères
+spéciaux faisait échouer le chargement entier.
