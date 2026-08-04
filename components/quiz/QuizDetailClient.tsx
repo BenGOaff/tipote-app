@@ -2253,6 +2253,18 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       }
       toast.success(t("toastSaved"));
       try { await clearDraft(); } catch { /* non-fatal */ }
+      // Puis on RELIT ce que le serveur a réellement enregistré.
+      //
+      // Drame Jocelyne (Tiquiz), 4 août 2026 : "c'est bon pour la
+      // sauvegarde !" à 13h15, "la sauvegarde recommence" à 13h42.
+      //
+      // Ce que le serveur écrit n'est PAS ce que l'éditeur lui a envoyé,
+      // et l'éditeur ne le relisait jamais : la typographie française
+      // insère des espaces insécables, une question AJOUTÉE reçoit son
+      // `id` à l'INSERT, et les trim / sanitizers réécrivent le reste.
+      // L'état de l'éditeur divergeait donc de la base dès la sauvegarde,
+      // définitivement, et le brouillon suivant portait cette divergence.
+      try { await fetchQuiz(); } catch { /* non-fatal */ }
     } catch (err: unknown) { toast.error(err instanceof Error ? err.message : tc("error")); } finally { setSaving(false); }
   };
 
