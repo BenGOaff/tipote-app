@@ -78,9 +78,39 @@ function fixFragment(text: string): string {
 }
 
 /**
+ * Une balise ouvrante, fermante, un commentaire ou un doctype. Sert à
+ * reconnaître qu'une valeur est du HTML et pas du texte brut. Même motif
+ * que `applyFrenchTypographyDeep`, écrit UNE fois pour les deux.
+ */
+const LOOKS_LIKE_HTML = /<[a-z!/][^>]*>/i;
+
+/**
  * Texte brut. No-op hors français, pour ne pas abîmer l'anglais,
  * l'espagnol, l'allemand, l'italien, le portugais ni l'arabe : aucun ne
  * prend cette espace.
+ *
+ * -- ET SI ON LUI DONNE DU HTML ? (drame Eric, 4 août 2026) -----------
+ *
+ * "Il modifie la taille du titre, il enregistre, et dès qu'il a
+ * enregistré la taille revient à l'original."
+ *
+ * La taille d'un champ vit dans `style="--rt-fs-d: 48px"`. Or le nom de
+ * la variable finit par une LETTRE et le `:` est suivi d'une espace :
+ * pour la règle française, c'est exactement un deux-points qui mérite
+ * son espace insécable. Appliquée au HTML brut, elle écrivait
+ * `--rt-fs-d&nbsp;: 48px`, une propriété CSS qui n'existe pas, que le
+ * sanitizer jetait ensuite en silence. La taille était donc détruite à
+ * CHAQUE enregistrement, sans le moindre message.
+ *
+ * `applyFrenchTypographyToHtml` existait déjà et ne fait pas cette
+ * faute : elle découpe sur les balises et ne touche qu'au texte visible.
+ * Trois appelants prenaient la mauvaise des deux.
+ *
+ * **On ne compte donc plus sur l'appelant pour choisir.** Une valeur qui
+ * contient une balise part vers la version HTML, point. C'est la même
+ * leçon que la liste blanche des colonnes supprimée le 3 août : quand
+ * une erreur ne coûte rien à commettre et détruit du travail en
+ * silence, on rend l'erreur IMPOSSIBLE, on ne demande pas d'y penser.
  */
 export function applyFrenchTypography(
   text: string | null | undefined,
@@ -88,6 +118,7 @@ export function applyFrenchTypography(
 ): string {
   if (!text) return "";
   if (!isFrenchLocale(locale)) return text;
+  if (LOOKS_LIKE_HTML.test(text)) return applyFrenchTypographyToHtml(text, locale);
   return fixFragment(text);
 }
 
