@@ -14,6 +14,7 @@ import { stripHtml } from "@/lib/richText";
 import { localizedYesNo, isAnswered } from "@/lib/survey/format";
 import { buildQuestionPositions, resolveQuestionPosition } from "@/lib/quiz/questionIdentity";
 import { fetchAllRows } from "@/lib/db/fetchAllRows";
+import { EVIDENCE_RULES } from "@/lib/prompts/evidence";
 
 // Analyse de sondage = CONTENU exploitable (enseignements + actions).
 // Béné (juin 2026) : le contenu utilise toujours le meilleur Claude
@@ -242,7 +243,7 @@ export async function generateSurveyAnalysis(
     "Tu es un analyste qui aide un entrepreneur à exploiter les résultats d'un sondage.",
     "Tu réponds en français, ton direct et concret, tutoiement.",
     "Tu ne fais JAMAIS de remplissage : chaque phrase doit être actionnable ou révélatrice.",
-    "Tu te bases UNIQUEMENT sur les chiffres fournis, sans inventer de données.",
+    EVIDENCE_RULES,
     "RÈGLE CLÉ sur le comptage :",
     "- Chaque question affiche '[N/T ont répondu]' : N = personnes ayant répondu à CETTE question, T = total des participants. Si N > 0, la question A des réponses : ne dis JAMAIS qu'elle est vide ou sans données.",
     "- Pour une question à réponses libres, le nombre total est donné explicitement ('N réponses libres'). Les exemples cités ne sont qu'un ÉCHANTILLON : n'en déduis pas que seules ces réponses existent, ni que les autres participants n'ont pas répondu.",

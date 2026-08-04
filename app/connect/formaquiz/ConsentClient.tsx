@@ -48,11 +48,26 @@ export default function ConsentClient({ state, email }: { state: string; email: 
               </p>
             </div>
 
+            {/* LE COMPTE AVANT TOUT (drame Jocelyne, 4 aout 2026, cote Tiquiz).
+                Six semaines reliee a un compte vide, cree sous son autre
+                adresse. L'email etait deja affiche ici, en petit, au milieu
+                d'un paragraphe rassurant sur la confidentialite : on ne lit
+                pas une adresse quand on cherche a etre rassure. */}
+            <div className="flex flex-col gap-1 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3">
+              <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                Tu connectes ce compte Tipote
+              </span>
+              <strong className="break-all text-base">{email}</strong>
+              <span className="text-xs text-muted-foreground">
+                Tes quiz ne sont pas sur ce compte ? Déconnecte-toi de Tipote, reconnecte-toi
+                avec la bonne adresse, puis reviens ici.
+              </span>
+            </div>
+
             <div className="flex items-start gap-2 rounded-lg bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
               <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" />
               <span>
                 Aucune donnée personnelle de tes leads n&apos;est partagée, seulement des compteurs.
-                Tu autorises avec le compte <strong>{email}</strong>.
               </span>
             </div>
 
