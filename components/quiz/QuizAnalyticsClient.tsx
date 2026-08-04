@@ -20,6 +20,7 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { readFunnelSignal, stepLoss } from "@/lib/quiz/funnelSignal";
 import { biggestLeak, buildFullFunnel } from "@/lib/quiz/fullFunnel";
+import { DIRECT_BLIND_PCT, type TrafficReading } from "@/lib/quiz/trafficSource";
 import {
   Area,
   AreaChart,
@@ -37,6 +38,7 @@ import {
   AlertTriangle,
   ArrowLeft,
   BarChart3,
+  Compass,
   Eye,
   Loader2,
   Pencil,
@@ -82,6 +84,8 @@ interface AnalyticsResponse {
     viewsReliable?: boolean;
     exportRate: number;
   };
+  /** D'où viennent les visiteurs, sur une fenêtre des dernières vues. */
+  traffic?: { reading: TrafficReading; capped: boolean; window: number };
   resultDistribution: { title: string; count: number; pct: number }[];
   // count = inscrits du jour, views = visites du jour (source quiz_events).
   leadsByDay: { date: string; count: number; views?: number }[];
@@ -374,6 +378,8 @@ export function QuizAnalyticsClient({ quizId, initial, hideCounts = false }: Pro
         </Card>
       </div>
 
+      <TrafficSection traffic={data.traffic} />
+
       <FunnelSection
         funnel={data.funnel ?? []}
         totalSessions={data.totalFunnelSessions ?? 0}
@@ -387,6 +393,126 @@ export function QuizAnalyticsClient({ quizId, initial, hideCounts = false }: Pro
           axes d'amelioration + actions). Gate credit cote endpoint. */}
       <QuizInsightsPanel quizId={quizId} />
     </div>
+  );
+}
+
+/**
+ * D'où viennent les visiteurs.
+ *
+ * On a établi que la fuite de Jocelyne était son écran d'accueil, et on
+ * s'est arrêtés là, parce que la question suivante n'avait pas de
+ * réponse dans l'app : est-ce que sa page déçoit, ou est-ce que le
+ * monde qui arrive dessus n'est pas le bon ? Les deux donnent le même
+ * chiffre et appellent des corrections opposées.
+ *
+ * La carte ne conclut pas à la place de la créatrice : le verdict (a-t-on
+ * assez de monde ? le direct aveugle-t-il la lecture ?) est calculé dans
+ * lib/quiz/trafficSource.ts, comme le funnel.
+ */
+function TrafficSection({
+  traffic,
+}: {
+  traffic?: { reading: TrafficReading; capped: boolean; window: number };
+}) {
+  const reading = traffic?.reading;
+  // Rien de tracé : quiz antérieur au suivi de provenance. On n'affiche
+  // pas une carte vide, qui ferait croire à une panne.
+  if (!reading || reading.kind === "no-data") return null;
+
+  return (
+    <Card className="p-4 space-y-3">
+      <div>
+        <h2 className="text-sm font-semibold flex items-center gap-2">
+          <Compass className="size-4 text-primary" />
+          D&apos;où viennent tes visiteurs
+        </h2>
+        <p className="text-[11px] text-muted-foreground mt-0.5">
+          Répondre à la question qui vient avant toutes les autres : est-ce que
+          ta page déçoit, ou est-ce que ce ne sont pas les bonnes personnes qui
+          arrivent dessus ?
+        </p>
+      </div>
+
+      {reading.kind === "too-few" ? (
+        <div className="rounded-md bg-muted/50 border px-3 py-2">
+          <p className="text-xs text-muted-foreground">
+            Pas encore assez de visites tracées pour lire une répartition (
+            {reading.classified} sur environ {reading.needed} nécessaires). En
+            dessous, une seule visite fait bouger un pourcentage de plusieurs
+            points.
+          </p>
+        </div>
+      ) : (
+        <>
+          <div className="space-y-1.5">
+            {reading.slices.map((s) => (
+              <div key={s.source} className="flex items-center gap-3 text-xs">
+                <div className="w-28 shrink-0 truncate" title={s.source}>
+                  {s.source === "direct" ? "Direct" : s.source}
+                </div>
+                <div className="flex-1 h-5 rounded-md bg-muted/40 overflow-hidden">
+                  <div
+                    className="h-full bg-primary/30"
+                    style={{ width: `${Math.max(2, s.pct)}%` }}
+                  />
+                </div>
+                <div className="w-24 shrink-0 text-right tabular-nums text-muted-foreground">
+                  {s.pct}% ({s.count})
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* "direct" n'est PAS "ils ont tapé ton adresse" : les
+              applications mobiles n'envoient pas de provenance. Sans
+              cette phrase, on fabrique une fausse piste, ce qu'on
+              essaie précisément d'arrêter. */}
+          {reading.directShare > 0 ? (
+            <p className="text-[11px] text-muted-foreground">
+              {reading.directShare >= DIRECT_BLIND_PCT ? (
+                <>
+                  {reading.directShare}% de ton trafic arrive sans provenance, ce
+                  qui est normal quand tu publies sur mobile : les applications
+                  ne la transmettent pas. Pour y voir clair, ajoute une étiquette
+                  à tes liens (par exemple ton-lien?utm_source=instagram) et tu
+                  verras chaque publication séparément.
+                </>
+              ) : (
+                <>
+                  &quot;Direct&quot; ne veut pas dire qu&apos;ils ont tapé ton
+                  adresse : la plupart des applications mobiles (Instagram,
+                  TikTok, messageries, mail) n&apos;indiquent pas d&apos;où vient
+                  le clic. Un QR code ou un lien dans un PDF non plus.
+                </>
+              )}
+            </p>
+          ) : null}
+
+          <p className="text-[11px] text-muted-foreground">
+            {reading.kind === "single" ? (
+              <>
+                Tout ton trafic vient de {reading.top.source} ({reading.top.pct}
+                %). Ce qui se passe sur ton écran d&apos;accueil parle donc de CE
+                public là : si beaucoup repartent, regarde d&apos;abord si ta
+                promesse correspond à ce que tu as annoncé là-bas.
+              </>
+            ) : (
+              <>
+                Ton trafic vient de plusieurs endroits. Compare : si une source
+                démarre beaucoup mieux que les autres, ce n&apos;est pas ta page
+                qui coince, c&apos;est le public de la source la plus faible.
+              </>
+            )}
+          </p>
+        </>
+      )}
+
+      {traffic?.capped ? (
+        <p className="text-[11px] text-muted-foreground">
+          Lecture sur tes {traffic.window} dernières visites.
+        </p>
+      ) : null}
+    </Card>
   );
 }
 

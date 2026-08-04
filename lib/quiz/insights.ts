@@ -18,6 +18,12 @@ import { stripHtml } from "@/lib/richText";
 import { buildLiveFunnel } from "@/lib/quiz/funnel";
 import { readFunnelSignal, type FunnelSignal, type FunnelStepLike } from "@/lib/quiz/funnelSignal";
 import {
+  readTrafficSource,
+  renderTrafficForPrompt,
+  sanitizeVisitMeta,
+  type TrafficReading,
+} from "@/lib/quiz/trafficSource";
+import {
   biggestLeak,
   buildFullFunnel,
   renderFullFunnelVerdict,
@@ -73,6 +79,10 @@ export interface QuizInsightsAggregate {
    *  impose la priorite du rapport, l'IA n'a pas le droit d'en choisir
    *  une autre. */
   worstLeak: FullFunnelStep | null;
+  /** D'ou viennent les visiteurs. Sans ca, l'IA ne peut pas distinguer
+   *  "ta page decoit" de "ce ne sont pas les bonnes personnes", et les
+   *  deux produisent exactement le meme chiffre. */
+  traffic: TrafficReading;
   questions: AggregatedQuestion[];
   totalAnswered: number;
 }
@@ -266,6 +276,23 @@ export async function aggregateQuizInsights(
   });
   const worstLeak = biggestLeak(fullFunnel);
 
+  // ── D'ou viennent-ils ? ──
+  // Fenetre sur les dernieres vues : la provenance change a chaque
+  // publication, un cumul melangerait des campagnes sans rapport.
+  const trafficRes = await supabaseAdmin
+    .from("quiz_events")
+    .select("meta")
+    .eq("quiz_id", quizId)
+    .eq("event_type", "view")
+    .not("meta", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(1000);
+  const traffic = readTrafficSource(
+    (trafficRes.error ? [] : trafficRes.data ?? []).map((r) =>
+      sanitizeVisitMeta((r as { meta?: unknown }).meta),
+    ),
+  );
+
   const survey = await aggregateSurvey(quizId, userId);
 
   return {
@@ -277,6 +304,7 @@ export async function aggregateQuizInsights(
     funnelSignal,
     fullFunnel,
     worstLeak,
+    traffic,
     questions: survey?.questions ?? [],
     totalAnswered: survey?.totalResponses ?? 0,
   };
@@ -350,6 +378,10 @@ function renderAggregateForPrompt(a: QuizInsightsAggregate): string {
     lines.push(parcours, "");
   }
 
+  // Juste apres le parcours, parce que c'est la question suivante :
+  // "et alors, c'est la page ou l'audience ?".
+  lines.push(renderTrafficForPrompt(a.traffic), "");
+
   if (a.funnel.length > 0) {
     lines.push("DROP-OFF PAR QUESTION (sessions atteignant chaque question) :");
     for (const f of a.funnel)
@@ -386,6 +418,7 @@ export async function generateQuizInsights(aggregate: QuizInsightsAggregate): Pr
     "Tu te bases UNIQUEMENT sur les chiffres fournis, sans jamais inventer de donnees.",
     "REGLES de lecture des chiffres :",
     "- Un taux de capture sous ~10% = fuite a corriger (capture mal placee, promesse du resultat trop faible). 20%+ = bon, 40%+ = excellent.",
+    "- UNE FUITE A L'ENTREE A DEUX CAUSES POSSIBLES, ET ELLES DONNENT LE MEME CHIFFRE : soit l'ecran d'accueil decoit, soit ce ne sont pas les bonnes personnes qui arrivent dessus. Tu ne tranches JAMAIS sans le bloc PROVENANCE DES VISITEURS. Quand il ne permet pas de trancher, tu dis les deux causes et tu proposes de les distinguer (etiqueter les liens avec utm_source, comparer les sources). Prescrire une reecriture de promesse sur un trafic hors sujet ne peut rien produire, et la creatrice en conclura que nos conseils ne servent a rien.",
     "- LE PARCOURS ENTIER PASSE AVANT LES QUESTIONS. Le quiz commence a l'ecran d'accueil, pas a la question 1. Le bloc VERDICT DU PARCOURS est CALCULE et non negociable : la marche qu'il designe EST la priorite du rapport. Une creatrice peut passer des semaines a reecrire des questions pendant que la moitie de ses visiteurs repartent avant d'en lire une seule.",
     "- LE FUNNEL PAR QUESTION : tu suis le bloc VERDICT DU FUNNEL a la lettre. Il est CALCULE, il n'est pas negociable, et il prime sur ta propre lecture des chiffres bruts. S'il dit qu'il n'y a pas assez de donnees, tu ne nommes AUCUNE question, meme si un pourcentage te saute aux yeux.",
     "- Perdre des gens en cours de quiz est NORMAL et SAIN : ceux qui s'arretent sont d'abord les visiteurs non qualifies, et le quiz fait son travail en les filtrant. Aucun quiz ne vise 100% de completion. Ne presente jamais un abandon comme une faute de la creatrice, ni un taux de completion imparfait comme un probleme a corriger.",
