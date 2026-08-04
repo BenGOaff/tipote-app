@@ -20,6 +20,9 @@ interface InsightsResult {
   summary: string;
   funnel: string;
   audience: string;
+  /** LA chose à faire maintenant, une seule. Absent des rapports générés
+   *  avant le 4 août 2026 : on retombe alors sur l'affichage historique. */
+  priority?: { title: string; why: string; how: string } | null;
   improvements: string[];
   actions: string[];
   generated_at?: string;
@@ -107,6 +110,26 @@ export default function QuizInsightsPanel({ quizId }: { quizId: string }) {
               <Section icon={<TrendingUp className="w-3.5 h-3.5" />} label={t("quizSectionDiag")}>
                 <p className="text-sm">{a.summary}</p>
               </Section>
+              {/* LA priorité, en premier et en évidence.
+                  Retour Béné, 4 août 2026 : "le coach n'est pas focus, il
+                  donne trop d'infos trop compliquées d'un coup. Il doit
+                  donner la bonne info au bon moment pour guider l'user, pas
+                  l'assommer avec toute sa connaissance." Le rapport du
+                  3 août à Jocelyne alignait dix conseils : le premier était
+                  le bon, elle a travaillé le deuxième pendant trois
+                  semaines, sur trois personnes. */}
+              {a.priority && (
+                <div className="rounded-lg border-2 border-primary/40 bg-primary/5 p-3 space-y-1.5">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-primary">
+                    {t("quizSectionPriority")}
+                  </p>
+                  <p className="text-sm font-semibold">{a.priority.title}</p>
+                  {a.priority.why && <p className="text-sm">{a.priority.why}</p>}
+                  {a.priority.how && (
+                    <p className="text-sm text-muted-foreground">{a.priority.how}</p>
+                  )}
+                </div>
+              )}
               {a.funnel && (
                 <Section icon={<TrendingUp className="w-3.5 h-3.5" />} label={t("quizSectionFunnel")}>
                   <p className="text-sm">{a.funnel}</p>
@@ -117,6 +140,12 @@ export default function QuizInsightsPanel({ quizId }: { quizId: string }) {
                   <p className="text-sm">{a.audience}</p>
                 </Section>
               )}
+              {(a.improvements.length > 0 || a.actions.length > 0) && (
+              <details open={!a.priority} className="rounded-lg border bg-muted/20 px-3 py-2">
+                <summary className="text-xs font-medium cursor-pointer text-muted-foreground">
+                  {t("quizLaterToggle")}
+                </summary>
+                <div className="mt-2 space-y-3">
               {a.improvements.length > 0 && (
                 <Section icon={<Wrench className="w-3.5 h-3.5" />} label={t("quizSectionImprove")}>
                   <ul className="mt-1 space-y-1">
@@ -140,6 +169,9 @@ export default function QuizInsightsPanel({ quizId }: { quizId: string }) {
                     ))}
                   </ul>
                 </Section>
+              )}
+                </div>
+              </details>
               )}
             </div>
           )}

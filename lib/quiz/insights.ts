@@ -63,7 +63,23 @@ export interface QuizInsightsResult {
   summary: string;
   funnel: string;
   audience: string;
+  /**
+   * LA chose a faire maintenant, une seule.
+   *
+   * Retour Bene, 4 aout 2026 : "le coach n'est pas focus, il donne trop
+   * d'infos trop compliquees d'un coup. Il doit donner la bonne info au
+   * bon moment pour guider, pas assommer avec toute sa connaissance."
+   *
+   * Le rapport du 3 aout a Jocelyne alignait 5 ameliorations + 5 actions.
+   * La premiere etait la bonne (la fuite avant la question 1). Elle a
+   * travaille la deuxieme pendant trois semaines, sur trois personnes.
+   * Dix conseils dans une reponse, ce n'est pas de la generosite : c'est
+   * un tri qu'on lui demande de faire a notre place.
+   */
+  priority: { title: string; why: string; how: string } | null;
+  /** Le reste, explicitement POUR PLUS TARD (2-3 puces maxi). */
   improvements: string[];
+  /** Actions a l'imperatif pour vendre/capter plus (2-3 maxi). */
   actions: string[];
   stats_at_generation: { views: number; leads: number; completions: number };
   model: string;
@@ -326,13 +342,18 @@ export async function generateQuizInsights(aggregate: QuizInsightsAggregate): Pr
     "- Un profil de resultat sur-represente peut signaler une cible reelle a exploiter (offre dediee) OU un quiz mal equilibre : tranche selon le contexte.",
     "- Si les vues sont partiellement trackees, ne conclus pas sur le taux de capture, concentre-toi sur les leads et les profils.",
     "- Ne dis JAMAIS qu'une question est vide si des reponses sont indiquees.",
+    "TON ROLE EST PEDAGOGIQUE, PAS ENCYCLOPEDIQUE. Tu ne deverses pas tout ce que tu sais : tu donnes la bonne information au bon moment. Une creatrice n'appliquera JAMAIS dix conseils, elle en appliquera un, et si tu ne choisis pas lequel, elle choisira au hasard, souvent le plus facile plutot que le plus rentable. Choisir a sa place, c'est ton travail.",
+    "Tu designes donc UNE priorite unique, celle qui rapporte le plus par rapport a l'effort qu'elle demande, et tu la traites a fond : ce que c'est, pourquoi ca compte CHEZ ELLE avec ses chiffres, et comment s'y prendre concretement. Le reste passe apres, et tu le dis.",
     "Tu reponds STRICTEMENT en JSON valide, sans texte autour, au format :",
-    '{ "summary": string, "funnel": string, "audience": string, "improvements": string[], "actions": string[] }',
-    "- summary : 2 a 4 phrases, le diagnostic global honnete.",
+    '{ "summary": string, "funnel": string, "audience": string, "priority": { "title": string, "why": string, "how": string }, "improvements": string[], "actions": string[] }',
+    "- summary : 2 a 4 phrases, le diagnostic global honnete (ce qui marche, ce qui coince). Commence par ce qui MARCHE quand quelque chose marche : une creatrice qui se croit nulle ne corrige rien.",
     "- funnel : 2 a 4 phrases sur le parcours (vues -> completion -> capture), ou on perd des gens et pourquoi.",
-    "- audience : 2 a 4 phrases sur le profil des visiteurs deduit des resultats et des reponses. Si aucune donnee de profil, dis-le et propose comment en obtenir.",
-    "- improvements : 3 a 5 axes d'amelioration concrets, priorises (le point de fuite d'abord).",
-    "- actions : 3 a 5 actions a l'imperatif pour capter et vendre plus (offre par profil, relance, coupon, sequence email, ajustement du quiz).",
+    "- audience : 2 a 4 phrases sur le profil des visiteurs deduit des resultats et des reponses (qui ils sont, ce qu'ils veulent). Si aucune donnee de profil, dis-le et propose comment en obtenir.",
+    "- priority.title : LA seule chose a faire maintenant, en une phrase a l'imperatif. Le plus gros trou du funnel passe avant tout le reste : corriger une etape qui perd la moitie des visiteurs rapporte toujours plus que peaufiner une question qui en perd trois.",
+    "- priority.why : 1 a 2 phrases, avec SES chiffres a elle, pour qu'elle voie l'enjeu. Donne le gain attendu en nombre de personnes, pas seulement en pourcentage.",
+    "- priority.how : 2 a 4 phrases tres concretes sur la maniere de s'y prendre. Termine TOUJOURS en rappelant de ne changer que cette chose la, puis d'attendre 20 a 30 nouvelles reponses avant de juger.",
+    "- improvements : 2 a 3 MAXIMUM, et uniquement ce qui vaut la peine APRES la priorite. Jamais un doublon de la priorite. Si tu n'as que la priorite a dire, renvoie un tableau vide : c'est un bon rapport, pas un rapport incomplet.",
+    "- actions : 2 a 3 MAXIMUM, a l'imperatif, sur ce qui se joue APRES le quiz (offre par profil, sequence email, relance). Tableau vide si rien de solide a proposer.",
   ].join("\n");
 
   const controller = new AbortController();
@@ -381,6 +402,7 @@ function parseInsightsJson(raw: string): {
   summary: string;
   funnel: string;
   audience: string;
+  priority: { title: string; why: string; how: string } | null;
   improvements: string[];
   actions: string[];
 } {
@@ -392,19 +414,37 @@ function parseInsightsJson(raw: string): {
     const e = jsonStr.lastIndexOf("}");
     if (s >= 0 && e > s) jsonStr = jsonStr.slice(s, e + 1);
   }
+  // Plafond a 3 cote CODE, pas seulement dans la consigne : un modele
+  // qui deborde ne doit pas pouvoir re-assommer la creatrice.
+  const MAX_SECONDARY = 3;
   const toArr = (v: unknown): string[] =>
-    Array.isArray(v) ? v.map((x) => sanitizeAiText(String(x).trim())).filter(Boolean) : [];
+    Array.isArray(v)
+      ? v.map((x) => sanitizeAiText(String(x).trim())).filter(Boolean).slice(0, MAX_SECONDARY)
+      : [];
   const toStr = (v: unknown): string => (typeof v === "string" ? sanitizeAiText(v.trim()) : "");
   try {
     const obj = JSON.parse(jsonStr) as Record<string, unknown>;
+    const p = (obj.priority ?? null) as Record<string, unknown> | null;
+    const priority =
+      p && typeof p === "object" && toStr(p.title)
+        ? { title: toStr(p.title), why: toStr(p.why), how: toStr(p.how) }
+        : null;
     return {
       summary: toStr(obj.summary),
       funnel: toStr(obj.funnel),
       audience: toStr(obj.audience),
+      priority,
       improvements: toArr(obj.improvements),
       actions: toArr(obj.actions),
     };
   } catch {
-    return { summary: sanitizeAiText(raw.slice(0, 800)), funnel: "", audience: "", improvements: [], actions: [] };
+    return {
+      summary: sanitizeAiText(raw.slice(0, 800)),
+      funnel: "",
+      audience: "",
+      priority: null,
+      improvements: [],
+      actions: [],
+    };
   }
 }
