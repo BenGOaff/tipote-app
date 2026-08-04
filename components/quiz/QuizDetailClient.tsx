@@ -112,6 +112,12 @@ import { UserPalettesProvider } from "@/components/editor/PalettesContext";
 import { EditorPreviewDeviceProvider } from "@/components/editor/EditorPreviewDeviceContext";
 import { RestoreDraftDialog } from "@/components/editor/RestoreDraftDialog";
 import { useAutosave } from "@/hooks/use-autosave";
+import { answerImageRender } from "@/lib/quiz/answerImage";
+import {
+  clearRichTextAlign,
+  questionAlignSetting,
+  resolveQuestionAlign,
+} from "@/lib/quiz/questionLayout";
 import { stripHtml } from "@/lib/richText";
 import { isPixelFieldValid } from "@/lib/clientPixels";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
@@ -2484,6 +2490,30 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     setEditQuestions((p) => p.map((q, qi) => (qi === i ? { ...q, config: { ...(q.config ?? {}), ...patch } } : q)));
   const updateR = (i: number, field: string, v: unknown) => setEditResults(p => p.map((r, ri) => ri === i ? { ...r, [field]: v } : r));
 
+  /**
+   * Remet TOUTES les questions sous le reglage global.
+   *
+   * Retour Bene, 4 aout 2026 : le reglage global ne pouvait rien reprendre
+   * en main, parce qu'un alignement ecrit dans un champ gagne pour
+   * toujours contre lui. Deux etages sont remis a zero : les exceptions
+   * par question, et les alignements ecrits dans les champs. Le reste de
+   * la mise en forme (gras, couleur, taille) est conserve.
+   */
+  const applyLayoutToAllQuestions = useCallback(() => {
+    setEditQuestions((prev) =>
+      prev.map((q) => {
+        const { align: _a, answer_layout: _l, ...restCfg } = (q.config ?? {}) as Record<string, unknown>;
+        return {
+          ...q,
+          question_text: clearRichTextAlign(q.question_text),
+          options: q.options.map((o) => ({ ...o, text: clearRichTextAlign(o.text) })),
+          config: restCfg,
+        };
+      }),
+    );
+    toast.success(t("applyLayoutToAllDone"));
+  }, [t]);
+
   // Titres de blocs personnalisables par profil (Gwenn 13 juin 2026,
   // miroir Tiquiz). Mode derive : au moins un override non-null.
   const setInsightHeadingPersonalized = (on: boolean) => {
@@ -3110,6 +3140,23 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     ))}
                   </div>
                   <p className="text-[10px] text-muted-foreground">{t("designAnswerLayoutHint")}</p>
+                </div>
+
+                {/* Tout realigner : poser une exception est facile, la
+                    retirer doit l'etre autant. Sans ce bouton, un quiz dont
+                    on a aligne les champs un par un ne peut plus jamais
+                    obeir au reglage global. */}
+                <div className="space-y-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={applyLayoutToAllQuestions}
+                  >
+                    {t("applyLayoutToAll")}
+                  </Button>
+                  <p className="text-[10px] text-muted-foreground">{t("applyLayoutToAllHint")}</p>
                 </div>
 
                 {/* ── Forme des boutons ── */}
@@ -4107,7 +4154,11 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                 // texte à gauche : plus de demi-écran vide. 'centered' reste le
                 // rendu historique (texte à gauche comme le public).
                 const previewSplit = questionLayout === "split";
-                const previewAlignText = questionLayout === "centered" ? "" : " text-left";
+                // MEME fonction que le viewer : l'apercu qui recalcule une
+                // decision finit toujours par mentir (AGENTS.md).
+                const previewAlignText = " " + alignTextClass(
+                  resolveQuestionAlign((q.config ?? {}).align, questionLayout),
+                );
                 return (
                   <div key={qi} ref={el => { questionRefs.current[qi] = el; }} className="min-h-screen flex flex-col px-6 sm:px-12 py-8">
                     {/* Progress bar */}
@@ -4183,6 +4234,20 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                                 surchargent juste cette question. Stocke dans
                                 config.answer_layout. Pertinent uniquement pour
                                 les types a reponses multiples (choix, choix image). */}
+                            {/* Alignement PAR QUESTION (retour Bene, 4 aout
+                                2026). "Comme le quiz" = on ne se prononce pas,
+                                donc rien ne bouge sur les quiz existants.
+                                Cf. lib/quiz/questionLayout.ts. */}
+                            <select
+                              value={questionAlignSetting(cfg.align)}
+                              onChange={(e) => updateQuestionConfig(qi, { align: e.target.value })}
+                              className="text-xs border rounded-lg px-2 py-1 bg-background font-medium cursor-pointer"
+                              title={t("questionAlignHint")}
+                            >
+                              <option value="inherit">{t("questionAlignInherit")}</option>
+                              <option value="center">{t("questionAlignCenter")}</option>
+                              <option value="left">{t("questionAlignLeft")}</option>
+                            </select>
                             {(qType === "multiple_choice" || qType === "image_choice") && (
                               <select
                                 value={cfg.answer_layout === "grid" || cfg.answer_layout === "list" ? cfg.answer_layout : "auto"}
@@ -4441,7 +4506,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                               {opt.image_url ? (
                                 <div className="relative mb-3 rounded-lg overflow-hidden border border-border bg-muted/30">
                                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                                  <img src={opt.image_url} alt={stripHtml(opt.text)} className="w-full aspect-video object-cover" />
+                                  <img src={opt.image_url} alt={stripHtml(opt.text)} {...answerImageRender(opt.image_width)} />
                                   <button
                                     type="button"
                                     onClick={() => clearOptionImage(qi, oi)}

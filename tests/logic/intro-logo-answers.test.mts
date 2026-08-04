@@ -134,8 +134,14 @@ test("une surcharge illisible n'écrase pas le choix du quiz", () => {
 });
 
 test("les réponses illustrées suivent LISTE aussi", () => {
-  assert.equal(answerImageGridClass("list"), "grid-cols-1");
-  assert.equal(answerImageGridClass("auto"), "grid-cols-1 sm:grid-cols-2");
+  // On assertionne le NOMBRE DE COLONNES, pas la chaîne entière : depuis
+  // que l'image garde son format réel, la grille porte aussi
+  // `items-start` (cf. lib/quiz/answerImage.ts), et une classe de
+  // présentation ajoutée plus tard ne doit pas faire rougir un test qui
+  // parle de colonnes.
+  assert.ok(!answerImageGridClass("list").includes("sm:grid-cols-2"));
+  assert.ok(answerImageGridClass("list").includes("grid-cols-1"));
+  assert.ok(answerImageGridClass("auto").includes("sm:grid-cols-2"));
 });
 
 test("l'aperçu mobile empile, comme le téléphone réel", () => {
@@ -143,5 +149,5 @@ test("l'aperçu mobile empile, comme le téléphone réel", () => {
   // pas : sans ça, les classes sm: resteraient actives et l'aperçu
   // montrerait deux colonnes que le visiteur ne verra jamais.
   assert.equal(answerGridClass("grid", 4, { stacked: true }), "grid-cols-1");
-  assert.equal(answerImageGridClass("grid", { stacked: true }), "grid-cols-1");
+  assert.ok(!answerImageGridClass("grid", { stacked: true }).includes("sm:grid-cols-2"));
 });

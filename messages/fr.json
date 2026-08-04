@@ -4742,7 +4742,14 @@
     "freeTextShown": "Les {shown} réponses les plus récentes sur {total}. Le bouton Copier les prend toutes.",
     "freeTextCopy": "Copier les réponses",
     "freeTextCopied": "Copié",
-    "rebalanceAdded": "Réponse ajoutée"
+    "rebalanceAdded": "Réponse ajoutée",
+    "questionAlignHint": "Alignement de cette question. \"Comme le quiz\" suit le réglage général, les deux autres font exception juste ici.",
+    "questionAlignInherit": "Comme le quiz",
+    "questionAlignCenter": "Centré",
+    "questionAlignLeft": "À gauche",
+    "applyLayoutToAll": "Tout réaligner sur ce réglage",
+    "applyLayoutToAllHint": "Retire les exceptions posées sur les questions et les alignements appliqués à la main dans les champs. Ton réglage ci-dessus reprend la main partout. Le gras, les couleurs et les tailles ne bougent pas.",
+    "applyLayoutToAllDone": "Toutes les questions suivent ton réglage. Pense à enregistrer."
   },
   "contentStrategy": {
     "title": "Stratégie de contenu",
