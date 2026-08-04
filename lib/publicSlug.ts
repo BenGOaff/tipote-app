@@ -1,78 +1,127 @@
 // lib/publicSlug.ts
 //
-// Shared rules around the slug that ends up in a public URL — both
-// on the main host (app.tipote.com/q/<slug>) and on a creator's
-// custom domain (test.ethilife.fr/<slug>, no /q/ prefix).
+// Ce qu'une créatrice a le droit d'écrire dans l'adresse publique de son
+// contenu, et ce qu'un domaine perso a le droit de servir. Deux questions
+// voisines, longtemps confondues, et c'est la confusion qui coûtait cher.
 //
-// Two concerns live here:
+// -- LE MOT "quiz" ÉTAIT INTERDIT (retour Béné, 4 août 2026) ------------
 //
-//   1. RESERVED words. On a custom domain the slug sits at the root
-//      of the URL space, so a slug like "api", "embed" or "robots.txt"
-//      would silently shadow real routes and break the creator's
-//      site. We refuse them at save time.
+// "On ne peut pas blacklister le mot 'quiz' parce que beaucoup vont
+// l'utiliser. C'est LOGIQUE." Elle a raison, et la liste en interdisait
+// une trentaine d'autres du même genre : contents, pages, dashboard,
+// leads, settings, support... c'est à dire les mots les plus naturels du
+// monde pour nommer un contenu.
 //
-//   2. Cross-type uniqueness. Tipote has 3 public content types
-//      (quizzes, popquizzes, hosted_pages). On a custom domain
-//      they share the root URL space, so a slug can only exist on
-//      ONE of the three for a given user — otherwise the catch-all
-//      route at app/[publicSlug] couldn't pick. Surfaced as a clear
-//      SLUG_TAKEN error before write.
+// Aucun de ces mots ne gênait qui que ce soit. Ils étaient là parce que
+// la liste servait DEUX choses à la fois :
 //
-// The actual SQL lookups live in lib/publicSlugServer.ts so this file
-// stays safe to import from Edge runtime / client code.
+//   1. "ce slug masquerait une de nos pages" ;
+//   2. "ce chemin ne doit pas être servi sur le domaine d'une cliente".
+//
+// Or le point 2 est déjà réglé, et bien mieux, par la porte du
+// middleware : sur un domaine perso, TOUT ce qui n'est pas explicitement
+// autorisé répond 404. Nos pages n'y sont donc jamais accessibles. En
+// gardant leurs noms dans la liste, on interdisait à la créatrice des
+// mots qui ne pouvaient déjà plus rien masquer chez elle.
+//
+// Restait un vrai risque : sur son domaine, `example.com/quiz` était
+// résolu par le routeur Next comme n'importe quelle URL, et une route
+// statique gagne toujours contre une route dynamique. Un contenu nommé
+// "quiz" serait donc tombé sur notre page, ou sur un 404.
+//
+// D'où la vraie correction, qui vit dans le middleware : le slug nu d'un
+// domaine perso est RÉÉCRIT vers `/s/<slug>`, un chemin qui n'est pas une
+// page de l'app. Le routeur n'a plus d'arbitrage à rendre, donc plus
+// aucun de nos noms de pages n'a besoin d'être interdit.
+//
+// L'unicité entre les 3 types de contenu public (quizzes, popquizzes,
+// hosted_pages) reste entière : elle vit dans lib/publicSlugServer.ts et
+// n'a rien à voir avec les mots réservés. Sur un domaine perso les trois
+// partagent la racine, donc un slug ne peut exister que sur UN des trois
+// pour une créatrice donnée, sinon le catch-all ne saurait pas choisir.
+//
+// Les lookups SQL vivent dans lib/publicSlugServer.ts pour que ce fichier
+// reste importable depuis le runtime Edge et depuis le runner de tests.
 
-/** Slugs that would collide with Next routes, infra hostnames, or
- *  files browsers expect to find at the root. Lowercase, exact match.
- *  Synced with the top-level folders under `app/` — when you add a
- *  new top-level route, add its segment here so a creator can't
- *  shadow it via a slug. */
-export const RESERVED_PUBLIC_SLUGS: ReadonlySet<string> = new Set([
-  // Next / framework
-  "_next",
-  "api",
-  "favicon.ico",
-  "robots.txt",
-  "sitemap.xml",
-  "llms.txt",
-  "manifest.json",
-  "manifest.webmanifest",
-  // Public-content prefixes (would shadow them on the main host, or
-  // look confusing on a custom domain where /<slug> is the expected
-  // shape — the catch-all already serves these types without prefix)
-  "q", "p", "pq",
-  // Existing Tipote app routes (every top-level dir under app/)
-  "embed",
-  "app",
-  "admin",
-  "analytics",
-  "auth",
-  "automations",
-  "clients",
-  "contents",
-  "create",
-  "dashboard",
-  "leads",
-  "legal",
-  "meta",
-  "onboarding",
-  "pages",
-  "pepites",
-  "popquiz", "popquizzes",
-  "quiz", "quizzes",
-  "settings",
-  "strategy",
-  "support",
-  "survey",
-  "tasks",
-  "templates",
-  "webinars",
-  "widgets",
-  // Auth-y / common
-  "login", "signup", "logout",
-  // Web-standard "well-known" prefix
-  ".well-known",
-]);
+/**
+ * Slugs refusés à l'enregistrement.
+ *
+ * `sanitizeSlug` (lib/quizBranding.ts) ne laisse passer que [a-z0-9-] :
+ * ni point, ni underscore. `_next`, `.well-known`, `favicon.ico`,
+ * `robots.txt` et compagnie sont donc DÉJÀ impossibles à saisir. On ne
+ * les répète pas ici : une liste qui protège de l'impossible donne
+ * l'illusion de protéger de quelque chose.
+ *
+ * Ne reste que le préfixe d'API, gardé par prudence : c'est le seul
+ * segment nu qui pourrait un jour devenir une page réelle servie sur un
+ * domaine perso (la porte du middleware ouvre déjà `/api/quiz/...`,
+ * `/api/pages/...` et `/api/leads`).
+ */
+export const RESERVED_PUBLIC_SLUGS: ReadonlySet<string> = new Set(["api"]);
 
 export function isReservedPublicSlug(slug: string): boolean {
   return RESERVED_PUBLIC_SLUGS.has(slug.toLowerCase());
+}
+
+/** Segment interne vers lequel le middleware réécrit le slug nu d'un
+ *  domaine perso. Ce n'est PAS une URL publique : on n'y arrive que par
+ *  réécriture, jamais en la tapant (la porte ci-dessous la refuse). */
+export const TENANT_SLUG_PREFIX = "/s";
+
+/** Forme d'un slug servi à la racine d'un domaine perso. Miroir de
+ *  `SLUG_RE` / `sanitizeSlug` : la porte ne laisse jamais passer un
+ *  chemin sur lequel la page finirait de toute façon en 404. */
+const BARE_SLUG_RE = /^\/[a-z0-9](?:[a-z0-9-]{1,48}[a-z0-9])?$/;
+
+/** Chemins servis tels quels sur un domaine perso. Tout le reste répond
+ *  404 : le tableau de bord, l'admin, la connexion, les pages de vente
+ *  n'existent pas sur le domaine d'une cliente. */
+const TENANT_PASSTHROUGH_PREFIXES = [
+  "/q/",
+  "/p/",
+  "/pq/",
+  "/embed/",
+  "/api/quiz/",
+  "/api/popquiz/",
+  "/api/pages/",
+  "/api/leads",
+  "/_next/",
+];
+
+const TENANT_PASSTHROUGH_EXACT = new Set([
+  "/favicon.ico",
+  "/robots.txt",
+  "/sitemap.xml",
+  "/llms.txt",
+]);
+
+export type TenantRoute =
+  /** Servir le chemin tel quel. */
+  | { kind: "pass" }
+  /** Réécrire vers `${TENANT_SLUG_PREFIX}/${slug}` : c'est un contenu. */
+  | { kind: "slug"; slug: string }
+  /** 404 : ce chemin n'appartient pas au domaine d'une cliente. */
+  | { kind: "block" };
+
+/**
+ * Décide ce qu'un domaine perso fait d'un chemin. Fonction pure, testée :
+ * c'est elle qui garantit à la fois qu'aucune de nos pages ne fuite chez
+ * une cliente, et qu'aucun mot ne lui est interdit sans raison.
+ */
+export function routeTenantPath(pathname: string): TenantRoute {
+  if (pathname === "/") return { kind: "pass" };
+  if (TENANT_PASSTHROUGH_EXACT.has(pathname)) return { kind: "pass" };
+  if (TENANT_PASSTHROUGH_PREFIXES.some((p) => pathname.startsWith(p))) {
+    return { kind: "pass" };
+  }
+  // Assets statiques de /public (logo du footer, image de fond...). Un
+  // fichier avec extension n'est jamais un slug : `sanitizeSlug` interdit
+  // le point.
+  if (/\.[a-z0-9]{2,5}$/i.test(pathname)) return { kind: "pass" };
+
+  if (BARE_SLUG_RE.test(pathname)) {
+    const slug = pathname.slice(1);
+    if (!isReservedPublicSlug(slug)) return { kind: "slug", slug };
+  }
+  return { kind: "block" };
 }

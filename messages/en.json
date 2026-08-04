@@ -4742,7 +4742,14 @@
     "freeTextShown": "The {shown} most recent answers out of {total}. The Copy button takes them all.",
     "freeTextCopy": "Copy the answers",
     "freeTextCopied": "Copied",
-    "rebalanceAdded": "Answer added"
+    "rebalanceAdded": "Answer added",
+    "questionAlignHint": "Alignment for this question. \"Same as quiz\" follows the general setting, the other two make an exception here only.",
+    "questionAlignInherit": "Same as quiz",
+    "questionAlignCenter": "Centred",
+    "questionAlignLeft": "Left",
+    "applyLayoutToAll": "Realign everything on this setting",
+    "applyLayoutToAllHint": "Removes per-question exceptions and the alignment applied by hand inside fields. Your setting above takes over everywhere. Bold, colours and sizes stay untouched.",
+    "applyLayoutToAllDone": "Every question now follows your setting. Remember to save."
   },
   "contentStrategy": {
     "title": "Content strategy",

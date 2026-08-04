@@ -4742,7 +4742,14 @@
     "freeTextShown": "أحدث {shown} إجابة من أصل {total}. زر النسخ يأخذها كلها.",
     "freeTextCopy": "نسخ الإجابات",
     "freeTextCopied": "تم النسخ",
-    "rebalanceAdded": "إجابة مضافة"
+    "rebalanceAdded": "إجابة مضافة",
+    "questionAlignHint": "محاذاة هذا السؤال. \"مثل الاختبار\" تتبع الإعداد العام، والخياران الآخران يشكلان استثناء هنا فقط.",
+    "questionAlignInherit": "مثل الاختبار",
+    "questionAlignCenter": "توسيط",
+    "questionAlignLeft": "إلى اليسار",
+    "applyLayoutToAll": "إعادة محاذاة كل شيء على هذا الإعداد",
+    "applyLayoutToAllHint": "يزيل الاستثناءات الموضوعة على الأسئلة والمحاذاة المطبقة يدويا داخل الحقول. يستعيد إعدادك أعلاه السيطرة في كل مكان. الخط العريض والألوان والأحجام لا تتغير.",
+    "applyLayoutToAllDone": "كل الأسئلة تتبع إعدادك الآن. لا تنس الحفظ."
   },
   "contentStrategy": {
     "title": "استراتيجية المحتوى",

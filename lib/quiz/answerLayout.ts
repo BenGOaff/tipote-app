@@ -77,6 +77,12 @@ export function answerImageGridClass(
   layout: AnswerLayout,
   opts: { stacked?: boolean } = {},
 ): string {
-  if (opts.stacked) return "grid-cols-1";
-  return layout === "list" ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2";
+  // `items-start` : depuis que l'image d'une reponse garde son format
+  // reel (cf. lib/quiz/answerImage.ts), deux photos de formats differents
+  // donnent deux cartes de hauteurs differentes. Sans ca, la grille les
+  // etire a la hauteur de la plus grande et laisse un vide sous le texte.
+  if (opts.stacked) return "grid-cols-1 items-start";
+  return layout === "list"
+    ? "grid-cols-1 items-start"
+    : "grid-cols-1 sm:grid-cols-2 items-start";
 }

@@ -4742,7 +4742,14 @@
     "freeTextShown": "As {shown} respostas mais recentes de {total}. O botão Copiar leva todas.",
     "freeTextCopy": "Copiar as respostas",
     "freeTextCopied": "Copiado",
-    "rebalanceAdded": "Resposta adicionada"
+    "rebalanceAdded": "Resposta adicionada",
+    "questionAlignHint": "Alinhamento desta pergunta. \"Como o quiz\" segue a configuração geral, os outros dois abrem uma exceção só aqui.",
+    "questionAlignInherit": "Como o quiz",
+    "questionAlignCenter": "Centralizado",
+    "questionAlignLeft": "À esquerda",
+    "applyLayoutToAll": "Realinhar tudo por esta configuração",
+    "applyLayoutToAllHint": "Remove as exceções das perguntas e os alinhamentos aplicados na mão nos campos. Sua configuração acima volta a valer em todo lugar. Negrito, cores e tamanhos não mudam.",
+    "applyLayoutToAllDone": "Todas as perguntas seguem sua configuração. Lembre de salvar."
   },
   "contentStrategy": {
     "title": "Estratégia de conteúdo",

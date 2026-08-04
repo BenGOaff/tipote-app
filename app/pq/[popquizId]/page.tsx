@@ -28,7 +28,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 // Custom-domain ownership: when served through a creator's branded
 // hostname (middleware sets this header), the popquiz must belong to
 // the same (user, project) as the domain. Mirrors the gate added to
-// /q/[quizId] and the catch-all in app/[publicSlug] so the three
+// /q/[quizId] and the catch-all in app/s/[publicSlug] so the three
 // entry points stay symmetric.
 async function resolveCustomDomainScope(): Promise<{ userId: string; projectId: string } | null> {
   const h = await headers();

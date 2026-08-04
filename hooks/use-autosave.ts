@@ -152,15 +152,32 @@ export function useAutosave<T>({
     if (inFlightRef.current) inFlightRef.current.abort();
     try {
       await fetch(endpoint, { method: "DELETE" });
-      lastSerializedRef.current = null;
-      // Reset la baseline : sans ça, le prochain render (avec state
-      // identique au state juste sauvegardé) verrait
-      // `lastSerializedRef === null !== JSON(state)` et planifierait
-      // un PUT inutile — recréant le draft strictement identique au
-      // canonique et ramenant le dialog "Reprendre tes modifs ?" à la
-      // prochaine ouverture. En oubliant la baseline, l'effet
-      // re-tombe sur la branche "première activation" qui pose le
-      // state actuel comme nouvelle référence sans push.
+      // La référence devient l'état COURANT (celui qui vient d'être
+      // sauvegardé), et surtout PAS `null`.
+      //
+      // Drame Jocelyne, 4 août 2026 : "à chaque fois que je ferme et que
+      // je reviens, il me redemande si je veux la sauvegarde automatique
+      // ou la mienne, alors que je sauvegarde toujours avant de sortir."
+      // Avec `null`, `flushNow()` (le flush de démontage) comparait
+      // `null` au state courant, concluait "il reste quelque chose à
+      // sauver", et écrivait un brouillon À CHAQUE SORTIE, y compris
+      // juste après une sauvegarde explicite sans la moindre édition.
+      // Le dialogue de restauration revenait donc systématiquement.
+      //
+      // Le bug dormait : `flushNow` passe par `sendBeacon`, qui envoie un
+      // POST, et la route ne connaissait que PUT. Le 405 jetait le
+      // brouillon parasite à la poubelle. En réparant le 405 (perte de la
+      // dernière sauvegarde en quittant la page), on a rendu ce brouillon
+      // parasite bien réel. Une réparation qui réveille un bug latent
+      // reste une réparation : c'est ici que la faute était.
+      try {
+        lastSerializedRef.current = JSON.stringify(stateRef.current);
+      } catch {
+        lastSerializedRef.current = null;
+      }
+      // Reset la baseline : l'effet re-tombe sur la branche "première
+      // activation", qui repose le state actuel comme référence sans
+      // planifier de PUT inutile.
       baselineSetRef.current = false;
       setLastSavedAt(null);
     } catch {

@@ -18,6 +18,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { readFunnelSignal, stepLoss } from "@/lib/quiz/funnelSignal";
 import {
   Area,
   AreaChart,
@@ -424,14 +425,13 @@ function FunnelSection({
   const baseline = tracked[0]!.views;
   // Worst drop-off (excluding Q1 where it's always 0). Highlighted in
   // the UI so the user knows immediately which question to fix.
-  let worstIdx = -1;
-  let worstDrop = -1;
-  for (let i = 1; i < tracked.length; i++) {
-    if (tracked[i]!.dropFromPrevious > worstDrop) {
-      worstDrop = tracked[i]!.dropFromPrevious;
-      worstIdx = i;
-    }
-  }
+  // Le point chaud, ses seuils et surtout la question qu'il DÉSIGNE
+  // vivent dans lib/quiz/funnelSignal.ts. Avant, ce composant calculait
+  // lui-même un "pire drop" sans seuil d'échantillon, et nommait la
+  // question SUIVANTE : celle que les partants n'avaient jamais vue
+  // (drame Jocelyne, 4 août 2026).
+  const signal = readFunnelSignal(funnel);
+  const hotspotIndex = signal.hotspot?.questionIndex ?? -1;
 
   return (
     <Card className="p-4 space-y-3">
@@ -451,14 +451,66 @@ function FunnelSection({
         </div>
       </div>
 
-      {worstIdx > 0 && worstDrop >= 15 ? (
+      {signal.kind === "hotspot" && signal.hotspot ? (
         <div className="rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 px-3 py-2 flex items-start gap-2">
           <AlertTriangle className="size-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
           <p className="text-xs text-amber-900 dark:text-amber-100">
-            Question {tracked[worstIdx]!.questionIndex + 1} fait perdre{" "}
-            <span className="font-bold">{worstDrop}%</span> des visiteurs
-            par rapport à la précédente. C&apos;est le point chaud à
-            reformuler en priorité.
+            {signal.hotspot.shape === "after-answer" ? (
+              <>
+                <span className="font-bold">
+                  {signal.hotspot.lost} visiteurs sur {signal.hotspot.sample}
+                </span>{" "}
+                répondent à la question {signal.hotspot.questionIndex + 1} puis
+                s&apos;arrêtent là. La question passe bien : c&apos;est la
+                longueur ou ce qui vient après qui les perd.
+              </>
+            ) : (
+              <>
+                Question {signal.hotspot.questionIndex + 1} est la dernière que
+                voient{" "}
+                <span className="font-bold">
+                  {signal.hotspot.lost} visiteurs sur {signal.hotspot.sample}
+                </span>
+                {signal.hotspot.shape === "on-question"
+                  ? " : ils la lisent et n'y répondent pas."
+                  : "."}{" "}
+                C&apos;est elle qu&apos;il faut regarder, pas la suivante : ils
+                ne l&apos;ont jamais vue.
+              </>
+            )}
+          </p>
+        </div>
+      ) : signal.kind === "too-few" ? (
+        <div className="rounded-md bg-muted/50 border px-3 py-2">
+          <p className="text-xs text-muted-foreground">
+            Pas encore assez de monde pour dire où ça décroche. Il faut environ{" "}
+            {signal.needed} visiteurs sur une même question pour qu&apos;un
+            écart veuille dire autre chose que le hasard : sur 8 personnes, une
+            seule qui s&apos;arrête pèse déjà 12%. Tu en es à {signal.bestSample}.
+          </p>
+        </div>
+      ) : signal.kind === "steady" ? (
+        <div className="rounded-md bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900 px-3 py-2">
+          <p className="text-xs text-emerald-900 dark:text-emerald-100">
+            Aucun décrochage anormal. Le parcours tient.
+          </p>
+        </div>
+      ) : null}
+
+      {/* Perdre du monde n'est PAS un échec, et un effet ne se mesure pas
+          sur trois personnes. Sans ces deux phrases, une créatrice réécrit
+          en boucle un quiz qui va bien (drame Jocelyne, 4 août 2026). */}
+      {signal.kind !== "no-data" ? (
+        <div className="space-y-1">
+          <p className="text-[11px] text-muted-foreground">
+            Perdre du monde en route est normal et sain : ce sont surtout les
+            visiteurs non qualifiés qui s&apos;arrêtent. Aucun quiz ne vise 100%
+            de complétion.
+          </p>
+          <p className="text-[11px] text-muted-foreground">
+            Pour mesurer un changement : une seule modification à la fois, puis{" "}
+            {signal.needed} nouvelles réponses avant de juger. Deux changements
+            en même temps rendent l&apos;effet illisible.
           </p>
         </div>
       ) : null}
@@ -466,7 +518,10 @@ function FunnelSection({
       <div className="space-y-1.5">
         {tracked.map((step, i) => {
           const ratio = baseline > 0 ? step.views / baseline : 0;
-          const isWorst = i === worstIdx && worstDrop >= 15;
+          const isWorst = step.questionIndex === hotspotIndex;
+          // La perte est portée par la question qui la SUBIT (ceux qui
+          // l'ont vue sans atteindre la suivante), pas par la suivante.
+          const loss = stepLoss(funnel, i);
           const widthPct = Math.max(6, ratio * 100);
           const completionPct =
             baseline > 0 ? Math.round(ratio * 1000) / 10 : 0;
@@ -493,8 +548,8 @@ function FunnelSection({
                   {step.views} ({completionPct}%)
                 </span>
               </div>
-              <div className="w-16 shrink-0 text-right tabular-nums">
-                {step.dropFromPrevious > 0 ? (
+              <div className="w-28 shrink-0 text-right tabular-nums">
+                {loss ? (
                   <span
                     className={
                       isWorst
@@ -502,10 +557,10 @@ function FunnelSection({
                         : "text-muted-foreground"
                     }
                   >
-                    -{step.dropFromPrevious}%
+                    -{loss.pct}% ({loss.lost} pers.)
                   </span>
                 ) : (
-                  <span className="text-muted-foreground">—</span>
+                  <span className="text-muted-foreground">-</span>
                 )}
               </div>
             </div>
