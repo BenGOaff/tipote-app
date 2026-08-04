@@ -32,7 +32,7 @@ import { useCallback, useEffect, useState } from "react";
 /** The 3 prefixed public-content namespaces in Tipote. Used to decide
  *  the URL shape on the main host (where the prefix is required to
  *  distinguish between content types). On a custom domain the prefix
- *  is always dropped — the catch-all in app/[publicSlug] resolves
+ *  is always dropped — the catch-all in app/s/[publicSlug] resolves
  *  across all 3 in priority order. */
 export type PublicContentKind = "q" | "pq" | "p";
 
@@ -52,7 +52,7 @@ export interface UseShareDomain {
   /**
    * True when the selected domain is a creator's custom domain (not
    * the multi-tenant main host). The catch-all route at
-   * app/[publicSlug] serves bare slugs on these, so share URLs can
+   * app/s/[publicSlug] serves bare slugs on these, so share URLs can
    * drop the /q/, /pq/ or /p/ prefix.
    */
   isCustomDomain: boolean;

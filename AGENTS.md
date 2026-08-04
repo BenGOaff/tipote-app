@@ -971,3 +971,110 @@ sans ça, `&nbsp;` deviendrait `&nbsp ;`.
 les 7 locales.
 
 Le module quiz de Tiquiz est jumeau : cette correction y vit aussi.
+
+## Une chute dans le funnel : sur QUI, et sur QUELLE question (drame Jocelyne 4 août 2026)
+
+"J'avais une question sur laquelle il y avait vraiment une chute. À chaque
+fois que je changeais quelque chose sur les conseils du robot, ça restait
+bloqué dessus. Reformuler les quatre réponses, reformuler la question,
+remettre les réponses dans un autre ordre : j'ai tout fait, j'attendais
+trois quatre nouvelles personnes, même problème. Il m'a carrément
+conseillé de l'enlever, je l'ai enlevée, et ça continue à bloquer au même
+endroit, la question 7." Puis, le lendemain : "mon premier quiz a 15
+questions et globalement tous les gens qui le commencent le terminent."
+
+Ce n'était donc pas la longueur, et il n'y avait aucune question qui
+bloque. Trois défauts empilés, du plus grave au moins grave.
+
+**1. ON DÉSIGNAIT LA MAUVAISE QUESTION.** `views` d'une étape = les
+sessions qui ont AFFICHÉ cette question (`question_view` part au rendu).
+Quelqu'un qui abandonne entre la Q6 et la Q7 a donc vu la Q6 et jamais la
+Q7 : **il s'est arrêté SUR la Q6**. Le bandeau annonçait "Question 7 fait
+perdre X%, c'est le point chaud à reformuler en priorité". Jocelyne a
+réécrit, réordonné puis supprimé une question que les partants n'avaient
+jamais lue, et quand elle l'a supprimée l'ancienne Q8 a pris sa place :
+le bandeau a redésigné "la 7". Aucune de ses corrections ne POUVAIT
+produire d'effet.
+
+**2. AUCUN SEUIL D'ÉCHANTILLON.** L'alerte partait à 15% de perte quel que
+soit le nombre de personnes. Sur une étape atteinte par 8 visiteurs, UNE
+personne vaut 12,5%. Et comme le pourcentage se calcule sur l'effectif
+précédent, qui fond à mesure qu'on avance, l'alerte **dérive
+mécaniquement vers la fin du quiz** sans rien devoir au contenu. Sur la
+page Mes stats, le badge rouge sortait dès 1% de perte, sans aucun seuil.
+
+**3. ON N'AFFICHAIT PAS CE QU'ON AVAIT.** Chaque étape porte `views` ET
+`answers`. Vu sans réponse = il bute SUR la question (trop intime, pas
+comprise, blocage technique) ; répondu puis parti = fatigue, et
+reformuler ne sert à rien. Deux corrections opposées, aucune des deux
+affichée.
+
+**Règle : `lib/quiz/funnelSignal.ts` décide, personne d'autre.**
+`readFunnelSignal(steps)` rend `no-data | too-few | steady | hotspot`,
+et le hotspot porte la question qu'ils ont VUE (`questionIndex`), celle
+qu'ils n'ont jamais atteinte (`neverReachedIndex`), la perte EN
+PERSONNES, et la forme (`on-question` / `after-answer`). Seuils :
+`MIN_SAMPLE = 20` (une personne ne peut plus à elle seule franchir les
+15%), `MIN_LOST = 5` (en dessous on commente des individus),
+`MIN_DROP_PCT = 15` (inchangé). `stepLoss()` porte la perte sur la
+question qui la SUBIT, avec le nombre de personnes à côté du %.
+
+**Endroits à respecter (Tipote) :** `components/quiz/QuizAnalyticsClient.tsx`,
+`lib/quiz/insights.ts` (bloc VERDICT DU FUNNEL calculé AVANT l'appel),
+`lib/insights/global.ts`. Côté Tiquiz s'ajoutent `app/stats/StatsShell.tsx`
+et le coach de l'Atelier.
+
+**Sur les prompts :** à un modèle qui reçoit une liste de pourcentages et
+pour consigne "nomme le point de fuite prioritaire", il reste toujours un
+maximum à nommer, même sur trois visiteurs. **La retenue ne s'obtient pas
+en la demandant, elle s'obtient en calculant le verdict AVANT** et en le
+lui donnant comme non négociable.
+
+**Deux phrases obligatoires partout où on montre un funnel :**
+- perdre du monde est NORMAL et SAIN, ce sont d'abord les visiteurs non
+  qualifiés, aucun quiz ne vise 100% de complétion (sinon chaque départ
+  se lit comme une faute et la créatrice réécrit un quiz qui va bien) ;
+- une seule modification à la fois, puis 20 à 30 nouvelles réponses avant
+  de juger.
+
+**Et le partage n'est pas un levier universel.** Sur un sujet intime ou
+stigmatisant (santé, santé mentale, neuroatypie, argent, poids,
+sexualité, famille), partager publiquement revient à s'exposer : un taux
+de partage bas n'y est ni un défaut du quiz ni un cadeau trop faible.
+Jocelyne l'avait diagnostiqué seule, les prompts le disent maintenant.
+
+Le module quiz de Tiquiz est jumeau : toute correction ici se porte
+là-bas.
+
+## Le mot "quiz" n'est plus interdit comme adresse (retour Béné 4 août 2026)
+
+"On ne peut pas blacklister le mot 'quiz' parce que beaucoup vont
+l'utiliser. C'est LOGIQUE !" Elle a raison, et la liste en interdisait une
+trentaine du même genre : contents, pages, dashboard, leads, settings,
+support, login...
+
+Ils n'étaient pas là pour la protéger. `RESERVED_PUBLIC_SLUGS` servait
+DEUX choses à la fois : "ce slug masquerait une de nos pages" et "ce
+chemin ne doit pas être servi sur le domaine d'une cliente". Le second est
+déjà réglé, et mieux, par la porte du middleware : sur un domaine perso,
+tout ce qui n'est pas explicitement autorisé répond 404.
+
+Restait un vrai risque : `example.com/quiz` était résolu par le routeur
+Next, et **une route statique gagne toujours contre une route
+dynamique**. D'où la correction : le middleware RÉÉCRIT le slug nu vers
+`/s/<slug>` (`app/s/[publicSlug]/page.tsx`), un chemin qui n'est pas une
+page de l'app. Plus d'arbitrage à rendre, donc plus de mots à interdire.
+L'URL vue par le visiteur ne change pas. L'unicité entre les 3 types de
+contenu public (quizzes, popquizzes, hosted_pages) est intacte : elle vit
+dans `lib/publicSlugServer.ts` et n'a rien à voir avec les mots réservés.
+
+`routeTenantPath()` (`lib/publicSlug.ts`) est la fonction pure qui décide
+`pass | slug | block`, testée par `tests/logic/tenant-routing.test.mts`
+sur les deux moitiés : tous les mots naturels sont rendus, et aucune de
+nos pages ne fuite. Il ne reste réservé que `api` ; `_next`,
+`.well-known` et les fichiers à extension sont déjà impossibles puisque
+`sanitizeSlug` n'accepte que `[a-z0-9-]`.
+
+**INTERDIT :** rallonger `RESERVED_PUBLIC_SLUGS` avec un nom de route de
+l'app. Si une nouvelle page apparaît, elle est déjà protégée par la porte
+du middleware.

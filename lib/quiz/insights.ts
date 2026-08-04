@@ -16,6 +16,7 @@ import { sanitizeAiText } from "@/lib/aiTextSanitizer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { stripHtml } from "@/lib/richText";
 import { buildLiveFunnel } from "@/lib/quiz/funnel";
+import { readFunnelSignal, type FunnelSignal } from "@/lib/quiz/funnelSignal";
 import { aggregateSurvey, type AggregatedQuestion } from "@/lib/survey/analysis";
 
 const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
@@ -48,6 +49,12 @@ export interface QuizInsightsAggregate {
   };
   resultDistribution: { title: string; count: number; pct: number }[];
   funnel: { index: number; text: string; views: number; answers: number; dropPct: number }[];
+  /** Verdict partage avec l'ecran de stats : ce qu'on a le droit de
+   *  conclure, et sur QUELLE question (cf. lib/quiz/funnelSignal.ts).
+   *  Sans lui, l'IA relisait les pourcentages bruts et prescrivait une
+   *  reformulation sur trois visiteurs, en designant qui plus est la
+   *  question suivante (drame Jocelyne, 4 aout 2026). */
+  funnelSignal: FunnelSignal;
   questions: AggregatedQuestion[];
   totalAnswered: number;
 }
@@ -163,6 +170,13 @@ export async function aggregateQuizInsights(
 
   // ── Drop-off par question ──
   const funnel: QuizInsightsAggregate["funnel"] = [];
+  let funnelSignal: FunnelSignal = {
+    kind: "no-data",
+    bestSample: 0,
+    needed: 0,
+    readableUntil: -1,
+    hotspot: null,
+  };
   try {
     const { data: funnelRows } = await supabaseAdmin.rpc("quiz_question_funnel_detail", {
       p_quiz_id: quizId,
@@ -180,6 +194,7 @@ export async function aggregateQuizInsights(
     // Recalage sur les questions vivantes : une question supprimée ne doit
     // pas se retrouver dans le diagnostic de l'IA (cf. lib/quiz/funnel.ts).
     const { steps } = buildLiveFunnel(rows, texts.length);
+    funnelSignal = readFunnelSignal(steps);
     for (const step of steps) {
       if (!step.hasData) continue;
       funnel.push({
@@ -202,9 +217,53 @@ export async function aggregateQuizInsights(
     metrics: { views, viewsReliable, completions, completionRate, leads, captureRate, exportedSio: exported },
     resultDistribution,
     funnel,
+    funnelSignal,
     questions: survey?.questions ?? [],
     totalAnswered: survey?.totalResponses ?? 0,
   };
+}
+
+/**
+ * Traduit le verdict du funnel en une consigne que l'IA ne peut pas
+ * contourner. On ne lui donne PAS le choix de designer une question : on
+ * lui dit laquelle, ou on lui dit qu'il n'y a rien a designer.
+ *
+ * C'est la lecon du drame Jocelyne (4 aout 2026) : a un modele qui recoit
+ * une liste de pourcentages et pour consigne "nomme le point de fuite
+ * prioritaire", il reste toujours un maximum a nommer, meme sur trois
+ * visiteurs. La retenue ne s'obtient pas en la demandant, elle s'obtient
+ * en calculant le verdict AVANT.
+ */
+function renderFunnelVerdict(s: QuizInsightsAggregate["funnelSignal"]): string {
+  if (s.kind === "hotspot" && s.hotspot) {
+    const h = s.hotspot;
+    const forme =
+      h.shape === "on-question"
+        ? `Ils VOIENT la Q${h.questionIndex + 1} et n'y repondent pas (${h.stuck} personnes) : c'est cette question qui bloque (trop intime, pas comprise, ou probleme technique).`
+        : h.shape === "after-answer"
+          ? `Ils REPONDENT a la Q${h.questionIndex + 1} puis s'arretent (${h.leftAfter} personnes) : la question passe bien, c'est la longueur ou ce qui vient apres qui les perd. Ne propose PAS de la reformuler.`
+          : "";
+    return [
+      "VERDICT DU FUNNEL (calcule, a reprendre tel quel) :",
+      `- Point de fuite : la question ${h.questionIndex + 1}. ${h.lost} personnes sur ${h.sample} s'y arretent (${h.dropPct}%).`,
+      `- Ne parle JAMAIS de la question ${h.neverReachedIndex + 1} a ce sujet : les partants ne l'ont jamais affichee, ils ne peuvent pas avoir ete rebutes par un texte qu'ils n'ont pas lu.`,
+      forme,
+    ]
+      .filter(Boolean)
+      .join("\n");
+  }
+  if (s.kind === "steady") {
+    return [
+      "VERDICT DU FUNNEL (calcule, a reprendre tel quel) :",
+      "- Aucun decrochage anormal. Le parcours des questions tient la route : dis-le, et cherche les gains AILLEURS (trafic, promesse d'entree, capture, offre par profil).",
+    ].join("\n");
+  }
+  return [
+    "VERDICT DU FUNNEL (calcule, a reprendre tel quel) :",
+    `- PAS ASSEZ DE DONNEES pour designer une question. Le maximum atteint sur une etape est de ${s.bestSample} visiteurs, il en faut environ ${s.needed}.`,
+    "- INTERDIT : nommer une question a corriger, parler de 'point de fuite', ou commenter un pourcentage de perte par question. Sur une poignee de visiteurs, une seule personne fait bouger un pourcentage de 12 points : ce serait de l'invention.",
+    "- Dis-le franchement, explique en une phrase pourquoi, et oriente vers ce qui se joue AVANT : amener plus de monde sur le quiz.",
+  ].join("\n");
 }
 
 function renderAggregateForPrompt(a: QuizInsightsAggregate): string {
@@ -227,7 +286,9 @@ function renderAggregateForPrompt(a: QuizInsightsAggregate): string {
   if (a.funnel.length > 0) {
     lines.push("DROP-OFF PAR QUESTION (sessions atteignant chaque question) :");
     for (const f of a.funnel)
-      lines.push(`- Q${f.index + 1} ${f.text} : ${f.views} vues, ${f.answers} reponses${f.dropPct > 0 ? `, ${f.dropPct}% de perte vs la question precedente` : ""}`);
+      lines.push(`- Q${f.index + 1} ${f.text} : ${f.views} vues, ${f.answers} reponses`);
+    lines.push("");
+    lines.push(renderFunnelVerdict(a.funnelSignal));
     lines.push("");
   }
   if (a.questions.length > 0) {
@@ -258,7 +319,10 @@ export async function generateQuizInsights(aggregate: QuizInsightsAggregate): Pr
     "Tu te bases UNIQUEMENT sur les chiffres fournis, sans jamais inventer de donnees.",
     "REGLES de lecture des chiffres :",
     "- Un taux de capture sous ~10% = fuite a corriger (capture mal placee, promesse du resultat trop faible). 20%+ = bon, 40%+ = excellent.",
-    "- La question avec le plus gros drop-off est le point de fuite prioritaire : trop longue, trop intrusive, ou mal placee.",
+    "- LE FUNNEL PAR QUESTION : tu suis le bloc VERDICT DU FUNNEL a la lettre. Il est CALCULE, il n'est pas negociable, et il prime sur ta propre lecture des chiffres bruts. S'il dit qu'il n'y a pas assez de donnees, tu ne nommes AUCUNE question, meme si un pourcentage te saute aux yeux.",
+    "- Perdre des gens en cours de quiz est NORMAL et SAIN : ceux qui s'arretent sont d'abord les visiteurs non qualifies, et le quiz fait son travail en les filtrant. Aucun quiz ne vise 100% de completion. Ne presente jamais un abandon comme une faute de la creatrice, ni un taux de completion imparfait comme un probleme a corriger.",
+    "- PROTOCOLE DE MESURE, a rappeler des que tu proposes de modifier le quiz : UNE SEULE modification a la fois, puis attendre au moins 20 a 30 nouvelles reponses avant de juger. Enchainer plusieurs changements (le texte, les reponses, l'ordre) rend l'effet de chacun illisible, et juger sur 3 ou 4 personnes ne mesure que le hasard.",
+    "- LE PARTAGE N'EST PAS UN LEVIER UNIVERSEL. Sur un sujet intime ou stigmatisant (sante, sante mentale, neuroatypie, argent, poids, sexualite, famille, echec), partager publiquement revient a s'exposer : un taux de partage bas n'y est ni un defaut du quiz ni un cadeau trop faible. Ne recommande pas d'augmenter le partage dans ce cas, propose plutot l'envoi a UNE personne (message prive, email), les groupes fermes, ou concentre-toi sur d'autres leviers.",
     "- Un profil de resultat sur-represente peut signaler une cible reelle a exploiter (offre dediee) OU un quiz mal equilibre : tranche selon le contexte.",
     "- Si les vues sont partiellement trackees, ne conclus pas sur le taux de capture, concentre-toi sur les leads et les profils.",
     "- Ne dis JAMAIS qu'une question est vide si des reponses sont indiquees.",

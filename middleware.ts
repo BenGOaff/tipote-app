@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { isAdminEmail } from "@/lib/adminEmails";
 import { customDomainsEnabled, isOwnHost, normaliseHost } from "@/lib/customDomains";
-import { isReservedPublicSlug } from "@/lib/publicSlug";
+import { routeTenantPath, TENANT_SLUG_PREFIX } from "@/lib/publicSlug";
 
 /**
  * Invariants (anti-régression)
@@ -32,45 +32,6 @@ const SUPPORTED_LOCALES = ["fr", "en", "es", "it", "ar", "pt", "pt-BR"];
 // to that domain's owner. Same convention as Tiquiz, different
 // header name so the two apps never collide on the same VPS.
 const CUSTOM_HOST_HEADER = "x-tipote-custom-host";
-
-// Bare-slug shape served by app/[publicSlug]/page.tsx at the root of
-// a custom domain (test.ethilife.fr/<slug>). Mirrors sanitizeSlug's
-// regex so we never let through a path the page would then 404 on
-// malformed input — keeps the 404 surface small. Length matches the
-// SLUG_RE in lib/quizBranding.ts (1..50 chars total).
-const BARE_SLUG_RE = /^\/[a-z0-9](?:[a-z0-9-]{1,48}[a-z0-9])?$/;
-
-/** Tells whether a request arriving on a creator's custom domain is
- *  on a path we're willing to serve. Everything else 404s before any
- *  page handler runs — protects the creator's branded URL from
- *  exposing dashboard chrome, admin pages, marketing pages, etc. */
-function isPublicTenantPath(pathname: string): boolean {
-  if (
-    pathname.startsWith("/q/") ||
-    pathname.startsWith("/p/") ||
-    pathname.startsWith("/pq/") ||
-    pathname.startsWith("/embed/") ||
-    pathname.startsWith("/api/quiz/") ||
-    pathname.startsWith("/api/popquiz/") ||
-    pathname.startsWith("/api/pages/") ||
-    pathname.startsWith("/api/leads") ||
-    pathname.startsWith("/_next/") ||
-    pathname === "/favicon.ico" ||
-    pathname === "/robots.txt" ||
-    pathname === "/sitemap.xml" ||
-    pathname === "/llms.txt"
-  ) {
-    return true;
-  }
-  // Bare-slug shape served by app/[publicSlug]/page.tsx. Reserved
-  // words are pre-rejected here so the catch-all never has to deal
-  // with them.
-  if (BARE_SLUG_RE.test(pathname)) {
-    const segment = pathname.slice(1);
-    if (!isReservedPublicSlug(segment)) return true;
-  }
-  return false;
-}
 
 /**
  * Detect preferred locale from Accept-Language header.
@@ -155,7 +116,8 @@ export async function middleware(req: NextRequest) {
     const rawHost = req.headers.get("host");
     if (!isOwnHost(rawHost)) {
       const host = normaliseHost(rawHost)!;
-      if (!isPublicTenantPath(pathname) && pathname !== "/") {
+      const route = routeTenantPath(pathname);
+      if (route.kind === "block") {
         // Don't expose dashboard / admin / login to the creator's
         // branded URL. Explicit 404 so visitors don't accidentally
         // discover those screens via someone else's domain.
@@ -163,6 +125,17 @@ export async function middleware(req: NextRequest) {
       }
       const requestHeaders = new Headers(req.headers);
       requestHeaders.set(CUSTOM_HOST_HEADER, host);
+      // Le slug nu est RÉÉCRIT vers un chemin qui n'est pas une page de
+      // l'app. Sans ça, le routeur Next ferait gagner sa route statique
+      // contre le catch-all, et un contenu nommé "quiz", "pages" ou
+      // "contents" serait inatteignable sur le domaine de sa créatrice.
+      // C'est ce qui obligeait à lui interdire ces mots (retour Béné,
+      // 4 août 2026). L'URL vue par le visiteur ne change pas.
+      if (route.kind === "slug") {
+        const url = req.nextUrl.clone();
+        url.pathname = `${TENANT_SLUG_PREFIX}/${route.slug}`;
+        return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
+      }
       return NextResponse.next({ request: { headers: requestHeaders } });
     }
   }

@@ -1,12 +1,22 @@
-// app/[publicSlug]/page.tsx
+// app/s/[publicSlug]/page.tsx
 //
-// Catch-all that serves Tipote's public content at the root of a
-// creator custom domain — `mybrand.com/<slug>` instead of the longer
-// `/q/<slug>`, `/pq/<slug>` or `/p/<slug>`. The existing prefixed
-// routes still work (backwards-compat with any URL already shared in
-// the wild) and are the only thing that resolves on the main host
-// app.tipote.com, where this catch-all 404s silently because we
-// never want `/dashboard`, `/settings`, `/quiz`, etc. to be shadowed.
+// Sert le contenu public de Tipote à la RACINE du domaine perso d'une
+// créatrice : `mybrand.com/<slug>` au lieu du plus long `/q/<slug>`,
+// `/pq/<slug>` ou `/p/<slug>`. Les routes préfixées continuent de
+// marcher (tout ce qui a déjà été partagé dans la nature) et restent les
+// seules à répondre sur le host principal app.tipote.com, où cette page
+// 404 volontairement.
+//
+// -- POURQUOI CE FICHIER VIT SOUS /s (retour Béné, 4 août 2026) --------
+//
+// Il était en `app/[publicSlug]/page.tsx`, donc en concurrence directe
+// avec toutes nos routes statiques. Une route statique gagne toujours,
+// donc un contenu nommé "quiz", "pages" ou "contents" n'aurait jamais pu
+// s'afficher : d'où une longue liste de mots interdits à la créatrice,
+// alors que "quiz" est le mot le plus naturel du monde pour nommer un
+// quiz. Le middleware réécrit désormais le slug nu vers `/s/<slug>`, un
+// chemin qui n'est pas une page de l'app : plus d'arbitrage, plus de
+// mots interdits. L'adresse vue par le visiteur ne change pas.
 //
 // Routing decision:
 //   1. Reserved word → notFound() (api, embed, robots.txt, _next, …)
