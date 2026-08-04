@@ -7604,6 +7604,8 @@
     "costFree": " Free update.",
     "oneCreditSuffix": " (1 credit)",
     "surveyExportPdfGlobal": "Summary PDF",
-    "surveyExportPdfFull": "Detailed PDF"
+    "surveyExportPdfFull": "Detailed PDF",
+    "quizSectionPriority": "Do this now, one thing only",
+    "quizLaterToggle": "And later, once you have measured"
   }
 }

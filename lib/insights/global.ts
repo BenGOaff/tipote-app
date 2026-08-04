@@ -153,9 +153,10 @@ export async function generateGlobalInsights(a: GlobalAggregate): Promise<Global
     "Tu reponds STRICTEMENT en JSON valide, sans texte autour :",
     '{ "summary": string, "whatWorks": string[], "toFix": string[], "nextMoves": string[] }',
     "- summary : 2 a 4 phrases, l'etat des lieux honnete du portefeuille.",
-    "- whatWorks : 2 a 4 points sur ce qui marche et qu'il faut amplifier (cite les projets par leur nom).",
-    "- toFix : 2 a 5 problemes concrets a corriger, priorises (cite les projets).",
-    "- nextMoves : 2 a 5 prochains mouvements strategiques a l'imperatif.",
+    "TON ROLE EST PEDAGOGIQUE, PAS ENCYCLOPEDIQUE. Un createur n'appliquera jamais douze conseils : il en appliquera un. Si tu ne choisis pas lequel, il choisira au hasard, souvent le plus facile plutot que le plus rentable. Choisir a sa place est ton travail : 3 points MAXIMUM par liste, le plus rentable en premier, et rien qui fasse doublon d'une liste a l'autre.",
+    "- whatWorks : 2 a 3 points sur ce qui marche et qu'il faut amplifier (cite les projets par leur nom).",
+    "- toFix : 2 a 3 problemes concrets a corriger, le plus rentable en premier (cite les projets). Le premier point est celui sur lequel il doit travailler cette semaine, et lui seul.",
+    "- nextMoves : 2 a 3 prochains mouvements strategiques a l'imperatif (lancer un nouveau quiz sur tel angle, optimiser tel projet, ajouter une offre par profil, mettre du trafic sur celui qui capte le mieux).",
   ].join("\n");
 
   const controller = new AbortController();
@@ -210,8 +211,11 @@ function parseReportJson(raw: string): {
     const e = jsonStr.lastIndexOf("}");
     if (s >= 0 && e > s) jsonStr = jsonStr.slice(s, e + 1);
   }
+  // Plafond a 3 cote CODE : un modele qui deborde ne doit pas pouvoir
+  // re-assommer le createur (retour Bene, 4 aout 2026).
+  const MAX_ITEMS = 3;
   const toArr = (v: unknown): string[] =>
-    Array.isArray(v) ? v.map((x) => sanitizeAiText(String(x).trim())).filter(Boolean) : [];
+    Array.isArray(v) ? v.map((x) => sanitizeAiText(String(x).trim())).filter(Boolean).slice(0, MAX_ITEMS) : [];
   const toStr = (v: unknown): string => (typeof v === "string" ? sanitizeAiText(v.trim()) : "");
   try {
     const obj = JSON.parse(jsonStr) as Record<string, unknown>;

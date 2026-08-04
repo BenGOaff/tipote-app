@@ -7604,6 +7604,8 @@
     "costFree": " تحديث مجاني.",
     "oneCreditSuffix": " (رصيد واحد)",
     "surveyExportPdfGlobal": "ملخص PDF",
-    "surveyExportPdfFull": "PDF مفصّل"
+    "surveyExportPdfFull": "PDF مفصّل",
+    "quizSectionPriority": "افعل هذا الآن، شيء واحد فقط",
+    "quizLaterToggle": "ثم لاحقا، بعد أن تقيس النتيجة"
   }
 }
