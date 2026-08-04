@@ -1078,3 +1078,66 @@ nos pages ne fuite. Il ne reste réservé que `api` ; `_next`,
 **INTERDIT :** rallonger `RESERVED_PUBLIC_SLUGS` avec un nom de route de
 l'app. Si une nouvelle page apparaît, elle est déjà protégée par la porte
 du middleware.
+
+## Alignement : trois étages, et le plus fort doit pouvoir se taire (4 août 2026)
+
+Béné : "tu empiles les trucs, ça devient n'importe quoi l'éditeur. Il faut
+laisser le choix de TOUT aligner / centrer OU de modifier : une question
+où les réponses sont centrées, la suivante alignée à gauche, ou même une
+question en colonnes et une en liste. MAIS faut le faire BIEN."
+
+Le "tu empiles" est le diagnostic exact. Il n'y avait qu'un étage assumé
+(le réglage du quiz) et un étage CLANDESTIN : l'alignement écrit dans le
+texte riche, qui gagne pour toujours dès qu'on a cliqué une fois sur un
+bouton d'alignement. Jocelyne s'est retrouvée avec un quiz "centré" dont
+elle réalignait les champs un par un, sans pouvoir revenir en arrière
+autrement qu'en les reprenant tous.
+
+**Règle : `lib/quiz/questionLayout.ts`, trois étages, du plus fort au plus
+faible.**
+
+1. le champ : l'alignement posé à la main dans le texte riche ;
+2. la question : `quiz_questions.config.align` (nouveau) ;
+3. le quiz : `question_layout`.
+
+`"inherit"` n'est PAS une valeur d'affichage, c'est "je ne me prononce
+pas", et c'est le défaut de tout ce qui existe. Aucun quiz en ligne ne
+bouge. Pas de migration : `config` est déjà du JSONB.
+
+**Et le retour en arrière doit être aussi facile que l'aller.**
+`clearRichTextAlign()` + le bouton "Tout réaligner sur ce réglage"
+retirent les exceptions des questions ET les alignements écrits dans les
+champs (en conservant gras, couleurs, tailles). Sans lui, "tout centrer"
+ne centrerait rien du tout sur un quiz déjà bricolé : c'est exactement ce
+que Jocelyne a vécu, et c'est ce qui permet d'appliquer le réglage à un
+quiz DÉJÀ EN LIGNE sans le refaire.
+
+La disposition des réponses suit le même modèle
+(`config.answer_layout`, déjà lu par le viewer depuis juillet).
+
+**Endroits à respecter :** `PublicQuizClient.tsx` (écran de question),
+`QuizDetailClient.tsx` (aperçu + contrôles). L'aperçu appelle
+`resolveQuestionAlign`, jamais un ternaire recopié : sixième fois que ce
+défaut sort. Test : `tests/logic/question-layout.test.mts`.
+
+## L'image d'une réponse garde SON format (retour Béné 4 août 2026)
+
+"Adapte la place de l'image au format de la photo, là elles sont
+tronquées dans les réponses et c'est pourri."
+
+Les vignettes étaient en `aspect-video object-cover` : la boîte imposait
+son 16/9 et recadrait la photo dedans, coupant le haut des titres.
+
+**La règle existait déjà**, écrite en tête de `PublicQuizClient` : "w-full
+h-auto par défaut, jamais de `max-h-*` / `object-cover`". Elle était
+contredite soixante lignes plus bas, à QUATRE endroits (les deux branches
+du viewer, les deux aperçus d'éditeur). **Une règle écrite en commentaire
+n'est pas une règle** : elle vit maintenant dans
+`lib/quiz/answerImage.ts`, et les quatre appellent `answerImageRender()`.
+
+Corollaire visuel : deux photos de formats différents donnent deux cartes
+de hauteurs différentes. C'est voulu. La grille porte donc `items-start`
+(`answerImageGridClass`), sinon la carte la plus courte s'étire.
+
+Le filet de captures ne pouvait pas le voir : la fixture `/visual-test`
+n'a aucune réponse illustrée. À ajouter à la matrice au prochain passage.
