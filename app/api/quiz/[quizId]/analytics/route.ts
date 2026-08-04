@@ -58,7 +58,7 @@ export async function GET(
   // Ownership + base counters in one shot
   const { data: quiz, error: quizErr } = await supabase
     .from("quizzes")
-    .select("id, title, views_count, completions_count, created_at")
+    .select("id, title, views_count, starts_count, completions_count, created_at")
     .eq("id", quizId)
     .eq("user_id", user.id)
     .maybeSingle();
@@ -118,12 +118,21 @@ export async function GET(
   const exportedSio = lifetimeExportedSio ?? 0;
 
   // ── B) VUES + COMPLÉTIONS lifetime — double source réconciliée ──
-  const [viewsCountRes, completionsCountRes] = await Promise.all([
+  const [viewsCountRes, startsCountRes, completionsCountRes] = await Promise.all([
     supabaseAdmin
       .from("quiz_events")
       .select("id", { count: "exact", head: true })
       .eq("quiz_id", quizId)
       .eq("event_type", "view"),
+    // Les DÉMARRAGES : la marche entre l'arrivée et la première question.
+    // On l'avait en base depuis toujours, on ne la montrait nulle part,
+    // et c'est là que se joue la plus grosse fuite d'un quiz (audit du
+    // quiz de Jocelyne, 4 août 2026, cf. lib/quiz/fullFunnel.ts).
+    supabaseAdmin
+      .from("quiz_events")
+      .select("id", { count: "exact", head: true })
+      .eq("quiz_id", quizId)
+      .eq("event_type", "start"),
     supabaseAdmin
       .from("quiz_events")
       .select("id", { count: "exact", head: true })
@@ -131,8 +140,10 @@ export async function GET(
       .eq("event_type", "complete"),
   ]);
   const viewsFromEvents = viewsCountRes.error ? 0 : viewsCountRes.count ?? 0;
+  const startsFromEvents = startsCountRes.error ? 0 : startsCountRes.count ?? 0;
   const completesFromEvents = completionsCountRes.error ? 0 : completionsCountRes.count ?? 0;
   const trackedViews = Math.max(quiz.views_count ?? 0, viewsFromEvents);
+  const startsCount = Math.max(quiz.starts_count ?? 0, startsFromEvents);
   const completionsCount = Math.max(quiz.completions_count ?? 0, completesFromEvents);
 
   // ── C) Taux de capture HONNÊTE ──
@@ -332,6 +343,7 @@ export async function GET(
     metrics: {
       // LIFETIME, source réconciliée max(compteur dénormalisé, quiz_events).
       viewsCount,
+      startsCount,
       completionsCount,
       leadsCount,
       exportedSioCount: exportedSio,
