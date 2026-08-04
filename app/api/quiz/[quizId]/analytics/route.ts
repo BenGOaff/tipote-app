@@ -15,8 +15,14 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { dateKeyForOffset, parseTzOffset } from "@/lib/dateKeys";
 import { stripHtml } from "@/lib/richText";
 import { buildLiveFunnel } from "@/lib/quiz/funnel";
+import { readTrafficSource, sanitizeVisitMeta } from "@/lib/quiz/trafficSource";
 
 export const dynamic = "force-dynamic";
+
+/** Nombre de vues remontées pour lire la provenance. Une fenêtre, pas un
+ *  cumul : la provenance change à chaque publication. L'UI dit quand la
+ *  fenêtre est pleine. */
+const TRAFFIC_WINDOW = 3000;
 export const runtime = "nodejs";
 
 type PeriodKey = "7" | "30" | "90" | "all";
@@ -144,6 +150,29 @@ export async function GET(
   const completesFromEvents = completionsCountRes.error ? 0 : completionsCountRes.count ?? 0;
   const trackedViews = Math.max(quiz.views_count ?? 0, viewsFromEvents);
   const startsCount = Math.max(quiz.starts_count ?? 0, startsFromEvents);
+
+  // ── PROVENANCE DES VISITEURS ──
+  //
+  // Un écran d'accueil qui perd la moitié des visiteurs a deux causes
+  // possibles, opposées : la page déçoit, ou le monde qui arrive dessus
+  // n'est pas le bon. Sans savoir d'où ils viennent, on ne peut pas
+  // trancher (cf. lib/quiz/trafficSource.ts).
+  //
+  // Fenêtre sur les DERNIÈRES vues, pas un cumul : la provenance change
+  // à chaque publication. Pas d'agrégation SQL, donc pas de migration.
+  const trafficRes = await supabaseAdmin
+    .from("quiz_events")
+    .select("meta")
+    .eq("quiz_id", quizId)
+    .eq("event_type", "view")
+    .not("meta", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(TRAFFIC_WINDOW);
+  const trafficMetas = (trafficRes.error ? [] : trafficRes.data ?? []).map((r) =>
+    sanitizeVisitMeta((r as { meta?: unknown }).meta),
+  );
+  const trafficReading = readTrafficSource(trafficMetas);
+  const trafficCapped = trafficMetas.length >= TRAFFIC_WINDOW;
   const completionsCount = Math.max(quiz.completions_count ?? 0, completesFromEvents);
 
   // ── C) Taux de capture HONNÊTE ──
@@ -354,6 +383,7 @@ export async function GET(
       viewsReliable,
       exportRate,
     },
+    traffic: { reading: trafficReading, capped: trafficCapped, window: TRAFFIC_WINDOW },
     resultDistribution,
     leadsByDay,
     funnel,

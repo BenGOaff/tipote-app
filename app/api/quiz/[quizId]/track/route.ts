@@ -41,6 +41,7 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { isBot } from "@/lib/userAgent";
 import { randomUUID } from "node:crypto";
 import { logBusinessEvent } from "@/lib/businessEvents";
+import { sanitizeVisitMeta } from "@/lib/quiz/trafficSource";
 
 export const dynamic = "force-dynamic";
 
@@ -252,7 +253,10 @@ export async function POST(req: NextRequest, context: RouteContext) {
         const full = await supabaseAdmin.from("quiz_events").insert({
           quiz_id: quizId,
           event_type: event as ProjectEvent,
-          meta: body.meta ?? null,
+          // Le viewer tourne chez le visiteur : ce qu'il envoie est
+          // modifiable. On ne garde que des clés connues, nettoyées et
+          // bornées (cf. lib/quiz/trafficSource.ts).
+          meta: sanitizeVisitMeta(body.meta),
           session_id: sessionId,
         });
         if (full.error) {

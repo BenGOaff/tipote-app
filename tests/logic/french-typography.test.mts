@@ -192,3 +192,73 @@ test("les nombres, booléens et null traversent sans dommage", () => {
   );
   assert.deepEqual(out, { sort_order: 3, show: true, insight: null, points: 2.5 });
 });
+
+// ── Eric, 4 août 2026 : la taille du titre revient à l'original ───────
+//
+// "Il modifie la taille, il enregistre, et dès qu'il a enregistré la
+// taille est revenue à l'original."
+//
+// La taille d'un champ vit dans `style="--rt-fs-d: 48px"`. Le nom de la
+// variable finit par une LETTRE et le `:` est suivi d'une espace : pour
+// la règle française, c'est un deux-points qui mérite son espace
+// insécable. Appliquée au HTML brut, elle écrivait `--rt-fs-d&nbsp;:`,
+// une propriété CSS qui n'existe pas, que le sanitizer jetait ensuite
+// SANS UN MOT. La taille était détruite à chaque enregistrement.
+//
+// La version HTML de la fonction ne fait pas cette faute depuis le
+// 3 août. Trois appelants prenaient simplement la mauvaise des deux.
+
+const TITRE_DIMENSIONNE =
+  '<div class="rt-field-fs" style="--rt-fs-d: 48px;">Prêt à changer de vie ?</div>';
+
+test("la taille d'un champ survit à la version TEXTE de la fonction", () => {
+  // C'est ça, le correctif : on ne compte plus sur l'appelant pour
+  // choisir la bonne des deux fonctions.
+  const out = applyFrenchTypography(TITRE_DIMENSIONNE, "fr");
+  assert.match(out, /--rt-fs-d:\s*48px/, "la variable CSS ne doit pas être touchée");
+  assert.ok(!/--rt-fs-d\s*\u202f|--rt-fs-d\s*&nbsp;|--rt-fs-d\s+:/.test(out));
+});
+
+test("et le texte visible du même champ est bien corrigé", () => {
+  // Le repli vers la version HTML ne doit pas faire perdre la règle :
+  // le point d'interrogation garde son espace.
+  const out = applyFrenchTypography(TITRE_DIMENSIONNE, "fr");
+  assert.match(out, /vie\u00a0\?|vie&nbsp;\?/, "le ? du texte garde son espace");
+});
+
+test("les deux tailles, mobile et desktop, survivent", () => {
+  const out = applyFrenchTypography(
+    '<div class="rt-field-fs" style="--rt-fs-m: 24px; --rt-fs-d: 48px;">Bonjour !</div>',
+    "fr",
+  );
+  assert.match(out, /--rt-fs-m:\s*24px/);
+  assert.match(out, /--rt-fs-d:\s*48px/);
+});
+
+test("un texte SANS balise garde exactement l'ancien comportement", () => {
+  // Le repli ne doit pas changer le cas normal, qui est la majorité.
+  assert.equal(
+    applyFrenchTypography("Prêt?", "fr"),
+    applyFrenchTypographyToHtml("Prêt?", "fr"),
+  );
+  assert.match(applyFrenchTypography("Prêt?", "fr"), /Prêt\u00a0\?/);
+});
+
+test("les autres langues restent intactes, balises comprises", () => {
+  for (const locale of ["en", "es", "it", "pt", "pt-BR", "ar"]) {
+    assert.equal(applyFrenchTypography(TITRE_DIMENSIONNE, locale), TITRE_DIMENSIONNE);
+  }
+});
+
+test("aucun appelant ne peut plus détruire une taille de police", () => {
+  // Garde-fou de bout en bout : ce que la route écrit vraiment en base.
+  const questionText = '<div class="rt-field-fs" style="--rt-fs-d: 32px;">Où en es-tu ?</div>';
+  for (const out of [
+    applyFrenchTypography(questionText, "fr"),
+    applyFrenchTypographyToHtml(questionText, "fr"),
+    (applyFrenchTypographyDeep({ question_text: questionText }, "fr") as Record<string, string>)
+      .question_text,
+  ]) {
+    assert.match(out, /--rt-fs-d:\s*32px/);
+  }
+});
