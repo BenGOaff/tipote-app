@@ -20,6 +20,7 @@ import { universalSchemaToPrompt } from "@/lib/templates/universalSchema";
 import { buildCopywritingKnowledge } from "@/lib/knowledge/salesPageKnowledge";
 import { buildNichePrompt } from "@/lib/knowledge/nicheRecommendations";
 import { isPaidPlan, FREE_LIMITS } from "@/lib/planLimits";
+import { fetchAnthropic } from "@/lib/aiRetry";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -72,7 +73,7 @@ async function callClaude(args: {
 
   let res: Response;
   try {
-    res = await fetch(CLAUDE_API_URL, {
+    res = await fetchAnthropic(CLAUDE_API_URL, {
       method: "POST",
       headers: {
         "content-type": "application/json",

@@ -18,6 +18,7 @@ import { loadBrandBundle, brandVoiceToPromptHint } from "@/lib/visualStudio/bran
 import { copyStyleHint } from "@/lib/visualStudio/copyPatterns";
 import { sanitizeAiQuizPayload } from "@/lib/aiTextSanitizer";
 import { buildClaudeMessageBody } from "@/lib/claudeRequest";
+import { fetchAnthropic } from "@/lib/aiRetry";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -267,7 +268,7 @@ export async function POST(req: NextRequest) {
 
         let res: Response;
         try {
-          res = await fetch(CLAUDE_API_URL, {
+          res = await fetchAnthropic(CLAUDE_API_URL, {
             method: "POST",
             headers: {
               "content-type": "application/json",

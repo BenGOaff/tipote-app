@@ -20,6 +20,7 @@ import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { buildBusinessContext } from "@/lib/compta/businessContext";
 import { sanitizeAiText } from "@/lib/aiTextSanitizer";
+import { fetchAnthropic } from "@/lib/aiRetry";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -204,7 +205,7 @@ async function callClaude(args: {
     "sonnet",
   );
 
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
+  const res = await fetchAnthropic("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
       "content-type": "application/json",

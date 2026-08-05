@@ -39,6 +39,7 @@ import { pickTitleFromContentData as pickTitleFromCD } from "@/lib/templates/pic
 
 import fs from "node:fs/promises";
 import path from "node:path";
+import { fetchAnthropic } from "@/lib/aiRetry";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -1475,7 +1476,7 @@ async function callClaude(args: {
 
     let res: Response;
     try {
-      res = await fetch("https://api.anthropic.com/v1/messages", {
+      res = await fetchAnthropic("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: {
           "content-type": "application/json",

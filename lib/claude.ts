@@ -13,6 +13,7 @@
 import "server-only";
 import { resolveAnthropicModel } from "@/lib/anthropicModel";
 import { sanitizeAiText } from "@/lib/aiTextSanitizer";
+import { fetchAnthropic } from "@/lib/aiRetry";
 
 const DEFAULT_IDLE_TIMEOUT_MS = 90_000;
 
@@ -120,7 +121,7 @@ export async function callClaude(args: CallClaudeArgs): Promise<string> {
   }
 
   try {
-    res = await fetch("https://api.anthropic.com/v1/messages", {
+    res = await fetchAnthropic("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
         "content-type": "application/json",
