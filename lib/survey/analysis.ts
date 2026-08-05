@@ -7,6 +7,7 @@
 // { question_index, option_index?, option_indices?, rating?, text? }.
 // Mêmes conventions que /aggregate-responses.
 
+import { PRIORITY_RULES, capSecondary } from "@/lib/prompts/priority";
 import { resolveAnthropicModel } from "@/lib/anthropicModel";
 import { callClaude, getClaudeApiKey } from "@/lib/claude";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -65,6 +66,8 @@ export interface SurveyAggregate {
 
 export interface SurveyAnalysisResult {
   summary: string;
+  /** LA chose a faire maintenant, une seule (cf. lib/prompts/priority.ts). */
+  priority: { title: string; why: string; how: string } | null;
   takeaways: string[];
   actions: string[];
   responses_at_generation: number;
@@ -248,11 +251,15 @@ export async function generateSurveyAnalysis(
     "- Chaque question affiche '[N/T ont répondu]' : N = personnes ayant répondu à CETTE question, T = total des participants. Si N > 0, la question A des réponses : ne dis JAMAIS qu'elle est vide ou sans données.",
     "- Pour une question à réponses libres, le nombre total est donné explicitement ('N réponses libres'). Les exemples cités ne sont qu'un ÉCHANTILLON : n'en déduis pas que seules ces réponses existent, ni que les autres participants n'ont pas répondu.",
     "- Les pourcentages d'une question sont calculés sur les répondants à cette question (pas sur le total), ils somment donc à 100% pour un choix unique.",
+    PRIORITY_RULES,
     "Tu réponds STRICTEMENT en JSON valide, sans texte autour, au format :",
-    '{ "summary": string, "takeaways": string[], "actions": string[] }',
+    '{ "summary": string, "priority": { "title": string, "why": string, "how": string }, "takeaways": string[], "actions": string[] }',
+    "- priority.title : LA seule chose à faire maintenant, en une phrase à l'impératif.",
+    "- priority.why : 1 à 2 phrases, avec SES chiffres à elle.",
+    "- priority.how : 2 à 4 phrases très concrètes sur la manière de s'y prendre.",
     "- summary : 2-4 phrases sur ce que disent VRAIMENT les résultats (les tendances fortes, les surprises).",
-    "- takeaways : 3 à 5 enseignements concrets à retenir (puces courtes).",
-    "- actions : 3 à 5 actions concrètes à mettre en place, priorisées, formulées à l'impératif.",
+    "- takeaways : 3 MAXIMUM, APRÈS la priorité, enseignements concrets à retenir (puces courtes).",
+    "- actions : 3 MAXIMUM, jamais un doublon de la priorité, actions concrètes à mettre en place, priorisées, formulées à l'impératif.",
   ].join("\n");
 
   const lines: string[] = [`Sondage : "${surveyTitle}"`, `Nombre de participants : ${aggregate.totalResponses}`, ""];
@@ -287,6 +294,7 @@ export async function generateSurveyAnalysis(
   const parsed = parseAnalysisJson(raw);
   return {
     summary: parsed.summary,
+    priority: parsed.priority,
     takeaways: parsed.takeaways,
     actions: parsed.actions,
     responses_at_generation: aggregate.totalResponses,
@@ -302,6 +310,7 @@ export async function generateSurveyAnalysis(
  */
 function parseAnalysisJson(raw: string): {
   summary: string;
+  priority: { title: string; why: string; how: string } | null;
   takeaways: string[];
   actions: string[];
 } {
@@ -318,16 +327,24 @@ function parseAnalysisJson(raw: string): {
 
   try {
     const obj = JSON.parse(jsonStr) as Record<string, unknown>;
+    // Le plafond vit dans le CODE et pas seulement dans la consigne :
+    // un modele qui deborde ne doit pas pouvoir re-assommer la creatrice.
     const toStringArray = (v: unknown): string[] =>
-      Array.isArray(v) ? v.map((x) => String(x).trim()).filter(Boolean) : [];
+      capSecondary(Array.isArray(v) ? v.map((x) => String(x).trim()).filter(Boolean) : []);
+    const toStr = (v: unknown): string => (typeof v === "string" ? v.trim() : "");
+    const pr = (obj.priority ?? null) as Record<string, unknown> | null;
     return {
-      summary: typeof obj.summary === "string" ? obj.summary.trim() : "",
+      summary: toStr(obj.summary),
+      priority:
+        pr && typeof pr === "object" && toStr(pr.title)
+          ? { title: toStr(pr.title), why: toStr(pr.why), how: toStr(pr.how) }
+          : null,
       takeaways: toStringArray(obj.takeaways),
       actions: toStringArray(obj.actions),
     };
   } catch {
     // Fallback : on renvoie au moins le texte brut en summary pour ne
     // pas perdre le travail du modèle.
-    return { summary: raw.trim().slice(0, 1000), takeaways: [], actions: [] };
+    return { summary: raw.trim().slice(0, 1000), priority: null, takeaways: [], actions: [] };
   }
 }

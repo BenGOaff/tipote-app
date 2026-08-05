@@ -40,6 +40,9 @@ type ResultsLead = {
 
 interface AnalysisResult {
   summary: string;
+  /** LA chose a faire maintenant. Absente d'une analyse generee avant le
+   *  5 aout 2026 : l'ecran doit continuer a fonctionner sans elle. */
+  priority?: { title: string; why: string; how: string } | null;
   takeaways: string[];
   actions: string[];
   generated_at?: string;
@@ -279,6 +282,23 @@ export default function SurveyResultsPanel({
                   </p>
                   <p className="text-sm mt-1">{state.analysis.summary}</p>
                 </div>
+                {/* LA PRIORITE, AVANT LES LISTES (retour Bene, 4 aout
+                    2026). Cet ecran alignait 3 a 5 enseignements PLUS
+                    3 a 5 actions, sans dire par quoi commencer. */}
+                {state.analysis.priority?.title && (
+                  <div className="rounded-lg border-2 border-primary/40 bg-primary/5 p-3 space-y-1.5">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-primary">
+                      {t("quizSectionPriority")}
+                    </p>
+                    <p className="text-sm font-semibold">{state.analysis.priority.title}</p>
+                    {state.analysis.priority.why && (
+                      <p className="text-sm">{state.analysis.priority.why}</p>
+                    )}
+                    {state.analysis.priority.how && (
+                      <p className="text-sm text-muted-foreground">{state.analysis.priority.how}</p>
+                    )}
+                  </div>
+                )}
                 {state.analysis.takeaways.length > 0 && (
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">

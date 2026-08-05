@@ -5,6 +5,7 @@
 // chiffre : tout ce qui suit est vérifié et sourcé, et c'est le SEUL
 // matériau factuel autorisé.
 
+import { PRIORITY_RULES_CONTENT } from "@/lib/prompts/priority";
 import type { ContentProduct } from "./contentSpace";
 
 export const GENERATOR_FORMATS = [
@@ -94,6 +95,8 @@ export function buildSystemPrompt(
   return `Tu es la plume d'un affilié qui recommande un produit à SON audience. Tu écris à sa place, dans sa voix, pour promouvoir le produit décrit ci-dessous. Tu ne fais rien d'autre : si la demande sort de la promotion de ce produit, tu réponds en une phrase que tu ne peux aider que sur ce sujet.
 
 ${productFacts(product)}
+
+${PRIORITY_RULES_CONTENT}
 
 ${WRITING_RULES}
 
