@@ -16,6 +16,7 @@ import { sanitizeAiText } from "@/lib/aiTextSanitizer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { stripHtml } from "@/lib/richText";
 import { buildLiveFunnel } from "@/lib/quiz/funnel";
+import { resolveCohortSince } from "@/lib/quiz/funnelCohort";
 import { readFunnelSignal, type FunnelSignal, type FunnelStepLike } from "@/lib/quiz/funnelSignal";
 import {
   readTrafficSource,
@@ -242,9 +243,27 @@ export async function aggregateQuizInsights(
     hotspot: null,
   };
   try {
+    // ON NE COMMENTE QUE DES GENS QUI ONT VU LE MÊME QUIZ (drame
+    // Jocelyne, 4 août 2026, cf. lib/quiz/funnelCohort.ts).
+    //
+    // Sans cette borne, l'analyse porte sur un mélange de versions : la
+    // suppression d'une question y ressemble à un abandon massif, et le
+    // modèle conseille de retravailler la question voisine.
+    //
+    // Colonne lue à part : la nommer dans un select plus large ferait
+    // échouer la requête entière si la migration n'est pas appliquée.
+    const { data: scRow } = await supabaseAdmin
+      .from("quizzes")
+      .select("structure_changed_at")
+      .eq("id", quizId)
+      .maybeSingle();
+    const cohortSince = resolveCohortSince(
+      null,
+      (scRow as { structure_changed_at?: string | null } | null)?.structure_changed_at ?? null,
+    );
     const { data: funnelRows } = await supabaseAdmin.rpc("quiz_question_funnel_detail", {
       p_quiz_id: quizId,
-      p_since: null,
+      p_since: cohortSince,
     });
     const rows = (funnelRows ?? []) as { question_index: number; views: number; answers: number }[];
     const { data: qRows } = await supabaseAdmin

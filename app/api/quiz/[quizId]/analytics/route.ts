@@ -15,6 +15,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { dateKeyForOffset, parseTzOffset } from "@/lib/dateKeys";
 import { stripHtml } from "@/lib/richText";
 import { buildLiveFunnel } from "@/lib/quiz/funnel";
+import { resolveCohortSince, summarizeFunnelCohort, type FunnelCohort } from "@/lib/quiz/funnelCohort";
 import { readTrafficSource, sanitizeVisitMeta } from "@/lib/quiz/trafficSource";
 
 export const dynamic = "force-dynamic";
@@ -331,20 +332,54 @@ export async function GET(
   // 1er août 2026 côté Tiquiz, même moteur ici).
   let removedQuestions = 0;
   let totalSessions = 0;
+  let funnelTotal: typeof funnel = [];
+  let cohort: FunnelCohort = { comparable: 0, total: 0, stale: 0, singleVersion: true };
+
+  // Colonne lue à part et sans bloquer : absente (migration pas encore
+  // appliquée) -> null -> lecture depuis toujours, comportement d'avant.
+  let structureChangedAt: string | null = null;
+  {
+    const { data: scRow } = await supabaseAdmin
+      .from("quizzes")
+      .select("structure_changed_at")
+      .eq("id", quizId)
+      .maybeSingle();
+    structureChangedAt =
+      (scRow as { structure_changed_at?: string | null } | null)?.structure_changed_at ?? null;
+  }
+
   try {
     // Funnel agrégé DANS la base (RPC), sans plafond (avant : cap 50000).
     // La RPC renvoie, par question_index croissant, views (MONOTONE :
     // sessions ayant atteint la question) + answers (sessions distinctes
     // ayant répondu). Aligné sur Tiquiz : la courbe ne remonte jamais.
-    const { data: funnelRows } = await supabaseAdmin.rpc("quiz_question_funnel_detail", {
-      p_quiz_id: quizId,
-      p_since: period.sinceISO,
-    });
-    const rows = (funnelRows ?? []) as {
-      question_index: number;
-      views: number;
-      answers: number;
-    }[];
+    // ON N'ADDITIONNE PAS DES GENS QUI N'ONT PAS RÉPONDU AU MÊME QUIZ
+    // (drame Jocelyne, 4 août 2026, cf. lib/quiz/funnelCohort.ts).
+    //
+    // Deux lectures, jamais une seule :
+    //   - COMPARABLE : depuis la dernière modification de structure. Seule
+    //     elle a le droit de désigner une question, parce que seule elle
+    //     décrit un quiz que tous ses visiteurs ont vu à l'identique.
+    //   - TOTAL : tout le monde, pour le volume. Quelqu'un qui vient de
+    //     travailler deux heures mérite mieux qu'un écran vide.
+    const cohortSince = resolveCohortSince(period.sinceISO, structureChangedAt);
+    const [cohortRes, totalRes] = await Promise.all([
+      supabaseAdmin.rpc("quiz_question_funnel_detail", {
+        p_quiz_id: quizId,
+        p_since: cohortSince,
+      }),
+      cohortSince === period.sinceISO
+        ? Promise.resolve({ data: null })
+        : supabaseAdmin.rpc("quiz_question_funnel_detail", {
+            p_quiz_id: quizId,
+            p_since: period.sinceISO,
+          }),
+    ]);
+    type Row = { question_index: number; views: number; answers: number };
+    const rows = (cohortRes.data ?? []) as Row[];
+    // Pas de seconde borne = les deux lectures sont la même, on évite un
+    // aller-retour en base pour rien.
+    const totalRows = (totalRes.data ?? cohortRes.data ?? []) as Row[];
 
     // Structure VIVANTE = source de vérité.
     const { count: liveQuestionCount } = await supabaseAdmin
@@ -352,7 +387,10 @@ export async function GET(
       .select("id", { count: "exact", head: true })
       .eq("quiz_id", quizId);
     const live = buildLiveFunnel(rows, liveQuestionCount ?? 0);
+    const liveTotal = buildLiveFunnel(totalRows, liveQuestionCount ?? 0);
     funnel = live.steps;
+    funnelTotal = liveTotal.steps;
+    cohort = summarizeFunnelCohort(live.steps, liveTotal.steps);
     removedQuestions = live.removedQuestions;
     totalSessions = funnel.find((f) => f.hasData)?.views ?? 0;
   } catch (e) {
@@ -387,6 +425,12 @@ export async function GET(
     resultDistribution,
     leadsByDay,
     funnel,
+    // Le TOTAL, pour le volume. Identique au précédent quand la structure
+    // n'a jamais bougé : `funnelCohort.singleVersion` le dit à l'UI, qui
+    // n'affiche alors qu'un seul chiffre (deux chiffres identiques l'un
+    // sous l'autre se lisent comme un bug).
+    funnelTotal,
+    funnelCohort: cohort,
     totalFunnelSessions: totalSessions,
     funnelRemovedQuestions: removedQuestions,
   });
