@@ -158,6 +158,37 @@ export function biggestLeak(steps: readonly FullFunnelStep[]): FullFunnelStep | 
  * Jocelyne réécrire des questions pendant trois semaines pendant que la
  * moitié de ses visiteurs repartaient de l'écran d'accueil.
  */
+/**
+ * Ce sur quoi on travaille quand la fuite est a l'entree.
+ *
+ * -- POURQUOI UNE LISTE COURTE ET ORDONNEE (Jocelyne, 5 aout 2026) -----
+ *
+ * La version precedente en citait six d'un coup, a plat : promesse,
+ * gain, duree, visibilite du bouton, temps de chargement, coherence avec
+ * ce qui a ete promis ailleurs. Tout est vrai, et c'est justement le
+ * probleme : six leviers sans ordre, c'est un tri qu'on demande a la
+ * creatrice de faire a notre place, et elle prendra le plus facile
+ * plutot que le plus rentable. Bene, elle, lui en a donne TROIS, dans
+ * l'ordre, et lui a dit de ne toucher a rien d'autre.
+ *
+ * L'IMAGE etait absente des six, et c'est Jocelyne qui l'a nommee la
+ * premiere ("dans l'accroche il y a deux choses, la phrase et l'image").
+ * Elle a raison : c'est ce que le visiteur lit avant le titre.
+ *
+ * Le sujet stigmatisant est le meme angle mort. La regle existait, mais
+ * seulement sur le PARTAGE. A l'entree, elle joue pourtant deux fois
+ * plus fort : cliquer sur "Es-tu neuroatypique ?" revient deja a se
+ * ranger dans la case, et c'est le genre d'hesitation qui ne laisse
+ * aucune trace dans les chiffres.
+ */
+const INTRO_LEVERS: string[] = [
+  "- Une fuite a l'entree ne se corrige PAS dans les questions : quelqu'un qui n'a pas clique sur commencer n'en a lu aucune. Ne propose aucune modification de question a ce titre.",
+  "- TROIS LEVIERS, DANS CET ORDRE, ET UN SEUL A LA FOIS : 1) le TITRE, ce qu'il promet et a qui ; 2) la PHRASE SOUS LE TITRE, ce que le visiteur y gagne et en combien de temps ; 3) le TEXTE DU BOUTON, ce sur quoi il croit cliquer. Tu en designes UN, celui qui te parait le plus faible, et tu dis explicitement de laisser les deux autres tranquilles pour l'instant.",
+  "- L'IMAGE D'ACCUEIL COMPTE AUTANT QUE CES TROIS LA, et elle est plus souvent oubliee : elle dit en une seconde a qui s'adresse le quiz, et elle peut contredire le titre sans que personne ne s'en apercoive. Si le quiz en a une, mets-la dans le lot.",
+  "- SUJET INTIME OU STIGMATISANT (sante, sante mentale, neuroatypie, argent, poids, sexualite, famille, echec) : a l'entree, une accroche frontale qui demande au visiteur de se ranger dans la categorie (\"Es-tu X ?\") peut le faire repartir avant la premiere question, parce que cliquer revient deja a se reconnaitre, parfois devant quelqu'un qui regarde son ecran. La piste a tester en premier est alors une accroche qui parle de ce qu'il VIT au quotidien plutot que de l'etiquette. Propose-la comme une piste, jamais comme la cause.",
+  "- Ensuite seulement, et seulement s'il reste quelque chose a dire : la duree annoncee, la visibilite du bouton, le temps de chargement, et l'accord entre ce qui a ete promis la ou le lien est publie et ce que le visiteur trouve en arrivant.",
+];
+
 export function renderFullFunnelVerdict(steps: readonly FullFunnelStep[]): string {
   if (steps.length === 0) return "";
   const lines = ["PARCOURS COMPLET (de l'arrivee a l'email) :"];
@@ -198,7 +229,7 @@ export function renderFullFunnelVerdict(steps: readonly FullFunnelStep[]): strin
   );
   if (leak.stage === "arrival" || leak.stage === "start") {
     lines.push(
-      "- Une fuite a l'entree ne se corrige PAS dans les questions. Elle se joue sur la promesse (titre, sous-titre), sur ce qu'on gagne a repondre, sur la duree annoncee, sur la visibilite du bouton, sur le temps de chargement, et sur l'accord entre ce qu'on a promis la ou le lien est publie et ce que le visiteur trouve en arrivant. Ne propose aucune modification de question a ce titre.",
+      ...INTRO_LEVERS,
     );
   }
   return lines.join("\n");

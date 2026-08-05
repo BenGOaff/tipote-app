@@ -16,6 +16,7 @@ import { sanitizeAiText } from "@/lib/aiTextSanitizer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { stripHtml } from "@/lib/richText";
 import { buildLiveFunnel } from "@/lib/quiz/funnel";
+import { resolveCohortSince } from "@/lib/quiz/funnelCohort";
 import { readFunnelSignal, type FunnelSignal, type FunnelStepLike } from "@/lib/quiz/funnelSignal";
 import {
   readTrafficSource,
@@ -29,6 +30,12 @@ import {
   renderFullFunnelVerdict,
   type FullFunnelStep,
 } from "@/lib/quiz/fullFunnel";
+import {
+  compareStartRates,
+  renderStartRateVerdict,
+  type StartRateComparison,
+  type StartRateProject,
+} from "@/lib/insights/startRate";
 import { aggregateSurvey, type AggregatedQuestion } from "@/lib/survey/analysis";
 import { EVIDENCE_RULES } from "@/lib/prompts/evidence";
 
@@ -84,6 +91,12 @@ export interface QuizInsightsAggregate {
    *  "ta page decoit" de "ce ne sont pas les bonnes personnes", et les
    *  deux produisent exactement le meme chiffre. */
   traffic: TrafficReading;
+  /** Le taux de demarrage de CE quiz, compare a ses autres quiz.
+   *  "Sur ton quiz TDAH, 8 sur 10 commencent, contre 5 sur 10 ici" : la
+   *  phrase qui transforme un reproche en piste, parce que le meilleur
+   *  taux est une preuve qu'elle a produite elle-meme
+   *  (cf. lib/insights/startRate.ts). */
+  startRates: StartRateComparison;
   questions: AggregatedQuestion[];
   totalAnswered: number;
 }
@@ -230,9 +243,27 @@ export async function aggregateQuizInsights(
     hotspot: null,
   };
   try {
+    // ON NE COMMENTE QUE DES GENS QUI ONT VU LE MÊME QUIZ (drame
+    // Jocelyne, 4 août 2026, cf. lib/quiz/funnelCohort.ts).
+    //
+    // Sans cette borne, l'analyse porte sur un mélange de versions : la
+    // suppression d'une question y ressemble à un abandon massif, et le
+    // modèle conseille de retravailler la question voisine.
+    //
+    // Colonne lue à part : la nommer dans un select plus large ferait
+    // échouer la requête entière si la migration n'est pas appliquée.
+    const { data: scRow } = await supabaseAdmin
+      .from("quizzes")
+      .select("structure_changed_at")
+      .eq("id", quizId)
+      .maybeSingle();
+    const cohortSince = resolveCohortSince(
+      null,
+      (scRow as { structure_changed_at?: string | null } | null)?.structure_changed_at ?? null,
+    );
     const { data: funnelRows } = await supabaseAdmin.rpc("quiz_question_funnel_detail", {
       p_quiz_id: quizId,
-      p_since: null,
+      p_since: cohortSince,
     });
     const rows = (funnelRows ?? []) as { question_index: number; views: number; answers: number }[];
     const { data: qRows } = await supabaseAdmin
@@ -294,6 +325,43 @@ export async function aggregateQuizInsights(
     ),
   );
 
+  // ── Ses AUTRES quiz, pour le taux de demarrage ──
+  //
+  // Une seule requete, sur des colonnes deja denormalisees. On ne
+  // recompte pas les leads de chaque quiz pour en deduire une fiabilite
+  // par projet, et c'est volontaire : le taux de demarrage a son
+  // numerateur ET son denominateur dans le MEME flux d'evenements
+  // (`view` et `start`), contrairement au taux de capture qui compare
+  // des evenements a des lignes de base. Les garde-fous qui comptent
+  // (au moins MIN_SAMPLE vues, jamais plus de demarrages que de vues)
+  // vivent dans startRateOf.
+  //
+  // En revanche, si les vues de CE quiz-ci sont douteuses, on ne
+  // compare rien : le rapport dirait au meme endroit "taux a
+  // interpreter avec prudence" et "tu demarres a 52%".
+  let startRates: StartRateComparison = { kind: "no-data", rates: [] };
+  if (viewsReliable) {
+    const { data: siblings } = await supabaseAdmin
+      .from("quizzes")
+      .select("id, title, mode, views_count, starts_count")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(60);
+    const projects: StartRateProject[] = ((siblings ?? []) as Array<{
+      title: string | null;
+      mode: string | null;
+      views_count: number | null;
+      starts_count: number | null;
+    }>).map((q) => ({
+      title: stripHtml(String(q.title ?? "")).trim() || "Sans titre",
+      mode: (String(q.mode ?? "quiz") === "survey" ? "survey" : "quiz") as "quiz" | "survey",
+      views: q.views_count ?? 0,
+      starts: q.starts_count ?? 0,
+      viewsReliable: true,
+    }));
+    startRates = compareStartRates(projects);
+  }
+
   const survey = await aggregateSurvey(quizId, userId);
 
   return {
@@ -306,6 +374,7 @@ export async function aggregateQuizInsights(
     fullFunnel,
     worstLeak,
     traffic,
+    startRates,
     questions: survey?.questions ?? [],
     totalAnswered: survey?.totalResponses ?? 0,
   };
@@ -383,6 +452,14 @@ function renderAggregateForPrompt(a: QuizInsightsAggregate): string {
   // "et alors, c'est la page ou l'audience ?".
   lines.push(renderTrafficForPrompt(a.traffic), "");
 
+  // Puis la troisieme question : "et est-ce que je sais faire mieux ?".
+  // Seulement sur un quiz : un sondage n'a pas le meme ecran d'accueil
+  // ni le meme marche, le comparer aux quiz designerait un gagnant qui
+  // ne joue pas le meme match.
+  if (a.mode === "quiz" && a.startRates.kind !== "no-data") {
+    lines.push(renderStartRateVerdict(a.startRates, a.title), "");
+  }
+
   if (a.funnel.length > 0) {
     lines.push("DROP-OFF PAR QUESTION (sessions atteignant chaque question) :");
     for (const f of a.funnel)
@@ -422,6 +499,7 @@ export async function generateQuizInsights(aggregate: QuizInsightsAggregate): Pr
     "- UNE FUITE A L'ENTREE A DEUX CAUSES POSSIBLES, ET ELLES DONNENT LE MEME CHIFFRE : soit l'ecran d'accueil decoit, soit ce ne sont pas les bonnes personnes qui arrivent dessus. Tu ne tranches JAMAIS sans le bloc PROVENANCE DES VISITEURS. Quand il ne permet pas de trancher, tu dis les deux causes et tu proposes de les distinguer (etiqueter les liens avec utm_source, comparer les sources). Prescrire une reecriture de promesse sur un trafic hors sujet ne peut rien produire, et la creatrice en conclura que nos conseils ne servent a rien.",
     "- LE PARCOURS ENTIER PASSE AVANT LES QUESTIONS. Le quiz commence a l'ecran d'accueil, pas a la question 1. Le bloc VERDICT DU PARCOURS est CALCULE et non negociable : la marche qu'il designe EST la priorite du rapport. Une creatrice peut passer des semaines a reecrire des questions pendant que la moitie de ses visiteurs repartent avant d'en lire une seule.",
     "- LE FUNNEL PAR QUESTION : tu suis le bloc VERDICT DU FUNNEL a la lettre. Il est CALCULE, il n'est pas negociable, et il prime sur ta propre lecture des chiffres bruts. S'il dit qu'il n'y a pas assez de donnees, tu ne nommes AUCUNE question, meme si un pourcentage te saute aux yeux.",
+    "- SES AUTRES QUIZ SONT SA SEULE COMPARAISON LEGITIME. Le bloc TAUX DE DEMARRAGE est CALCULE et non negociable : tu n'affirmes qu'un quiz demarre mieux qu'un autre que s'il le dit. Quand il annonce un ecart, sers-t'en, c'est souvent la phrase la plus utile du rapport : le meilleur taux, c'est ELLE qui l'a obtenu, sur son sujet, avec son audience, donc l'objectif n'a rien de theorique et elle sait deja faire. Une preuve encourageante, jamais un classement du bon et du mauvais quiz.",
     "- Perdre des gens en cours de quiz est NORMAL et SAIN : ceux qui s'arretent sont d'abord les visiteurs non qualifies, et le quiz fait son travail en les filtrant. Aucun quiz ne vise 100% de completion. Ne presente jamais un abandon comme une faute de la creatrice, ni un taux de completion imparfait comme un probleme a corriger.",
     "- PROTOCOLE DE MESURE, a rappeler des que tu proposes de modifier le quiz : UNE SEULE modification a la fois, puis attendre au moins 20 a 30 nouvelles reponses avant de juger. Enchainer plusieurs changements (le texte, les reponses, l'ordre) rend l'effet de chacun illisible, et juger sur 3 ou 4 personnes ne mesure que le hasard.",
     "- LE PARTAGE N'EST PAS UN LEVIER UNIVERSEL. Sur un sujet intime ou stigmatisant (sante, sante mentale, neuroatypie, argent, poids, sexualite, famille, echec), partager publiquement revient a s'exposer : un taux de partage bas n'y est ni un defaut du quiz ni un cadeau trop faible. Ne recommande pas d'augmenter le partage dans ce cas, propose plutot l'envoi a UNE personne (message prive, email), les groupes fermes, ou concentre-toi sur d'autres leviers.",

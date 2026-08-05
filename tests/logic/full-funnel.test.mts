@@ -177,6 +177,54 @@ test("et il lui interdit de proposer de retoucher une question", () => {
   assert.match(verdict, /non negociable/);
 });
 
+test("les leviers d'accueil sont trois, dans l'ordre, et l'image en fait partie", () => {
+  // Béné à Jocelyne, 5 août 2026 : "travaille uniquement sur sa page
+  // d'accueil, le titre, la phrase située en dessous et le texte du
+  // bouton. Rien d'autre."
+  //
+  // La version précédente en listait six d'un coup, à plat. Tout était
+  // vrai, et c'était le problème : six leviers sans ordre, c'est un tri
+  // qu'on demande à la créatrice de faire à notre place, et elle prendra
+  // le plus facile plutôt que le plus rentable.
+  const verdict = renderFullFunnelVerdict(jocelyne());
+  assert.match(verdict, /TROIS LEVIERS, DANS CET ORDRE/);
+  assert.match(verdict, /le TITRE/);
+  assert.match(verdict, /la PHRASE SOUS LE TITRE/);
+  assert.match(verdict, /le TEXTE DU BOUTON/);
+  // Jocelyne l'avait nommée avant nous : "dans l'accroche, il y a la
+  // phrase et il y a l'image".
+  assert.match(verdict, /L'IMAGE D'ACCUEIL COMPTE AUTANT/);
+});
+
+test("un sujet intime se joue AUSSI à l'entrée, pas seulement au partage", () => {
+  // La règle existait, uniquement sur le partage. À l'entrée elle joue
+  // deux fois plus fort : cliquer sur "Es-tu neuroatypique ?" revient
+  // déjà à se ranger dans la case, parfois devant quelqu'un qui regarde
+  // l'écran. Cette hésitation ne laisse aucune trace dans les chiffres.
+  const verdict = renderFullFunnelVerdict(jocelyne());
+  assert.match(verdict, /SUJET INTIME OU STIGMATISANT/);
+  assert.match(verdict, /neuroatypie/);
+  // Et ça reste une hypothèse : evidence.ts interdit de l'écrire comme
+  // un constat.
+  assert.match(verdict, /jamais comme la cause/);
+});
+
+test("ces leviers ne sortent QUE sur une fuite d'entrée", () => {
+  // Sur une fuite de capture, cinq lignes sur le titre et l'image
+  // enverraient retravailler un écran qui n'a rien.
+  const captureLeak = buildFullFunnel({
+    views: 200,
+    starts: 190,
+    questions: q(188, 186, 184),
+    leads: 90,
+    viewsReliable: true,
+  });
+  assert.equal(biggestLeak(captureLeak)?.stage, "question");
+  const verdict = renderFullFunnelVerdict(captureLeak);
+  assert.doesNotMatch(verdict, /TROIS LEVIERS/);
+  assert.doesNotMatch(verdict, /L'IMAGE D'ACCUEIL/);
+});
+
 test("le parcours entier est écrit, marche par marche", () => {
   const verdict = renderFullFunnelVerdict(jocelyne());
   assert.match(verdict, /Arrivent sur le quiz : 142/);

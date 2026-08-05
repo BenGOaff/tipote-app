@@ -4749,7 +4749,14 @@
     "questionAlignLeft": "Left",
     "applyLayoutToAll": "Realign everything on this setting",
     "applyLayoutToAllHint": "Removes per-question exceptions and the alignment applied by hand inside fields. Your setting above takes over everywhere. Bold, colours and sizes stay untouched.",
-    "applyLayoutToAllDone": "Every question now follows your setting. Remember to save."
+    "applyLayoutToAllDone": "Every question now follows your setting. Remember to save.",
+    "sessionLostTitle": "You have been signed out",
+    "sessionLostBody": "Your work in progress is kept in this browser, nothing is lost. Sign back in and you will land straight back on this quiz.",
+    "sessionLostAction": "Sign back in",
+    "otherResultsPositionLabel": "Where to place this block",
+    "otherResultsAfterCta": "After the button (recommended)",
+    "otherResultsBeforeCta": "Before the button",
+    "otherResultsPositionHint": "Placed before the button, it gives the visitor something else to do at the exact moment of your offer."
   },
   "contentStrategy": {
     "title": "Content strategy",

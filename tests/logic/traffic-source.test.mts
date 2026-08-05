@@ -209,7 +209,24 @@ test("plusieurs sources : comparer coûte moins cher qu'une refonte", () => {
   const p = renderTrafficForPrompt(
     readTrafficSource([...many("instagram", 30), ...many("facebook", 25), ...many("google", 20)]),
   );
-  assert.match(p, /ce n'est pas la page qui coince mais l'audience/);
+  assert.match(p, /moins couteuse qu'une refonte/);
+  assert.match(p, /utm_source/);
+});
+
+test("on ne demande pas au modèle de voir le démarrage par source", () => {
+  // Jusqu'au 5 août 2026, cette ligne lui disait : "si une source
+  // démarre nettement mieux que les autres, dis-le". Il n'a jamais eu
+  // de quoi le voir : la répartition ci-dessus compte des VUES, et rien
+  // ici ne dit combien de gens ont cliqué sur commencer par source.
+  //
+  // Demander une observation absente de ce qu'on donne ne laisse que
+  // deux issues : se taire, ou inventer. C'est précisément ce que
+  // `evidence.ts` passe son temps à empêcher ailleurs.
+  const p = renderTrafficForPrompt(
+    readTrafficSource([...many("instagram", 30), ...many("facebook", 25), ...many("google", 20)]),
+  );
+  assert.match(p, /Tu n'as PAS le taux de demarrage par source/);
+  assert.doesNotMatch(p, /Si l'une demarre nettement mieux/);
 });
 
 test("aucun tiret cadratin dans ce qu'on donne au modèle", () => {

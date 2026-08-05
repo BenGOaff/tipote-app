@@ -11,6 +11,11 @@ import { sanitizeAiText } from "@/lib/aiTextSanitizer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { stripHtml } from "@/lib/richText";
 import { EVIDENCE_RULES } from "@/lib/prompts/evidence";
+import {
+  compareStartRates,
+  renderStartRateVerdict,
+  type StartRateProject,
+} from "@/lib/insights/startRate";
 
 const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
 
@@ -33,9 +38,17 @@ export interface GlobalProjectStat {
   mode: "quiz" | "survey";
   status: string;
   views: number;
+  /** Clics sur le bouton de depart. Sans lui, le portefeuille n'avait
+   *  AUCUN chiffre sur les ecrans d'accueil, alors que c'est la marche
+   *  qui perd le plus de monde chez la plupart des creatrices, et la
+   *  seule que la comparaison entre ses propres quiz sait eclairer
+   *  (cf. lib/insights/startRate.ts). */
+  starts: number;
   completions: number;
   leads: number;
   captureRate: number | null;
+  /** false quand les vues sont incompletes : aucun taux n'a de sens. */
+  viewsReliable: boolean;
 }
 
 export interface GlobalAggregate {
@@ -57,7 +70,7 @@ export interface GlobalReport {
 export async function aggregateGlobalInsights(userId: string): Promise<GlobalAggregate | null> {
   const { data: quizzesRaw } = await supabaseAdmin
     .from("quizzes")
-    .select("id, title, mode, status, views_count, completions_count, created_at")
+    .select("id, title, mode, status, views_count, starts_count, completions_count, created_at")
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .limit(MAX_PROJECTS + 1);
@@ -67,6 +80,7 @@ export async function aggregateGlobalInsights(userId: string): Promise<GlobalAgg
     mode: string | null;
     status: string | null;
     views_count: number | null;
+    starts_count: number | null;
     completions_count: number | null;
   }>;
   if (rows.length === 0) return null;
@@ -98,9 +112,11 @@ export async function aggregateGlobalInsights(userId: string): Promise<GlobalAgg
       mode: (String(q.mode ?? "quiz") === "survey" ? "survey" : "quiz") as "quiz" | "survey",
       status: String(q.status ?? "draft"),
       views,
+      starts: q.starts_count ?? 0,
       completions,
       leads,
       captureRate: viewsReliable && views > 0 ? Math.round((leads / views) * 1000) / 10 : null,
+      viewsReliable,
     };
   });
 
@@ -131,9 +147,22 @@ function renderForPrompt(a: GlobalAggregate): string {
   ];
   for (const p of a.projects) {
     lines.push(
-      `- [${p.mode === "survey" ? "sondage" : "quiz"}, ${p.status}] "${p.title}" : ${p.views} vues, ${p.completions} completions, ${p.leads} leads${p.captureRate !== null ? `, capture ${p.captureRate}%` : ", capture non fiable (vues incompletes)"}`,
+      `- [${p.mode === "survey" ? "sondage" : "quiz"}, ${p.status}] "${p.title}" : ${p.views} vues, ${p.starts} demarrages, ${p.completions} completions, ${p.leads} leads${p.captureRate !== null ? `, capture ${p.captureRate}%` : ", capture non fiable (vues incompletes)"}`,
     );
   }
+
+  // Le verdict est CALCULE (lib/insights/startRate.ts), pas laisse au
+  // modele : sinon il compare deux taux quels qu'ils soient, y compris
+  // sur six visiteurs de chaque cote.
+  const startRates: StartRateProject[] = a.projects.map((p) => ({
+    title: p.title,
+    mode: p.mode,
+    views: p.views,
+    starts: p.starts,
+    viewsReliable: p.viewsReliable,
+  }));
+  lines.push("", renderStartRateVerdict(compareStartRates(startRates)));
+
   return lines.filter(Boolean).join("\n");
 }
 
@@ -149,6 +178,8 @@ export async function generateGlobalInsights(a: GlobalAggregate): Promise<Global
     "Tu reponds en francais, ton direct, tutoiement, zero remplissage.",
     EVIDENCE_RULES,
     "Reperes : capture <10% = a corriger, 20%+ = bon, 40%+ = excellent. Fort volume mais faible capture = priorite d'optimisation. Forte capture mais faible volume = priorite de trafic.",
+    "SES QUIZ SE COMPARENT ENTRE EUX, ET A RIEN D'AUTRE. Le bloc TAUX DE DEMARRAGE est CALCULE et non negociable : tu ne designes un quiz comme demarrant mieux ou moins bien qu'un autre que s'il le dit. Quand il annonce un ecart, c'est souvent l'information la plus utile de tout le rapport, parce que le meilleur taux est une preuve qu'elle a produite elle-meme, sur son sujet et avec son audience : ce qui est atteint une fois est atteignable ailleurs. Dis-le comme une preuve encourageante, jamais comme le classement d'un bon et d'un mauvais eleve.",
+    "LE DEMARRAGE PARLE DE L'ECRAN D'ACCUEIL, PAS DES QUESTIONS. Quelqu'un qui n'a pas clique sur commencer n'a lu aucune question : ne propose jamais de retoucher une question pour un ecart de demarrage.",
     "Perdre des gens en cours de quiz est NORMAL et SAIN : ceux qui s'arretent sont d'abord les visiteurs non qualifies, et le quiz fait son travail en les filtrant. Aucun quiz ne vise 100% de completion, ne presente jamais un taux de completion imparfait comme une faute.",
     "SEUIL DE LECTURE : sous une vingtaine de visiteurs sur un projet, tu ne tires AUCUNE conclusion sur ses questions ni sur ses taux, tu le dis, et tu orientes vers le trafic. Sur une poignee de personnes, une seule fait bouger un pourcentage de plus de 10 points.",
     "PROTOCOLE : des que tu proposes de modifier un projet, rappelle qu'on change UNE seule chose a la fois puis qu'on attend au moins 20 a 30 nouvelles reponses avant de juger. Plusieurs changements en meme temps rendent l'effet de chacun illisible.",

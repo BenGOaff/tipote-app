@@ -69,6 +69,8 @@ import { UserPalettesProvider } from "@/components/editor/PalettesContext";
 import { EditorPreviewDeviceProvider } from "@/components/editor/EditorPreviewDeviceContext";
 import { RestoreDraftDialog } from "@/components/editor/RestoreDraftDialog";
 import { useAutosave } from "@/hooks/use-autosave";
+import { buildSurveyEditorSnapshot, diffEditorSnapshot } from "@/lib/quiz/editorSnapshot";
+import { SessionLostBanner } from "@/components/editor/SessionLostBanner";
 import { answerImageRender } from "@/lib/quiz/answerImage";
 import { stripHtml } from "@/lib/richText";
 import { alignBlockMarginClass, alignJustifyClass, alignTextClass, resolveBlockAlign } from "@/lib/quiz/textAlign";
@@ -670,7 +672,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   }, []);
 
   // ─── Autosave snapshot ────────────────────────────────────────
-  const autosaveSnapshot = useMemo(() => ({
+  const autosaveSnapshot = useMemo(() => buildSurveyEditorSnapshot({
     title,
     introduction,
     cta_text: ctaText,
@@ -735,10 +737,14 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     editQuestions,
   ]);
 
-  const { savingDraft, clearDraft } = useAutosave({
+  const { savingDraft, clearDraft, sessionLost } = useAutosave({
     endpoint: `/api/quiz/${quizId}/autosave`,
     state: autosaveSnapshot,
     enabled: !loading && !pendingDraft,
+    // Filet local : si la session tombe, le brouillon est mis a
+    // l'abri dans le navigateur au lieu de n'exister que sur le
+    // serveur, qui refuse tout a ce moment la.
+    backupId: quizId,
   });
 
   const applySnapshot = useCallback((s: Record<string, unknown>) => {
@@ -935,11 +941,80 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       const draftAt = (q as { draft_updated_at?: string | null }).draft_updated_at ?? null;
       const savedAt = (q as { updated_at?: string | null }).updated_at ?? null;
       if (draftState && draftAt && (!savedAt || new Date(draftAt).getTime() > new Date(savedAt).getTime())) {
-        setPendingDraft({
-          state: draftState as Record<string, unknown>,
-          draftUpdatedAt: draftAt,
-          updatedAt: savedAt,
+        // CET ECRAN AVAIT LE DEFAUT A L'ETAT PUR : il ne comparait RIEN,
+        // il proposait la restauration des que le brouillon etait plus
+        // recent, identique ou pas. "A chaque fois que je reviens il me
+        // redemande" (Jocelyne, 4 aout 2026). Les deux objets passent
+        // maintenant par le MEME constructeur type.
+        const canonical = buildSurveyEditorSnapshot({
+          title: q.title,
+          introduction: q.introduction ?? "",
+          cta_text: q.cta_text ?? "",
+          cta_url: q.cta_url ?? "",
+          start_button_text: q.start_button_text ?? "",
+          privacy_url: q.privacy_url ?? "",
+          consent_text: q.consent_text ?? "",
+          capture_heading: q.capture_heading ?? "",
+          capture_subtitle: q.capture_subtitle ?? "",
+          capture_submit_text: q.capture_submit_text ?? "",
+          capture_before_questions: Boolean((q as { capture_before_questions?: boolean | null }).capture_before_questions),
+          hide_response_counts: (q as { hide_response_counts?: boolean | null }).hide_response_counts === true,
+          notify_responses: (q as { notify_responses?: boolean | null }).notify_responses !== false,
+          survey_thanks_heading: (q as { survey_thanks_heading?: string | null }).survey_thanks_heading ?? "",
+          survey_thanks_body: (q as { survey_thanks_body?: string | null }).survey_thanks_body ?? "",
+          result_insight_heading: q.result_insight_heading ?? "",
+          result_projection_heading: q.result_projection_heading ?? "",
+          capture_first_name: q.capture_first_name ?? false,
+          capture_last_name: q.capture_last_name ?? false,
+          capture_phone: q.capture_phone ?? false,
+          capture_country: q.capture_country ?? false,
+          first_name_required: q.first_name_required ?? false,
+          last_name_required: q.last_name_required ?? false,
+          phone_required: q.phone_required ?? false,
+          country_required: q.country_required ?? false,
+          show_consent_checkbox: (q as { show_consent_checkbox?: boolean | null }).show_consent_checkbox !== false,
+          ask_first_name: Boolean((q as unknown as Record<string, unknown>).ask_first_name),
+          ask_gender: Boolean((q as unknown as Record<string, unknown>).ask_gender),
+          share_message: q.share_message ?? "",
+          locale: q.locale ?? "",
+          sio_share_tag_name: q.sio_share_tag_name ?? "",
+          sio_capture_tag: q.sio_capture_tag ?? "",
+          status: q.status,
+          brand_font: resolvedFont,
+          brand_color_primary: q.brand_color_primary || prof?.brand_color_primary || DEFAULT_BRAND_COLOR_PRIMARY,
+          brand_color_background: q.brand_color_background || DEFAULT_BRAND_COLOR_BACKGROUND,
+          brand_color_text: q.brand_color_text ?? null,
+          slug: q.slug ?? "",
+          og_description: q.og_description ?? "",
+          og_image_url: q.og_image_url ?? null,
+          intro_image_url: (q as { intro_image_url?: string | null }).intro_image_url ?? null,
+          intro_image_width: (q as { intro_image_width?: number | null }).intro_image_width ?? null,
+          custom_footer_text: q.custom_footer_text ?? "",
+          custom_footer_url: q.custom_footer_url ?? "",
+          share_networks: Array.isArray(q.share_networks) ? q.share_networks : [],
+          intro_image_position: (q.intro_image_position as string | null) ?? "top",
+          // `?? ""` et PAS `?? null` : c'est ce que pose l'hydratation.
+          toast_widget_id: ((q as Record<string, unknown>).toast_widget_id as string | null) ?? "",
+          share_widget_id: ((q as Record<string, unknown>).share_widget_id as string | null) ?? "",
+          questions: q.questions.map((qq) => ({
+        ...qq,
+        question_type: (qq.question_type as QuestionType) ?? "multiple_choice",
+        config: (qq.config as Record<string, unknown>) ?? {},
+      })),
         });
+        const draftDiff = diffEditorSnapshot(draftState, canonical);
+        if (draftDiff.length > 0) {
+          console.warn("[brouillon] restauration proposee, champs differents :", draftDiff.join(", "));
+        }
+        if (draftDiff.length === 0) {
+          fetch(`/api/quiz/${quizId}/autosave`, { method: "DELETE" }).catch(() => { /* non-fatal */ });
+        } else {
+          setPendingDraft({
+            state: draftState as Record<string, unknown>,
+            draftUpdatedAt: draftAt,
+            updatedAt: savedAt,
+          });
+        }
       }
     } catch { toast.error("Error loading quiz"); } finally { setLoading(false); }
   }, [quizId, router]);
@@ -1461,6 +1536,9 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
 
   return (
    <SioTagsProvider quizId={quizId}>
+    {/* Session tombee : l'ecran le dit, au lieu de laisser des 401
+        en silence dans la console (drame Bene, 4 aout 2026). */}
+    <SessionLostBanner visible={sessionLost} />
     <UserPalettesProvider palettes={savedPalettes}>
     <EditorPreviewDeviceProvider device={device}>
       <RestoreDraftDialog

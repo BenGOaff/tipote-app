@@ -19,6 +19,7 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { readFunnelSignal, stepLoss } from "@/lib/quiz/funnelSignal";
+import type { FunnelCohort } from "@/lib/quiz/funnelCohort";
 import { biggestLeak, buildFullFunnel } from "@/lib/quiz/fullFunnel";
 import { DIRECT_BLIND_PCT, type TrafficReading } from "@/lib/quiz/trafficSource";
 import {
@@ -90,6 +91,10 @@ interface AnalyticsResponse {
   // count = inscrits du jour, views = visites du jour (source quiz_events).
   leadsByDay: { date: string; count: number; views?: number }[];
   funnel?: FunnelStep[];
+  /** Comparaison des deux cohortes de lecture du funnel (drame Jocelyne,
+   *  4 août 2026). Optionnel : une réponse d'API antérieure au portage
+   *  ne le porte pas, et l'écran doit continuer de fonctionner. */
+  funnelCohort?: FunnelCohort;
   totalFunnelSessions?: number;
   error?: string;
 }
@@ -382,6 +387,7 @@ export function QuizAnalyticsClient({ quizId, initial, hideCounts = false }: Pro
 
       <FunnelSection
         funnel={data.funnel ?? []}
+        cohort={data.funnelCohort}
         totalSessions={data.totalFunnelSessions ?? 0}
         views={data.metrics.viewsCount}
         starts={data.metrics.startsCount ?? 0}
@@ -518,6 +524,7 @@ function TrafficSection({
 
 function FunnelSection({
   funnel,
+  cohort,
   totalSessions,
   views,
   starts,
@@ -525,6 +532,10 @@ function FunnelSection({
   viewsReliable,
 }: {
   funnel: FunnelStep[];
+  /** Comparaison des deux lectures du funnel (drame Jocelyne, 4 août
+   *  2026, cf. lib/quiz/funnelCohort.ts). Absent sur une réponse d'API
+   *  antérieure : on n'affiche alors rien de plus qu'avant. */
+  cohort?: FunnelCohort;
   totalSessions: number;
   views: number;
   starts: number;
@@ -597,6 +608,27 @@ function FunnelSection({
           {totalSessions} session{totalSessions > 1 ? "s" : ""} commencées
         </div>
       </div>
+
+      {/* DEUX LECTURES, JAMAIS UNE SEULE (drame Jocelyne, 4 août 2026).
+          Ce graphique ne compte que les gens passés depuis sa dernière
+          modification, sinon la suppression d'une question ressemble à
+          un abandon massif. On dit combien de personnes sont écartées et
+          pourquoi : deux chiffres différents sans explication se lisent
+          comme un bug, et cacher les autres se lit comme une perte.
+
+          On affiche `comparable` et PAS `total` : la phrase parle de ce
+          que le graphique montre, `total` compte tout le monde, exclues
+          comprises. Côté Tiquiz, la première version annonçait `total`
+          et les deux nombres de la phrase ne s'additionnaient plus. */}
+      {cohort && !cohort.singleVersion && (
+        <p className="text-[11px] text-muted-foreground rounded-md bg-muted/40 px-3 py-2">
+          Ce graphique ne compte que les {cohort.comparable} personne
+          {cohort.comparable > 1 ? "s" : ""} passées depuis ta dernière modification des
+          questions. {cohort.stale} autre{cohort.stale > 1 ? "s" : ""} ont répondu à une
+          version différente du quiz : les additionner ferait apparaître une chute là où tu
+          as simplement ajouté, supprimé ou déplacé une question.
+        </p>
+      )}
 
       {/* La plus grosse fuite du parcours ENTIER, en nombre de personnes.
           Elle passe avant le point chaud par question : corriger une

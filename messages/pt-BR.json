@@ -4749,7 +4749,14 @@
     "questionAlignLeft": "À esquerda",
     "applyLayoutToAll": "Realinhar tudo por esta configuração",
     "applyLayoutToAllHint": "Remove as exceções das perguntas e os alinhamentos aplicados na mão nos campos. Sua configuração acima volta a valer em todo lugar. Negrito, cores e tamanhos não mudam.",
-    "applyLayoutToAllDone": "Todas as perguntas seguem sua configuração. Lembre de salvar."
+    "applyLayoutToAllDone": "Todas as perguntas seguem sua configuração. Lembre de salvar.",
+    "sessionLostTitle": "Sua sessão foi encerrada",
+    "sessionLostBody": "Seu trabalho em andamento fica guardado neste navegador, nada se perde. Entre novamente e você volta direto para este quiz.",
+    "sessionLostAction": "Entrar novamente",
+    "otherResultsPositionLabel": "Onde colocar este bloco",
+    "otherResultsAfterCta": "Depois do botão (recomendado)",
+    "otherResultsBeforeCta": "Antes do botão",
+    "otherResultsPositionHint": "Colocado antes do botão, dá ao visitante outra coisa para fazer bem no momento da sua proposta."
   },
   "contentStrategy": {
     "title": "Estratégia de conteúdo",

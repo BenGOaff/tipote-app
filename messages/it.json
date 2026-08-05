@@ -4749,7 +4749,14 @@
     "questionAlignLeft": "A sinistra",
     "applyLayoutToAll": "Riallinea tutto su questa impostazione",
     "applyLayoutToAllHint": "Toglie le eccezioni poste sulle domande e gli allineamenti applicati a mano nei campi. La tua impostazione qui sopra torna a valere ovunque. Grassetto, colori e dimensioni restano invariati.",
-    "applyLayoutToAllDone": "Tutte le domande seguono la tua impostazione. Ricordati di salvare."
+    "applyLayoutToAllDone": "Tutte le domande seguono la tua impostazione. Ricordati di salvare.",
+    "sessionLostTitle": "Sei stata disconnessa",
+    "sessionLostBody": "Il lavoro in corso resta salvato in questo browser, non si perde nulla. Accedi di nuovo e tornerai direttamente su questo quiz.",
+    "sessionLostAction": "Accedi di nuovo",
+    "otherResultsPositionLabel": "Dove mettere questo blocco",
+    "otherResultsAfterCta": "Dopo il pulsante (consigliato)",
+    "otherResultsBeforeCta": "Prima del pulsante",
+    "otherResultsPositionHint": "Messo prima del pulsante, dà al visitatore qualcos'altro da fare proprio nel momento della tua proposta."
   },
   "contentStrategy": {
     "title": "Strategia di contenuto",
