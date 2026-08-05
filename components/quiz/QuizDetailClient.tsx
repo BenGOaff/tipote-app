@@ -112,6 +112,8 @@ import { UserPalettesProvider } from "@/components/editor/PalettesContext";
 import { EditorPreviewDeviceProvider } from "@/components/editor/EditorPreviewDeviceContext";
 import { RestoreDraftDialog } from "@/components/editor/RestoreDraftDialog";
 import { useAutosave } from "@/hooks/use-autosave";
+import { buildQuizEditorSnapshot, diffEditorSnapshot } from "@/lib/quiz/editorSnapshot";
+import { SessionLostBanner } from "@/components/editor/SessionLostBanner";
 import { answerImageRender } from "@/lib/quiz/answerImage";
 import {
   clearRichTextAlign,
@@ -666,6 +668,10 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const [scoreLabelsEdit, setScoreLabelsEdit] = useState<ScoreLabels>(() => resolveScoreLabels(null, "fr"));
   const [sioScoreTags, setSioScoreTags] = useState(false);
   const [showOtherResults, setShowOtherResults] = useState(false);
+  // Avant ou apres le bouton (retour Gwenn, 4 aout 2026). Defaut =
+  // apres, y compris sur les quiz deja en ligne : le placement d'avant
+  // etait une erreur, pas un choix.
+  const [otherResultsPosition, setOtherResultsPosition] = useState<"after_cta" | "before_cta">("after_cta");
   // Masquer le nombre brut de reponses dans la synthese (onglet Resultats)
   // et n'afficher que les %. Default false = compteurs visibles (compat).
   const [hideResponseCounts, setHideResponseCounts] = useState(false);
@@ -1001,7 +1007,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   }, []);
 
   // ─── Autosave snapshot ────────────────────────────────────────
-  const autosaveSnapshot = useMemo(() => ({
+  const autosaveSnapshot = useMemo(() => buildQuizEditorSnapshot({
     title,
     introduction,
     cta_text: ctaText,
@@ -1038,6 +1044,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     score_labels: scoreLabelsEdit,
     sio_score_tags: sioScoreTags,
     show_other_results: showOtherResults,
+    other_results_position: otherResultsPosition,
     hide_response_counts: hideResponseCounts,
     notify_responses: notifyResponses,
     meta_pixel_id: metaPixelId,
@@ -1122,10 +1129,14 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     editQuestions, editResults,
   ]);
 
-  const { savingDraft, clearDraft } = useAutosave({
+  const { savingDraft, clearDraft, sessionLost } = useAutosave({
     endpoint: `/api/quiz/${quizId}/autosave`,
     state: autosaveSnapshot,
     enabled: !loading && !pendingDraft,
+    // Filet local : si la session tombe, le brouillon est mis a
+    // l'abri dans le navigateur au lieu de n'exister que sur le
+    // serveur, qui refuse tout a ce moment la.
+    backupId: quizId,
   });
 
   const applySnapshot = useCallback((s: Record<string, unknown>) => {
@@ -1158,6 +1169,9 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     if (s.score_labels && typeof s.score_labels === "object") setScoreLabelsEdit(resolveScoreLabels(s.score_labels, typeof s.locale === "string" ? s.locale : null));
     if (typeof s.sio_score_tags === "boolean") setSioScoreTags(s.sio_score_tags);
     if (typeof s.show_other_results === "boolean") setShowOtherResults(s.show_other_results);
+    if (s.other_results_position === "after_cta" || s.other_results_position === "before_cta") {
+      setOtherResultsPosition(s.other_results_position);
+    }
     if (typeof s.hide_response_counts === "boolean") setHideResponseCounts(s.hide_response_counts);
     if (typeof s.notify_responses === "boolean") setNotifyResponses(s.notify_responses);
     if (typeof s.meta_pixel_id === "string") setMetaPixelId(s.meta_pixel_id);
@@ -1495,6 +1509,10 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       setScoreLabelsEdit(resolveScoreLabels((q as { score_labels?: unknown }).score_labels, (q as { locale?: string | null }).locale ?? null));
       setSioScoreTags((q as { sio_score_tags?: boolean | null }).sio_score_tags === true);
       setShowOtherResults((q as { show_other_results?: boolean | null }).show_other_results === true);
+      {
+        const pos = (q as { other_results_position?: string | null }).other_results_position;
+        setOtherResultsPosition(pos === "before_cta" ? "before_cta" : "after_cta");
+      }
       setHideResponseCounts((q as { hide_response_counts?: boolean | null }).hide_response_counts === true);
       setNotifyResponses((q as { notify_responses?: boolean | null }).notify_responses !== false);
       setMetaPixelId((q as { meta_pixel_id?: string | null }).meta_pixel_id ?? "");
@@ -1588,11 +1606,149 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       const draftAt = (q as { draft_updated_at?: string | null }).draft_updated_at ?? null;
       const savedAt = (q as { updated_at?: string | null }).updated_at ?? null;
       if (draftState && draftAt && (!savedAt || new Date(draftAt).getTime() > new Date(savedAt).getTime())) {
-        setPendingDraft({
-          state: draftState as Record<string, unknown>,
-          draftUpdatedAt: draftAt,
-          updatedAt: savedAt,
+        // ON NE PROPOSE LA RESTAURATION QUE SI LE BROUILLON DIFFERE
+        // VRAIMENT (drame Jocelyne, 4 aout 2026, porte de Tiquiz).
+        //
+        // "A chaque fois que je ferme et que je reviens, il me redemande
+        // si je veux garder la derniere sauvegarde automatique ou la
+        // derniere sauvegarde que j'ai faite moi. Je sauvegarde toujours
+        // avant de sortir."
+        //
+        // Ici c'etait le defaut a l'etat pur : cet ecran ne comparait
+        // RIEN du tout, il proposait des que le brouillon etait plus
+        // recent. Les deux objets passent maintenant par le MEME
+        // constructeur type (lib/quiz/editorSnapshot.ts) : le typecheck
+        // refuse de compiler si l'un des deux oublie un champ.
+        const canonical = buildQuizEditorSnapshot({
+          title: q.title,
+          introduction: q.introduction ?? "",
+          cta_text: q.cta_text ?? "",
+          cta_url: q.cta_url ?? "",
+          start_button_text: q.start_button_text ?? "",
+          privacy_url: q.privacy_url ?? "",
+          consent_text: q.consent_text ?? "",
+          capture_heading: q.capture_heading ?? "",
+          capture_subtitle: q.capture_subtitle ?? "",
+          capture_submit_text: q.capture_submit_text ?? "",
+          result_insight_heading: q.result_insight_heading ?? "",
+          result_bridge_heading: (q as { result_bridge_heading?: string | null }).result_bridge_heading ?? "",
+          show_result_bridge: (q as { show_result_bridge?: boolean | null }).show_result_bridge !== false,
+          result_layout: resultLayoutMode((q as { result_layout?: string | null }).result_layout),
+          tie_break: tieBreakMode((q as { tie_break?: string | null }).tie_break),
+          brand_logo_align: logoAlignSetting((q as { brand_logo_align?: string | null }).brand_logo_align),
+          brand_logo_width: logoWidthPct((q as { brand_logo_width?: number | null }).brand_logo_width),
+          intro_text_width: introTextWidthPct((q as { intro_text_width?: number | null }).intro_text_width),
+          result_projection_heading: q.result_projection_heading ?? "",
+          capture_enabled: (q as { capture_enabled?: boolean | null }).capture_enabled !== false,
+          capture_first_name: q.capture_first_name ?? false,
+          capture_last_name: q.capture_last_name ?? false,
+          capture_phone: q.capture_phone ?? false,
+          capture_country: q.capture_country ?? false,
+          first_name_required: q.first_name_required ?? false,
+          last_name_required: q.last_name_required ?? false,
+          phone_required: q.phone_required ?? false,
+          country_required: q.country_required ?? false,
+          show_consent_checkbox: (q as { show_consent_checkbox?: boolean | null }).show_consent_checkbox !== false,
+          show_results_breakdown: (q as { show_results_breakdown?: boolean | null }).show_results_breakdown === true,
+          scoring_axes: normalizeScoringAxes((q as { scoring_axes?: unknown }).scoring_axes),
+          show_score_gauge: (q as { show_score_gauge?: boolean | null }).show_score_gauge === true,
+          score_display_mode: safeScoreDisplayMode((q as { score_display_mode?: string | null }).score_display_mode),
+          score_labels: resolveScoreLabels((q as { score_labels?: unknown }).score_labels, (q as { locale?: string | null }).locale ?? null),
+          sio_score_tags: (q as { sio_score_tags?: boolean | null }).sio_score_tags === true,
+          hide_response_counts: (q as { hide_response_counts?: boolean | null }).hide_response_counts === true,
+          notify_responses: (q as { notify_responses?: boolean | null }).notify_responses !== false,
+          show_other_results: (q as { show_other_results?: boolean | null }).show_other_results === true,
+          other_results_position:
+            (q as { other_results_position?: string | null }).other_results_position === "before_cta"
+              ? "before_cta"
+              : "after_cta",
+          meta_pixel_id: (q as { meta_pixel_id?: string | null }).meta_pixel_id ?? "",
+          ga4_measurement_id: (q as { ga4_measurement_id?: string | null }).ga4_measurement_id ?? "",
+          google_ads_conversion_id: (q as { google_ads_conversion_id?: string | null }).google_ads_conversion_id ?? "",
+          google_ads_conversion_label: (q as { google_ads_conversion_label?: string | null }).google_ads_conversion_label ?? "",
+          ask_first_name: Boolean((q as unknown as Record<string, unknown>).ask_first_name),
+          ask_gender: Boolean((q as unknown as Record<string, unknown>).ask_gender),
+          virality_enabled: q.virality_enabled,
+          bonus_description: q.bonus_description ?? "",
+          bonus_heading: q.bonus_heading ?? "",
+          bonus_intro_text: q.bonus_intro_text ?? "",
+          bonus_unlocked_message: q.bonus_unlocked_message ?? "",
+          bonus_image_url: q.bonus_image_url ?? null,
+          bonus_image_width: q.bonus_image_width ?? null,
+          bonus_image_position: (q.bonus_image_position as BonusImagePosition | null) ?? "top",
+          intro_image_url: q.intro_image_url ?? null,
+          intro_image_position: q.intro_image_position ?? "top",
+          intro_image_width: q.intro_image_width ?? null,
+          background_style: ((q as { background_style?: string | null }).background_style === "gradient" || (q as { background_style?: string | null }).background_style === "image") ? (q as { background_style?: string }).background_style! : "solid",
+          background_gradient: (q as { background_gradient?: string | null }).background_gradient ?? null,
+          background_image_url: (q as { background_image_url?: string | null }).background_image_url ?? null,
+          intro_layout: (q as { intro_layout?: string | null }).intro_layout === "cover" ? "cover" : "card",
+          button_shape: ((q as { button_shape?: string | null }).button_shape === "rounded" || (q as { button_shape?: string | null }).button_shape === "square") ? (q as { button_shape?: string }).button_shape! : "pill",
+          theme_id: (q as { theme_id?: string | null }).theme_id ?? null,
+          question_layout: ((q as { question_layout?: string | null }).question_layout === "left" || (q as { question_layout?: string | null }).question_layout === "split") ? (q as { question_layout?: string }).question_layout! : "centered",
+          split_image_url: (q as { split_image_url?: string | null }).split_image_url ?? null,
+          split_side: (q as { split_side?: string | null }).split_side === "right" ? "right" : "left",
+          panel_media: sanitizePanelMediaConfig((q as { panel_media?: unknown }).panel_media),
+          answer_layout: ((q as { answer_layout?: string | null }).answer_layout === "grid" || (q as { answer_layout?: string | null }).answer_layout === "list") ? (q as { answer_layout?: string }).answer_layout! : "auto",
+          show_result_insight: (q as { show_result_insight?: boolean | null }).show_result_insight !== false,
+          show_result_projection: (q as { show_result_projection?: boolean | null }).show_result_projection !== false,
+          show_result_share: (q as { show_result_share?: boolean | null }).show_result_share !== false,
+          share_result_page: (q as { share_result_page?: boolean | null }).share_result_page !== false,
+          close_enabled: (q as { close_enabled?: boolean | null }).close_enabled === true,
+          close_action: (q as { close_action?: string | null }).close_action === "redirect" ? "redirect" : "message",
+          close_redirect_url: (q as { close_redirect_url?: string | null }).close_redirect_url ?? "",
+          close_message: (q as { close_message?: string | null }).close_message ?? "",
+          close_cta_text: (q as { close_cta_text?: string | null }).close_cta_text ?? "",
+          close_cta_url: (q as { close_cta_url?: string | null }).close_cta_url ?? "",
+          share_message: q.share_message ?? "",
+          locale: q.locale ?? "",
+          sio_share_tag_name: q.sio_share_tag_name ?? "",
+          status: q.status,
+          brand_font: (BRAND_FONT_CHOICES as readonly string[]).includes(q.brand_font ?? "")
+            ? (q.brand_font as BrandFontChoice)
+            : (BRAND_FONT_CHOICES as readonly string[]).includes(prof?.brand_font ?? "")
+              ? (prof!.brand_font as BrandFontChoice)
+              : DEFAULT_BRAND_FONT,
+          brand_color_primary: q.brand_color_primary || prof?.brand_color_primary || DEFAULT_BRAND_COLOR_PRIMARY,
+          brand_color_background: q.brand_color_background || DEFAULT_BRAND_COLOR_BACKGROUND,
+          brand_color_text: q.brand_color_text ?? null,
+          brand_logo_url: (q as { brand_logo_url?: string | null }).brand_logo_url ?? null,
+          hide_brand_logo: (q as { hide_brand_logo?: boolean | null }).hide_brand_logo === true,
+          slug: q.slug ?? "",
+          og_description: q.og_description ?? "",
+          og_image_url: q.og_image_url ?? null,
+          custom_footer_text: q.custom_footer_text ?? "",
+          custom_footer_url: q.custom_footer_url ?? "",
+          hide_branding: (q as { hide_branding?: boolean | null }).hide_branding === true,
+          share_networks: Array.isArray(q.share_networks) ? q.share_networks : [],
+          // `?? ""` et PAS `?? null` : c'est ce que pose
+          // l'hydratation. Une chaine vide comparee a null suffit a
+          // rendre le brouillon "different" a chaque ouverture.
+          toast_widget_id: (q as { toast_widget_id?: string | null }).toast_widget_id ?? "",
+          // `?? ""` et PAS `?? null` : c'est ce que pose
+          // l'hydratation. Une chaine vide comparee a null suffit a
+          // rendre le brouillon "different" a chaque ouverture.
+          share_widget_id: (q as { share_widget_id?: string | null }).share_widget_id ?? "",
+          questions: q.questions,
+          results: q.results,
         });
+        // Le nom des champs qui different, dans la console. Uniquement
+        // des NOMS, jamais leur contenu.
+        const draftDiff = diffEditorSnapshot(draftState, canonical);
+        if (draftDiff.length > 0) {
+          console.warn("[brouillon] restauration proposee, champs differents :", draftDiff.join(", "));
+        }
+        if (draftDiff.length === 0) {
+          // Brouillon strictement identique au canonique : on le nettoie
+          // en silence pour ne pas re-proposer au prochain ouverture.
+          fetch(`/api/quiz/${quizId}/autosave`, { method: "DELETE" }).catch(() => { /* non-fatal */ });
+        } else {
+          setPendingDraft({
+            state: draftState as Record<string, unknown>,
+            draftUpdatedAt: draftAt,
+            updatedAt: savedAt,
+          });
+        }
       }
     } catch { toast.error("Error loading quiz"); } finally { setLoading(false); }
   }, [quizId, router]);
@@ -2130,6 +2286,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           show_consent_checkbox: showConsentCheckbox,
           show_results_breakdown: showResultsBreakdown,
           show_other_results: showOtherResults,
+          other_results_position: otherResultsPosition,
           hide_response_counts: hideResponseCounts,
           notify_responses: notifyResponses,
           meta_pixel_id: metaPixelId.trim() || null,
@@ -2672,6 +2829,9 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
 
   return (
    <SioTagsProvider quizId={quizId}>
+    {/* Session tombee : l'ecran le dit, au lieu de laisser des 401
+        en silence dans la console (drame Bene, 4 aout 2026). */}
+    <SessionLostBanner visible={sessionLost} />
     <UserPalettesProvider palettes={palettesWithBrand}>
     <EditorPreviewDeviceProvider device={device}>
       <RestoreDraftDialog
@@ -3627,6 +3787,26 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     checked={showOtherResults}
                     onChange={v => setShowOtherResults(v)}
                   />
+                  {/* OU il se place. Retour Gwenn, 4 aout 2026 : "au dessus
+                      du bouton d'achat, ca offre une porte de sortie juste
+                      avant la proposition". Il passe donc apres par defaut,
+                      et celle qui preferait l'ancien ordre le remet ici. */}
+                  {showOtherResults && (
+                    <div className="ml-1 mt-2 space-y-1">
+                      <p className="text-xs font-medium">{t("otherResultsPositionLabel")}</p>
+                      <select
+                        className="w-full rounded-md border bg-background px-2 py-1.5 text-sm"
+                        value={otherResultsPosition}
+                        onChange={e =>
+                          setOtherResultsPosition(e.target.value === "before_cta" ? "before_cta" : "after_cta")
+                        }
+                      >
+                        <option value="after_cta">{t("otherResultsAfterCta")}</option>
+                        <option value="before_cta">{t("otherResultsBeforeCta")}</option>
+                      </select>
+                      <p className="text-xs text-muted-foreground">{t("otherResultsPositionHint")}</p>
+                    </div>
+                  )}
                   {/* Atelier juillet 2026 : personnaliser la page de resultat
                       facon Tally. Cartes insight / projection masquables +
                       bouton de partage optionnel. Default TRUE -> quiz
