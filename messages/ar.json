@@ -4756,7 +4756,10 @@
     "otherResultsPositionLabel": "أين يوضع هذا القسم",
     "otherResultsAfterCta": "بعد الزر (مستحسن)",
     "otherResultsBeforeCta": "قبل الزر",
-    "otherResultsPositionHint": "إذا وضع قبل الزر، فإنه يمنح الزائر شيئا آخر يفعله في لحظة عرضك بالذات."
+    "otherResultsPositionHint": "إذا وضع قبل الزر، فإنه يمنح الزائر شيئا آخر يفعله في لحظة عرضك بالذات.",
+    "optionSurveyShare": "السماح بمشاركة الاستبيان",
+    "optionSurveyShareHint": "أزرار المشاركة في شاشة الشكر. ألغِ التحديد حتى لا يتمكن أحد من نشر استبيانك من هذه الصفحة.",
+    "optionSurveyShareOffHint": "المشاركة معطّلة: لا يظهر أي زر في شاشة الشكر."
   },
   "contentStrategy": {
     "title": "استراتيجية المحتوى",
@@ -6042,7 +6045,19 @@
     "flagAction": "تعليم هذا المشارك",
     "unflagAction": "إزالة العلامة",
     "radarTitle": "نظرة عامة على التقييمات",
-    "radarTooltip": "المتوسط {avg}/{max} ({pct}%)"
+    "radarTooltip": "المتوسط {avg}/{max} ({pct}%)",
+    "responsesSelectAll": "تحديد الكل",
+    "responsesSelectOne": "تحديد هذه الإجابة",
+    "responsesSelected": "{count, plural, one {تم تحديد إجابة واحدة} other {تم تحديد # إجابات}}",
+    "responsesClearSelection": "إلغاء التحديد",
+    "responsesDelete": "حذف",
+    "responsesDeleteTitle": "{count, plural, one {حذف هذه الإجابة؟} other {حذف هذه الإجابات (#)؟}}",
+    "responsesDeleteBody": "ستختفي من الجدول ومن التصديرات ومن الملخص. هذا نهائي: لا توجد سلة محذوفات.",
+    "responsesDeleteStatsNote": "لا تتغير عدادات صفحة الإحصائيات (المشاهدات، البدايات، الإكمالات): فهي تأتي من تتبع التصفح وليس من الإجابات.",
+    "responsesDeleteCancel": "إلغاء",
+    "responsesDeleteConfirm": "{count, plural, one {حذف الإجابة} other {حذف الإجابات (#)}}",
+    "errResponsesDelete": "لم تكتمل عملية الحذف. حاول مرة أخرى بعد لحظات.",
+    "responsesDeleted": "{count, plural, one {تم حذف إجابة واحدة} other {تم حذف # إجابات}}"
   },
   "compta": {
     "revenueGoal": {

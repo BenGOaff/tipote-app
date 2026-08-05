@@ -16,6 +16,7 @@ import {
   renderStartRateVerdict,
   type StartRateProject,
 } from "@/lib/insights/startRate";
+import { fetchAnthropic } from "@/lib/aiRetry";
 
 const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
 
@@ -196,7 +197,7 @@ export async function generateGlobalInsights(a: GlobalAggregate): Promise<Global
   const timeout = setTimeout(() => controller.abort(), 60_000);
   let res: Response;
   try {
-    res = await fetch(CLAUDE_API_URL, {
+    res = await fetchAnthropic(CLAUDE_API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
       signal: controller.signal,

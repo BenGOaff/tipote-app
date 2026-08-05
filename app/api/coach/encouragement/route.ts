@@ -9,6 +9,7 @@ import { resolveAnthropicModel } from "@/lib/anthropicModel";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { buildBusinessContext } from "@/lib/compta/businessContext";
 import { sanitizeAiText } from "@/lib/aiTextSanitizer";
+import { fetchAnthropic } from "@/lib/aiRetry";
 
 function toStr(v: unknown): string {
   return typeof v === "string" ? v.trim() : "";
@@ -133,7 +134,7 @@ ${businessContext.text ? `\n${businessContext.text}` : ""}
 
     let res: Response;
     try {
-      res = await fetch("https://api.anthropic.com/v1/messages", {
+      res = await fetchAnthropic("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: {
           "content-type": "application/json",

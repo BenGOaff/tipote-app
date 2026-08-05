@@ -4756,7 +4756,10 @@
     "otherResultsPositionLabel": "Onde colocar este bloco",
     "otherResultsAfterCta": "Depois do botão (recomendado)",
     "otherResultsBeforeCta": "Antes do botão",
-    "otherResultsPositionHint": "Colocado antes do botão, dá ao visitante outra coisa para fazer mesmo no momento da tua proposta."
+    "otherResultsPositionHint": "Colocado antes do botão, dá ao visitante outra coisa para fazer mesmo no momento da tua proposta.",
+    "optionSurveyShare": "Permitir a partilha do questionário",
+    "optionSurveyShareHint": "Os botões de partilha no ecrã de agradecimento. Desmarca para que ninguém possa divulgar o teu questionário a partir dessa página.",
+    "optionSurveyShareOffHint": "A partilha está desativada: nenhum botão aparece no ecrã de agradecimento."
   },
   "contentStrategy": {
     "title": "Estratégia de conteúdo",
@@ -6042,7 +6045,19 @@
     "flagAction": "Marcar este respondente",
     "unflagAction": "Remover marca",
     "radarTitle": "Visão geral das notas",
-    "radarTooltip": "Média {avg}/{max} ({pct}%)"
+    "radarTooltip": "Média {avg}/{max} ({pct}%)",
+    "responsesSelectAll": "Selecionar tudo",
+    "responsesSelectOne": "Selecionar esta resposta",
+    "responsesSelected": "{count, plural, one {# resposta selecionada} other {# respostas selecionadas}}",
+    "responsesClearSelection": "Desmarcar tudo",
+    "responsesDelete": "Eliminar",
+    "responsesDeleteTitle": "{count, plural, one {Eliminar esta resposta?} other {Eliminar estas # respostas?}}",
+    "responsesDeleteBody": "Desaparecem da tabela, das exportações e da síntese. É definitivo: não há reciclagem.",
+    "responsesDeleteStatsNote": "Os contadores da página Estatísticas (visitas, inícios, conclusões) não mudam: vêm do rastreio de navegação, não das respostas.",
+    "responsesDeleteCancel": "Cancelar",
+    "responsesDeleteConfirm": "{count, plural, one {Eliminar a resposta} other {Eliminar as # respostas}}",
+    "errResponsesDelete": "A eliminação não foi concluída. Tenta novamente daqui a pouco.",
+    "responsesDeleted": "{count, plural, one {# resposta eliminada} other {# respostas eliminadas}}"
   },
   "compta": {
     "revenueGoal": {

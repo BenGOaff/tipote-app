@@ -4,6 +4,7 @@
 
 import { resolveAnthropicModel } from "@/lib/anthropicModel";
 import { sanitizeAiText } from "@/lib/aiTextSanitizer";
+import { fetchAnthropic } from "@/lib/aiRetry";
 
 const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
 
@@ -86,7 +87,7 @@ Angle du commentaire : ${angleObj.instruction}
 
 Écris directement le commentaire (en français) :`;
 
-  const res = await fetch(CLAUDE_API_URL, {
+  const res = await fetchAnthropic(CLAUDE_API_URL, {
     method: "POST",
     headers: {
       "content-type": "application/json",

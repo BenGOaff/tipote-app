@@ -8,6 +8,7 @@ import { ensureUserCredits, consumeCredits } from "@/lib/credits";
 import { resolveAnthropicModel } from "@/lib/anthropicModel";
 import { buildClaudeMessageBody } from "@/lib/claudeRequest";
 import { sanitizeAiQuizPayload } from "@/lib/aiTextSanitizer";
+import { fetchAnthropic } from "@/lib/aiRetry";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -207,7 +208,7 @@ export async function POST(req: NextRequest) {
 
   // Call Claude to extract quiz structure
   try {
-    const res = await fetch(CLAUDE_API_URL, {
+    const res = await fetchAnthropic(CLAUDE_API_URL, {
       method: "POST",
       headers: {
         "content-type": "application/json",

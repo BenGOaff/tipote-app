@@ -11,6 +11,7 @@ import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { buildQuizChatSystemPrompt } from "@/lib/prompts/quiz/chat";
 import { resolveAnthropicModel } from "@/lib/anthropicModel";
 import { sanitizeAiText } from "@/lib/aiTextSanitizer";
+import { fetchAnthropic } from "@/lib/aiRetry";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -138,7 +139,7 @@ export async function POST(req: NextRequest) {
 
         let res: Response;
         try {
-          res = await fetch(CLAUDE_API_URL, {
+          res = await fetchAnthropic(CLAUDE_API_URL, {
             method: "POST",
             headers: {
               "content-type": "application/json",

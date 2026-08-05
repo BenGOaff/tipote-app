@@ -576,6 +576,45 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       toast.error("Le marquage n'a pas pu être enregistré.");
     }
   };
+
+  /**
+   * Suppression de reponses (Bene, 5 aout 2026).
+   *
+   * Contrairement au marquage, on NE retire RIEN de l'ecran avant la
+   * reponse du serveur : une suppression optimiste qui echoue ferait
+   * croire que des reponses sont parties, et elles reviendraient au
+   * prochain rechargement, ce qui est pire que d'attendre une seconde.
+   *
+   * On ne retire que les ids VRAIMENT supprimes, ceux que la route
+   * renvoie. Le module Tiquiz est jumeau.
+   */
+  const handleDeleteResponses = async (leadIds: string[]): Promise<string[]> => {
+    try {
+      const res = await fetch(`/api/quiz/${quizId}/survey-delete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ leadIds }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.ok) {
+        // UN `ok: false` PRODUIT TOUJOURS QUELQUE CHOSE A L'ECRAN
+        // (regle du 3 aout) : un refus silencieux envoie chercher au
+        // mauvais endroit.
+        toast.error(st("errResponsesDelete"));
+        return [];
+      }
+      const removed: string[] = Array.isArray(data.deleted) ? data.deleted : [];
+      if (removed.length > 0) {
+        const gone = new Set(removed);
+        setLeads((prev) => prev.filter((l) => !gone.has(l.id)));
+        toast.success(st("responsesDeleted", { count: removed.length }));
+      }
+      return removed;
+    } catch {
+      toast.error(st("errResponsesDelete"));
+      return [];
+    }
+  };
   const [leftTab, setLeftTab] = useState<"edition" | "design" | "settings">("edition");
   // Sidebar : ouverte par défaut sur desktop, fermée sur mobile.
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -609,6 +648,11 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   const [customFooterText, setCustomFooterText] = useState("");
   const [customFooterUrl, setCustomFooterUrl] = useState("");
   const [shareNetworks, setShareNetworks] = useState<ShareNetwork[]>([]);
+  // PARTAGE DU SONDAGE (Adeline, 5 aout 2026) : "elle veut empecher les
+  // gens de partager son sondage". On reutilise `show_result_share`, la
+  // colonne du bouton de partage du quiz : meme decision, un seul
+  // domicile, aucune migration. Defaut ON, rien ne bouge en ligne.
+  const [showResultShare, setShowResultShare] = useState<boolean>(true);
   // Tipote widgets (toast notification + social share) attachable per quiz.
   const [toastWidgets, setToastWidgets] = useState<{ id: string; name: string; enabled: boolean }[]>([]);
   const [shareWidgets, setShareWidgets] = useState<{ id: string; name: string; enabled: boolean }[]>([]);
@@ -718,6 +762,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     intro_image_width: introImageWidth,
     custom_footer_text: customFooterText,
     custom_footer_url: customFooterUrl,
+    show_result_share: showResultShare,
     share_networks: shareNetworks,
     toast_widget_id: selectedToastWidget,
     share_widget_id: selectedShareWidget,
@@ -731,7 +776,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     showConsentCheckbox, askFirstName, askGender,
     shareMessage, locale, sioShareTagName, sioCaptureTag, status,
     fontFamily, primaryColor, bgColor, textColor,
-    slug, ogDescription, customFooterText, customFooterUrl, shareNetworks,
+    slug, ogDescription, customFooterText, customFooterUrl, shareNetworks, showResultShare,
     ogImageUrl, introImageUrl, introImagePosition, introImageWidth,
     selectedToastWidget, selectedShareWidget,
     editQuestions,
@@ -797,6 +842,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     }
     if (typeof s.custom_footer_text === "string") setCustomFooterText(s.custom_footer_text);
     if (typeof s.custom_footer_url === "string") setCustomFooterUrl(s.custom_footer_url);
+    if (typeof s.show_result_share === "boolean") setShowResultShare(s.show_result_share);
     if (Array.isArray(s.share_networks)) setShareNetworks(s.share_networks as ShareNetwork[]);
     if (typeof s.toast_widget_id === "string") setSelectedToastWidget(s.toast_widget_id);
     if (typeof s.share_widget_id === "string") setSelectedShareWidget(s.share_widget_id);
@@ -922,6 +968,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       setCustomFooterText(q.custom_footer_text ?? "");
       setCustomFooterUrl(q.custom_footer_url ?? "");
       setShareNetworks(Array.isArray(q.share_networks) ? (q.share_networks as ShareNetwork[]) : []);
+      // `!== false` : NULL = jamais touche, donc partage visible.
+      setShowResultShare((q as { show_result_share?: boolean | null }).show_result_share !== false);
       setSelectedToastWidget(((q as Record<string, unknown>).toast_widget_id as string | null) ?? "");
       setSelectedShareWidget(((q as Record<string, unknown>).share_widget_id as string | null) ?? "");
       // Branding: quiz overrides profile, profile overrides default constants
@@ -991,6 +1039,9 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
           intro_image_width: (q as { intro_image_width?: number | null }).intro_image_width ?? null,
           custom_footer_text: q.custom_footer_text ?? "",
           custom_footer_url: q.custom_footer_url ?? "",
+          // MEME expression que l'hydratation : un `?? true` ici et la
+          // comparaison serait fausse a tous les coups (drame Jocelyne).
+          show_result_share: (q as { show_result_share?: boolean | null }).show_result_share !== false,
           share_networks: Array.isArray(q.share_networks) ? q.share_networks : [],
           intro_image_position: (q.intro_image_position as string | null) ?? "top",
           // `?? ""` et PAS `?? null` : c'est ce que pose l'hydratation.
@@ -1370,6 +1421,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
           slug: slug.trim() ? cleanedSlug : null,
           og_description: ogDescription.trim() || null,
           og_image_url: ogImageUrl,
+          show_result_share: showResultShare,
           share_networks: shareNetworks,
           // Custom footer — ignored server-side for free plan but we still send it
           custom_footer_text: customFooterText.trim() || null,
@@ -2573,8 +2625,20 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
           {/* Share networks */}
           <Card><CardContent className="pt-6 space-y-3">
             <h3 className="font-semibold flex items-center gap-2"><Share2 className="w-4 h-4 text-primary" /> {t("shareNetworksTitle")}</h3>
-            <p className="text-xs text-muted-foreground">{t("shareNetworksDesc")}</p>
-            <div className="flex flex-wrap gap-2">
+            {/* PARTAGE DU SONDAGE (Adeline, 5 août 2026). L'interrupteur
+                vit AVANT les réseaux : quand il est fermé, la liste en
+                dessous ne décide plus de rien, et le dire vaut mieux que
+                de la laisser croire qu'elle règle quelque chose. */}
+            <SettingsToggle
+              label={t("optionSurveyShare")}
+              hint={t("optionSurveyShareHint")}
+              checked={showResultShare}
+              onChange={setShowResultShare}
+            />
+            <p className="text-xs text-muted-foreground">
+              {showResultShare ? t("shareNetworksDesc") : t("optionSurveyShareOffHint")}
+            </p>
+            <div className={`flex flex-wrap gap-2 ${showResultShare ? "" : "opacity-40 pointer-events-none"}`}>
               {ALLOWED_SHARE_NETWORKS.map((n) => {
                 const active = shareNetworks.includes(n);
                 return (
@@ -2769,6 +2833,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                 leads={leads}
                 locale={locale}
                 onToggleFlag={handleToggleFlag}
+                onDelete={handleDeleteResponses}
               />
             )}
 

@@ -34,6 +34,7 @@ import {
   type CoachBrief,
 } from "@/lib/coach/briefSchema";
 import { COACH_PROACTIVE_SYSTEM_PROMPT } from "@/lib/coach/systemPrompt";
+import { fetchAnthropic } from "@/lib/aiRetry";
 
 const COACH_MODEL = "claude-opus-4-8";
 const COACH_MAX_TOKENS = 4096;
@@ -147,7 +148,7 @@ export async function generateProactiveBrief(
 
   let res: Response;
   try {
-    res = await fetch(ANTHROPIC_URL, {
+    res = await fetchAnthropic(ANTHROPIC_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

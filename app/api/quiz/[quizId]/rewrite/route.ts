@@ -16,6 +16,7 @@ import { checkRateLimit } from "@/lib/aiRateLimit";
 import { resolveAnthropicModel } from "@/lib/anthropicModel";
 import { sanitizeAiText } from "@/lib/aiTextSanitizer";
 import { NATURAL_WRITING_BLOCK } from "@/lib/prompts/quiz/system";
+import { fetchAnthropic } from "@/lib/aiRetry";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -167,7 +168,7 @@ NATURAL WRITING — banned AI tics: em dashes (—) for incise, brochure verbs (
   try {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 20_000);
-    const res = await fetch(CLAUDE_API_URL, {
+    const res = await fetchAnthropic(CLAUDE_API_URL, {
       method: "POST",
       headers: {
         "content-type": "application/json",

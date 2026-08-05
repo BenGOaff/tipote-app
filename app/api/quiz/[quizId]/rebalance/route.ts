@@ -17,6 +17,7 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { checkRateLimit } from "@/lib/aiRateLimit";
 import { resolveAnthropicModel } from "@/lib/anthropicModel";
+import { fetchAnthropic } from "@/lib/aiRetry";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -310,7 +311,7 @@ Respond STRICTLY with valid JSON, no surrounding text, in this exact shape:
   try {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 45_000);
-    const res = await fetch(CLAUDE_API_URL, {
+    const res = await fetchAnthropic(CLAUDE_API_URL, {
       method: "POST",
       headers: {
         "content-type": "application/json",
