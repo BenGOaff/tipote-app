@@ -3685,8 +3685,14 @@ export default function PublicQuizClient({
             </Button>
           )}
 
-          {/* Surveys still get a share button — just no gating, no bonus.
-              Honours "no viral but share at end" from the user spec. */}
+          {/* PARTAGE DU SONDAGE, DESACTIVABLE (Adeline, 5 aout 2026) :
+              "elle veut empecher les gens de partager son sondage". Le
+              reglage est `show_result_share`, la MEME colonne que le
+              bouton de partage du quiz : meme decision, un seul
+              domicile. `!== false` : NULL = jamais touche = visible,
+              donc aucun sondage en ligne ne bouge.
+              Le module Tiquiz est jumeau. */}
+          {quiz.show_result_share !== false && (
           <Button
             variant="outline"
             size="lg"
@@ -3708,6 +3714,7 @@ export default function PublicQuizClient({
           >
             {linkCopied ? (t.copied ?? "Copied!") : (t.surveyShareCta ?? "Share this survey")}
           </Button>
+          )}
         </div>
         </div>
       </div>

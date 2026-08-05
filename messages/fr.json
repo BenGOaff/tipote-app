@@ -4756,7 +4756,10 @@
     "otherResultsPositionLabel": "Où placer ce bloc",
     "otherResultsAfterCta": "Après le bouton (recommandé)",
     "otherResultsBeforeCta": "Avant le bouton",
-    "otherResultsPositionHint": "Placé avant le bouton, il donne au visiteur autre chose à faire juste au moment de ta proposition."
+    "otherResultsPositionHint": "Placé avant le bouton, il donne au visiteur autre chose à faire juste au moment de ta proposition.",
+    "optionSurveyShare": "Autoriser le partage du sondage",
+    "optionSurveyShareHint": "Les boutons de partage sur l'écran de remerciement. Décoche pour que personne ne puisse relayer ton sondage depuis cette page.",
+    "optionSurveyShareOffHint": "Le partage est désactivé : aucun bouton n'apparaît sur l'écran de remerciement."
   },
   "contentStrategy": {
     "title": "Stratégie de contenu",
@@ -6042,7 +6045,19 @@
     "flagAction": "Marquer ce répondant",
     "unflagAction": "Retirer le marquage",
     "radarTitle": "Vue d'ensemble des notes",
-    "radarTooltip": "Moyenne {avg}/{max} ({pct}%)"
+    "radarTooltip": "Moyenne {avg}/{max} ({pct}%)",
+    "responsesSelectAll": "Tout sélectionner",
+    "responsesSelectOne": "Sélectionner cette réponse",
+    "responsesSelected": "{count, plural, one {# réponse sélectionnée} other {# réponses sélectionnées}}",
+    "responsesClearSelection": "Tout décocher",
+    "responsesDelete": "Supprimer",
+    "responsesDeleteTitle": "{count, plural, one {Supprimer cette réponse ?} other {Supprimer ces # réponses ?}}",
+    "responsesDeleteBody": "Elles disparaissent du tableau, des exports et de la synthèse. C'est définitif : il n'y a pas de corbeille.",
+    "responsesDeleteStatsNote": "Les compteurs de la page Stats (vues, démarrages, complétions) ne bougent pas : ils viennent du suivi de navigation, pas des réponses.",
+    "responsesDeleteCancel": "Annuler",
+    "responsesDeleteConfirm": "{count, plural, one {Supprimer la réponse} other {Supprimer les # réponses}}",
+    "errResponsesDelete": "La suppression n'a pas abouti. Réessaie dans un instant.",
+    "responsesDeleted": "{count, plural, one {# réponse supprimée} other {# réponses supprimées}}"
   },
   "compta": {
     "revenueGoal": {

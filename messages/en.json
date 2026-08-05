@@ -4756,7 +4756,10 @@
     "otherResultsPositionLabel": "Where to place this block",
     "otherResultsAfterCta": "After the button (recommended)",
     "otherResultsBeforeCta": "Before the button",
-    "otherResultsPositionHint": "Placed before the button, it gives the visitor something else to do at the exact moment of your offer."
+    "otherResultsPositionHint": "Placed before the button, it gives the visitor something else to do at the exact moment of your offer.",
+    "optionSurveyShare": "Allow sharing the survey",
+    "optionSurveyShareHint": "The share buttons on the thank-you screen. Uncheck so nobody can pass your survey on from that page.",
+    "optionSurveyShareOffHint": "Sharing is off: no button appears on the thank-you screen."
   },
   "contentStrategy": {
     "title": "Content strategy",
@@ -6042,7 +6045,19 @@
     "flagAction": "Flag this respondent",
     "unflagAction": "Remove flag",
     "radarTitle": "Ratings overview",
-    "radarTooltip": "Average {avg}/{max} ({pct}%)"
+    "radarTooltip": "Average {avg}/{max} ({pct}%)",
+    "responsesSelectAll": "Select all",
+    "responsesSelectOne": "Select this response",
+    "responsesSelected": "{count, plural, one {# response selected} other {# responses selected}}",
+    "responsesClearSelection": "Clear selection",
+    "responsesDelete": "Delete",
+    "responsesDeleteTitle": "{count, plural, one {Delete this response?} other {Delete these # responses?}}",
+    "responsesDeleteBody": "They disappear from the table, the exports and the summary. This is permanent: there is no bin.",
+    "responsesDeleteStatsNote": "The Stats page counters (views, starts, completions) do not move: they come from navigation tracking, not from responses.",
+    "responsesDeleteCancel": "Cancel",
+    "responsesDeleteConfirm": "{count, plural, one {Delete the response} other {Delete the # responses}}",
+    "errResponsesDelete": "The deletion did not go through. Try again in a moment.",
+    "responsesDeleted": "{count, plural, one {# response deleted} other {# responses deleted}}"
   },
   "compta": {
     "revenueGoal": {

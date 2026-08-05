@@ -199,6 +199,9 @@ export const SURVEY_SNAPSHOT_KEYS = [
   "intro_image_width",
   "custom_footer_text",
   "custom_footer_url",
+  // Partage du sondage (Adeline, 5 aout 2026) : meme colonne que le
+  // quiz, meme decision (un bouton de partage a la fin, ou pas).
+  "show_result_share",
   "share_networks",
   "toast_widget_id",
   "share_widget_id",

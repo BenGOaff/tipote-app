@@ -4756,7 +4756,10 @@
     "otherResultsPositionLabel": "Dove mettere questo blocco",
     "otherResultsAfterCta": "Dopo il pulsante (consigliato)",
     "otherResultsBeforeCta": "Prima del pulsante",
-    "otherResultsPositionHint": "Messo prima del pulsante, dà al visitatore qualcos'altro da fare proprio nel momento della tua proposta."
+    "otherResultsPositionHint": "Messo prima del pulsante, dà al visitatore qualcos'altro da fare proprio nel momento della tua proposta.",
+    "optionSurveyShare": "Consenti la condivisione del sondaggio",
+    "optionSurveyShareHint": "I pulsanti di condivisione nella schermata di ringraziamento. Togli la spunta perché nessuno possa diffondere il tuo sondaggio da quella pagina.",
+    "optionSurveyShareOffHint": "La condivisione è disattivata: nessun pulsante appare nella schermata di ringraziamento."
   },
   "contentStrategy": {
     "title": "Strategia di contenuto",
@@ -6042,7 +6045,19 @@
     "flagAction": "Contrassegna questo rispondente",
     "unflagAction": "Rimuovi contrassegno",
     "radarTitle": "Panoramica dei voti",
-    "radarTooltip": "Media {avg}/{max} ({pct}%)"
+    "radarTooltip": "Media {avg}/{max} ({pct}%)",
+    "responsesSelectAll": "Seleziona tutto",
+    "responsesSelectOne": "Seleziona questa risposta",
+    "responsesSelected": "{count, plural, one {# risposta selezionata} other {# risposte selezionate}}",
+    "responsesClearSelection": "Deseleziona tutto",
+    "responsesDelete": "Elimina",
+    "responsesDeleteTitle": "{count, plural, one {Eliminare questa risposta?} other {Eliminare queste # risposte?}}",
+    "responsesDeleteBody": "Spariscono dalla tabella, dalle esportazioni e dalla sintesi. È definitivo: non c'è cestino.",
+    "responsesDeleteStatsNote": "I contatori della pagina Statistiche (visite, avvii, completamenti) non cambiano: vengono dal tracciamento di navigazione, non dalle risposte.",
+    "responsesDeleteCancel": "Annulla",
+    "responsesDeleteConfirm": "{count, plural, one {Elimina la risposta} other {Elimina le # risposte}}",
+    "errResponsesDelete": "L'eliminazione non è andata a buon fine. Riprova tra un istante.",
+    "responsesDeleted": "{count, plural, one {# risposta eliminata} other {# risposte eliminate}}"
   },
   "compta": {
     "revenueGoal": {
