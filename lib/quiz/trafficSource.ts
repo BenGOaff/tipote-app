@@ -281,7 +281,15 @@ export function renderTrafficForPrompt(reading: TrafficReading): string {
   lines.push(
     reading.kind === "single"
       ? `- Tout le trafic vient de ${reading.top.source} (${reading.top.pct}%). Une fuite a l'entree se lit donc CONTRE ce public la : le premier soupcon est l'ecart entre ce qui a ete promis la-bas et ce que le visiteur trouve en arrivant, avant toute reecriture de la page.`
-      : "- Le trafic vient de plusieurs sources. Si l'une demarre nettement mieux que les autres, ce n'est pas la page qui coince mais l'audience de la source la plus faible : dis-le, c'est une correction beaucoup moins couteuse qu'une refonte.",
+      : // Cette ligne demandait au modele, jusqu'au 5 aout 2026, de dire
+        // "si une source demarre nettement mieux que les autres". Il n'a
+        // jamais eu de quoi le voir : la repartition ci-dessus compte des
+        // VUES, et rien ici ne dit combien de gens ont clique sur
+        // commencer par source. On lui demandait donc d'observer une
+        // chose absente de ce qu'on lui donne, ce qui laisse deux issues :
+        // se taire, ou inventer. C'est exactement ce que EVIDENCE_RULES
+        // essaie d'empecher ailleurs.
+        "- Le trafic vient de plusieurs sources. Tu n'as PAS le taux de demarrage par source : n'affirme jamais que l'une demarre mieux qu'une autre, tu ne peux pas le voir. Ce que tu peux dire, si la fuite est a l'entree : elle peut venir d'UNE des sources plutot que de la page, et c'est une correction beaucoup moins couteuse qu'une refonte. Pour trancher, elle etiquette ses liens (utm_source, une etiquette differente par endroit ou elle publie) et compare ensuite.",
   );
   return lines.join("\n");
 }
