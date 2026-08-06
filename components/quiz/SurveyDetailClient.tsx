@@ -1207,7 +1207,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { toast.error(t("toastNotLoggedIn")); return; }
       const ext = file.name.split(".").pop() ?? "png";
-      const path = `logos/${user.id}/logo.${ext}`;
+      // Horodaté comme tous les autres uploads : cf. QuizDetailClient.
+      const path = `logos/${user.id}/logo-${Date.now()}.${ext}`;
       const { error } = await supabase.storage.from("public-assets").upload(path, file, { upsert: true });
       if (error) throw error;
       const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
