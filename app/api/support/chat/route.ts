@@ -93,32 +93,14 @@ export async function POST(req: NextRequest) {
       { role: "user" as const, content: message },
     ];
 
-    const completion = await openai.chat.completions.create({
-      model: OPENAI_MODEL,
-      messages,
-      // ATTENTION, piege des modeles a raisonnement (GPT-5) : ce budget
-      // couvre les tokens de RAISONNEMENT **et** la reponse visible. A
-      // 800, un raisonnement un peu long ne laissait plus de place pour
-      // repondre, et l'utilisateur recevait une bulle vide sans qu'aucune
-      // erreur ne soit levee. Une reponse d'aide fait 3 a 12 lignes,
-      // donc ~400 tokens : le reste est la marge de raisonnement.
-      max_completion_tokens: 2000,
-      ...cachingParams("support-chat"),
-      // On surcharge apres le spread, volontairement. Choisir le bon
-      // article parmi 57 demande un peu plus que l'effort minimal, et
-      // designer le mauvais article coute plus cher qu'une seconde de
-      // latence.
-      reasoning_effort: "medium",
-    } as any);
-
-    const reply = sanitizeAiText(completion.choices?.[0]?.message?.content?.trim() || "");
+    const reply = await askWithRetry(messages);
 
     // Un `ok: true` avec un message vide produit une bulle blanche, et
     // l'utilisateur croit que SA question a ete ignoree. On prefere dire
     // qu'on a rate (regle du 3 aout : un echec silencieux coute plus cher
-    // que le bug qu'il masque).
+    // que le bug qu'il masque). Mais on ne doit y arriver qu'apres avoir
+    // vraiment tout essaye : voir askWithRetry.
     if (!reply) {
-      console.error("[support-chat] Reponse vide du modele");
       return NextResponse.json(
         { ok: false, error: "Empty answer. Please rephrase your question." },
         { status: 502 },
@@ -133,6 +115,83 @@ export async function POST(req: NextRequest) {
       { status: 500 },
     );
   }
+}
+
+/**
+ * DEMANDER UNE RÉPONSE, ET S'ASSURER D'EN AVOIR UNE.
+ *
+ * Béné, 6 août 2026, en testant le bot : "j'ai testé de poser une
+ * question simple au bot et... 502".
+ *
+ * Le 502 n'était pas le bug, c'était le garde-fou qui faisait son
+ * travail : avant, la même situation renvoyait `ok: true` avec un
+ * message VIDE, donc une bulle blanche dans le chat, et personne ne
+ * savait que ça avait raté. Le bug, lui, était juste au dessus.
+ *
+ * LA CAUSE. Sur un modèle à raisonnement (GPT-5), `max_completion_tokens`
+ * couvre les tokens de RAISONNEMENT **et** la réponse visible. En passant
+ * la base de connaissances de 6 000 à 27 000 tokens, le modèle s'est mis
+ * à réfléchir beaucoup plus longtemps : le raisonnement mangeait tout le
+ * budget, `finish_reason` valait "length", et le champ `content`
+ * revenait VIDE. Un budget confortable pour la réponse ne suffit donc
+ * pas : il faut de la place pour la réflexion EN PLUS.
+ *
+ * LA CORRECTION, en trois temps :
+ *   1. effort de raisonnement bas. Le corpus est maintenant explicite et
+ *      structuré : chercher n'est plus la partie difficile. C'est aussi
+ *      ce qui garde le bot rapide, or dans un chat d'aide la vitesse de
+ *      réponse compte autant que la réponse.
+ *   2. budget large (4000), qui absorbe un raisonnement long.
+ *   3. et si malgré tout la réponse revient vide, UNE nouvelle tentative
+ *      avec un budget doublé. Elle coûte une seconde à quelqu'un qui
+ *      allait recevoir une erreur : c'est toujours le bon échange.
+ *
+ * On journalise `finish_reason` et le nombre de tokens de raisonnement :
+ * si ça recommence, on saura POURQUOI au lieu de le deviner.
+ */
+type Tentative = { budget: number; effort: string };
+
+/**
+ * Deux tentatives, et la seconde ne se contente pas de rallonger le
+ * budget : elle RÉDUIT le raisonnement. Rejouer exactement la même
+ * requête après un échec dû à la longueur du raisonnement échouerait de
+ * la même façon. `minimal` est le levier qui agit sur la cause.
+ */
+const TENTATIVES: Tentative[] = [
+  { budget: 4000, effort: "low" },
+  { budget: 8000, effort: "minimal" },
+];
+
+async function askWithRetry(messages: unknown[]): Promise<string> {
+  for (const { budget, effort } of TENTATIVES) {
+    try {
+      const completion: any = await openai!.chat.completions.create({
+        model: OPENAI_MODEL,
+        messages,
+        max_completion_tokens: budget,
+        ...cachingParams("support-chat"),
+        // Surcharge volontaire, APRÈS le spread.
+        reasoning_effort: effort,
+      } as any);
+
+      const choice = completion.choices?.[0];
+      const brut = choice?.message?.content?.trim() || "";
+      if (brut) return sanitizeAiText(brut);
+
+      const raisonnement =
+        completion.usage?.completion_tokens_details?.reasoning_tokens ?? "?";
+      console.error(
+        `[support-chat] Reponse vide (budget=${budget}, effort=${effort}, ` +
+          `finish_reason=${choice?.finish_reason}, tokens_raisonnement=${raisonnement})`,
+      );
+    } catch (err: any) {
+      // Une tentative qui ÉCHOUE ne doit pas emporter la suivante : si un
+      // jour le modèle configuré refuse une de ces valeurs d'effort, la
+      // seconde tentative doit quand même avoir lieu.
+      console.error(`[support-chat] Tentative echouee (effort=${effort}) : ${err?.message}`);
+    }
+  }
+  return "";
 }
 
 function buildSystemPrompt(locale: string, knowledgeBase: string): string {
