@@ -1898,9 +1898,16 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       const ext = file.name.split(".").pop() ?? "png";
       // Path différent par scope pour ne pas écraser le logo de profil
       // quand on upload un logo override pour un quiz spécifique.
+      //
+      // ET UN HORODATAGE, comme TOUS les autres uploads du repo. Le logo
+      // était le seul à réécrire un chemin STABLE : remplacer son logo
+      // écrivait au même endroit, donc l'adresse ne changeait pas, donc
+      // les navigateurs et les caches gardaient l'ancien pendant la durée
+      // de leur cache. Un chemin neuf à chaque fois rend la question sans
+      // objet : le nouveau logo se voit tout de suite, partout.
       const path = scope === "profile"
-        ? `logos/${user.id}/logo.${ext}`
-        : `logos/${user.id}/quiz-${quizId}.${ext}`;
+        ? `logos/${user.id}/logo-${Date.now()}.${ext}`
+        : `logos/${user.id}/quiz-${quizId}-${Date.now()}.${ext}`;
       const { error } = await supabase.storage.from("public-assets").upload(path, file, { upsert: true });
       if (error) throw error;
       const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
