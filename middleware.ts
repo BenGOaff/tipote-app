@@ -4,6 +4,7 @@ import { createServerClient } from "@supabase/ssr";
 import { isAdminEmail } from "@/lib/adminEmails";
 import { customDomainsEnabled, isOwnHost, normaliseHost } from "@/lib/customDomains";
 import { routeTenantPath, TENANT_SLUG_PREFIX } from "@/lib/publicSlug";
+import { askedHelpLocale } from "@/lib/support/locale";
 
 /**
  * Invariants (anti-régression)
@@ -150,6 +151,29 @@ export async function middleware(req: NextRequest) {
   const detectedLocale = hasLocaleCookie
     ? req.cookies.get(UI_LOCALE_COOKIE)!.value
     : detectLocaleFromHeader(req);
+
+  // 1bis) Le centre d'aide est PUBLIC, et c'est aussi l'aide de Tiquiz.
+  //
+  //   Le cookie `ui_locale` n'est posé que sur les routes protégées (plus
+  //   bas). Une cliente Tiquiz n'a pas de compte Tipote, donc pas de
+  //   cookie sur ce domaine : elle cliquait sur "Aide" et lisait les 57
+  //   articles en français, quelle que soit sa langue.
+  //
+  //   La page lit déjà `?lang=` pour SON rendu (lib/support/locale.ts) ;
+  //   ici on le mémorise, sinon le premier clic vers un article, qui n'a
+  //   pas le paramètre, la ramènerait au français.
+  if (pathname.startsWith("/support")) {
+    const asked = askedHelpLocale(req.nextUrl.searchParams.get("lang"));
+    const aRetenir = asked ?? (hasLocaleCookie ? null : detectedLocale);
+    if (!aRetenir) return NextResponse.next();
+    const res = NextResponse.next();
+    res.cookies.set(UI_LOCALE_COOKIE, aRetenir, {
+      path: "/",
+      maxAge: 365 * 24 * 60 * 60,
+      sameSite: "lax",
+    });
+    return res;
+  }
 
   // 1) Toujours laisser passer les routes publiques
   if (startsWithAny(pathname, PUBLIC_PREFIXES)) {

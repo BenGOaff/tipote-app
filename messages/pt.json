@@ -5906,9 +5906,9 @@
     "reopen": "Reabrir"
   },
   "adminSupport": {
-    "seedConfirm": "Isto vai inserir/atualizar todas as categorias e artigos. Continuar?",
-    "seedButton": "Seed / Atualizar conteúdo",
-    "seeding": "A fazer seed...",
+    "seedConfirm": "Isto publica todas as categorias e artigos de ajuda incluídos nesta versão. Os artigos existentes são atualizados, nenhum é apagado. Continuar?",
+    "seedButton": "Publicar o conteúdo de ajuda",
+    "seeding": "A publicar…",
     "tagsCsvLabel": "Tags (separadas por vírgulas)",
     "relatedSlugsLabel": "Artigos relacionados (slugs, separados por vírgulas)"
   },
