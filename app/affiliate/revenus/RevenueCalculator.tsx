@@ -13,12 +13,12 @@ const TIQUIZ_RATE = 0.4;
 
 // Prix publics réels. On n'invente aucun chiffre : l'Atelier du Quiz est
 // un paiement unique à 47 €. Tiquiz a deux niveaux mensuels : l'accès
-// simple à 9 € (solo, un seul projet) et le Plus à 29 € (agence,
+// simple à 17 € (solo, un seul projet) et le Plus à 29 € (agence,
 // freelance qui vend des prestations de quiz, multi-projets).
-// Les formules annuelles (90 € et 290 €) rapportent une commission
+// Les formules annuelles (170 € et 290 €) rapportent une commission
 // légèrement plus faible sur douze mois : on calcule sur le mensuel.
 const ATELIER_PRICE_EUR = 47;
-const TIQUIZ_PRICE_EUR = { simple: 9, plus: 29 } as const;
+const TIQUIZ_PRICE_EUR = { simple: 17, plus: 29 } as const;
 
 type TiquizPlan = keyof typeof TIQUIZ_PRICE_EUR;
 

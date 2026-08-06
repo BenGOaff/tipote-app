@@ -32,7 +32,7 @@ Cas réel utilisable : Jocelyne, orthophoniste pendant 40 ans, comptes créés l
 Chiffre de marché utilisable, avec sa source : 44,9 % des personnes qui commencent un quiz en coaching ou formation laissent leur email (rapport Interact).`;
 
 const TIQUIZ_FACTS = `PRODUIT : Tiquiz, le logiciel de création de quiz marketing (quiz.tipote.com).
-Tarifs : compte gratuit à vie (1 quiz, 10 réponses par mois, sans carte bancaire) ; accès simple 9 €/mois ou 90 €/an (utilisateur solo, un seul projet) ; Plus 29 €/mois ou 290 €/an (agences, freelances qui vendent des prestations de quiz à leurs clients, entrepreneurs multi-projets).
+Tarifs : compte gratuit à vie (1 quiz, 10 réponses par mois, sans carte bancaire) ; accès simple 17 €/mois ou 170 €/an (utilisateur solo, un seul projet) ; Plus 29 €/mois ou 290 €/an (agences, freelances qui vendent des prestations de quiz à leurs clients, entrepreneurs multi-projets).
 Ce que fait l'outil : génération du quiz par IA à partir d'une idée, quiz à profils ou quiz scoré multi-axes, page de résultat dédiée par profil avec son propre appel à l'action, capture d'email, tagging automatique dans Systeme.io, sondages, popquiz (quiz incrusté dans une vidéo), statistiques question par question, partage du résultat obtenu.
 Ce que débloque le Plus : multiprofils (un espace par client ou par marque, branding et statistiques séparés), analyse IA des réponses, plusieurs clés API Systeme.io, modèles pré-conçus.
 Différence avec un formulaire classique (Typeform, Tally) : le quiz qualifie, segmente et pré-vend au lieu de seulement collecter.

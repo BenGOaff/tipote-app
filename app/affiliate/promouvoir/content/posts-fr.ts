@@ -41,8 +41,8 @@ Tu connectes ton Systeme io.
 Tes leads tombent, déjà segmentés, déjà tagués.
 
 - Compte gratuit : 1 quiz, 10 réponses/mois
-- Mensuel : 9 €/mois sans engagement
-- Annuel : 90 €/an
+- Mensuel : 17 €/mois sans engagement
+- Annuel : 170 €/an
 - Plus : 29 €/mois ou 290 €/an si tu gères plusieurs clients ou plusieurs marques
 
 Pas de carte bancaire pour le gratuit. Tu testes vraiment.
@@ -61,7 +61,7 @@ Ce qui change vs un Typeform :
 - Chaque réponse tague automatiquement le lead dans ton Systeme io
 - Chaque profil de résultat a sa propre mini page de vente avec CTA personnalisé
 - Tu peux inscrire en formation ou en communauté selon le profil
-- 9 €/mois ou 90 €/an (vs Typeform Plus à 50 €/mois + Zapier 20 €/mois)
+- 17 €/mois ou 170 €/an (vs Typeform Plus à 50 €/mois + Zapier 20 €/mois)
 
 Compte gratuit pour tester (1 quiz, 10 réponses/mois, sans CB) : {AFFILIATE_LINK}`,
       },
@@ -73,8 +73,8 @@ Quiz marketing → segmentation auto → tagging Systeme io natif → page de r�
 
 4 plans :
 • Gratuit (1 quiz, 10 réponses/mois)
-• 9 €/mois illimité
-• 90 €/an illimité
+• 17 €/mois illimité
+• 170 €/an illimité
 • Plus 29 €/mois ou 290 €/an (plusieurs clients, plusieurs marques)
 
 Sans CB pour le gratuit : {AFFILIATE_LINK}`,
@@ -98,7 +98,7 @@ Sans CB pour le gratuit : {AFFILIATE_LINK}`,
 
 Typeform collecte. Tiquiz qualifie + segmente + pré-vend.
 
-9 €/mois ou 90 €/an. Compte gratuit pour tester.
+17 €/mois ou 170 €/an. Compte gratuit pour tester.
 
 Lien en bio 👆
 
@@ -119,14 +119,14 @@ Quand tu veux :
 
 Tiquiz fait ces 3 choses nativement, intégrées avec Systeme io. Le quiz n'est plus juste un formulaire, c'est un funnel complet de qualification + pré-vente.
 
-9 €/mois ou 90 €/an. Tu testes avec le compte gratuit (1 quiz, 10 réponses/mois) : {AFFILIATE_LINK}`,
+17 €/mois ou 170 €/an. Tu testes avec le compte gratuit (1 quiz, 10 réponses/mois) : {AFFILIATE_LINK}`,
       },
       {
         network: "x",
         caption: `Typeform : collecte.
 Tiquiz : collecte + tague dans Systeme io + sert une page de résultat par profil + push une offre adaptée.
 
-Différence de prix : 9 €/mois vs 50 €/mois + Zapier.
+Différence de prix : 17 €/mois vs 50 €/mois + Zapier.
 
 Compte gratuit ici : {AFFILIATE_LINK}`,
       },
@@ -253,7 +253,7 @@ Compte gratuit : {AFFILIATE_LINK}`,
 
 ❓ Faut-il être technique ? Non. Si tu sais utiliser Systeme io, tu sais utiliser Tiquiz.
 
-❓ Différence avec Typeform ? Tiquiz tague auto dans SIO, sert une page de résultat dédiée par profil, et coûte 9 € vs 50 €.
+❓ Différence avec Typeform ? Tiquiz tague auto dans SIO, sert une page de résultat dédiée par profil, et coûte 17 € vs 50 €.
 
 ❓ Faut-il déjà avoir SIO ? Tu peux sans, mais c'est là où la magie opère.
 
@@ -271,7 +271,7 @@ Compte gratuit ici (lien en bio) 👆
 Non. Si tu sais utiliser Systeme io, tu sais utiliser Tiquiz. L'IA fait la partie lourde, toi tu valides et tu publies. Tutoriel guidé en 7 étapes à la première connexion.
 
 2. Quelle différence avec Typeform / Tally ?
-Typeform et Tally sont d'excellents formulaires. Tiquiz est pensé pour la qualification + segmentation + pré-vente : tagging Systeme io natif, page de résultat dédiée par profil, inscription auto en formation/communauté. Et 9 €/mois vs 50 €/mois pour Typeform Plus.
+Typeform et Tally sont d'excellents formulaires. Tiquiz est pensé pour la qualification + segmentation + pré-vente : tagging Systeme io natif, page de résultat dédiée par profil, inscription auto en formation/communauté. Et 17 €/mois vs 50 €/mois pour Typeform Plus.
 
 3. Faut-il déjà avoir un compte Systeme io ?
 Tu peux sans (les leads arrivent dans ton dashboard Tiquiz, tu exportes). Mais la vraie puissance c'est la connexion SIO. Compte gratuit SIO suffit pour démarrer.
@@ -286,7 +286,7 @@ Compte gratuit : {AFFILIATE_LINK}`,
         caption: `FAQ Tiquiz, 4 réponses :
 
 - Technique ? Non, si tu sais SIO tu sais Tiquiz.
-- Diff Typeform ? Tag SIO auto, page résultat par profil, 9 € vs 50 €.
+- Diff Typeform ? Tag SIO auto, page résultat par profil, 17 € vs 50 €.
 - SIO requis ? Pas obligé, mais c'est là que ça brille.
 - Garantie ? Non. Le gratuit est là pour ça.
 
@@ -317,7 +317,7 @@ Compte gratuit pour tester : lien en bio 👆
       },
       {
         network: "linkedin",
-        caption: `Pourquoi Tiquiz est à 9 €/mois quand Typeform Plus est à 50 €/mois.
+        caption: `Pourquoi Tiquiz est à 17 €/mois quand Typeform Plus est à 50 €/mois.
 
 J'ai fait le calcul sur 5 ans.
 
@@ -416,9 +416,9 @@ Je te résume les 4 chemins possibles :
 
 Chemin 1 - Compte gratuit. 0 €, sans CB, 1 quiz, 10 réponses/mois. Tu testes sur ton audience, tu décides ensuite.
 
-Chemin 2 - Mensuel à 9 €. Quiz illimités, sans engagement. Tu arrêtes quand tu veux.
+Chemin 2 - Mensuel à 17 €. Quiz illimités, sans engagement. Tu arrêtes quand tu veux.
 
-Chemin 3 - Annuel à 90 €. Tu économises 2 mois.
+Chemin 3 - Annuel à 170 €. Tu économises 2 mois.
 
 Chemin 4 - Plus, 29 €/mois ou 290 €/an. Celui-là c'est si tu es agence, freelance qui vend des quiz à ses clients, ou si tu gères plusieurs marques : un espace par client, une clé Systeme io par projet, et l'analyse IA des réponses.
 
@@ -434,8 +434,8 @@ Merci d'avoir lu cette série.
 
 4 chemins :
 • Gratuit (0 €, sans CB)
-• Mensuel 9 € sans engagement
-• Annuel 90 € (économise 2 mois)
+• Mensuel 17 € sans engagement
+• Annuel 170 € (économise 2 mois)
 • Plus 29 €/mois ou 290 €/an (agences, multi-clients)
 
 Sinon, on se reparle sur autre chose. Merci d'avoir suivi.

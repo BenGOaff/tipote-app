@@ -3858,8 +3858,8 @@ Enable **virality** in your quiz settings so participants can share the quiz and
 |------|------|------|---------------|
 | **Free** | 0 € | 1 | 10 |
 | **Lifetime** | 57 € (une fois) | Illimité | Illimité |
-| **Monthly** | 9 €/mois | Illimité | Illimité |
-| **Yearly** | 90 €/an | Illimité | Illimité |
+| **Monthly** | 17 €/mois | Illimité | Illimité |
+| **Yearly** | 170 €/an | Illimité | Illimité |
 
 ### Plan gratuit
 - 1 quiz maximum
@@ -3876,8 +3876,8 @@ Enable **virality** in your quiz settings so participants can share the quiz and
 |------|-------|---------|-----------------|
 | **Free** | €0 | 1 | 10 |
 | **Lifetime** | €57 (one-time) | Unlimited | Unlimited |
-| **Monthly** | €9/mo | Unlimited | Unlimited |
-| **Yearly** | €90/yr | Unlimited | Unlimited |
+| **Monthly** | €17/mo | Unlimited | Unlimited |
+| **Yearly** | €170/yr | Unlimited | Unlimited |
 
 ### Free plan
 - 1 quiz max, 10 responses/month (auto-reset after 30 days)
@@ -3887,9 +3887,9 @@ Enable **virality** in your quiz settings so participants can share the quiz and
 - Unlimited quizzes and responses
 - All Systeme.io integrations
 - Priority support`,
-      es: `## Planes Tiquiz\n\n- **Free**: 0€, 1 quiz, 10 respuestas/mes\n- **Lifetime**: 57€ (una vez), ilimitado\n- **Mensual**: 9€/mes, ilimitado\n- **Anual**: 90€/año, ilimitado`,
-      it: `## Piani Tiquiz\n\n- **Free**: 0€, 1 quiz, 10 risposte/mese\n- **Lifetime**: 57€ (una volta), illimitato\n- **Mensile**: 9€/mese, illimitato\n- **Annuale**: 90€/anno, illimitato`,
-      ar: `## خطط Tiquiz\n\n- **مجاني**: 0€، اختبار واحد، 10 ردود/شهر\n- **مدى الحياة**: 57€ (مرة واحدة)، غير محدود\n- **شهري**: 9€/شهر، غير محدود\n- **سنوي**: 90€/سنة، غير محدود`,
+      es: `## Planes Tiquiz\n\n- **Free**: 0€, 1 quiz, 10 respuestas/mes\n- **Lifetime**: 57€ (una vez), ilimitado\n- **Mensual**: 17€/mes, ilimitado\n- **Anual**: 170€/año, ilimitado`,
+      it: `## Piani Tiquiz\n\n- **Free**: 0€, 1 quiz, 10 risposte/mese\n- **Lifetime**: 57€ (una volta), illimitato\n- **Mensile**: 17€/mese, illimitato\n- **Annuale**: 170€/anno, illimitato`,
+      ar: `## خطط Tiquiz\n\n- **مجاني**: 0€، اختبار واحد، 10 ردود/شهر\n- **مدى الحياة**: 57€ (مرة واحدة)، غير محدود\n- **شهري**: 17€/شهر، غير محدود\n- **سنوي**: 170€/سنة، غير محدود`,
     },
     related_slugs: ["what-is-tiquiz", "tiquiz-create-quiz"],
     tags: ["tiquiz", "plans", "pricing", "free", "lifetime"],

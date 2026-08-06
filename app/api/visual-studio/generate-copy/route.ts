@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
       `NEVER invent a number/%/price/stat absent from the post. Never write "n'importe qui".\n` +
       `Slots (no repetition — each says something DIFFERENT):\n` +
       `- headline: scroll-stopping HOOK, MAX 6 words, matching the post's spirit. NO number/price inside (the accent shows it). No ending period, no emojis.\n` +
-      `- accent: the ONE strongest real figure/comparison from the post (e.g. "9 € vs 50 €", "3 min"), exactly as written. "" if no real figure, or if format is "data"/"beforeAfter".\n` +
+      `- accent: the ONE strongest real figure/comparison from the post (e.g. "17 € vs 50 €", "3 min"), exactly as written. "" if no real figure, or if format is "data"/"beforeAfter".\n` +
       `- accentWord: 1-3 words copied VERBATIM from headline to highlight. "" if headline short.\n` +
       `- subtitle: ONE line (max ~11 words) adding NEW concrete info. Must NOT restate headline nor repeat the figure.\n` +
       `- kicker: OPTIONAL 1-3 word tag with real tension/proof ("TESTÉ", "SANS CB"). NEVER a flat category ("Prix", "Comparatif", "SaaS"). "" if nothing punchy.\n` +
