@@ -129,21 +129,43 @@ test("la base reste assez grosse pour être mise en cache", () => {
   assert.ok(KB.length > 40_000, `base trop courte : ${KB.length} caractères`);
 });
 
-test("le budget de sortie du bot couvre le raisonnement ET la réponse", () => {
-  // Piège des modèles à raisonnement : `max_completion_tokens` compte
-  // les tokens de raisonnement. À 800, un raisonnement un peu long ne
-  // laissait plus de place pour répondre, et l'utilisateur recevait une
-  // bulle VIDE sans qu'aucune erreur ne soit levée.
+test("le bot ne peut pas rendre une bulle vide, ni abandonner au premier essai", () => {
+  // Béné, en testant : "j'ai teste de poser une question simple au bot
+  // et... 502". Le 502 etait le garde-fou ; la cause etait au dessus.
+  //
+  // Sur un modele a raisonnement, `max_completion_tokens` couvre le
+  // RAISONNEMENT et la reponse. En passant la base de connaissances de
+  // 6 000 a 27 000 tokens, le raisonnement s'est allonge au point de
+  // manger tout le budget : `content` revenait vide.
   const route = readFileSync(
     join(process.cwd(), "app/api/support/chat/route.ts"),
     "utf8",
   );
-  const m = route.match(/max_completion_tokens:\s*(\d+)/);
-  assert.ok(m, "max_completion_tokens introuvable dans la route");
+
+  const budgets = [...route.matchAll(/budget:\s*(\d+)/g)].map((m) => Number(m[1]));
+  assert.ok(budgets.length >= 2, "il faut au moins deux tentatives");
   assert.ok(
-    Number(m[1]) >= 1500,
-    `budget de ${m[1]} tokens : trop juste, le raisonnement mange la réponse`,
+    Math.min(...budgets) >= 3000,
+    `budget de ${Math.min(...budgets)} tokens : trop juste, le raisonnement mange la réponse`,
   );
-  // Et une réponse vide doit produire une erreur, jamais un ok: true.
+
+  // La 2e tentative doit agir sur la CAUSE, pas seulement rallonger :
+  // rejouer la meme requete apres un echec du a la longueur du
+  // raisonnement echouerait a l'identique.
+  assert.match(route, /effort:\s*"minimal"/, "aucune tentative ne réduit le raisonnement");
+
+  // Une tentative qui leve ne doit pas emporter la suivante : le catch
+  // doit vivre DANS la boucle, pas autour.
+  const boucle = route.slice(route.indexOf("for (const { budget, effort }"));
+  assert.ok(
+    boucle.slice(0, boucle.indexOf("return \"\";")).includes("} catch"),
+    "la boucle de retry n'est pas protégée : une tentative qui lève emporte la suivante",
+  );
+
+  // Et une reponse vide doit produire une erreur, jamais un ok: true.
   assert.match(route, /if \(!reply\)/, "une réponse vide passerait en ok: true");
+
+  // On journalise de quoi diagnostiquer sans deviner.
+  assert.match(route, /finish_reason/, "finish_reason n'est pas journalisé");
+  assert.match(route, /reasoning_tokens/, "les tokens de raisonnement ne sont pas journalisés");
 });
