@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
+import { prepareUpload } from "@/lib/images/compress";
 import { useShareDomain } from "@/hooks/useShareDomain";
 import { ShareDomainPicker } from "@/components/share/ShareDomainPicker";
 import { QrCodeCard } from "@/components/share/QrCodeCard";
@@ -1206,10 +1207,11 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       const supabase = getSupabaseBrowserClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { toast.error(t("toastNotLoggedIn")); return; }
-      const ext = file.name.split(".").pop() ?? "png";
+      const prepared = await prepareUpload(file, "logos");
+      const ext = prepared.ext;
       // Horodaté comme tous les autres uploads : cf. QuizDetailClient.
       const path = `logos/${user.id}/logo-${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("public-assets").upload(path, file, { upsert: true });
+      const { error } = await supabase.storage.from("public-assets").upload(path, prepared.blob, { upsert: true });
       if (error) throw error;
       const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
       const publicUrl = urlData.publicUrl;
@@ -1240,9 +1242,10 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       const supabase = getSupabaseBrowserClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { toast.error(t("toastNotLoggedIn")); return; }
-      const ext = file.name.split(".").pop() ?? "png";
+      const prepared = await prepareUpload(file, "og");
+      const ext = prepared.ext;
       const path = `og/${user.id}/${quizId}-${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("public-assets").upload(path, file, { upsert: true });
+      const { error } = await supabase.storage.from("public-assets").upload(path, prepared.blob, { upsert: true });
       if (error) throw error;
       const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
       setOgImageUrl(urlData.publicUrl);
@@ -1267,9 +1270,10 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       const supabase = getSupabaseBrowserClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { toast.error(t("toastNotLoggedIn")); return null; }
-      const ext = file.name.split(".").pop() ?? "png";
+      const prepared = await prepareUpload(file, "rich-content");
+      const ext = prepared.ext;
       const path = `rich-content/${user.id}/${quizId}-${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("public-assets").upload(path, file, { upsert: true });
+      const { error } = await supabase.storage.from("public-assets").upload(path, prepared.blob, { upsert: true });
       if (error) throw error;
       const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
       return urlData.publicUrl;
@@ -1328,9 +1332,10 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       const supabase = getSupabaseBrowserClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { toast.error(t("toastNotLoggedIn")); return; }
-      const ext = file.name.split(".").pop() ?? "png";
+      const prepared = await prepareUpload(file, "quiz-options");
+      const ext = prepared.ext;
       const path = `quiz-options/${user.id}/${quizId}-q${qi}-o${oi}-${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("public-assets").upload(path, file, { upsert: true });
+      const { error } = await supabase.storage.from("public-assets").upload(path, prepared.blob, { upsert: true });
       if (error) throw error;
       const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
       setEditQuestions((p) => p.map((q, i) => i !== qi ? q : {
@@ -1367,9 +1372,10 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       const supabase = getSupabaseBrowserClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { toast.error(t("toastNotLoggedIn")); return; }
-      const ext = file.name.split(".").pop() ?? "png";
+      const prepared = await prepareUpload(file, "quiz-questions");
+      const ext = prepared.ext;
       const path = `quiz-questions/${user.id}/${quizId}-q${qi}-${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("public-assets").upload(path, file, { upsert: true });
+      const { error } = await supabase.storage.from("public-assets").upload(path, prepared.blob, { upsert: true });
       if (error) throw error;
       const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
       setQuestionImage(qi, urlData.publicUrl);
