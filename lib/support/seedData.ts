@@ -3641,21 +3641,40 @@ Attiva **"Chiedi il nome"** e/o **"Chiedi il genere"** nella barra laterale per 
       ar: "جمع وإدارة العملاء المحتملين",
     },
     content: {
-      fr: `## Capture de leads
+      fr: `## Le moment de la capture
 
-Quand un participant termine ton quiz, il doit entrer son **email** avant de voir son résultat. Tu peux aussi activer des champs optionnels : **prénom, nom, téléphone, pays**.
+Le visiteur répond à tout, puis il doit entrer son **email** pour voir son résultat. C'est le seul moment où il a une vraie raison de le donner : il a déjà investi deux minutes, et ce qu'il attend est de l'autre côté.
 
-### Où retrouver tes leads ?
+Tu peux demander en plus le **prénom, le nom, le téléphone et le pays**. Chaque champ supplémentaire fait perdre du monde : ne demande que ce dont tu te serviras vraiment. Le prénom vaut souvent le coup, il te permet ensuite d'écrire \`{name}\` dans tes textes de résultat.
 
-Dans la page **Mes leads** ou dans l'onglet **Leads** de chaque quiz. Tu y vois : email, prénom, résultat obtenu, date, statut de partage.
+## Où les retrouver
 
-### Exporter
+**Menu Mes leads** pour tous tes projets réunis, ou l'onglet **Résultats** d'un quiz pour ceux de ce quiz.
 
-Clique sur **Exporter les leads** pour télécharger un fichier CSV avec tous tes contacts.
+Le tableau donne, pour chaque contact : l'email, le nom, le quiz, le **résultat obtenu**, le tag Systeme.io, l'état de la synchronisation et la date. Tu peux chercher par email, prénom ou nom, et filtrer sur un quiz.
 
-### Synchronisation Systeme.io
+En haut, quatre compteurs : le total, les leads **synchronisés** avec Systeme.io, ceux qui ne le sont **pas**, et ceux de ce mois-ci.
 
-Si ta clé API est configurée, chaque lead est **automatiquement synchronisé** : création du contact, application du tag du résultat, inscription en formation et ajout en communauté (si configurés).`,
+## Exporter
+
+Bouton **Exporter CSV**. Le fichier contient l'email, le prénom, le nom, le téléphone, le pays, le quiz, le résultat et la date. Il s'ouvre dans un tableur ou s'importe dans n'importe quel outil d'emailing.
+
+## La synchronisation Systeme.io
+
+Si ta clé API est renseignée (**Paramètres > Systeme.io**), chaque nouveau lead part tout seul :
+1. le contact est créé ou mis à jour ;
+2. le **tag du résultat obtenu** lui est posé ;
+3. si tu les as configurées, l'inscription en formation et l'ajout en communauté suivent.
+
+Une colonne **Sync** montre où en est chaque lead. Un lead non synchronisé n'est jamais perdu : le bouton **Sync** le renvoie, et l'onglet Leads d'un quiz permet de relancer tous ceux qui attendent (utile après une erreur d'API ou un changement de clé).
+
+## Sur le plan gratuit
+
+Le gratuit affiche **10 leads par fenêtre de 30 jours**. Les autres ne sont pas supprimés, ils sont masqués : ils réapparaissent tous dès le passage en plan payant.
+
+## Ce que tu dois savoir sur leurs données
+
+Les données personnelles de tes leads sont **chiffrées** en base, avec une clé propre à ton compte. Personne d'autre que toi n'y accède, et la recherche fonctionne quand même. Tu restes responsable de ce que tu en fais : pense à renseigner l'URL de ta politique de confidentialité dans les réglages du quiz, elle s'affiche sous le formulaire de capture.`,
       en: `## Lead capture
 
 When a participant completes your quiz, they must enter their **email** before seeing their result. You can also enable optional fields: **first name, last name, phone, country**.
@@ -3833,20 +3852,42 @@ Configura la chiave API in **Impostazioni → Systeme.io**. Quando un lead compl
       ar: "تفعيل الانتشار (مكافأة المشاركة)",
     },
     content: {
-      fr: `## Le bonus de partage
+      fr: `## Faire circuler ton quiz
 
-Active la **viralité** dans les paramètres de ton quiz pour que chaque participant puisse partager le quiz et débloquer un bonus.
+Le principe : le visiteur voit son résultat, et un écran lui propose de partager le quiz pour recevoir **un bonus en plus**. Ce n'est pas un partage demandé pour rien, c'est un échange.
 
-### Comment ça marche
-1. Le participant voit son résultat
-2. Un écran lui propose de **partager le quiz** (lien + message pré-rempli)
-3. S'il partage, il **débloque le bonus** que tu as défini (ex : guide PDF, accès privé…)
-4. Un **tag Systeme.io dédié** est appliqué au contact pour identifier les partageurs
+## Le régler
 
-### Configuration
-- **Description du bonus** : ce que le participant reçoit en échange
-- **Message de partage** : le texte pré-rempli pour le partage
-- **Tag SIO share** : le tag appliqué dans Systeme.io aux partageurs`,
+Dans l'éditeur, colonne de droite, panneau **Bonus offert pour un partage** :
+
+- **Description du bonus** : ce qu'il reçoit. Sois concrète. "Mon guide PDF" ne donne envie à personne ; "les 7 phrases qui débloquent un client qui hésite" oui.
+- **Message de partage** : le texte pré-rempli quand il partage. Écris-le à SA place, à la première personne, comme s'il le disait lui-même.
+- **Tag Systeme.io du partage** : le tag posé sur les contacts qui ont partagé.
+
+## Comment le bonus lui arrive
+
+C'est la partie qu'on oublie le plus souvent, et sans elle rien ne part.
+
+Tiquiz pose le **tag**. C'est tout. C'est ensuite dans Systeme.io que tu crées une automatisation :
+1. Systeme.io > **Automatisations > Règles > Créer une règle**
+2. Déclencheur : **Tag ajouté à un contact**, ton tag de partage
+3. Action : **Envoyer un email**, celui qui contient le lien du bonus
+
+Le fichier lui-même est hébergé où tu veux (un drive, une page de ton site), avec un partage réglé sur "tout le monde avec le lien" en lecture. Sinon le visiteur tombe sur une page d'erreur que toi tu ne verras jamais, puisque toi tu y as accès.
+
+**Ne colle pas le lien du bonus dans la page de résultat.** Cette page mène déjà à ton offre : empiler les deux dilue les deux.
+
+## Choisir les réseaux
+
+Dans les réglages du quiz. **Si tu ne coches rien, tous les réseaux s'affichent**, c'est voulu : mieux vaut trop de choix que priver ton visiteur d'Instagram ou de WhatsApp sans le savoir.
+
+## Un taux de partage bas n'est pas forcément un problème
+
+Sur un sujet intime ou qui expose (santé, santé mentale, argent, poids, famille, neuroatypie), partager publiquement revient à se dévoiler. Le taux sera bas, et ce n'est ni un défaut de ton quiz ni un bonus trop faible. Sur ces sujets, vise la qualité des leads, pas la viralité.
+
+## Le partage de fin de résultat, séparément
+
+Indépendamment du bonus, un bouton de partage simple s'affiche en bas du résultat. Il se désactive avec **"Afficher le bouton de partage"**. Le lien qu'il partage est celui du **profil obtenu**, pas celui du quiz : la personne qui clique voit le résultat de son amie, ce qui donne beaucoup plus envie de le passer.`,
       en: `## Share bonus
 
 Enable **virality** in your quiz settings so participants can share the quiz and unlock a bonus.
