@@ -79,10 +79,10 @@
 À respecter à 100% dans tous les chantiers ci-dessous :
 
 - **Tiquiz lifetime à 57€ N'EST PLUS COMMERCIALISÉ** (terminé depuis
-  longtemps). Plans actifs : Free / Monthly 9€ / Yearly 90€. Les lifetime
+  longtemps). Plans actifs : Free / Monthly 17€ / Yearly 170€. Les lifetime
   existants restent grandfathérés à vie côté DB / pricing.
 - **Nouveau pricing Tiquiz à venir** : 19€/mois et 190€/an pour les
-  futurs users uniquement. Les abonnés actuels (9€/90€) sont grandfathérés
+  futurs users uniquement. Les abonnés actuels (17€/170€) sont grandfathérés
   — leur ligne de prix ne doit pas changer sans accord explicite. Le
   switch utilise une colonne `pricing_grandfathered_at` ou équivalent.
 - **Bridge Tiquiz → Tipote in-app IMPOSSIBLE** tant que Systeme.io n'a
@@ -409,12 +409,12 @@ Optionnel mais gros différenciateur vs Typeform :
 
 - `profiles.pricing_grandfathered_at TIMESTAMPTZ` (NULL = nouveau prix)
 - Backfill : tous les users existants au moment du switch reçoivent
-  `now()` → grandfathérés à vie sur 9€/90€.
+  `now()` → grandfathérés à vie sur 17€/170€.
 
 ### 6.B Pages pricing + checkout
 
 - `/pricing` : affichage conditionnel. Si user connecté et grandfathéré,
-  voit 9€/90€. Sinon 19€/190€.
+  voit 17€/170€. Sinon 19€/190€.
 - Stripe : nouveaux prix (nouveaux Price IDs). Anciens prix gardés pour
   les grandfathérés.
 - Webhook Stripe : reconnaît le Price ID utilisé pour appliquer le bon

@@ -5906,9 +5906,9 @@
     "reopen": "Rouvrir"
   },
   "adminSupport": {
-    "seedConfirm": "Ceci va insérer/mettre à jour toutes les catégories et articles. Continuer ?",
-    "seedButton": "Seed / Mettre à jour le contenu",
-    "seeding": "Seeding...",
+    "seedConfirm": "Ceci met en ligne toutes les catégories et tous les articles d'aide livrés avec cette version. Les articles existants sont mis à jour, aucun n'est supprimé. Continuer ?",
+    "seedButton": "Publier le contenu d'aide",
+    "seeding": "Publication…",
     "tagsCsvLabel": "Tags (séparés par des virgules)",
     "relatedSlugsLabel": "Articles liés (slugs, séparés par des virgules)"
   },

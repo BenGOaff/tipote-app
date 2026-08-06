@@ -5906,9 +5906,9 @@
     "reopen": "Reopen"
   },
   "adminSupport": {
-    "seedConfirm": "This will insert/update all categories and articles. Continue?",
-    "seedButton": "Seed / Update content",
-    "seeding": "Seeding...",
+    "seedConfirm": "This publishes every help category and article shipped with this version. Existing articles are updated, none are deleted. Continue?",
+    "seedButton": "Publish help content",
+    "seeding": "Publishing…",
     "tagsCsvLabel": "Tags (comma-separated)",
     "relatedSlugsLabel": "Related articles (slugs, comma-separated)"
   },

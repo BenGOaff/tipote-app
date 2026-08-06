@@ -5906,9 +5906,9 @@
     "reopen": "Reabrir"
   },
   "adminSupport": {
-    "seedConfirm": "Esto insertará/actualizará todas las categorías y artículos. ¿Continuar?",
-    "seedButton": "Seed / Actualizar contenido",
-    "seeding": "Sembrando...",
+    "seedConfirm": "Esto publica todas las categorías y artículos de ayuda incluidos en esta versión. Los artículos existentes se actualizan, no se borra ninguno. ¿Continuar?",
+    "seedButton": "Publicar el contenido de ayuda",
+    "seeding": "Publicando…",
     "tagsCsvLabel": "Etiquetas (separadas por comas)",
     "relatedSlugsLabel": "Artículos relacionados (slugs, separados por comas)"
   },

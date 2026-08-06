@@ -1,6 +1,16 @@
 // lib/support/seedData.ts
-// Comprehensive help center content - 10 categories, 60+ articles
-// Each article has FR/EN/ES/IT/AR translations
+// Comprehensive help center content.
+//
+// Chaque article porte FR/EN/ES/IT/AR. FR et EN sont complets, ES/IT/AR
+// sont des versions condensees mais autonomes : elles doivent rester
+// utilisables seules, jamais un renvoi vers le francais.
+//
+// ATTENTION : ce fichier ne suffit PAS. Les articles vivent en base, et
+// modifier ce fichier ne change RIEN en production tant que personne n'a
+// cliqué sur "Mettre à jour le contenu d'aide" dans Admin > Support.
+// C'est le meme piege qu'une migration SQL jamais appliquee : le code est
+// juste, l'ecran ne bouge pas. A rappeler dans chaque message de livraison
+// qui touche a ce fichier.
 
 export type SeedCategory = {
   slug: string;
@@ -300,9 +310,9 @@ Chaque contenu généré est **réellement personnalisé** pour votre business.
 7. **Gestion des leads** - Centralisez et exportez vos prospects (chiffrement AES-256)
 8. **Analytics IA** - Suivez vos KPIs et recevez un diagnostic business
 
-### Disponible en 5 langues
+### Disponible en 7 langues
 
-Tipote fonctionne en Français, English, Español, Italiano et العربية.
+L'interface existe en Français, English, Español, Italiano, Português, Português do Brasil et العربية. Cette aide, elle, est écrite en 5 langues (français, anglais, espagnol, italien, arabe) : si tu lis en portugais, les articles s'affichent en français.
 
 > **Prochaine étape :** [Créer votre compte et compléter l'onboarding](/support/article/create-account)`,
       en: `## Tipote, your business buddy
@@ -336,9 +346,9 @@ Every generated content is **truly personalized** for your business.
 7. **Lead management** - Centralize and export your prospects (AES-256 encryption)
 8. **AI Analytics** - Track your KPIs and get a business diagnosis
 
-### Available in 5 languages
+### Available in 7 languages
 
-Tipote works in Français, English, Español, Italiano and العربية.
+The interface exists in Français, English, Español, Italiano, Português, Português do Brasil and العربية. This help centre is written in 5 of them (French, English, Spanish, Italian, Arabic): if you read in Portuguese, articles show in French.
 
 > **Next step:** [Create your account and complete onboarding](/support/article/create-account)`,
       es: `## Tipote, tu compañero de negocios
@@ -996,7 +1006,7 @@ Accedi alle impostazioni da **⚙️ Impostazioni** nella sidebar. 7 schede: Pro
     content: {
       fr: `## Changer de langue en 2 clics
 
-Tipote est disponible en **5 langues** : Français, English, Español, Italiano et العربية.
+Tipote est disponible en **7 langues** : Français, English, Español, Italiano, Português, Português do Brasil et العربية.
 
 ### Méthode 1 : Depuis les paramètres
 
@@ -1025,7 +1035,7 @@ L'interface passe automatiquement en mode **droite-à-gauche (RTL)** quand vous 
 > **Voir aussi :** [Les paramètres](/support/article/settings-overview)`,
       en: `## Change language in 2 clicks
 
-Tipote is available in **5 languages**: Français, English, Español, Italiano and العربية.
+Tipote is available in **7 languages**: Français, English, Español, Italiano, Português, Português do Brasil and العربية.
 
 ### From Settings
 Go to **Settings > General** and select your preferred language.
@@ -1039,10 +1049,10 @@ These are **independent** settings. You can use Tipote in French but generate co
 > **See also:** [Settings overview](/support/article/settings-overview)`,
       es: `## Cambia el idioma en 2 clics
 
-Tipote está disponible en 5 idiomas. Ve a **Configuración > Ajustes** o usa el selector en la barra lateral.`,
+Tipote está disponible en 7 idiomas. Ve a **Configuración > Ajustes** o usa el selector en la barra lateral.`,
       it: `## Cambia lingua in 2 clic
 
-Tipote è disponibile in 5 lingue. Vai in **Impostazioni > Impostazioni** o usa il selettore nella sidebar.`,
+Tipote è disponibile in 7 lingue. Vai in **Impostazioni > Impostazioni** o usa il selettore nella sidebar.`,
       ar: `## غيّر اللغة بنقرتين
 
 Tipote متاح بـ 5 لغات. اذهب إلى **الإعدادات > الإعدادات** أو استخدم محدد اللغة في الشريط الجانبي.`,
@@ -3388,30 +3398,48 @@ In **Impostazioni > Impostazioni** → "Zona pericolosa" → "Elimina il mio acc
 
 ### Ce que tu peux faire avec Tiquiz
 
-- **Créer des quiz** manuellement ou les **générer avec l'IA** (Claude)
+- **Créer des quiz** à la main ou les **faire écrire par l'IA** à partir d'une phrase
+- **Créer des sondages** pour poser tes questions à ton audience et lire les réponses
+- **Créer des popquizzes** : un quiz incrusté dans une vidéo, qui capture pendant le visionnage
 - **Capturer des leads** (email, prénom, nom, téléphone, pays)
-- **Synchroniser automatiquement** avec Systeme.io (tags, formations, communautés)
-- **Activer la viralité** : tes participants partagent le quiz pour débloquer un bonus
-- **Suivre les performances** : vues, taux de complétion, conversions, partages
+- **Synchroniser avec Systeme.io** tout seul : contact créé, tag du résultat posé, inscription en formation ou en communauté
+- **Offrir un bonus contre un partage** pour que ton quiz circule
+- **Suivre ce qui se passe** : vues, taux de complétion, où les gens s'arrêtent, résultats obtenus, partages
+- **Mettre ta marque partout** : logo, couleurs, polices, et ton propre nom de domaine
 
 ### Accès
 
-Tiquiz est accessible sur **quiz.tipote.com**. Disponible en 5 langues : français, anglais, espagnol, italien et arabe.`,
+Tiquiz s'utilise sur **quiz.tipote.com**, dans le navigateur, sans rien installer.
+
+L'interface existe en 7 langues : français, anglais, espagnol, italien, portugais, portugais du Brésil et arabe. Tes quiz publics, eux, peuvent être dans n'importe quelle langue : c'est toi qui écris le texte.
+
+### Tiquiz ou Tipote ?
+
+**Tiquiz** ne fait que du quiz, et le fait à fond. **Tipote** est un outil plus large (contenus, réseaux sociaux, automatisations, pages) dont le quiz n'est qu'un module. Si tu ne veux que du quiz, reste sur Tiquiz.`,
       en: `## Tiquiz in a nutshell
 
 **Tiquiz** is an interactive quiz creation tool designed to capture qualified leads. It's the quiz-only version of Tipote: simple for users, powerful under the hood.
 
 ### What you can do with Tiquiz
 
-- **Create quizzes** manually or **generate them with AI** (Claude)
+- **Create quizzes** by hand, or **have the AI write one** from a single sentence
+- **Create surveys** to ask your audience questions and read the answers
+- **Create popquizzes**: a quiz embedded in a video that captures while people watch
 - **Capture leads** (email, first name, last name, phone, country)
-- **Auto-sync** with Systeme.io (tags, courses, communities)
-- **Enable virality**: participants share the quiz to unlock a bonus
-- **Track performance**: views, completion rate, conversions, shares
+- **Sync with Systeme.io** on its own: contact created, result tag applied, course or community enrolment
+- **Offer a bonus in exchange for a share** so your quiz travels
+- **See what happens**: views, completion rate, where people stop, results obtained, shares
+- **Put your brand everywhere**: logo, colours, fonts, and your own domain name
 
 ### Access
 
-Tiquiz is available at **quiz.tipote.com**. Available in 5 languages: French, English, Spanish, Italian, and Arabic.`,
+Tiquiz runs at **quiz.tipote.com**, in the browser, nothing to install.
+
+The interface exists in 7 languages: French, English, Spanish, Italian, Portuguese, Brazilian Portuguese and Arabic. Your public quizzes can be in any language: you write the text.
+
+### Tiquiz or Tipote?
+
+**Tiquiz** only does quizzes, and does them thoroughly. **Tipote** is a wider tool (content, social, automations, pages) where quizzes are one module. If you only want quizzes, stay on Tiquiz.`,
       es: `## Tiquiz en resumen
 
 **Tiquiz** es una herramienta de creación de quiz interactivos para capturar leads cualificados. Es la versión quiz de Tipote: simple para el usuario, potente por detrás.
@@ -3420,7 +3448,7 @@ Tiquiz is available at **quiz.tipote.com**. Available in 5 languages: French, En
 - Captura leads (email, nombre, teléfono, país)
 - Sincronización automática con Systeme.io
 - Viralidad: los participantes comparten para desbloquear un bonus
-- Acceso en **quiz.tipote.com** en 5 idiomas`,
+- También encuestas y popquizzes (quiz dentro de un vídeo)\n- Estadísticas: vistas, finalización, dónde se detiene la gente\n- Tu marca y tu propio dominio\n- Acceso en **quiz.tipote.com**, interfaz en 7 idiomas`,
       it: `## Tiquiz in breve
 
 **Tiquiz** è uno strumento per creare quiz interattivi e catturare lead qualificati. È la versione quiz di Tipote: semplice per l'utente, potente nel backend.
@@ -3429,7 +3457,7 @@ Tiquiz is available at **quiz.tipote.com**. Available in 5 languages: French, En
 - Cattura lead (email, nome, telefono, paese)
 - Sincronizzazione automatica con Systeme.io
 - Viralità: i partecipanti condividono per sbloccare un bonus
-- Accesso su **quiz.tipote.com** in 5 lingue`,
+- Anche sondaggi e popquiz (quiz dentro un video)\n- Statistiche: visite, completamento, dove le persone si fermano\n- Il tuo brand e il tuo dominio\n- Accesso su **quiz.tipote.com**, interfaccia in 7 lingue`,
       ar: `## Tiquiz باختصار
 
 **Tiquiz** هو أداة لإنشاء اختبارات تفاعلية لجمع عملاء محتملين مؤهلين. هو نسخة الاختبارات من Tipote: بسيط للمستخدم، قوي في الخلفية.
@@ -3437,7 +3465,7 @@ Tiquiz is available at **quiz.tipote.com**. Available in 5 languages: French, En
 - إنشاء اختبارات يدوياً أو بالذكاء الاصطناعي
 - جمع العملاء المحتملين (بريد، اسم، هاتف، بلد)
 - مزامنة تلقائية مع Systeme.io
-- متاح على **quiz.tipote.com** بخمس لغات`,
+- كذلك استطلاعات وبوب كويز (اختبار داخل فيديو)\n- إحصاءات: المشاهدات، نسبة الإكمال، أين يتوقف الناس\n- علامتك التجارية ونطاقك الخاص\n- متاح على **quiz.tipote.com**، بواجهة بسبع لغات`,
     },
     related_slugs: ["tiquiz-create-quiz", "tiquiz-plans"],
     tags: ["tiquiz", "quiz", "leads", "overview"],
@@ -3469,7 +3497,7 @@ Rendez-vous sur **Créer un quiz** dans la sidebar. Tu as 3 options :
 - Choisis un **objectif** parmi 16 objectifs stratégiques
 - Décris ton **public cible** et le **ton** souhaité
 - Choisis le **format** (court : 3-5 questions, long : 6-10)
-- Choisis le type de **segmentation** (par profil ou par niveau)
+- Choisis le type de quiz : **par profil** (qui es-tu ?) ou **avec un score** (où en es-tu ?). C'est la seule décision difficile : si tu hésites, lis « Profil ou score : lequel choisir ? » avant de continuer
 - Clique sur **Générer** - l'IA crée tout en temps réel !
 
 ### Option 3 : Importer depuis un fichier
@@ -3521,7 +3549,7 @@ Go to **Create a quiz** in the sidebar. You have 3 options:
 - Choose an **objective** from 16 strategic objectives
 - Describe your **target audience** and desired **tone**
 - Pick the **format** (short: 3-5 questions, long: 6-10)
-- Choose **segmentation** type (by profile or by level)
+- Choose the quiz type: **by profile** (who are you?) or **scored** (where are you at?). This is the one hard decision: if you hesitate, read "Profile or score: which one?" first
 - Click **Generate** - AI creates everything in real time!
 
 ### Option 3: Import from a file
@@ -3598,13 +3626,13 @@ Attiva **"Chiedi il nome"** e/o **"Chiedi il genere"** nella barra laterale per 
 
 **كيف يعمل:** انقر زر **✨** بجانب أي حقل → يُولّد الذكاء الاصطناعي 3 صيغ (مذكر، مؤنث، محايد) محفوظة بصيغة \`{جاهز|جاهزة|جاهز}\`. عنصر النائب \`{name}\` يُدرج اسم الزائر. إذا فعّلت "الجنس" **بعد** توليد الاختبار، زر **"توليد جميع الصيغ"** يعالج كل الحقول دفعة واحدة.`,
     },
-    related_slugs: ["what-is-tiquiz", "tiquiz-leads", "tiquiz-systeme-io"],
+    related_slugs: ["tiquiz-profil-ou-score", "what-is-tiquiz", "tiquiz-mise-en-page"],
     tags: ["tiquiz", "quiz", "create", "ai", "manual", "import", "personalization", "gender", "genderize"],
   },
   {
     category_slug: "tiquiz",
     slug: "tiquiz-leads",
-    sort_order: 3,
+    sort_order: 4,
     title: {
       fr: "Capturer et gérer les leads",
       en: "Capture and manage leads",
@@ -3613,21 +3641,40 @@ Attiva **"Chiedi il nome"** e/o **"Chiedi il genere"** nella barra laterale per 
       ar: "جمع وإدارة العملاء المحتملين",
     },
     content: {
-      fr: `## Capture de leads
+      fr: `## Le moment de la capture
 
-Quand un participant termine ton quiz, il doit entrer son **email** avant de voir son résultat. Tu peux aussi activer des champs optionnels : **prénom, nom, téléphone, pays**.
+Le visiteur répond à tout, puis il doit entrer son **email** pour voir son résultat. C'est le seul moment où il a une vraie raison de le donner : il a déjà investi deux minutes, et ce qu'il attend est de l'autre côté.
 
-### Où retrouver tes leads ?
+Tu peux demander en plus le **prénom, le nom, le téléphone et le pays**. Chaque champ supplémentaire fait perdre du monde : ne demande que ce dont tu te serviras vraiment. Le prénom vaut souvent le coup, il te permet ensuite d'écrire \`{name}\` dans tes textes de résultat.
 
-Dans la page **Mes leads** ou dans l'onglet **Leads** de chaque quiz. Tu y vois : email, prénom, résultat obtenu, date, statut de partage.
+## Où les retrouver
 
-### Exporter
+**Menu Mes leads** pour tous tes projets réunis, ou l'onglet **Résultats** d'un quiz pour ceux de ce quiz.
 
-Clique sur **Exporter les leads** pour télécharger un fichier CSV avec tous tes contacts.
+Le tableau donne, pour chaque contact : l'email, le nom, le quiz, le **résultat obtenu**, le tag Systeme.io, l'état de la synchronisation et la date. Tu peux chercher par email, prénom ou nom, et filtrer sur un quiz.
 
-### Synchronisation Systeme.io
+En haut, quatre compteurs : le total, les leads **synchronisés** avec Systeme.io, ceux qui ne le sont **pas**, et ceux de ce mois-ci.
 
-Si ta clé API est configurée, chaque lead est **automatiquement synchronisé** : création du contact, application du tag du résultat, inscription en formation et ajout en communauté (si configurés).`,
+## Exporter
+
+Bouton **Exporter CSV**. Le fichier contient l'email, le prénom, le nom, le téléphone, le pays, le quiz, le résultat et la date. Il s'ouvre dans un tableur ou s'importe dans n'importe quel outil d'emailing.
+
+## La synchronisation Systeme.io
+
+Si ta clé API est renseignée (**Paramètres > Systeme.io**), chaque nouveau lead part tout seul :
+1. le contact est créé ou mis à jour ;
+2. le **tag du résultat obtenu** lui est posé ;
+3. si tu les as configurées, l'inscription en formation et l'ajout en communauté suivent.
+
+Une colonne **Sync** montre où en est chaque lead. Un lead non synchronisé n'est jamais perdu : le bouton **Sync** le renvoie, et l'onglet Leads d'un quiz permet de relancer tous ceux qui attendent (utile après une erreur d'API ou un changement de clé).
+
+## Sur le plan gratuit
+
+Le gratuit affiche **10 leads par fenêtre de 30 jours**. Les autres ne sont pas supprimés, ils sont masqués : ils réapparaissent tous dès le passage en plan payant.
+
+## Ce que tu dois savoir sur leurs données
+
+Les données personnelles de tes leads sont **chiffrées** en base, avec une clé propre à ton compte. Personne d'autre que toi n'y accède, et la recherche fonctionne quand même. Tu restes responsable de ce que tu en fais : pense à renseigner l'URL de ta politique de confidentialité dans les réglages du quiz, elle s'affiche sous le formulaire de capture.`,
       en: `## Lead capture
 
 When a participant completes your quiz, they must enter their **email** before seeing their result. You can also enable optional fields: **first name, last name, phone, country**.
@@ -3659,7 +3706,7 @@ Il partecipante deve inserire la sua email prima di vedere il risultato. Puoi at
   {
     category_slug: "tiquiz",
     slug: "tiquiz-systeme-io",
-    sort_order: 4,
+    sort_order: 5,
     title: {
       fr: "Connecter Systeme.io",
       en: "Connect Systeme.io",
@@ -3796,7 +3843,7 @@ Configura la chiave API in **Impostazioni → Systeme.io**. Quando un lead compl
   {
     category_slug: "tiquiz",
     slug: "tiquiz-virality",
-    sort_order: 5,
+    sort_order: 6,
     title: {
       fr: "Activer la viralité (bonus de partage)",
       en: "Enable virality (share bonus)",
@@ -3805,20 +3852,42 @@ Configura la chiave API in **Impostazioni → Systeme.io**. Quando un lead compl
       ar: "تفعيل الانتشار (مكافأة المشاركة)",
     },
     content: {
-      fr: `## Le bonus de partage
+      fr: `## Faire circuler ton quiz
 
-Active la **viralité** dans les paramètres de ton quiz pour que chaque participant puisse partager le quiz et débloquer un bonus.
+Le principe : le visiteur voit son résultat, et un écran lui propose de partager le quiz pour recevoir **un bonus en plus**. Ce n'est pas un partage demandé pour rien, c'est un échange.
 
-### Comment ça marche
-1. Le participant voit son résultat
-2. Un écran lui propose de **partager le quiz** (lien + message pré-rempli)
-3. S'il partage, il **débloque le bonus** que tu as défini (ex : guide PDF, accès privé…)
-4. Un **tag Systeme.io dédié** est appliqué au contact pour identifier les partageurs
+## Le régler
 
-### Configuration
-- **Description du bonus** : ce que le participant reçoit en échange
-- **Message de partage** : le texte pré-rempli pour le partage
-- **Tag SIO share** : le tag appliqué dans Systeme.io aux partageurs`,
+Dans l'éditeur, colonne de droite, panneau **Bonus offert pour un partage** :
+
+- **Description du bonus** : ce qu'il reçoit. Sois concrète. "Mon guide PDF" ne donne envie à personne ; "les 7 phrases qui débloquent un client qui hésite" oui.
+- **Message de partage** : le texte pré-rempli quand il partage. Écris-le à SA place, à la première personne, comme s'il le disait lui-même.
+- **Tag Systeme.io du partage** : le tag posé sur les contacts qui ont partagé.
+
+## Comment le bonus lui arrive
+
+C'est la partie qu'on oublie le plus souvent, et sans elle rien ne part.
+
+Tiquiz pose le **tag**. C'est tout. C'est ensuite dans Systeme.io que tu crées une automatisation :
+1. Systeme.io > **Automatisations > Règles > Créer une règle**
+2. Déclencheur : **Tag ajouté à un contact**, ton tag de partage
+3. Action : **Envoyer un email**, celui qui contient le lien du bonus
+
+Le fichier lui-même est hébergé où tu veux (un drive, une page de ton site), avec un partage réglé sur "tout le monde avec le lien" en lecture. Sinon le visiteur tombe sur une page d'erreur que toi tu ne verras jamais, puisque toi tu y as accès.
+
+**Ne colle pas le lien du bonus dans la page de résultat.** Cette page mène déjà à ton offre : empiler les deux dilue les deux.
+
+## Choisir les réseaux
+
+Dans les réglages du quiz. **Si tu ne coches rien, tous les réseaux s'affichent**, c'est voulu : mieux vaut trop de choix que priver ton visiteur d'Instagram ou de WhatsApp sans le savoir.
+
+## Un taux de partage bas n'est pas forcément un problème
+
+Sur un sujet intime ou qui expose (santé, santé mentale, argent, poids, famille, neuroatypie), partager publiquement revient à se dévoiler. Le taux sera bas, et ce n'est ni un défaut de ton quiz ni un bonus trop faible. Sur ces sujets, vise la qualité des leads, pas la viralité.
+
+## Le partage de fin de résultat, séparément
+
+Indépendamment du bonus, un bouton de partage simple s'affiche en bas du résultat. Il se désactive avec **"Afficher le bouton de partage"**. Le lien qu'il partage est celui du **profil obtenu**, pas celui du quiz : la personne qui clique voit le résultat de son amie, ce qui donne beaucoup plus envie de le passer.`,
       en: `## Share bonus
 
 Enable **virality** in your quiz settings so participants can share the quiz and unlock a bonus.
@@ -3833,9 +3902,54 @@ Enable **virality** in your quiz settings so participants can share the quiz and
 - **Bonus description**: what the participant gets
 - **Share message**: pre-filled sharing text
 - **SIO share tag**: Systeme.io tag for sharers`,
-      es: `## Bonus de compartir\n\nActiva la **viralidad** en los ajustes de tu quiz. Cuando el participante comparte, desbloquea un bonus y recibe un tag dedicado en Systeme.io.`,
-      it: `## Bonus condivisione\n\nAttiva la **viralità** nelle impostazioni del quiz. Quando il partecipante condivide, sblocca un bonus e riceve un tag dedicato in Systeme.io.`,
-      ar: `## مكافأة المشاركة\n\nفعّل **الانتشار** في إعدادات اختبارك. عندما يشارك المشارك، يفتح مكافأة ويحصل على وسم مخصص في Systeme.io.`,
+      es: `## Bonus de compartir
+
+Activa la **viralidad** en los ajustes de tu quiz para que cada participante pueda compartirlo y desbloquear un bonus.
+
+### Cómo funciona
+1. El participante ve su resultado.
+2. Una pantalla le propone **compartir el quiz** (enlace y mensaje ya preparados).
+3. Si comparte, **desbloquea el bonus** que hayas definido (una guía en PDF, un acceso privado…).
+4. Se le aplica un **tag dedicado de Systeme.io** para identificar a quienes comparten.
+
+### Qué configurar
+- **Descripción del bonus**: lo que recibe a cambio.
+- **Mensaje de compartir**: el texto ya escrito.
+- **Tag SIO de compartir**: el tag que reciben en Systeme.io.
+
+Un porcentaje bajo de compartidos no siempre significa que el bonus sea flojo: en temas íntimos (salud, dinero, peso, familia), compartir en público es exponerse.`,
+      it: `## Bonus condivisione
+
+Attiva la **viralità** nelle impostazioni del quiz, così ogni partecipante può condividerlo e sbloccare un bonus.
+
+### Come funziona
+1. Il partecipante vede il suo risultato.
+2. Una schermata gli propone di **condividere il quiz** (link e messaggio già pronti).
+3. Se condivide, **sblocca il bonus** che hai definito (una guida PDF, un accesso privato…).
+4. Gli viene applicato un **tag dedicato di Systeme.io** per riconoscere chi condivide.
+
+### Cosa configurare
+- **Descrizione del bonus**: cosa riceve in cambio.
+- **Messaggio di condivisione**: il testo già scritto.
+- **Tag SIO condivisione**: il tag che riceve in Systeme.io.
+
+Una percentuale di condivisione bassa non significa sempre che il bonus sia debole: su temi intimi (salute, denaro, peso, famiglia), condividere in pubblico significa esporsi.`,
+      ar: `## مكافأة المشاركة
+
+فعّل **الانتشار** في إعدادات اختبارك ليتمكن كل مشارك من مشاركته وفتح مكافأة.
+
+### كيف تعمل
+1. يرى المشارك نتيجته.
+2. تظهر له شاشة تقترح **مشاركة الاختبار** (رابط ورسالة جاهزان).
+3. إذا شارك، **يفتح المكافأة** التي حددتها (دليل PDF، وصول خاص…).
+4. يُطبَّق عليه **وسم مخصص في Systeme.io** للتعرّف على من يشارك.
+
+### ما الذي تضبطه
+- **وصف المكافأة**: ما يحصل عليه في المقابل.
+- **رسالة المشاركة**: النص الجاهز.
+- **وسم المشاركة في SIO**: الوسم الذي يحصل عليه.
+
+انخفاض نسبة المشاركة لا يعني دائمًا أن المكافأة ضعيفة: في المواضيع الحساسة (الصحة، المال، الوزن، العائلة)، المشاركة العلنية تعني كشف النفس.`,
     },
     related_slugs: ["tiquiz-leads", "tiquiz-systeme-io"],
     tags: ["tiquiz", "virality", "share", "bonus"],
@@ -3843,7 +3957,7 @@ Enable **virality** in your quiz settings so participants can share the quiz and
   {
     category_slug: "tiquiz",
     slug: "tiquiz-plans",
-    sort_order: 6,
+    sort_order: 13,
     title: {
       fr: "Plans et tarifs Tiquiz",
       en: "Tiquiz plans and pricing",
@@ -3857,41 +3971,1564 @@ Enable **virality** in your quiz settings so participants can share the quiz and
 | Plan | Prix | Quiz | Réponses/mois |
 |------|------|------|---------------|
 | **Free** | 0 € | 1 | 10 |
-| **Lifetime** | 57 € (une fois) | Illimité | Illimité |
-| **Monthly** | 9 €/mois | Illimité | Illimité |
-| **Yearly** | 90 €/an | Illimité | Illimité |
+| **Mensuel** | 17 €/mois | Illimité | Illimité |
+| **Annuel** | 170 €/an | Illimité | Illimité |
+| **Mensuel Plus** | 29 €/mois | Illimité | Illimité |
+| **Annuel Plus** | 290 €/an | Illimité | Illimité |
 
-### Plan gratuit
-- 1 quiz maximum
-- 10 réponses par mois (reset automatique après 30 jours)
-- Toutes les fonctionnalités de base (IA, SIO, viralité)
+Les tarifs à jour et les boutons de commande sont toujours dans **Paramètres > Abonnement**, dans ton compte. C'est la seule page qui ne peut pas se tromper.
 
-### Plans payants
-- Quiz et réponses **illimités**
-- Toutes les intégrations Systeme.io
-- Support prioritaire`,
+### Le plan gratuit
+- 1 quiz, 1 sondage et 1 popquiz
+- 10 réponses par mois (le compteur repart tout seul après 30 jours)
+- Toutes les fonctions de base : génération par l'IA, Systeme.io, bonus de partage
+
+Le gratuit n'expire pas. Tu peux rester dessus le temps que tu veux pour tester sur ta vraie audience.
+
+### Mensuel et Annuel
+Quiz, sondages, popquizzes et réponses **illimités**. L'annuel revient à 10 mois payés pour 12 : deux mois offerts.
+
+### Mensuel Plus et Annuel Plus
+Tout le plan simple, plus :
+- les **multiprofils** : plusieurs espaces séparés dans le même compte, un par marque ou par cliente
+- l'**analyse IA** de tes résultats (quiz et sondages)
+- **plusieurs clés Systeme.io**, une par espace
+
+C'est le plan des agences, des freelances qui montent des quiz pour leurs clientes, et de celles qui gèrent plusieurs marques. Si tu n'as qu'une marque, le plan simple suffit.
+
+### Changer de plan
+Le passage d'un plan à l'autre est automatique : le nouveau démarre, l'ancien est annulé chez Systeme.io. Tu n'es jamais facturée deux fois.
+
+### Tu as un accès à vie ?
+L'offre à vie à 57 € des tout débuts n'est plus vendue. Si tu l'as prise, elle reste **valable et illimitée** : tu n'as rien à faire et rien à repayer.`,
       en: `## Tiquiz Plans
 
 | Plan | Price | Quizzes | Responses/month |
 |------|-------|---------|-----------------|
 | **Free** | €0 | 1 | 10 |
-| **Lifetime** | €57 (one-time) | Unlimited | Unlimited |
-| **Monthly** | €9/mo | Unlimited | Unlimited |
-| **Yearly** | €90/yr | Unlimited | Unlimited |
+| **Monthly** | €17/mo | Unlimited | Unlimited |
+| **Yearly** | €170/yr | Unlimited | Unlimited |
+| **Monthly Plus** | €29/mo | Unlimited | Unlimited |
+| **Yearly Plus** | €290/yr | Unlimited | Unlimited |
+
+Current prices and checkout buttons always live in **Settings > Subscription**, inside your account. That page cannot be out of date.
 
 ### Free plan
-- 1 quiz max, 10 responses/month (auto-reset after 30 days)
-- All basic features (AI, SIO, virality)
+- 1 quiz, 1 survey and 1 popquiz
+- 10 responses per month (the counter resets on its own after 30 days)
+- All core features: AI generation, Systeme.io, share bonus
 
-### Paid plans
-- Unlimited quizzes and responses
-- All Systeme.io integrations
-- Priority support`,
-      es: `## Planes Tiquiz\n\n- **Free**: 0€, 1 quiz, 10 respuestas/mes\n- **Lifetime**: 57€ (una vez), ilimitado\n- **Mensual**: 9€/mes, ilimitado\n- **Anual**: 90€/año, ilimitado`,
-      it: `## Piani Tiquiz\n\n- **Free**: 0€, 1 quiz, 10 risposte/mese\n- **Lifetime**: 57€ (una volta), illimitato\n- **Mensile**: 9€/mese, illimitato\n- **Annuale**: 90€/anno, illimitato`,
-      ar: `## خطط Tiquiz\n\n- **مجاني**: 0€، اختبار واحد، 10 ردود/شهر\n- **مدى الحياة**: 57€ (مرة واحدة)، غير محدود\n- **شهري**: 9€/شهر، غير محدود\n- **سنوي**: 90€/سنة، غير محدود`,
+Free does not expire. Stay on it as long as you need to test with your real audience.
+
+### Monthly and Yearly
+Unlimited quizzes, surveys, popquizzes and responses. Yearly is 10 months paid for 12: two months free.
+
+### Monthly Plus and Yearly Plus
+Everything in the simple plan, plus:
+- **multi-workspaces**: separate spaces in one account, one per brand or per client
+- **AI analysis** of your results (quizzes and surveys)
+- **multiple Systeme.io keys**, one per workspace
+
+This is the plan for agencies, freelancers building quizzes for clients, and anyone running several brands. One brand only? The simple plan is enough.
+
+### Switching plans
+Switching is automatic: the new plan starts, the old one is cancelled at Systeme.io. You are never billed twice.
+
+### Do you have lifetime access?
+The early €57 lifetime offer is no longer sold. If you bought it, it stays **valid and unlimited**: nothing to do, nothing to pay again.`,
+      es: `## Planes Tiquiz\n\n- **Free**: 0€, 1 quiz + 1 encuesta + 1 popquiz, 10 respuestas/mes\n- **Mensual**: 17€/mes, ilimitado\n- **Anual**: 170€/año, ilimitado (dos meses gratis)\n- **Mensual Plus**: 29€/mes, con multiperfiles, análisis IA y varias claves Systeme.io\n- **Anual Plus**: 290€/año\n\nLos precios al día están siempre en **Ajustes > Suscripción**. La oferta de por vida a 57€ ya no se vende, pero sigue siendo válida e ilimitada para quien la compró.`,
+      it: `## Piani Tiquiz\n\n- **Free**: 0€, 1 quiz + 1 sondaggio + 1 popquiz, 10 risposte/mese\n- **Mensile**: 17€/mese, illimitato\n- **Annuale**: 170€/anno, illimitato (due mesi gratis)\n- **Mensile Plus**: 29€/mese, con multiprofili, analisi IA e più chiavi Systeme.io\n- **Annuale Plus**: 290€/anno\n\nI prezzi aggiornati sono sempre in **Impostazioni > Abbonamento**. L'offerta a vita da 57€ non è più in vendita, ma resta valida e illimitata per chi l'ha acquistata.`,
+      ar: `## خطط Tiquiz\n\n- **مجاني**: 0€، اختبار واحد + استطلاع واحد + بوب كويز واحد، 10 ردود/شهر\n- **شهري**: 17€/شهر، غير محدود\n- **سنوي**: 170€/سنة، غير محدود (شهران مجانًا)\n- **شهري بلس**: 29€/شهر، مع تعدد الملفات وتحليل الذكاء الاصطناعي وعدة مفاتيح Systeme.io\n- **سنوي بلس**: 290€/سنة\n\nالأسعار المحدّثة موجودة دائمًا في **الإعدادات > الاشتراك**. عرض مدى الحياة بـ 57€ لم يعد معروضًا للبيع، لكنه يبقى ساريًا وغير محدود لمن اشتراه.`,
     },
     related_slugs: ["what-is-tiquiz", "tiquiz-create-quiz"],
-    tags: ["tiquiz", "plans", "pricing", "free", "lifetime"],
+    tags: ["tiquiz", "plans", "pricing", "free", "plus", "abonnement", "tarifs"],
+  },
+
+  {
+    category_slug: "tiquiz",
+    slug: "tiquiz-profil-ou-score",
+    sort_order: 3,
+    title: {
+      fr: "Profil ou score : lequel choisir ?",
+      en: "Profile or score: which one?",
+      es: "¿Perfil o puntuación?",
+      it: "Profilo o punteggio?",
+      ar: "ملف شخصي أم نتيجة رقمية؟",
+    },
+    content: {
+      fr: `## La seule décision qui compte au départ
+
+Tiquiz sait faire deux quiz différents. Le choix se fait à la création, et c'est le seul réglage qu'on ne devine pas tout seul. Prends trente secondes ici : ça t'évite de refaire ton quiz plus tard.
+
+La question à te poser n'est pas technique, c'est : **de quoi parle mon quiz ?**
+
+### Quiz par profil : « qui es-tu ? »
+
+Chaque réponse mène vers un profil, et le profil le plus choisi gagne.
+
+C'est le plus courant. Tu l'utilises quand tes résultats sont des **types**, des personnalités, des façons de faire : « Quel entrepreneur es-tu ? », « Quel est ton style de communication ? », « Quel format de contenu te correspond ? ».
+
+Aucun profil n'est meilleur qu'un autre. Ils sont différents.
+
+### Quiz avec un score : « où en es-tu ? »
+
+Chaque réponse rapporte des points, et c'est le **total** qui décide du résultat.
+
+Tu l'utilises quand tes résultats sont des **niveaux** : un bilan, un diagnostic, une maturité. « Où en est ton offre ? », « Ton tunnel est-il prêt ? ». Il y a un ordre : un score bas et un score haut ne disent pas la même chose.
+
+Tu peux aussi découper le score en **axes** (sommeil, alimentation, stress…) : chacun s'affiche avec sa propre barre.
+
+### Le test en une phrase
+
+> Si tes résultats peuvent être classés du moins bon au meilleur, c'est un **score**. S'ils sont juste différents, c'est un **profil**.
+
+### Et si je me suis trompée ?
+
+Ça arrive, et ça se voit à des signes précis : en mode score, les réglages qui parlent de profils (« quelles questions mènent à ce résultat », les ex aequo) ne s'affichent pas, parce qu'ils ne veulent rien dire là. À l'inverse, en mode profil, tu ne verras jamais de tranches de points.
+
+Tout le reste de ton travail est réutilisable : le plus simple est de recréer le quiz dans le bon mode et de recopier tes textes. Si tu hésites encore, écris-nous avant de tout refaire.
+
+### Les réponses en mode profil
+
+En mode profil, une réponse ne peut voter que pour **un** profil. Donc s'il te faut 4 profils, il faut au moins 4 réponses par question de choix, sinon un profil ne peut pas gagner à cette question. L'éditeur te prévient quand un profil ne peut jamais être attribué, et le bouton « Rééquilibrer avec l'IA » peut te rédiger les réponses qui manquent.`,
+      en: `## The one decision that matters up front
+
+Tiquiz builds two different kinds of quiz. You pick at creation time, and it is the one setting nobody guesses right on their own. Spend thirty seconds here and you save yourself a rebuild later.
+
+The question is not technical. It is: **what is my quiz about?**
+
+### Profile quiz: "who are you?"
+
+Each answer votes for a profile, and the most-voted profile wins.
+
+This is the common one. Use it when your results are **types**, personalities, ways of doing things: "What kind of founder are you?", "What's your communication style?".
+
+No profile is better than another. They are different.
+
+### Scored quiz: "where are you at?"
+
+Each answer is worth points, and the **total** decides the result.
+
+Use it when your results are **levels**: an assessment, a diagnosis, a maturity stage. "How ready is your offer?". There is an order: a low score and a high score do not mean the same thing.
+
+You can also split the score into **axes** (sleep, food, stress…): each gets its own bar.
+
+### The one-line test
+
+> If your results can be ranked from worst to best, it's a **score**. If they are simply different, it's a **profile**.
+
+### What if I picked wrong?
+
+It happens, and it shows: in score mode, the checks that talk about profiles (which questions lead to this result, ties) do not appear, because they mean nothing there. In profile mode you will never see point ranges.
+
+Everything else you wrote is reusable: the simplest route is to recreate the quiz in the right mode and paste your texts across. Still unsure? Write to us before rebuilding.
+
+### Answers in profile mode
+
+In profile mode, one answer votes for exactly **one** profile. So if you want 4 profiles, you need at least 4 answers per choice question, otherwise one profile cannot win there. The editor warns you when a result can never be awarded, and "Rebalance with AI" can write the missing answers for you.`,
+      es: `## Perfil o puntuación
+
+Se elige al crear el quiz y es el ajuste que nadie acierta por intuición.
+
+- **Por perfil, "¿quién eres?"**: cada respuesta vota por un perfil y gana el más votado. Para tipos y personalidades. Ningún perfil es mejor que otro.
+- **Con puntuación, "¿en qué punto estás?"**: cada respuesta suma puntos y el total decide. Para diagnósticos y niveles. Hay un orden.
+
+**La prueba:** si tus resultados se pueden ordenar de peor a mejor, es una **puntuación**. Si solo son distintos, es un **perfil**.
+
+En modo perfil, una respuesta vota por un solo perfil: con 4 perfiles necesitas al menos 4 respuestas por pregunta, si no un perfil nunca puede ganar. El editor te avisa.`,
+      it: `## Profilo o punteggio
+
+Si sceglie alla creazione ed è l'unica impostazione che non si indovina da soli.
+
+- **Per profilo, "chi sei?"**: ogni risposta vota un profilo e vince il più votato. Per tipi e personalità. Nessun profilo è migliore di un altro.
+- **Con punteggio, "a che punto sei?"**: ogni risposta vale dei punti e decide il totale. Per diagnosi e livelli. C'è un ordine.
+
+**La prova:** se i tuoi risultati si possono ordinare dal peggiore al migliore, è un **punteggio**. Se sono solo diversi, è un **profilo**.
+
+In modalità profilo una risposta vota un solo profilo: con 4 profili servono almeno 4 risposte per domanda, altrimenti un profilo non può mai vincere. L'editor ti avvisa.`,
+      ar: `## ملف شخصي أم نتيجة رقمية؟
+
+يتم الاختيار عند إنشاء الاختبار، وهو الإعداد الوحيد الذي لا يمكن تخمينه.
+
+- **حسب الملف الشخصي، "من أنت؟"**: كل إجابة تصوّت لملف، ويفوز الأكثر تصويتًا. للأنماط والشخصيات. لا يوجد ملف أفضل من آخر.
+- **بالنقاط، "أين أنت الآن؟"**: كل إجابة تمنح نقاطًا، والمجموع يقرر. للتشخيص والمستويات. هناك ترتيب.
+
+**الاختبار:** إذا كانت نتائجك قابلة للترتيب من الأسوأ إلى الأفضل، فهي **نقاط**. إذا كانت مختلفة فقط، فهي **ملفات شخصية**.
+
+في وضع الملفات، كل إجابة تصوّت لملف واحد: مع 4 ملفات تحتاج 4 إجابات على الأقل لكل سؤال، وإلا لن يفوز أحد الملفات أبدًا. المحرر ينبهك.`,
+    },
+    related_slugs: ["tiquiz-create-quiz", "tiquiz-page-resultat"],
+    tags: ["tiquiz", "profil", "score", "scoring", "mode", "diagnostic", "quiz"],
+  },
+  {
+    category_slug: "tiquiz",
+    slug: "tiquiz-page-resultat",
+    sort_order: 7,
+    title: {
+      fr: "La page de résultat",
+      en: "The result page",
+      es: "La página de resultado",
+      it: "La pagina del risultato",
+      ar: "صفحة النتيجة",
+    },
+    content: {
+      fr: `## C'est la page qui vend
+
+Le visiteur a répondu, il a laissé son email : il est au maximum de son attention. La page de résultat est le seul endroit où il te lit vraiment.
+
+### Les quatre temps
+
+Tiquiz peut présenter chaque résultat en quatre blocs qui s'enchaînent. Chacun a un rôle, et l'ordre compte :
+
+1. **Il se reconnaît.** Le titre du profil et sa description. S'il ne se reconnaît pas ici, il ne lit pas la suite.
+2. **Il comprend ce qui bloque.** Souvent autre chose que ce qu'il croyait. C'est ce bloc qui crée le déclic.
+3. **Il voit le chemin.** Les étapes, concrètes, pour que ça devienne faisable.
+4. **Il voit la suite.** Ton offre, présentée comme la suite logique de ce qu'il vient de lire, pas comme une publicité.
+
+Ces mots (reconnaissance, blocage, chemin, suite) sont là pour **toi**. Ils ne doivent jamais apparaître dans le texte que lit le visiteur : sinon il lit la structure au lieu du message.
+
+### L'activer sur un quiz existant
+
+Un quiz créé avant cette présentation garde son affichage d'origine, exprès : on ne change jamais une page déjà en ligne sans te demander. Pour passer aux quatre temps, ouvre ton quiz et cherche le bandeau au-dessus de tes profils de résultat. C'est **réversible**, et ça ne touche aucun de tes autres quiz.
+
+Dupliquer un quiz ne suffit pas : la copie est fidèle à l'original, donc elle reproduit aussi son ancienne présentation.
+
+### Les images
+
+Chaque temps peut porter sa propre image. Tu choisis si elle s'ajoute au texte ou si elle le **remplace**.
+
+### Le bouton de partage
+
+En bas du résultat, un bouton propose au visiteur de partager. Tu choisis les réseaux dans les réglages du quiz. **Si tu n'en coches aucun, tous s'affichent** : c'est voulu, mieux vaut trop de choix que priver ton visiteur d'Instagram ou de WhatsApp sans le savoir.
+
+Le lien partagé est celui du **profil obtenu**, pas celui du quiz : la personne qui clique voit le résultat de son amie, ce qui donne beaucoup plus envie de le passer à son tour.
+
+Tu peux masquer complètement ce bouton avec « Afficher le bouton de partage ».
+
+### Afficher ou cacher le score
+
+En mode score, tu décides de ce que voit le visiteur : le pourcentage, un libellé, ou **rien du tout**. Si tu caches le score, les barres d'axes disparaissent aussi. Les axes restent utilisables dans tes textes et dans tes tags Systeme.io : ils continuent à travailler sans être affichés.`,
+      en: `## This is the page that sells
+
+They answered, they gave their email: their attention is at its peak. The result page is the only place where they truly read you.
+
+### The four beats
+
+Tiquiz can lay each result out in four blocks that build on each other. Each has a job, and the order matters:
+
+1. **They recognise themselves.** The profile title and its description. If they don't recognise themselves here, they stop reading.
+2. **They understand what's blocking.** Usually something other than what they assumed. This is the block that clicks.
+3. **They see the path.** Concrete steps, so it feels doable.
+4. **They see what's next.** Your offer, presented as the logical continuation of what they just read, not as an ad.
+
+Those words (recognition, blocker, path, next) are for **you**. They must never appear in the text the visitor reads, or they read the skeleton instead of the message.
+
+### Turning it on for an existing quiz
+
+A quiz created before this layout keeps its original display on purpose: we never change a live page without asking. To switch, open your quiz and look for the banner above your result profiles. It is **reversible** and affects no other quiz.
+
+Duplicating a quiz will not do it: the copy is faithful to the original, so it reproduces the old layout too.
+
+### Images
+
+Each beat can carry its own image. You choose whether it sits alongside the text or **replaces** it.
+
+### The share button
+
+At the bottom of the result, a button invites the visitor to share. You pick the networks in the quiz settings. **If you tick none, all of them show**: that is deliberate, better too much choice than silently denying your visitor Instagram or WhatsApp.
+
+The shared link points at the **result they got**, not the quiz: whoever clicks sees their friend's result, which is far more tempting to take.
+
+You can hide the button entirely with "Show share button".
+
+### Showing or hiding the score
+
+In score mode you decide what the visitor sees: the percentage, a label, or **nothing at all**. Hiding the score hides the axis bars too. Axes keep working inside your texts and your Systeme.io tags: they still do their job without being displayed.`,
+      es: `## La página que vende
+
+Ha respondido y ha dejado su email: su atención está al máximo.
+
+**Los cuatro tiempos.** Tiquiz puede presentar cada resultado en cuatro bloques encadenados: se reconoce, entiende qué le bloquea, ve el camino, ve lo que sigue (tu oferta como consecuencia lógica). Ese vocabulario es para ti, nunca debe aparecer en el texto que lee el visitante.
+
+Un quiz creado antes conserva su presentación original a propósito. Para cambiar, abre el quiz y busca el aviso encima de tus perfiles de resultado. Es reversible y no afecta a tus otros quiz. Duplicar no basta: la copia es fiel al original.
+
+**Compartir.** Eliges las redes en los ajustes. Si no marcas ninguna, se muestran todas. El enlace compartido es el del **perfil obtenido**, no el del quiz.
+
+**Puntuación.** En modo puntuación puedes mostrar el porcentaje, una etiqueta o nada. Si la ocultas, también desaparecen las barras de ejes, pero los ejes siguen funcionando en tus textos y tags de Systeme.io.`,
+      it: `## La pagina che vende
+
+Ha risposto e ha lasciato la sua email: la sua attenzione è al massimo.
+
+**I quattro tempi.** Tiquiz può presentare ogni risultato in quattro blocchi concatenati: si riconosce, capisce cosa lo blocca, vede il percorso, vede il seguito (la tua offerta come conseguenza logica). Quel vocabolario è per te, non deve mai comparire nel testo che legge il visitatore.
+
+Un quiz creato prima mantiene la presentazione originale di proposito. Per cambiare, apri il quiz e cerca il banner sopra i profili di risultato. È reversibile e non tocca gli altri quiz. Duplicare non basta: la copia è fedele all'originale.
+
+**Condivisione.** Scegli i social nelle impostazioni. Se non ne spunti nessuno, si mostrano tutti. Il link condiviso è quello del **profilo ottenuto**, non del quiz.
+
+**Punteggio.** In modalità punteggio puoi mostrare la percentuale, un'etichetta o niente. Nascondendolo spariscono anche le barre degli assi, ma gli assi continuano a funzionare nei testi e nei tag Systeme.io.`,
+      ar: `## الصفحة التي تبيع
+
+لقد أجاب وترك بريده الإلكتروني: انتباهه في ذروته.
+
+**الأزمنة الأربعة.** يمكن لـ Tiquiz عرض كل نتيجة في أربع كتل متتابعة: يتعرّف على نفسه، يفهم ما يعيقه، يرى الطريق، يرى ما يليه (عرضك كنتيجة منطقية). هذه المصطلحات لك أنت، ويجب ألا تظهر أبدًا في النص الذي يقرأه الزائر.
+
+الاختبار المنشأ سابقًا يحتفظ بعرضه الأصلي عمدًا. للتغيير، افتح اختبارك وابحث عن الشريط فوق ملفات النتائج. القرار قابل للتراجع ولا يمس اختباراتك الأخرى. النسخ لا يكفي: النسخة مطابقة للأصل.
+
+**المشاركة.** تختار الشبكات من الإعدادات. إذا لم تحدد أيًا منها، تظهر كلها. الرابط المشارك هو رابط **الملف الذي حصل عليه**، لا رابط الاختبار.
+
+**النتيجة الرقمية.** يمكنك عرض النسبة أو تسمية أو لا شيء. إخفاؤها يخفي أيضًا أشرطة المحاور، لكن المحاور تظل تعمل في نصوصك ووسوم Systeme.io.`,
+    },
+    related_slugs: ["tiquiz-profil-ou-score", "tiquiz-virality", "tiquiz-mise-en-page"],
+    tags: ["tiquiz", "resultat", "result", "partage", "share", "score", "page"],
+  },
+  {
+    category_slug: "tiquiz",
+    slug: "tiquiz-stats",
+    sort_order: 8,
+    title: {
+      fr: "Lire tes statistiques sans te tromper",
+      en: "Reading your stats without being misled",
+      es: "Leer tus estadísticas sin equivocarte",
+      it: "Leggere le statistiche senza sbagliare",
+      ar: "قراءة إحصاءاتك دون خطأ",
+    },
+    content: {
+      fr: `## Ce que les chiffres disent vraiment
+
+Tu trouves tes chiffres dans **Statistiques** (tous tes quiz) et dans l'onglet du même nom sur chaque quiz.
+
+### Les quatre chiffres du haut
+
+- **Vues** : les personnes qui ont ouvert le quiz.
+- **Démarrages** : celles qui ont commencé à répondre.
+- **Complétés** : celles qui sont allées au bout.
+- **Leads** : celles qui ont laissé leur email. C'est le seul chiffre qui te fait gagner quelque chose.
+
+### Perdre du monde en route est NORMAL
+
+C'est le point le plus important de cette page, et celui qui fait perdre le plus de temps quand on l'ignore.
+
+Un quiz ne vise pas 100 % de complétion, et ne le doit pas. Les premiers à partir sont les visiteurs qui n'étaient pas pour toi : ils se sont qualifiés eux-mêmes, en partant. C'est le travail du quiz.
+
+Si tu lis chaque départ comme une faute, tu vas réécrire un quiz qui va très bien.
+
+### « Où décrochent tes répondants ? »
+
+Le graphique montre, question par question, combien de personnes l'ont **vue**. La barre rétrécit à chaque abandon.
+
+Deux choses à savoir pour ne pas corriger la mauvaise question :
+
+**1. Quelqu'un qui part entre la question 6 et la 7 n'a jamais vu la 7.** Il s'est arrêté **sur la 6**. C'est celle-là qu'il faut regarder. Tiquiz te la nomme directement, tu n'as pas à faire le calcul.
+
+**2. Tiquiz distingue deux formes d'abandon**, et elles ne se corrigent pas pareil :
+- **Ils voient la question et ne répondent pas** : elle bloque. Trop intime, mal comprise, ou une réponse qui manque. Reformuler sert à quelque chose.
+- **Ils répondent puis s'arrêtent** : la question passe bien, c'est la suite qui les perd. Reformuler cette question ne changera rien.
+
+### Attends d'avoir assez de monde
+
+En dessous d'une vingtaine de personnes sur une même question, Tiquiz **ne désigne aucun point de fuite**, et ce n'est pas une limitation : sur 8 visiteurs, une seule personne pèse 12 %. On te ferait courir après du bruit.
+
+Tant que l'échantillon est petit, Tiquiz te dit franchement qu'il n'y a pas encore de quoi conclure.
+
+### Comment mesurer un changement
+
+> **Une seule modification à la fois**, puis 20 à 30 nouvelles réponses avant de juger.
+
+Deux changements en même temps et tu ne sauras jamais lequel a agi. C'est la seule méthode qui donne une réponse.
+
+### Le taux de partage
+
+Un taux de partage bas n'est pas toujours un défaut du quiz ni un cadeau trop faible. Sur un sujet intime ou qui expose (santé, santé mentale, argent, poids, famille, neuroatypie), partager publiquement revient à se dévoiler. Le taux sera bas, et c'est normal.`,
+      en: `## What the numbers actually say
+
+Your numbers live in **Statistics** (all quizzes) and in the tab of the same name on each quiz.
+
+### The four headline numbers
+
+- **Views**: people who opened the quiz.
+- **Starts**: those who began answering.
+- **Completions**: those who reached the end.
+- **Leads**: those who left their email. The only number that earns you anything.
+
+### Losing people along the way is NORMAL
+
+This is the most important line on this page, and the one that costs the most time when ignored.
+
+A quiz does not aim for 100% completion, and should not. The first to leave are the visitors who were not for you: they qualified themselves out. That is the quiz doing its job.
+
+Read every exit as a mistake and you will rewrite a quiz that is working fine.
+
+### "Where do respondents drop off?"
+
+The chart shows, question by question, how many people **saw** it. The bar shrinks at each exit.
+
+Two things, so you don't fix the wrong question:
+
+**1. Someone who leaves between question 6 and 7 never saw 7.** They stopped **on 6**. That is the one to look at. Tiquiz names it for you, you don't do the maths.
+
+**2. Tiquiz separates two kinds of drop-off**, and they need opposite fixes:
+- **They see the question and don't answer**: it blocks. Too personal, unclear, or a missing answer. Rewording helps.
+- **They answer, then stop**: the question landed fine, what follows loses them. Rewording it changes nothing.
+
+### Wait until you have enough people
+
+Below roughly twenty people on the same question, Tiquiz **names no drop-off point**, and that is not a limitation: with 8 visitors, one person is worth 12%. We'd be sending you after noise.
+
+While the sample is small, Tiquiz says plainly that there is nothing to conclude yet.
+
+### How to measure a change
+
+> **One change at a time**, then 20 to 30 fresh responses before judging.
+
+Two changes at once and you will never know which one worked. This is the only method that gives an answer.
+
+### Share rate
+
+A low share rate is not always a flaw in the quiz or a weak bonus. On an intimate or exposing subject (health, mental health, money, weight, family, neurodivergence), sharing publicly means outing yourself. The rate will be low, and that is normal.`,
+      es: `## Lo que dicen de verdad los números
+
+Los tienes en **Estadísticas** y en la pestaña de cada quiz: vistas, inicios, finalizados y leads.
+
+**Perder gente por el camino es NORMAL.** Ningún quiz busca el 100% de finalización. Los primeros que se van son los visitantes que no eran para ti: se han descalificado solos, y ése es el trabajo del quiz.
+
+**Dónde se detienen.** Quien abandona entre la pregunta 6 y la 7 nunca vio la 7: se detuvo **en la 6**. Tiquiz te la señala directamente. Y distingue dos formas de abandono: la ven y no responden (la pregunta bloquea, reformular sirve) o responden y se van (la pregunta va bien, es lo que sigue).
+
+**Espera a tener gente.** Por debajo de unas veinte personas en una misma pregunta, Tiquiz no señala ningún punto de fuga: con 8 visitantes, una sola persona vale el 12%.
+
+**Para medir un cambio:** una sola modificación cada vez, y luego 20 a 30 respuestas nuevas antes de juzgar.
+
+Un porcentaje bajo de compartidos no siempre es un defecto: en temas íntimos (salud, dinero, peso, familia), compartir es exponerse.`,
+      it: `## Cosa dicono davvero i numeri
+
+Li trovi in **Statistiche** e nella scheda di ogni quiz: visite, avvii, completati e lead.
+
+**Perdere persone lungo il percorso è NORMALE.** Nessun quiz punta al 100% di completamento. I primi ad andarsene sono i visitatori che non erano per te: si sono squalificati da soli, ed è il lavoro del quiz.
+
+**Dove si fermano.** Chi abbandona tra la domanda 6 e la 7 non ha mai visto la 7: si è fermato **sulla 6**. Tiquiz te la indica direttamente. E distingue due forme di abbandono: la vedono e non rispondono (la domanda blocca, riformulare serve) oppure rispondono e se ne vanno (la domanda va bene, è il seguito).
+
+**Aspetta di avere abbastanza persone.** Sotto la ventina sulla stessa domanda, Tiquiz non indica nessun punto di fuga: con 8 visitatori, una sola persona vale il 12%.
+
+**Per misurare un cambiamento:** una sola modifica alla volta, poi 20-30 nuove risposte prima di giudicare.
+
+Una percentuale di condivisione bassa non è sempre un difetto: su temi intimi (salute, denaro, peso, famiglia), condividere significa esporsi.`,
+      ar: `## ما تقوله الأرقام حقًا
+
+تجدها في **الإحصاءات** وفي تبويب كل اختبار: المشاهدات، البدايات، المكتملة، والعملاء المحتملون.
+
+**فقدان بعض الزوار في الطريق أمر طبيعي.** لا يستهدف أي اختبار إكمالًا بنسبة 100%. أول من يغادر هم الزوار الذين لم يكونوا لك: لقد استبعدوا أنفسهم، وهذا هو عمل الاختبار.
+
+**أين يتوقفون.** من يغادر بين السؤال 6 و7 لم يرَ السؤال 7 أبدًا: توقف **عند السؤال 6**. يشير Tiquiz إليه مباشرة. ويميّز بين نوعين من الانسحاب: يرون السؤال ولا يجيبون (السؤال يعيقهم، إعادة الصياغة مفيدة)، أو يجيبون ثم يغادرون (السؤال جيد، المشكلة فيما يليه).
+
+**انتظر عددًا كافيًا.** تحت عشرين شخصًا على السؤال نفسه، لا يحدد Tiquiz أي نقطة تسرب: مع 8 زوار، شخص واحد يساوي 12%.
+
+**لقياس أي تغيير:** تعديل واحد فقط في كل مرة، ثم 20 إلى 30 إجابة جديدة قبل الحكم.
+
+انخفاض نسبة المشاركة ليس دائمًا عيبًا: في المواضيع الحساسة (الصحة، المال، الوزن، العائلة)، المشاركة تعني كشف النفس.`,
+    },
+    related_slugs: ["tiquiz-leads", "tiquiz-page-resultat"],
+    tags: ["tiquiz", "stats", "statistiques", "funnel", "analytics", "completion", "abandon"],
+  },
+  {
+    category_slug: "tiquiz",
+    slug: "tiquiz-mise-en-page",
+    sort_order: 9,
+    title: {
+      fr: "Mise en page : alignement, colonnes, tailles",
+      en: "Layout: alignment, columns, sizes",
+      es: "Maquetación: alineación, columnas, tamaños",
+      it: "Impaginazione: allineamento, colonne, dimensioni",
+      ar: "التنسيق: المحاذاة والأعمدة والأحجام",
+    },
+    content: {
+      fr: `## Trois étages, du plus fort au plus faible
+
+C'est la clé pour ne pas s'énerver sur l'éditeur. Trois endroits peuvent décider de l'alignement, et le plus précis gagne toujours :
+
+1. **Le champ** : l'alignement que tu poses à la main dans un texte, avec les boutons d'alignement.
+2. **La question** : un réglage qui ne vaut que pour cette question.
+3. **Le quiz** : le réglage général, qui s'applique à tout ce qui ne s'est pas prononcé.
+
+Par défaut, la question et le champ ne se prononcent pas : tout suit le réglage du quiz. Le jour où tu alignes un champ à la main, ce champ devient une exception permanente.
+
+### Tout remettre d'équerre
+
+C'est ce qui fait croire que « le réglage général ne marche pas » : il marche, mais toutes les exceptions posées à la main passent devant.
+
+Le bouton **« Tout réaligner sur ce réglage »** efface les exceptions, sur les questions **et** dans les textes. Tes gras, tes couleurs et tes tailles sont conservés, seul l'alignement est effacé.
+
+C'est ce qui te permet d'appliquer un nouveau réglage à un quiz **déjà en ligne** sans le refaire.
+
+### Liste ou colonnes
+
+Même logique pour les réponses : le réglage du quiz, qu'une question peut contredire.
+
+- **Auto** : Tiquiz décide selon le nombre de réponses.
+- **Liste** : une réponse par ligne, toujours.
+- **Colonnes** : deux colonnes sur ordinateur.
+
+Sur mobile, c'est toujours une colonne, quel que soit le réglage : deux colonnes sur un téléphone ne sont pas lisibles.
+
+### Taille du texte
+
+Le sélecteur de taille agit sur **tout le champ**, pas sur le mot sélectionné. Si tu as l'impression qu'il ne se passe rien, clique une deuxième fois sur une taille : le champ se remet d'aplomb tout seul.
+
+### Les images
+
+Une image de réponse garde **son format**. Une photo en hauteur reste en hauteur, une capture d'écran large reste large. Rien n'est recadré, donc rien n'est coupé.
+
+Conséquence normale : deux photos de formats différents donnent deux cartes de hauteurs différentes.
+
+### Le logo
+
+Le logo est indépendant du titre : tu peux l'aligner à gauche, au centre ou à droite, et régler sa largeur, même si ton titre est aligné autrement. Par défaut il suit le titre.`,
+      en: `## Three levels, strongest first
+
+This is the key to not fighting the editor. Three places can decide alignment, and the most specific always wins:
+
+1. **The field**: alignment you set by hand inside a text, with the alignment buttons.
+2. **The question**: a setting that applies to that question only.
+3. **The quiz**: the general setting, applied to anything that hasn't spoken up.
+
+By default the question and the field don't speak up: everything follows the quiz setting. The day you align a field by hand, that field becomes a permanent exception.
+
+### Straightening everything back
+
+This is what makes people think "the general setting doesn't work": it does, but every hand-placed exception outranks it.
+
+The **"Realign everything on this setting"** button clears the exceptions, on questions **and** inside texts. Your bold, colours and sizes are kept, only alignment is cleared.
+
+That is what lets you apply a new setting to a quiz that is **already live** without rebuilding it.
+
+### List or columns
+
+Same logic for answers: a quiz setting that a question can override.
+
+- **Auto**: Tiquiz decides based on how many answers there are.
+- **List**: one answer per line, always.
+- **Columns**: two columns on desktop.
+
+On mobile it is always one column whatever the setting: two columns on a phone are not readable.
+
+### Text size
+
+The size picker acts on **the whole field**, not on the selected word. If it seems to do nothing, click a size a second time: the field repairs itself.
+
+### Images
+
+An answer image keeps **its own shape**. A tall photo stays tall, a wide screenshot stays wide. Nothing is cropped, so nothing is cut off.
+
+Expected consequence: two photos of different shapes give two cards of different heights.
+
+### The logo
+
+The logo is independent from the title: you can align it left, centre or right and set its width, even with a title aligned differently. By default it follows the title.`,
+      es: `## Tres niveles, del más fuerte al más débil
+
+Tres sitios pueden decidir la alineación, y gana siempre el más preciso: **el campo** (lo que alineas a mano), **la pregunta** y **el quiz** (el ajuste general).
+
+Por defecto la pregunta y el campo no se pronuncian. El día que alineas un campo a mano, ese campo se convierte en excepción permanente. Por eso parece que "el ajuste general no funciona".
+
+El botón **"Realinear todo con este ajuste"** borra las excepciones, en las preguntas y dentro de los textos. Se conservan negritas, colores y tamaños. Es lo que permite aplicar un ajuste a un quiz **ya publicado** sin rehacerlo.
+
+**Lista o columnas:** misma lógica. En móvil siempre una columna, sea cual sea el ajuste.
+
+**Tamaño del texto:** el selector actúa sobre todo el campo, no sobre la palabra seleccionada.
+
+**Imágenes:** una imagen de respuesta conserva su formato, no se recorta. Dos fotos distintas dan dos tarjetas de alturas distintas: es normal.
+
+**Logo:** independiente del título, con su propia alineación y anchura.`,
+      it: `## Tre livelli, dal più forte al più debole
+
+Tre punti possono decidere l'allineamento e vince sempre il più preciso: **il campo** (quello che allinei a mano), **la domanda** e **il quiz** (l'impostazione generale).
+
+Di default la domanda e il campo non si pronunciano. Il giorno in cui allinei un campo a mano, quel campo diventa un'eccezione permanente. Ecco perché sembra che "l'impostazione generale non funzioni".
+
+Il pulsante **"Riallinea tutto su questa impostazione"** cancella le eccezioni, sulle domande e dentro i testi. Grassetti, colori e dimensioni restano. È ciò che permette di applicare una nuova impostazione a un quiz **già online** senza rifarlo.
+
+**Elenco o colonne:** stessa logica. Su mobile sempre una colonna, qualunque sia l'impostazione.
+
+**Dimensione del testo:** il selettore agisce su tutto il campo, non sulla parola selezionata.
+
+**Immagini:** l'immagine di una risposta conserva il suo formato, non viene ritagliata. Due foto diverse danno due schede di altezze diverse: è normale.
+
+**Logo:** indipendente dal titolo, con allineamento e larghezza propri.`,
+      ar: `## ثلاثة مستويات، من الأقوى إلى الأضعف
+
+ثلاثة مواضع يمكنها تحديد المحاذاة، ويفوز الأكثر تحديدًا دائمًا: **الحقل** (ما تحاذيه يدويًا)، **السؤال**، و**الاختبار** (الإعداد العام).
+
+افتراضيًا لا يحدد السؤال ولا الحقل شيئًا. لكن حين تحاذي حقلًا يدويًا، يصبح ذلك الحقل استثناءً دائمًا. لهذا يبدو أن "الإعداد العام لا يعمل".
+
+زر **"إعادة محاذاة كل شيء على هذا الإعداد"** يمسح الاستثناءات، في الأسئلة وداخل النصوص. يبقى الخط العريض والألوان والأحجام. وهذا ما يتيح تطبيق إعداد جديد على اختبار **منشور بالفعل** دون إعادة بنائه.
+
+**قائمة أم أعمدة:** المنطق نفسه. على الهاتف عمود واحد دائمًا مهما كان الإعداد.
+
+**حجم النص:** المحدد يؤثر على الحقل كله، لا على الكلمة المحددة.
+
+**الصور:** صورة الإجابة تحتفظ بنسبتها ولا يتم اقتصاصها. صورتان بنسبتين مختلفتين تعطيان بطاقتين بارتفاعين مختلفين: هذا طبيعي.
+
+**الشعار:** مستقل عن العنوان، بمحاذاة وعرض خاصين به.`,
+    },
+    related_slugs: ["tiquiz-create-quiz", "tiquiz-page-resultat"],
+    tags: ["tiquiz", "design", "alignement", "colonnes", "images", "logo", "mise en page"],
+  },
+  {
+    category_slug: "tiquiz",
+    slug: "tiquiz-sondages",
+    sort_order: 10,
+    title: {
+      fr: "Les sondages",
+      en: "Surveys",
+      es: "Las encuestas",
+      it: "I sondaggi",
+      ar: "الاستطلاعات",
+    },
+    content: {
+      fr: `## Un sondage, c'est pour écouter
+
+Le quiz **donne** un résultat à celui qui répond. Le sondage, lui, ne lui donne rien : c'est **toi** qui récupères les réponses. Les deux se créent depuis **Mes projets**.
+
+Utilise un sondage pour savoir ce que veut vraiment ton audience, tester une idée d'offre, comprendre pourquoi quelqu'un n'a pas acheté.
+
+### Le créer
+
+Trois façons, comme pour un quiz :
+- **Manuellement**, question par question.
+- **Avec l'IA** : tu décris ta cible et ce que tu veux apprendre, elle rédige les questions.
+- **En important** un fichier .txt que tu as déjà écrit.
+
+Plus ta cible est précise (« mes clientes qui ont acheté la formation X ces 6 derniers mois » plutôt que « mon audience »), meilleures sont les questions.
+
+### Les types de questions
+
+Au delà du choix multiple, un sondage sait poser :
+- du **texte libre** : la personne écrit ce qu'elle veut ;
+- une **échelle** (par exemple de 1 à 10) ;
+- des **étoiles**.
+
+Ces trois là n'ont pas d'options à cocher, et c'est normal.
+
+### Lire les réponses
+
+L'onglet **Réponses** te donne, pour chaque question : le compte par option, la **liste complète** des textes libres (avec un bouton pour tout copier), et la répartition des notes avec leur moyenne pour les échelles.
+
+Le texte libre est souvent la partie la plus utile : ce sont les mots exacts de ta cliente, ceux que tu peux reprendre tels quels dans ta page de vente.
+
+### Ce qui marche pareil que pour un quiz
+
+La capture d'email, la synchronisation Systeme.io, ton branding, ton domaine personnalisé, le suivi des abandons : tout fonctionne à l'identique.`,
+      en: `## A survey is for listening
+
+A quiz **gives** a result to the person answering. A survey gives them nothing: **you** are the one collecting answers. Both are created from **My projects**.
+
+Use a survey to find out what your audience actually wants, test an offer idea, or understand why someone didn't buy.
+
+### Creating one
+
+Three ways, same as a quiz:
+- **By hand**, question by question.
+- **With AI**: describe your target and what you want to learn, it writes the questions.
+- **By importing** a .txt file you already wrote.
+
+The more precise your target ("clients who bought course X in the last 6 months" rather than "my audience"), the better the questions.
+
+### Question types
+
+Beyond multiple choice, a survey can ask for:
+- **free text**: they write whatever they want;
+- a **scale** (1 to 10, for instance);
+- **stars**.
+
+Those three have no options to tick, and that is normal.
+
+### Reading the answers
+
+The **Responses** tab gives you, per question: the count per option, the **full list** of free-text answers (with a copy-all button), and the spread of ratings with their average for scales.
+
+Free text is often the most useful part: those are your customer's exact words, the ones you can lift straight into your sales page.
+
+### What works exactly like a quiz
+
+Email capture, Systeme.io sync, your branding, your custom domain, drop-off tracking: all identical.`,
+      es: `## Una encuesta sirve para escuchar
+
+El quiz **da** un resultado a quien responde. La encuesta no le da nada: eres **tú** quien recoge las respuestas. Ambos se crean desde **Mis proyectos**.
+
+Se crea manualmente, con IA (describe tu objetivo y tu público) o importando un .txt. Cuanto más precisa sea la descripción del público, mejores serán las preguntas.
+
+Además de la opción múltiple, una encuesta admite **texto libre**, **escalas** (por ejemplo de 1 a 10) y **estrellas**. Esos tres tipos no tienen opciones que marcar: es normal.
+
+La pestaña **Respuestas** muestra el recuento por opción, la lista completa de textos libres (con botón para copiar) y el reparto de notas con su media. El texto libre suele ser lo más útil: son las palabras exactas de tu clienta.
+
+Captura de email, Systeme.io, branding, dominio propio y seguimiento de abandonos funcionan igual que en un quiz.`,
+      it: `## Un sondaggio serve ad ascoltare
+
+Il quiz **dà** un risultato a chi risponde. Il sondaggio non gli dà nulla: sei **tu** a raccogliere le risposte. Entrambi si creano da **I miei progetti**.
+
+Si crea manualmente, con l'IA (descrivi il tuo target e cosa vuoi sapere) o importando un .txt. Più il target è preciso, migliori sono le domande.
+
+Oltre alla scelta multipla, un sondaggio permette **testo libero**, **scale** (per esempio da 1 a 10) e **stelle**. Questi tre tipi non hanno opzioni da spuntare: è normale.
+
+La scheda **Risposte** mostra il conteggio per opzione, l'elenco completo dei testi liberi (con pulsante per copiare tutto) e la distribuzione dei voti con la media. Il testo libero è spesso la parte più utile: sono le parole esatte della tua cliente.
+
+Cattura email, Systeme.io, branding, dominio personalizzato e monitoraggio degli abbandoni funzionano come in un quiz.`,
+      ar: `## الاستطلاع للاستماع
+
+الاختبار **يمنح** نتيجة لمن يجيب. أما الاستطلاع فلا يمنحه شيئًا: **أنت** من يجمع الإجابات. كلاهما يُنشأ من **مشاريعي**.
+
+يمكن إنشاؤه يدويًا، أو بالذكاء الاصطناعي (صف جمهورك وما تريد معرفته)، أو باستيراد ملف ‎.txt. كلما كان وصف الجمهور أدق، كانت الأسئلة أفضل.
+
+إلى جانب الاختيار المتعدد، يدعم الاستطلاع **النص الحر** و**المقاييس** (من 1 إلى 10 مثلًا) و**النجوم**. هذه الأنواع الثلاثة بلا خيارات للتحديد، وهذا طبيعي.
+
+يعرض تبويب **الإجابات** العدد لكل خيار، والقائمة الكاملة للنصوص الحرة (مع زر نسخ الكل)، وتوزيع الدرجات ومتوسطها. النص الحر غالبًا هو الأنفع: إنها كلمات عميلتك بالحرف.
+
+جمع البريد، ومزامنة Systeme.io، والعلامة التجارية، والنطاق الخاص، وتتبع الانسحاب: كلها تعمل كما في الاختبار.`,
+    },
+    related_slugs: ["tiquiz-create-quiz", "tiquiz-stats"],
+    tags: ["tiquiz", "sondage", "survey", "questions", "texte libre", "echelle"],
+  },
+  {
+    category_slug: "tiquiz",
+    slug: "tiquiz-popquiz",
+    sort_order: 11,
+    title: {
+      fr: "Le popquiz : un quiz dans ta vidéo",
+      en: "Popquiz: a quiz inside your video",
+      es: "El popquiz: un quiz dentro de tu vídeo",
+      it: "Il popquiz: un quiz dentro il video",
+      ar: "البوب كويز: اختبار داخل الفيديو",
+    },
+    content: {
+      fr: `## Capturer pendant qu'on te regarde
+
+Un popquiz, c'est ta vidéo avec des questions qui apparaissent aux moments que tu choisis. La personne répond sans quitter la vidéo, et tu récupères ses réponses comme pour un quiz normal.
+
+C'est fait pour les webinaires, les vidéos de vente, les modules de formation : les moments où quelqu'un t'accorde déjà plusieurs minutes.
+
+### Avant de commencer
+
+**Il te faut un quiz existant.** Le popquiz ne crée pas les questions, il les emprunte à un quiz de Mes projets. Crée d'abord le quiz, ensuite le popquiz.
+
+### Trois étapes
+
+1. **Ta vidéo.** Soit un lien (YouTube, Vimeo…), soit un fichier que tu importes (MP4, WebM, MOV). L'import reprend là où il s'était arrêté si ta connexion coupe, à condition de laisser l'onglet ouvert.
+2. **Tes marqueurs.** Lance la lecture, puis clique sur la barre de temps à l'endroit où tu veux qu'une question apparaisse. Autant de marqueurs que tu veux.
+3. **Publie.** Tant que c'est un brouillon, personne d'autre que toi ne peut l'ouvrir.
+
+### Le partager
+
+Deux façons, au choix :
+- **Le lien direct**, à envoyer ou à poster.
+- **Le code à intégrer**, à coller dans une page de ton site ou de Systeme.io. La vidéo s'affiche dedans, avec les questions.
+
+Si tu as connecté ton propre domaine, le lien porte ton domaine.
+
+### Où placer les marqueurs
+
+Juste **après** avoir donné quelque chose d'utile, jamais avant. Une question qui arrive avant la valeur ressemble à un péage ; la même question trente secondes plus tard ressemble à un échange.`,
+      en: `## Capture while they're watching
+
+A popquiz is your video with questions appearing at moments you choose. The viewer answers without leaving the video, and you collect their answers exactly like a normal quiz.
+
+It is built for webinars, sales videos and course modules: the moments when someone is already giving you several minutes.
+
+### Before you start
+
+**You need an existing quiz.** A popquiz does not write questions, it borrows them from a quiz in My projects. Create the quiz first, the popquiz second.
+
+### Three steps
+
+1. **Your video.** Either a link (YouTube, Vimeo…) or a file you upload (MP4, WebM, MOV). Uploads resume where they stopped if your connection drops, as long as you leave the tab open.
+2. **Your markers.** Hit play, then click the timeline where you want a question to appear. As many markers as you like.
+3. **Publish.** While it is a draft, nobody but you can open it.
+
+### Sharing it
+
+Two ways:
+- **The direct link**, to send or post.
+- **The embed code**, to paste into a page on your site or in Systeme.io. The video shows up inside, questions included.
+
+If you connected your own domain, the link carries your domain.
+
+### Where to put markers
+
+Just **after** you've given something useful, never before. A question that lands before the value feels like a toll gate; the same question thirty seconds later feels like an exchange.`,
+      es: `## Capturar mientras te miran
+
+Un popquiz es tu vídeo con preguntas que aparecen en los momentos que elijas. La persona responde sin salir del vídeo.
+
+**Necesitas un quiz que ya exista:** el popquiz no crea preguntas, las toma de un quiz de Mis proyectos.
+
+Tres pasos: **el vídeo** (un enlace de YouTube o Vimeo, o un archivo MP4, WebM o MOV que subes), **los marcadores** (dale al play y haz clic en la barra de tiempo donde quieras una pregunta) y **publicar**. Mientras sea borrador, nadie más puede abrirlo.
+
+Se comparte con el enlace directo o con el código para insertar en una página de tu web o de Systeme.io. Si tienes dominio propio, el enlace lo lleva.
+
+Coloca los marcadores **justo después** de dar algo útil, nunca antes: una pregunta antes del valor parece un peaje.`,
+      it: `## Catturare mentre ti guardano
+
+Un popquiz è il tuo video con domande che compaiono nei momenti che scegli. La persona risponde senza uscire dal video.
+
+**Serve un quiz già esistente:** il popquiz non crea le domande, le prende da un quiz in I miei progetti.
+
+Tre passi: **il video** (un link YouTube o Vimeo, oppure un file MP4, WebM o MOV che carichi), **i marcatori** (avvia la riproduzione e clicca sulla barra del tempo dove vuoi una domanda) e **pubblica**. Finché è una bozza, nessun altro può aprirlo.
+
+Si condivide con il link diretto o con il codice da incorporare in una pagina del tuo sito o di Systeme.io. Se hai un dominio personalizzato, il link lo usa.
+
+Metti i marcatori **subito dopo** aver dato qualcosa di utile, mai prima: una domanda prima del valore sembra un pedaggio.`,
+      ar: `## اجمع بياناتهم وهم يشاهدونك
+
+البوب كويز هو الفيديو الخاص بك مع أسئلة تظهر في اللحظات التي تختارها. يجيب المشاهد دون مغادرة الفيديو.
+
+**تحتاج إلى اختبار موجود مسبقًا:** البوب كويز لا ينشئ الأسئلة، بل يأخذها من اختبار في "مشاريعي".
+
+ثلاث خطوات: **الفيديو** (رابط YouTube أو Vimeo، أو ملف MP4 أو WebM أو MOV ترفعه)، و**العلامات** (شغّل الفيديو ثم انقر على شريط الوقت حيث تريد سؤالًا)، ثم **النشر**. ما دام مسودة، لا يمكن لأحد غيرك فتحه.
+
+تتم المشاركة عبر الرابط المباشر أو عبر كود التضمين في صفحة على موقعك أو في Systeme.io. إن كان لديك نطاق خاص، فالرابط يحمله.
+
+ضع العلامات **مباشرة بعد** تقديم شيء مفيد، لا قبله: السؤال قبل القيمة يبدو كرسوم عبور.`,
+    },
+    related_slugs: ["tiquiz-create-quiz", "tiquiz-leads"],
+    tags: ["tiquiz", "popquiz", "video", "embed", "integration", "marqueurs"],
+  },
+  {
+    category_slug: "tiquiz",
+    slug: "tiquiz-domaine",
+    sort_order: 12,
+    title: {
+      fr: "Utiliser ton propre nom de domaine",
+      en: "Using your own domain name",
+      es: "Usar tu propio dominio",
+      it: "Usare il tuo dominio",
+      ar: "استخدام نطاقك الخاص",
+    },
+    content: {
+      fr: `## Tes quiz à ton nom
+
+Par défaut, tes quiz s'ouvrent sur \`quiz.tipote.com\`. Tu peux les servir depuis ta propre adresse, par exemple \`quiz.ta-marque.com\`. Le visiteur ne voit plus Tiquiz nulle part.
+
+C'est une fonction des **plans payants**.
+
+### Comment faire
+
+Va dans **Paramètres > Domaine**, puis :
+
+1. **Donne ton adresse.** Un sous-domaine que tu contrôles est recommandé (\`quiz.ta-marque.com\`), mais ton domaine principal marche aussi. Il faut simplement que tu aies accès à sa configuration DNS.
+2. **Ajoute l'enregistrement DNS** que Tiquiz t'affiche, chez ton hébergeur (OVH, Gandi, Cloudflare, Hostinger…). Tiquiz te donne les trois cases à remplir : le type, le nom et la cible. Tu copies, tu colles.
+3. **Attends.** Tiquiz surveille tout seul pendant dix minutes et te prévient dès que c'est en ligne.
+
+### Si ça reste en attente
+
+C'est presque toujours le DNS qui n'a pas encore fait le tour du monde. Ça peut prendre quelques minutes comme quelques heures, ça ne dépend pas de Tiquiz. Reviens plus tard et clique sur **Vérifier**.
+
+Si ça échoue vraiment, la cause la plus fréquente est un enregistrement déjà existant sur le même nom, qui entre en conflit avec le nouveau.
+
+### Une fois vérifié
+
+Tous tes quiz, sondages et popquizzes sont servis depuis ton domaine, sans réglage par projet. Chacun garde son propre lien court.
+
+Tu peux retirer le domaine quand tu veux : tes quiz redeviennent accessibles sur l'adresse Tiquiz, rien n'est perdu.`,
+      en: `## Your quizzes under your own name
+
+By default your quizzes open on \`quiz.tipote.com\`. You can serve them from your own address instead, e.g. \`quiz.your-brand.com\`. The visitor never sees Tiquiz.
+
+This is a **paid plan** feature.
+
+### How to do it
+
+Go to **Settings > Domain**, then:
+
+1. **Enter your address.** A subdomain you control is recommended (\`quiz.your-brand.com\`), but your main domain works too. You just need access to its DNS settings.
+2. **Add the DNS record** Tiquiz shows you, at your registrar (OVH, Gandi, Cloudflare, Hostinger…). Tiquiz gives you the three fields to fill in: type, name and target. Copy, paste.
+3. **Wait.** Tiquiz watches on its own for ten minutes and tells you the moment it goes live.
+
+### If it stays pending
+
+It is almost always DNS still travelling around the world. It can take minutes or hours, and it does not depend on Tiquiz. Come back later and hit **Verify**.
+
+If it genuinely fails, the most common cause is an existing record on the same name conflicting with the new one.
+
+### Once verified
+
+All your quizzes, surveys and popquizzes are served from your domain, with no per-project setting. Each keeps its own short link.
+
+You can remove the domain whenever you like: your quizzes go back to the Tiquiz address, nothing is lost.`,
+      es: `## Tus quiz con tu nombre
+
+Por defecto tus quiz se abren en \`quiz.tipote.com\`. Puedes servirlos desde tu propia dirección, por ejemplo \`quiz.tu-marca.com\`. Es una función de los **planes de pago**.
+
+En **Ajustes > Dominio**: indica tu dirección (mejor un subdominio que controles), añade en tu proveedor de DNS el registro que Tiquiz te muestra (te da el tipo, el nombre y el destino: copiar y pegar) y espera. Tiquiz vigila solo durante diez minutos y te avisa.
+
+Si sigue pendiente, casi siempre es el DNS que aún se está propagando: puede tardar minutos u horas y no depende de Tiquiz. Vuelve más tarde y pulsa **Verificar**. Si falla de verdad, la causa más común es un registro ya existente con el mismo nombre.
+
+Una vez verificado, todos tus quiz, encuestas y popquizzes se sirven desde tu dominio. Puedes quitarlo cuando quieras sin perder nada.`,
+      it: `## I tuoi quiz a tuo nome
+
+Di default i tuoi quiz si aprono su \`quiz.tipote.com\`. Puoi servirli dal tuo indirizzo, per esempio \`quiz.il-tuo-brand.com\`. È una funzione dei **piani a pagamento**.
+
+In **Impostazioni > Dominio**: indica il tuo indirizzo (meglio un sottodominio che controlli), aggiungi presso il tuo provider DNS il record che Tiquiz ti mostra (ti dà tipo, nome e destinazione: copia e incolla) e aspetta. Tiquiz controlla da solo per dieci minuti e ti avvisa.
+
+Se resta in attesa, quasi sempre è il DNS che si sta ancora propagando: può volerci da qualche minuto a qualche ora e non dipende da Tiquiz. Torna più tardi e clicca **Verifica**. Se fallisce davvero, la causa più comune è un record già esistente con lo stesso nome.
+
+Una volta verificato, tutti i tuoi quiz, sondaggi e popquiz vengono serviti dal tuo dominio. Puoi rimuoverlo quando vuoi senza perdere nulla.`,
+      ar: `## اختباراتك باسمك
+
+افتراضيًا تُفتح اختباراتك على \`quiz.tipote.com\`. يمكنك تقديمها من عنوانك الخاص، مثل \`quiz.your-brand.com\`. هذه ميزة في **الخطط المدفوعة**.
+
+من **الإعدادات > النطاق**: أدخل عنوانك (يُفضّل نطاق فرعي تتحكم فيه)، ثم أضف لدى مزود النطاق سجل DNS الذي يعرضه Tiquiz (يعطيك النوع والاسم والوجهة: انسخ والصق)، ثم انتظر. يراقب Tiquiz تلقائيًا لمدة عشر دقائق ويخبرك.
+
+إذا بقي قيد الانتظار، فغالبًا لأن DNS لم ينتشر بعد: قد يستغرق دقائق أو ساعات ولا يعتمد على Tiquiz. عد لاحقًا واضغط **تحقق**. إذا فشل فعلًا، فالسبب الأشيع هو سجل موجود مسبقًا بالاسم نفسه.
+
+بعد التحقق، تُقدَّم كل اختباراتك واستطلاعاتك وبوب كويزاتك من نطاقك. يمكنك إزالته متى شئت دون فقدان أي شيء.`,
+    },
+    related_slugs: ["tiquiz-plans", "tiquiz-create-quiz"],
+    tags: ["tiquiz", "domaine", "domain", "dns", "cname", "marque", "branding"],
+  },
+  {
+    category_slug: "account-settings",
+    slug: "connexion-mot-de-passe",
+    sort_order: 2,
+    title: {
+      fr: "Se connecter, et que faire si tu n'y arrives pas",
+      en: "Signing in, and what to do when you can't",
+      es: "Conectarse, y qué hacer si no lo consigues",
+      it: "Accedere, e cosa fare se non ci riesci",
+      ar: "تسجيل الدخول، وماذا تفعل إن لم تستطع",
+    },
+    content: {
+      fr: `## Deux façons d'entrer
+
+Sur Tipote comme sur Tiquiz, l'écran de connexion propose deux chemins, et les deux mènent au même compte :
+
+- **Email + mot de passe.** Le plus rapide quand tu l'as défini.
+- **Lien magique.** Tu entres ton email, tu reçois un lien, tu cliques, tu es connectée. Aucun mot de passe à retenir.
+
+Le lien magique est pratique le temps de choisir un mot de passe, mais il oblige à ouvrir sa boîte mail à chaque fois. Si tu te connectes souvent, définis un mot de passe : **Paramètres > Général** (Tiquiz) ou **Paramètres > Réglages** (Tipote).
+
+## Mot de passe oublié
+
+1. Sur l'écran de connexion, clique sur **Mot de passe oublié ?**
+2. Entre ton email et valide.
+3. Ouvre le message reçu et clique sur le bouton.
+4. Choisis ton nouveau mot de passe : **8 caractères minimum**, et il doit être différent de l'ancien.
+
+**Le message n'arrive pas ?** Trois causes, dans cet ordre de fréquence :
+- il est dans les **spams** (ou dans l'onglet Promotions de Gmail) ;
+- l'adresse saisie n'est pas exactement celle du compte (une faute de frappe, ou une autre boîte) ;
+- l'envoi peut prendre une à deux minutes.
+
+Par sécurité, l'écran affiche toujours le même message que l'email existe ou non : ça évite qu'un inconnu puisse deviner qui a un compte.
+
+## "Le lien m'envoie sur localhost"
+
+Si un lien reçu par email affiche **"localhost n'autorise pas la connexion"**, c'est un vieux message : ce défaut a été corrigé le 2 août 2026. Redemande simplement un nouveau lien, celui-là pointera au bon endroit. Ce n'est ni ton navigateur, ni ton pare-feu, ni ton antivirus.
+
+## "Session expirée, reconnecte-toi"
+
+Un lien de réinitialisation ne sert qu'**une fois** et il expire. Si tu as cliqué deux fois, ou attendu trop longtemps, il faut en redemander un.
+
+## Changer de mot de passe quand tu es connectée
+
+**Paramètres > Général** (Tiquiz) ou **Paramètres > Réglages** (Tipote), section Mot de passe. Pas besoin de l'ancien : tu es déjà identifiée.
+
+## Deux comptes séparés
+
+Tipote et Tiquiz sont **deux applications avec deux comptes distincts**. Le même email peut exister des deux côtés sans que les mots de passe soient liés : changer l'un ne change pas l'autre.`,
+      en: `## Two ways in
+
+On Tipote and on Tiquiz alike, the sign-in screen offers two paths to the same account:
+
+- **Email + password.** Fastest once you've set one.
+- **Magic link.** Enter your email, get a link, click it, you're in. No password to remember.
+
+The magic link is handy while you decide on a password, but it means opening your inbox every time. If you sign in often, set a password: **Settings > General** (Tiquiz) or **Settings > Preferences** (Tipote).
+
+## Forgotten password
+
+1. On the sign-in screen, click **Forgot password?**
+2. Enter your email and confirm.
+3. Open the message and click the button.
+4. Pick your new password: **8 characters minimum**, and different from the old one.
+
+**Nothing arrives?** Three causes, most common first:
+- it's in **spam** (or Gmail's Promotions tab);
+- the address you typed isn't exactly the account's one;
+- delivery can take a minute or two.
+
+For safety the screen shows the same message whether the account exists or not: that stops a stranger from finding out who has an account.
+
+## "The link sends me to localhost"
+
+If an emailed link shows **"localhost refused to connect"**, it's an old message: that defect was fixed on 2 August 2026. Just request a fresh link. It is not your browser, your firewall or your antivirus.
+
+## "Session expired"
+
+A reset link works **once** and expires. Clicked twice, or waited too long? Request a new one.
+
+## Changing your password while signed in
+
+**Settings > General** (Tiquiz) or **Settings > Preferences** (Tipote), Password section. You don't need the old one: you're already identified.
+
+## Two separate accounts
+
+Tipote and Tiquiz are **two apps with two separate accounts**. The same email can exist on both without the passwords being linked.`,
+      es: `## Dos formas de entrar
+
+En Tipote y en Tiquiz: **email + contraseña**, o **enlace mágico** (introduces tu email, recibes un enlace, haces clic y entras).
+
+**Contraseña olvidada:** en la pantalla de acceso, "¿Contraseña olvidada?" > tu email > abre el mensaje > elige la nueva (mínimo 8 caracteres, distinta de la anterior).
+
+**¿No llega el mensaje?** Mira en **spam** (o la pestaña Promociones de Gmail), comprueba que la dirección sea exactamente la de la cuenta, y espera uno o dos minutos. Por seguridad la pantalla muestra siempre el mismo mensaje exista o no la cuenta.
+
+**"El enlace lleva a localhost":** es un correo antiguo, ese fallo se corrigió el 2 de agosto de 2026. Pide un enlace nuevo. No es tu navegador ni tu cortafuegos.
+
+**"Sesión expirada":** un enlace de restablecimiento sirve una sola vez y caduca. Pide otro.
+
+Tipote y Tiquiz son **dos cuentas distintas**: cambiar una contraseña no cambia la otra.`,
+      it: `## Due modi per entrare
+
+Su Tipote e su Tiquiz: **email + password**, oppure **link magico** (inserisci l'email, ricevi un link, clicchi ed entri).
+
+**Password dimenticata:** nella schermata di accesso, "Password dimenticata?" > la tua email > apri il messaggio > scegli la nuova (minimo 8 caratteri, diversa dalla precedente).
+
+**Il messaggio non arriva?** Controlla lo **spam** (o la scheda Promozioni di Gmail), verifica che l'indirizzo sia esattamente quello dell'account, e aspetta uno o due minuti. Per sicurezza la schermata mostra sempre lo stesso messaggio, che l'account esista o no.
+
+**"Il link porta a localhost":** è una vecchia email, il difetto è stato corretto il 2 agosto 2026. Chiedi un link nuovo. Non è il tuo browser né il firewall.
+
+**"Sessione scaduta":** un link di reimpostazione vale una sola volta e scade. Chiedine un altro.
+
+Tipote e Tiquiz sono **due account distinti**: cambiare una password non cambia l'altra.`,
+      ar: `## طريقتان للدخول
+
+في Tipote وفي Tiquiz: **البريد وكلمة المرور**، أو **الرابط السحري** (تُدخل بريدك، تستقبل رابطًا، تنقر فتدخل).
+
+**نسيت كلمة المرور:** في شاشة الدخول، "نسيت كلمة المرور؟" ثم بريدك، ثم افتح الرسالة، واختر كلمة جديدة (8 أحرف على الأقل، مختلفة عن السابقة).
+
+**الرسالة لا تصل؟** تفقّد **البريد المزعج** (أو تبويب العروض في Gmail)، وتأكد أن العنوان هو نفسه عنوان الحساب تمامًا، وانتظر دقيقة أو دقيقتين. لأسباب أمنية تعرض الشاشة الرسالة نفسها سواء وُجد الحساب أم لا.
+
+**"الرابط يقودني إلى localhost":** إنها رسالة قديمة، أُصلح هذا الخلل في 2 أغسطس 2026. اطلب رابطًا جديدًا. المشكلة ليست في متصفحك ولا في جدار الحماية.
+
+**"انتهت الجلسة":** رابط إعادة التعيين يعمل مرة واحدة وينتهي. اطلب رابطًا آخر.
+
+Tipote و Tiquiz **حسابان منفصلان**: تغيير كلمة مرور أحدهما لا يغيّر الآخر.`,
+    },
+    related_slugs: ["change-password", "settings-overview"],
+    tags: ["connexion", "login", "mot de passe", "password", "lien magique", "acces"],
+  },
+  {
+    category_slug: "tiquiz",
+    slug: "tiquiz-facturation",
+    sort_order: 14,
+    title: {
+      fr: "Changer de plan, annuler, être facturée",
+      en: "Changing plan, cancelling, getting billed",
+      es: "Cambiar de plan, cancelar, facturación",
+      it: "Cambiare piano, annullare, fatturazione",
+      ar: "تغيير الخطة، الإلغاء، الفوترة",
+    },
+    content: {
+      fr: `## Où ça se passe
+
+**Paramètres > Compte & Tarifs.** Tu y vois ton plan en cours, les cartes des autres plans avec leur prix, et le bouton d'annulation.
+
+## Passer à un plan supérieur
+
+Clique sur le bouton du plan voulu : tu arrives sur la page de commande. **Le changement est automatique** : le nouveau plan démarre, l'ancien est annulé côté Systeme.io.
+
+**Tu ne seras jamais facturée deux fois.** C'est la question qui revient le plus, et la réponse est non : les deux abonnements ne coexistent pas.
+
+## Redescendre d'un plan
+
+Même chemin : tu commandes le plan inférieur, l'ancien s'annule. Tu gardes toutes tes données. Si le nouveau plan a des limites plus basses, ce sont les limites qui s'appliquent, pas une suppression : rien n'est effacé.
+
+## Annuler
+
+Bouton **Annuler mon abonnement**, dans Paramètres > Compte & Tarifs.
+
+- Tu gardes ton accès **complet jusqu'à la fin de la période déjà payée**.
+- Ensuite tu repasses automatiquement en plan gratuit.
+- **Tes quiz, sondages, popquizzes et leads existants restent en place.** Ce sont les limites du gratuit qui s'appliquent (1 quiz + 1 sondage + 1 popquiz actifs, 10 réponses par mois), pas un effacement.
+
+Si le bouton ne fonctionne pas, l'abonnement se gère aussi directement depuis ton compte Systeme.io, ou en écrivant à hello@ethilife.fr.
+
+## Le paiement passe par Systeme.io
+
+Tiquiz ne stocke aucune donnée bancaire : les paiements, les factures et les reçus sont gérés par **Systeme.io**. Une facture se retrouve donc dans ton espace Systeme.io ou dans l'email de confirmation d'achat.
+
+## Le compteur du plan gratuit
+
+Le gratuit donne **10 réponses par mois**, et le compteur repart tout seul 30 jours après. Il n'expire jamais : tu peux rester dessus le temps qu'il faut pour tester sur ta vraie audience.
+
+## L'accès à vie à 57 €
+
+Il n'est **plus vendu**. Si tu l'as pris, il reste valable et illimité : tu n'as rien à faire et rien à repayer. Ne cherche pas la carte dans les tarifs, elle n'y est plus.`,
+      en: `## Where it happens
+
+**Settings > Account & Pricing.** Your current plan, the other plans with their prices, and the cancel button.
+
+## Upgrading
+
+Click the button of the plan you want and you land on the checkout page. **The switch is automatic**: the new plan starts, the old one is cancelled at Systeme.io.
+
+**You are never billed twice.** That's the most common question, and the answer is no: the two subscriptions never overlap.
+
+## Downgrading
+
+Same path: order the lower plan, the old one cancels. You keep all your data. Lower limits apply as limits, not as deletion: nothing is erased.
+
+## Cancelling
+
+**Cancel my subscription**, in Settings > Account & Pricing.
+
+- You keep **full access until the end of the period you already paid for**.
+- Then you drop automatically to the free plan.
+- **Your existing quizzes, surveys, popquizzes and leads stay.** Free-plan limits apply (1 quiz + 1 survey + 1 popquiz active, 10 responses per month), nothing is deleted.
+
+If the button fails, the subscription can also be managed from your Systeme.io account, or by writing to hello@ethilife.fr.
+
+## Payment goes through Systeme.io
+
+Tiquiz stores no card data: payments, invoices and receipts are handled by **Systeme.io**. Look for an invoice in your Systeme.io account or in the purchase confirmation email.
+
+## The free-plan counter
+
+Free gives **10 responses per month**, and the counter resets on its own after 30 days. It never expires: stay on it as long as you need to test with your real audience.
+
+## The €57 lifetime access
+
+It is **no longer sold**. If you bought it, it stays valid and unlimited: nothing to do, nothing to pay again. Don't look for the card in the pricing table, it's gone.`,
+      es: `## Dónde se hace
+
+**Ajustes > Cuenta y Tarifas**: tu plan actual, los demás planes con su precio, y el botón de cancelación.
+
+**Subir de plan:** pulsa el botón del plan que quieras y llegas a la página de pedido. El cambio es automático: el nuevo plan empieza y el anterior se cancela en Systeme.io. **Nunca se factura dos veces**, es la pregunta más frecuente y la respuesta es no.
+
+**Bajar de plan:** mismo camino. Conservas todos tus datos; se aplican los límites del nuevo plan, no se borra nada.
+
+**Cancelar:** botón "Cancelar mi suscripción". Mantienes el acceso completo hasta el final del periodo ya pagado, luego pasas al plan gratuito. Tus quiz, encuestas, popquizzes y leads **siguen ahí**: se aplican los límites del gratuito (1 quiz + 1 encuesta + 1 popquiz activos, 10 respuestas al mes), no un borrado.
+
+**Los pagos pasan por Systeme.io:** Tiquiz no guarda ningún dato bancario. Las facturas están en tu cuenta Systeme.io o en el email de confirmación.
+
+**El acceso de por vida a 57 €** ya no se vende, pero sigue siendo válido e ilimitado para quien lo compró.`,
+      it: `## Dove si fa
+
+**Impostazioni > Account e Tariffe**: il piano attuale, gli altri piani con il prezzo, e il pulsante di annullamento.
+
+**Passare a un piano superiore:** clicca sul pulsante del piano desiderato e arrivi alla pagina d'ordine. Il cambio è automatico: il nuovo piano parte, il vecchio viene annullato su Systeme.io. **Non si viene mai fatturati due volte**: è la domanda più frequente e la risposta è no.
+
+**Scendere di piano:** stesso percorso. Conservi tutti i dati; si applicano i limiti del nuovo piano, non una cancellazione.
+
+**Annullare:** pulsante "Annulla il mio abbonamento". Mantieni l'accesso completo fino alla fine del periodo già pagato, poi torni al piano gratuito. Quiz, sondaggi, popquiz e lead **restano**: si applicano i limiti del gratuito (1 quiz + 1 sondaggio + 1 popquiz attivi, 10 risposte al mese), non una cancellazione.
+
+**I pagamenti passano da Systeme.io:** Tiquiz non conserva alcun dato bancario. Le fatture sono nel tuo account Systeme.io o nell'email di conferma.
+
+**L'accesso a vita da 57 €** non è più in vendita, ma resta valido e illimitato per chi l'ha acquistato.`,
+      ar: `## أين يتم ذلك
+
+**الإعدادات > الحساب والأسعار**: خطتك الحالية، والخطط الأخرى بأسعارها، وزر الإلغاء.
+
+**الترقية:** اضغط زر الخطة المطلوبة لتصل إلى صفحة الطلب. التبديل تلقائي: تبدأ الخطة الجديدة وتُلغى القديمة في Systeme.io. **لن تُفوتر مرتين أبدًا**، وهذا أكثر سؤال يتكرر والجواب لا.
+
+**التخفيض:** المسار نفسه. تحتفظ بكل بياناتك؛ تُطبَّق حدود الخطة الجديدة، ولا يُحذف شيء.
+
+**الإلغاء:** زر "إلغاء اشتراكي". تحتفظ بالوصول الكامل حتى نهاية الفترة المدفوعة، ثم تعود إلى الخطة المجانية. اختباراتك واستطلاعاتك وبوب كويزاتك وعملاؤك المحتملون **يبقون**: تُطبَّق حدود المجاني (اختبار واحد + استطلاع واحد + بوب كويز واحد نشط، 10 ردود شهريًا)، لا الحذف.
+
+**المدفوعات تمر عبر Systeme.io:** لا يحتفظ Tiquiz بأي بيانات مصرفية. الفواتير في حسابك على Systeme.io أو في بريد التأكيد.
+
+**الوصول مدى الحياة بـ 57 €** لم يعد معروضًا للبيع، لكنه يبقى ساريًا وغير محدود لمن اشتراه.`,
+    },
+    related_slugs: ["tiquiz-plans", "connexion-mot-de-passe"],
+    tags: ["tiquiz", "facturation", "abonnement", "annuler", "plan", "billing", "systeme.io"],
+  },
+  {
+    category_slug: "tiquiz",
+    slug: "tiquiz-variables",
+    sort_order: 15,
+    title: {
+      fr: "Personnaliser tes textes : prénom, score, genre",
+      en: "Personalising your texts: first name, score, gender",
+      es: "Personalizar tus textos: nombre, puntuación, género",
+      it: "Personalizzare i testi: nome, punteggio, genere",
+      ar: "تخصيص نصوصك: الاسم والنتيجة والصيغة",
+    },
+    content: {
+      fr: `## Écrire un texte qui parle à chaque visiteur
+
+Dans tes textes de quiz, certains morceaux entre accolades sont remplacés au moment de l'affichage par ce qui concerne **la personne qui répond**. Tu n'as rien à programmer : tu les écris, ou tu utilises le bouton d'insertion à côté du champ.
+
+## Le prénom
+
+\`{name}\` affiche le prénom du visiteur.
+
+Pour qu'il ait une valeur, active **"Demander le prénom"** dans la colonne de droite de l'éditeur : un petit écran s'affiche avant la première question.
+
+> Bravo \`{name}\`, tu fais partie des rares à... → **Bravo Sophie, tu fais partie des rares à...**
+
+## Le score (mode score uniquement)
+
+- \`{score}\` : le score global, **en pourcentage** (0 à 100).
+- \`{label}\` : le libellé de la tranche, par exemple "Score 40 à 69".
+- \`{score_sommeil}\` : le score de l'axe nommé Sommeil, toujours en pourcentage.
+- \`{label_sommeil}\` : le libellé de ce même axe.
+
+Un axe donne donc deux variables, construites sur son nom. Elles apparaissent dans l'éditeur dès que tu ajoutes un axe : pas besoin de deviner l'orthographe, le bouton d'insertion les liste.
+
+**Elles marchent aussi dans l'URL du bouton d'action.** C'est ce qui permet d'envoyer le visiteur vers une page différente selon son score, ou de transmettre son résultat à ton outil.
+
+Bon à savoir : ces variables continuent de fonctionner **même si tu as choisi de ne pas afficher le score**. Cacher le score ne l'efface pas, ça le rend juste invisible.
+
+## Le genre
+
+\`{prêt|prête|prêt·e}\` affiche la bonne forme selon ce que le visiteur a indiqué : masculin, féminin, ou non binaire, dans cet ordre.
+
+Active **"Demander le genre"** pour que la question soit posée. Le bouton **✨** à côté de chaque champ demande à l'IA d'écrire les trois variantes d'un coup, et tu peux les corriger à la main ensuite. Si tu actives le genre après avoir écrit ton quiz, le bouton **"Genrer tout le quiz"** repasse sur tous les champs.
+
+En anglais ou dans une autre langue non genrée, l'IA renvoie trois fois le même texte : l'affichage reste correct.
+
+## Si une variable s'affiche telle quelle
+
+Tu vois \`{score}\` à l'écran au lieu d'un nombre ? C'est normal et c'est voulu : une variable inconnue reste visible plutôt que de disparaître en silence. Les causes habituelles :
+- une faute de frappe dans le nom ;
+- \`{score}\` utilisé sur un quiz en mode profil, où il n'existe pas ;
+- \`{name}\` sans avoir activé "Demander le prénom" ;
+- un axe renommé depuis que tu as écrit le texte.`,
+      en: `## Writing text that speaks to each visitor
+
+In your quiz texts, anything in braces is replaced at display time by something about **the person answering**. Nothing to code: type them, or use the insert button next to the field.
+
+## First name
+
+\`{name}\` shows the visitor's first name.
+
+For it to have a value, turn on **"Ask for first name"** in the editor's right column: a small screen appears before the first question.
+
+> Well done \`{name}\`, you're one of the few who... → **Well done Sophie, you're one of the few who...**
+
+## Score (score mode only)
+
+- \`{score}\`: the global score, **as a percentage** (0 to 100).
+- \`{label}\`: the band label, e.g. "Score 40 to 69".
+- \`{score_sleep}\`: the score of the axis named Sleep, also a percentage.
+- \`{label_sleep}\`: that axis's label.
+
+So each axis gives two variables built from its name. They appear in the editor as soon as you add an axis: no need to guess the spelling, the insert button lists them.
+
+**They also work inside the action button's URL.** That's how you send a visitor to a different page depending on their score, or pass the result to your own tool.
+
+Worth knowing: they keep working **even when you've chosen not to display the score**. Hiding the score doesn't erase it, it just makes it invisible.
+
+## Gender
+
+\`{ready|ready|ready}\` shows the right form based on what the visitor picked: masculine, feminine, non-binary, in that order. In French: \`{prêt|prête|prêt·e}\`.
+
+Turn on **"Ask for gender"** so the question gets asked. The **✨** button next to each field asks the AI to write all three variants at once, and you can edit them afterwards. If you turn gender on after writing your quiz, **"Gender the whole quiz"** sweeps every field.
+
+In English or another ungendered language, the AI returns the same text three times: the display stays correct.
+
+## If a variable shows up as-is
+
+Seeing \`{score}\` on screen instead of a number? That's deliberate: an unknown variable stays visible rather than vanishing silently. Usual causes:
+- a typo in the name;
+- \`{score}\` on a profile-mode quiz, where it doesn't exist;
+- \`{name}\` without "Ask for first name" turned on;
+- an axis renamed since you wrote the text.`,
+      es: `## Textos que hablan a cada visitante
+
+Lo que va entre llaves se sustituye al mostrarse por algo de **la persona que responde**. No hay que programar nada: escríbelas o usa el botón de inserción junto al campo.
+
+- \`{name}\`: el nombre del visitante. Requiere activar **"Pedir el nombre"** en la columna derecha del editor.
+- \`{score}\`: la puntuación global, **en porcentaje** (0 a 100). Solo en modo puntuación.
+- \`{label}\`: la etiqueta del tramo.
+- \`{score_sueno}\` y \`{label_sueno}\`: lo mismo para el eje llamado Sueño. Cada eje da dos variables, y el editor las lista en cuanto añades un eje.
+- \`{listo|lista|listo·a}\`: la forma correcta según el género indicado (masculino, femenino, no binario, en ese orden). Requiere activar **"Pedir el género"**; el botón ✨ escribe las tres variantes con IA.
+
+Las variables de puntuación funcionan **también en la URL del botón de acción**, y siguen funcionando aunque hayas elegido no mostrar la puntuación.
+
+**¿Ves \`{score}\` tal cual en pantalla?** Es intencionado: una variable desconocida queda visible en vez de desaparecer en silencio. Suele ser una errata, una variable de puntuación en un quiz de perfiles, o un eje renombrado.`,
+      it: `## Testi che parlano a ogni visitatore
+
+Ciò che sta tra parentesi graffe viene sostituito al momento della visualizzazione con qualcosa che riguarda **chi risponde**. Niente da programmare: scrivile o usa il pulsante di inserimento accanto al campo.
+
+- \`{name}\`: il nome del visitatore. Richiede di attivare **"Chiedere il nome"** nella colonna destra dell'editor.
+- \`{score}\`: il punteggio globale, **in percentuale** (0-100). Solo in modalità punteggio.
+- \`{label}\`: l'etichetta della fascia.
+- \`{score_sonno}\` e \`{label_sonno}\`: lo stesso per l'asse chiamato Sonno. Ogni asse dà due variabili, e l'editor le elenca appena aggiungi un asse.
+- \`{pronto|pronta|pront*}\`: la forma giusta secondo il genere indicato (maschile, femminile, non binario, in quest'ordine). Richiede di attivare **"Chiedere il genere"**; il pulsante ✨ scrive le tre varianti con l'IA.
+
+Le variabili di punteggio funzionano **anche nell'URL del pulsante d'azione**, e continuano a funzionare anche se hai scelto di non mostrare il punteggio.
+
+**Vedi \`{score}\` così com'è sullo schermo?** È voluto: una variabile sconosciuta resta visibile invece di sparire in silenzio. Di solito è un refuso, una variabile di punteggio su un quiz a profili, o un asse rinominato.`,
+      ar: `## نصوص تخاطب كل زائر
+
+ما بين الأقواس المعقوفة يُستبدل عند العرض بما يخص **الشخص الذي يجيب**. لا برمجة مطلوبة: اكتبها أو استخدم زر الإدراج بجانب الحقل.
+
+- \`{name}\`: اسم الزائر. يتطلب تفعيل **"طلب الاسم"** في العمود الأيمن من المحرر.
+- \`{score}\`: النتيجة الإجمالية **بالنسبة المئوية** (من 0 إلى 100). في وضع النقاط فقط.
+- \`{label}\`: تسمية الشريحة.
+- \`{score_sleep}\` و\`{label_sleep}\`: الشيء نفسه للمحور المسمى Sleep. كل محور يعطي متغيّرين، والمحرر يعرضها فور إضافة محور.
+- صيغة الجنس: الشكل الصحيح حسب ما اختاره الزائر (مذكر، مؤنث، غير ثنائي، بهذا الترتيب). يتطلب تفعيل **"طلب الجنس"**؛ زر ✨ يكتب الصيغ الثلاث بالذكاء الاصطناعي.
+
+متغيّرات النتيجة تعمل **أيضًا داخل رابط زر الإجراء**، وتظل تعمل حتى لو اخترت عدم عرض النتيجة.
+
+**ترى \`{score}\` كما هي على الشاشة؟** هذا مقصود: المتغيّر غير المعروف يبقى ظاهرًا بدل أن يختفي بصمت. السبب غالبًا خطأ إملائي، أو متغيّر نقاط في اختبار بالملفات الشخصية، أو محور أُعيدت تسميته.`,
+    },
+    related_slugs: ["tiquiz-create-quiz", "tiquiz-page-resultat", "tiquiz-profil-ou-score"],
+    tags: ["tiquiz", "variables", "prenom", "score", "genre", "personnalisation", "placeholder"],
+  },
+  {
+    category_slug: "tiquiz",
+    slug: "tiquiz-depannage",
+    sort_order: 16,
+    title: {
+      fr: "Ça ne marche pas : le symptôme, la cause, la solution",
+      en: "It's not working: symptom, cause, fix",
+      es: "No funciona: síntoma, causa, solución",
+      it: "Non funziona: sintomo, causa, soluzione",
+      ar: "لا يعمل: العَرَض والسبب والحل",
+    },
+    content: {
+      fr: `## À lire en premier quand quelque chose cloche
+
+Cette page liste les cas réels, dans l'ordre de fréquence. Cherche ton symptôme.
+
+---
+
+### "Mon lien de quiz affiche une page 404"
+
+**Cause :** le quiz est en brouillon. Un quiz n'est pas en ligne tant qu'on n'a pas cliqué sur **Publier**.
+
+**Solution :** ouvre le quiz, bouton **Publier** en haut à droite. Chaque quiz se publie séparément : si ton 2e quiz est en 404 alors que le 1er marche, c'est celui-là qui n'est pas publié. Aucune configuration technique n'est nécessaire.
+
+---
+
+### "L'éditeur m'affiche : ce résultat ne peut jamais être attribué"
+
+**Cause, en mode profil :** il te manque des réponses. Une réponse ne vote que pour UN profil. Avec 4 profils et seulement 3 réponses à une question, le 4e profil ne peut pas gagner à cette question.
+
+**Solution :** ajoute des réponses, ou clique sur **Rééquilibrer avec l'IA**, qui les rédige dans le ton de ta question. Déplacer les réponses existantes d'un profil à l'autre ne résoudra rien : ça laissera toujours un profil découvert.
+
+**En mode score,** cette alerte ne s'affiche pas : les profils n'y décident rien, c'est la tranche de points. Si tu la vois quand même, c'est que ton quiz est en mode profil alors que tu le croyais scoré.
+
+---
+
+### "Une question fait décrocher tout le monde, je la corrige et rien ne change"
+
+**Cause :** presque toujours une erreur de lecture, pas un problème de contenu. Quelqu'un qui part entre la question 6 et la 7 **n'a jamais vu la 7** : il s'est arrêté sur la 6.
+
+**Solution :** regarde la question que Tiquiz désigne, il fait déjà ce calcul. Et vérifie combien de personnes sont concernées : en dessous d'une vingtaine sur une même question, aucune conclusion n'est solide. Une seule modification à la fois, puis 20 à 30 nouvelles réponses avant de juger.
+
+Rappel utile : perdre du monde en route est normal et sain. Les premiers à partir sont ceux qui n'étaient pas pour toi.
+
+---
+
+### "J'ai choisi Liste (ou Centré) et l'écran ne change pas"
+
+**Cause :** un alignement posé à la main dans un champ est une exception permanente, et elle bat le réglage général.
+
+**Solution :** bouton **"Tout réaligner sur ce réglage"**. Il efface les exceptions sur les questions et dans les textes, en gardant gras, couleurs et tailles.
+
+---
+
+### "Le menu des tailles de police est vide"
+
+**Cause :** un défaut d'affichage sur les boutons, où le menu s'écrivait en blanc sur blanc. Corrigé.
+
+**Solution :** si un champ garde une taille qui ne bouge pas, clique une deuxième fois sur une taille : il se remet d'aplomb tout seul.
+
+---
+
+### "Le bouton Partager ne déclenche rien"
+
+**Cause :** corrigé. Il ouvre maintenant un panneau de réseaux.
+
+**Bon à savoir :** si tu ne coches aucun réseau dans les réglages, **tous** s'affichent. C'est voulu. Et le lien partagé est celui du profil obtenu, pas celui du quiz : c'est ça qui donne envie de le passer.
+
+---
+
+### "Le pourcentage s'affiche alors que j'ai tout décoché"
+
+**Solution :** le réglage s'appelle **Affichage du score** et vaut pourcentage, libellé, ou **rien**. Choisis "rien" : le score global et les barres d'axes disparaissent. Les axes continuent d'alimenter tes variables de texte et tes tags Systeme.io.
+
+---
+
+### "Je n'arrive pas à supprimer un projet"
+
+**Cause :** ce quiz sert de question dans un popquiz vidéo. Le supprimer casserait la vidéo.
+
+**Solution :** l'app te nomme les vidéos concernées. Retire le quiz de ces vidéos, puis supprime-le.
+
+---
+
+### "Mon automatisation Systeme.io ne part pas quand je teste"
+
+**Cause :** Systeme.io ne redéclenche pas une règle si le tag est déjà sur le contact.
+
+**Solution :** avant chaque nouveau test avec le même email, va dans Systeme.io > Contacts, ouvre ton contact de test, et **retire le tag à la main**. Sinon le contact est bien mis à jour, mais rien ne part, et tu crois que c'est cassé.
+
+---
+
+### "Mon domaine personnalisé reste en attente"
+
+**Cause :** le DNS n'a pas encore fait le tour du monde. Ça prend de quelques minutes à quelques heures, et ça ne dépend pas de Tiquiz.
+
+**Solution :** reviens plus tard et clique sur **Vérifier**. Si ça échoue vraiment, cherche un enregistrement déjà existant sur le même nom, qui entre en conflit avec le nouveau.
+
+---
+
+### "Mon Atelier du Quiz est relié au mauvais compte"
+
+**Cause :** la connexion entre l'Atelier et ton espace quiz se fait une fois, en autorisant l'accès. Si tu étais connectée à un autre compte ce jour-là, c'est celui-là qui est relié.
+
+**Solution :** dans l'Atelier, ton profil, onglet **Connexion**, refais la liaison en étant connectée au bon compte Tiquiz dans le même navigateur.
+
+---
+
+### "Une variable s'affiche telle quelle, genre {score}"
+
+**Cause :** c'est voulu. Une variable inconnue reste visible au lieu de disparaître en silence.
+
+**Solution :** vérifie l'orthographe, le mode du quiz ({score} n'existe qu'en mode score), et que l'axe cité existe toujours sous ce nom.
+
+---
+
+### Rien de tout ça ?
+
+Décris ce que tu voyais à l'écran et ce que tu attendais à la place : c'est la paire d'informations qui fait gagner le plus de temps.`,
+      en: `## Read this first when something is off
+
+Real cases, most frequent first. Find your symptom.
+
+---
+
+### "My quiz link shows a 404"
+
+**Cause:** the quiz is a draft. It isn't live until you click **Publish**.
+
+**Fix:** open the quiz, **Publish** button top right. Each quiz is published separately: if your 2nd quiz 404s while the 1st works, that one isn't published. No technical setup needed.
+
+---
+
+### "The editor says: this result can never be awarded"
+
+**Cause, in profile mode:** you're short of answers. One answer votes for ONE profile. With 4 profiles and only 3 answers on a question, the 4th cannot win there.
+
+**Fix:** add answers, or click **Rebalance with AI**, which writes them in your question's tone. Moving existing answers between profiles fixes nothing: some profile stays uncovered.
+
+**In score mode** this alert doesn't appear: profiles decide nothing there. If you see it anyway, your quiz is in profile mode when you thought it was scored.
+
+---
+
+### "One question loses everyone, I fix it and nothing changes"
+
+**Cause:** almost always a reading error, not a content problem. Someone leaving between question 6 and 7 **never saw 7**: they stopped on 6.
+
+**Fix:** look at the question Tiquiz names, it already does that maths. And check how many people are involved: under about twenty on the same question, no conclusion holds. One change at a time, then 20 to 30 fresh responses before judging.
+
+Worth repeating: losing people along the way is normal and healthy. The first to leave were not for you.
+
+---
+
+### "I chose List (or Centre) and the screen doesn't change"
+
+**Cause:** alignment set by hand inside a field is a permanent exception, and it outranks the general setting.
+
+**Fix:** the **"Realign everything on this setting"** button. It clears exceptions on questions and inside texts, keeping bold, colours and sizes.
+
+---
+
+### "The font-size menu is empty"
+
+**Cause:** a display defect on buttons, where the menu rendered white on white. Fixed.
+
+**Fix:** if a field keeps a size that won't move, click a size a second time: it repairs itself.
+
+---
+
+### "The Share button does nothing"
+
+**Cause:** fixed. It now opens a panel of networks.
+
+**Worth knowing:** if you tick no network in the settings, **all** of them show. That's deliberate. And the shared link points at the result they got, not the quiz.
+
+---
+
+### "The percentage shows even though I unticked everything"
+
+**Fix:** the setting is **Score display** and it takes percentage, label, or **nothing**. Pick "nothing": the global score and axis bars disappear. Axes keep feeding your text variables and Systeme.io tags.
+
+---
+
+### "I can't delete a project"
+
+**Cause:** that quiz is used as a question inside a video popquiz. Deleting it would break the video.
+
+**Fix:** the app names the videos involved. Remove the quiz from them, then delete it.
+
+---
+
+### "My Systeme.io automation doesn't fire when I test"
+
+**Cause:** Systeme.io won't re-trigger a rule if the tag is already on the contact.
+
+**Fix:** before each new test with the same email, go to Systeme.io > Contacts, open your test contact, and **remove the tag by hand**.
+
+---
+
+### "My custom domain stays pending"
+
+**Cause:** DNS hasn't propagated yet. Minutes to hours, and it doesn't depend on Tiquiz.
+
+**Fix:** come back later and hit **Verify**. If it truly fails, look for an existing record on the same name conflicting with the new one.
+
+---
+
+### "A variable shows up as-is, like {score}"
+
+**Cause:** deliberate. An unknown variable stays visible instead of vanishing silently.
+
+**Fix:** check the spelling, the quiz mode ({score} only exists in score mode), and that the axis still exists under that name.
+
+---
+
+### None of these?
+
+Describe what you saw on screen and what you expected instead: that pair saves the most time.`,
+      es: `## Léelo primero cuando algo falla
+
+- **"Mi enlace da 404":** el quiz está en borrador. Ábrelo y pulsa **Publicar**. Cada quiz se publica por separado.
+- **"Este resultado nunca puede asignarse":** en modo perfiles, faltan respuestas (una respuesta vota por un solo perfil). Añade respuestas o usa **Reequilibrar con IA**. En modo puntuación esta alerta no aparece.
+- **"Una pregunta pierde a todos y corregirla no cambia nada":** quien abandona entre la 6 y la 7 nunca vio la 7, se detuvo en la 6. Mira la pregunta que Tiquiz señala, y espera unas veinte personas antes de concluir. Un solo cambio cada vez.
+- **"He elegido Lista o Centrado y no cambia":** una alineación puesta a mano es una excepción permanente. Usa **"Realinear todo con este ajuste"**.
+- **"El botón Compartir no hace nada":** corregido, ahora abre un panel de redes. Sin ninguna casilla marcada se muestran todas.
+- **"Se ve el porcentaje aunque lo desmarqué":** el ajuste "Mostrar la puntuación" acepta porcentaje, etiqueta o **nada**.
+- **"No puedo borrar un proyecto":** ese quiz se usa en un popquiz de vídeo. La app te dice cuáles.
+- **"Mi automatización de Systeme.io no se dispara al probar":** Systeme.io no reactiva una regla si el tag ya está en el contacto. Quítalo a mano antes de cada prueba.
+- **"Mi dominio sigue pendiente":** es el DNS propagándose. Vuelve más tarde y pulsa **Verificar**.
+- **"Veo {score} tal cual":** es intencionado. Revisa la ortografía, el modo del quiz y el nombre del eje.`,
+      it: `## Da leggere per primo quando qualcosa non va
+
+- **"Il mio link dà 404":** il quiz è in bozza. Aprilo e clicca **Pubblica**. Ogni quiz si pubblica separatamente.
+- **"Questo risultato non può mai essere assegnato":** in modalità profili mancano risposte (una risposta vota un solo profilo). Aggiungi risposte o usa **Riequilibra con l'IA**. In modalità punteggio questo avviso non compare.
+- **"Una domanda perde tutti e correggerla non cambia nulla":** chi abbandona tra la 6 e la 7 non ha mai visto la 7, si è fermato sulla 6. Guarda la domanda che Tiquiz indica, e aspetta una ventina di persone prima di concludere. Una sola modifica alla volta.
+- **"Ho scelto Elenco o Centrato e non cambia":** un allineamento messo a mano è un'eccezione permanente. Usa **"Riallinea tutto su questa impostazione"**.
+- **"Il pulsante Condividi non fa nulla":** corretto, ora apre un pannello di social. Senza nessuna casella spuntata si mostrano tutti.
+- **"Si vede la percentuale anche se ho tolto tutto":** l'impostazione "Mostrare il punteggio" accetta percentuale, etichetta o **niente**.
+- **"Non riesco a eliminare un progetto":** quel quiz è usato in un popquiz video. L'app ti dice quali.
+- **"La mia automazione Systeme.io non parte quando provo":** Systeme.io non riattiva una regola se il tag è già sul contatto. Toglilo a mano prima di ogni prova.
+- **"Il mio dominio resta in attesa":** è il DNS che si propaga. Torna più tardi e clicca **Verifica**.
+- **"Vedo {score} così com'è":** è voluto. Controlla l'ortografia, la modalità del quiz e il nome dell'asse.`,
+      ar: `## اقرأ هذا أولًا حين يعطل شيء ما
+
+- **"رابط اختباري يعرض 404":** الاختبار مسودة. افتحه واضغط **نشر**. كل اختبار يُنشر على حدة.
+- **"هذه النتيجة لا يمكن منحها أبدًا":** في وضع الملفات تنقصك إجابات (كل إجابة تصوّت لملف واحد). أضف إجابات أو استخدم **إعادة التوازن بالذكاء الاصطناعي**. في وضع النقاط لا يظهر هذا التنبيه.
+- **"سؤال يفقدني الجميع، وتصحيحه لا يغيّر شيئًا":** من يغادر بين السؤال 6 و7 لم يرَ السؤال 7 قط، بل توقف عند 6. انظر إلى السؤال الذي يحدده Tiquiz، وانتظر نحو عشرين شخصًا قبل الاستنتاج. تعديل واحد في كل مرة.
+- **"اخترت قائمة أو توسيط ولا يتغير شيء":** المحاذاة اليدوية استثناء دائم. استخدم **"إعادة محاذاة كل شيء على هذا الإعداد"**.
+- **"زر المشاركة لا يفعل شيئًا":** أُصلح، وهو الآن يفتح لوحة شبكات. وبلا أي تحديد تظهر كلها.
+- **"النسبة تظهر رغم إلغاء التحديد":** إعداد "عرض النتيجة" يقبل النسبة أو التسمية أو **لا شيء**.
+- **"لا أستطيع حذف مشروع":** هذا الاختبار مستخدم في بوب كويز فيديو. التطبيق يسمّي الفيديوهات.
+- **"أتمتة Systeme.io لا تنطلق عند الاختبار":** لا يعيد Systeme.io تشغيل قاعدة إذا كان الوسم موجودًا على جهة الاتصال. أزله يدويًا قبل كل تجربة.
+- **"نطاقي ما زال قيد الانتظار":** إنه انتشار DNS. عد لاحقًا واضغط **تحقق**.
+- **"أرى ‎{score}‎ كما هي":** هذا مقصود. تحقق من الإملاء ووضع الاختبار واسم المحور.`,
+    },
+    related_slugs: ["tiquiz-profil-ou-score", "tiquiz-stats", "tiquiz-mise-en-page"],
+    tags: ["tiquiz", "probleme", "bug", "404", "depannage", "erreur", "aide"],
   },
 ];

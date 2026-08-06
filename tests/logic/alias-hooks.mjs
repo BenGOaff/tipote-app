@@ -20,19 +20,33 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", ".
 // Ordre d'essai identique à celui de TypeScript / Next.
 const CANDIDATES = ["", ".ts", ".tsx", ".mts", ".js", "/index.ts", "/index.tsx"];
 
+function premierFichier(base) {
+  for (const ext of CANDIDATES) {
+    const candidat = base + ext;
+    if (fs.existsSync(candidat) && fs.statSync(candidat).isFile()) return candidat;
+  }
+  return null;
+}
+
 export async function resolve(specifier, context, next) {
   if (specifier.startsWith("@/")) {
-    const base = path.join(ROOT, specifier.slice(2));
-    for (const ext of CANDIDATES) {
-      const candidate = base + ext;
-      if (ext !== "" || fs.existsSync(candidate)) {
-        if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
-          return next(pathToFileURL(candidate).href, context);
-        }
-      }
-    }
+    const trouve = premierFichier(path.join(ROOT, specifier.slice(2)));
+    if (trouve) return next(pathToFileURL(trouve).href, context);
     // Rien trouvé : on laisse Node échouer avec SON message, qui nomme le
     // fichier importateur. Un message maison ferait perdre cette info.
   }
+
+  // ET LES IMPORTS RELATIFS SANS EXTENSION (`./offers`), que TypeScript
+  // accepte et que Node refuse. Sans ça, un module de `lib/` qui en
+  // importe un autre de la même famille reste hors de portée du runner,
+  // donc non testé, donc exactement là où les bugs s'installent : c'est
+  // le cas qui a bloqué `lib/support/knowledgeBase.ts` le 6 août 2026,
+  // c'est à dire tout ce que le bot d'aide sait des deux apps.
+  if (specifier.startsWith(".") && !path.extname(specifier) && context.parentURL) {
+    const base = path.resolve(path.dirname(fileURLToPath(context.parentURL)), specifier);
+    const trouve = premierFichier(base);
+    if (trouve) return next(pathToFileURL(trouve).href, context);
+  }
+
   return next(specifier, context);
 }
