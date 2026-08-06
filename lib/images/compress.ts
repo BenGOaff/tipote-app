@@ -91,10 +91,17 @@ function toBlob(canvas: HTMLCanvasElement, type: string, quality: number): Promi
  *
  * Ne lève jamais.
  */
-export async function prepareUpload(file: File, storagePath: string): Promise<PreparedUpload> {
+export async function prepareUpload(
+  // `Blob` et pas `File` : le studio visuel envoie un blob produit par un
+  // canvas, sans nom de fichier. Il a exactement le meme besoin, et le
+  // laisser de cote serait le seul point d'envoi non couvert, donc celui
+  // par lequel le probleme reviendrait.
+  file: Blob & { name?: string },
+  storagePath: string,
+): Promise<PreparedUpload> {
   const original: PreparedUpload = {
     blob: file,
-    ext: extFromName(file.name),
+    ext: file.name ? extFromName(file.name) : extFor(file.type, "png"),
     compressed: false,
   };
 
