@@ -31,14 +31,23 @@ const LANGS = ["fr", "en", "es", "it", "ar"] as const;
  * Le seuil bas n'est pas une tolérance à la paresse : il interdit le
  * placeholder ("voir la version française"), pas la concision.
  *
- * DETTE CONNUE, mesurée le 6 août 2026 : une quarantaine d'articles
- * Tipote se réduisent, en ES/IT/AR, à une ligne de chemin ("Créer >
- * Vidéo → format → sujet → Générer") là où le FR déroule les étapes.
- * Ce n'est pas faux, c'est maigre. Le seuil est posé au plancher
- * d'aujourd'hui : personne ne peut faire PIRE sans le voir, et chaque
- * article réécrit fait monter le niveau réel sans toucher au test.
+ * LE FRANÇAIS EST À 1000 CARACTÈRES MINIMUM, et ce seuil est le coeur
+ * de la demande de Béné du 6 août : "ce support doit répondre à 95% des
+ * questions, comme le bot, pour que j'ai le moins possible de tickets à
+ * traiter". Un article de 600 caractères DÉCRIT une fonction sans dire
+ * comment s'en servir : il ne déflèche aucun ticket, il en crée un. Les
+ * 19 qui étaient en dessous ont été réécrits ; le seuil interdit de
+ * recommencer.
+ *
+ * DETTE ASSUMÉE côté ES/IT/AR : une quarantaine d'articles Tipote s'y
+ * réduisent à une ligne de chemin ("Créer > Vidéo → format → sujet →
+ * Générer") là où le FR déroule les étapes. Béné a tranché le 6 août :
+ * "pour le moment tipote multilangue c'est pas la priorité". Le seuil y
+ * reste au plancher d'aujourd'hui : personne ne peut faire PIRE sans le
+ * voir, et chaque article traduit fait monter le niveau réel sans
+ * toucher au test.
  */
-const MIN_CHARS: Record<string, number> = { fr: 300, en: 200, es: 70, it: 70, ar: 60 };
+const MIN_CHARS: Record<string, number> = { fr: 1000, en: 200, es: 70, it: 70, ar: 60 };
 
 test("chaque article existe dans les 5 langues, titre ET contenu", () => {
   for (const a of SEED_ARTICLES) {

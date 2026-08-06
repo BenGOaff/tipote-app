@@ -170,75 +170,43 @@ Contrairement aux outils IA génériques, Tipote mémorise le profil business co
 L'interface existe en 7 langues : Français, English, Español, Italiano, Português, Português do Brasil, العربية. Le centre d'aide, lui, est écrit en 5 langues (français, anglais, espagnol, italien, arabe) : une lectrice en portugais voit les articles en français.
 URL : ${TIPOTE_APP}`);
 
-  // ── 3. Tipote : fonctionnalités ──
-  sections.push(`### Tipote : fonctionnalités principales
-
-1. **Onboarding intelligent** - Questionnaire interactif qui capture le profil business complet (offres, persona, objectifs, style, tonalité). Obligatoire à la première connexion.
-
-2. **Plan stratégique IA** - Plan d'action en 3 phases généré par IA avec pyramide d'offres (Lead Magnet → Low/Middle Ticket → High Ticket). 3 phases : Fondations, Croissance, Scale.
-
-3. **Création de contenu IA** - 8 types de contenu : posts réseaux sociaux, emails et newsletters, articles de blog, scripts vidéo (YouTube, Reels, TikTok), offres, funnels, quiz, stratégie éditoriale.
-
-4. **Publication directe sur 8 réseaux sociaux** : LinkedIn, Facebook Pages, Instagram, Threads, Twitter/X, TikTok, Pinterest, Reddit. L'utilisateur connecte ses comptes via Paramètres > Connexions (OAuth 2.0).
-
-5. **Automatisations** : auto-commentaires sur les posts publiés (0.25 crédit par commentaire), Comment-to-DM, Comment-to-Email. À partir du plan Basic.
-
-6. **Constructeur de pages** - Landing pages hébergées (capture, vente, vitrine), édition inline, preview multi-device, chat IA de modification, analytics, pixels de tracking. URL publique : /p/[slug].
-
-7. **Quiz builder** - Le même moteur que Tiquiz, en module. URL publique : /q/[quizId].
-
-8. **Gestion des leads** - Base unifiée, sources multiples, chiffrement AES-256, export CSV ou Systeme.io.
-
-9. **Calendrier éditorial** - Vue calendrier et liste, filtrable par type, statut, canal.
-
-10. **Analytics + diagnostic IA** - Saisie manuelle des KPIs, diagnostic avec forces, faiblesses et recommandations.
-
-11. **Coach IA** - Bulle flottante de coaching business. Plans Pro et Elite uniquement (inclus, sans crédits). Free et Basic : 3 messages par mois.
-
-12. **Templates Systeme.io**, **Pépites (insights)**, **Didacticiel interactif** (19 étapes), **Notifications**, **Multi-projets** (Elite uniquement), **Widgets embarquables** (preuve sociale, partage).
-
-**Paramètres**, 7 onglets : Profil, Connexions, Réglages, Positionnement, Branding, IA, Abonnement.`);
-
-  // ── 4. Tipote : tarification ──
-  sections.push(`### Tipote : plans et tarification
-
-| | Free | Basic | Pro | Elite |
-|---|---|---|---|---|
-| **Prix mensuel** | 0€ | 19€/mois | 49€/mois | 99€/mois |
-| **Prix annuel** | - | 190€/an | 490€/an | 990€/an |
-| **Crédits IA/mois** | 25 (unique, non renouvelable) | 40 | 150 | 500 |
-| **Tous les modules** | Oui | Oui | Oui | Oui |
-| **Publication directe** | Oui | Oui | Oui | Oui |
-| **Auto-commentaires** | Non | Oui | Oui | Oui |
-| **Coach IA** | Non | Non | Oui (illimité) | Oui (illimité) |
-| **Multi-projets** | Non | Non | Non | Oui |
-
-Il existe aussi un plan "Beta" pour les early adopters lifetime (150 crédits/mois, toutes fonctionnalités).
-
-**Crédits IA :**
-- 1 crédit ≈ 0.01€ de coûts IA réels
-- Les crédits mensuels se renouvellent chaque mois (sauf Free = one-shot)
-- Les crédits ne se cumulent PAS d'un mois à l'autre
-- Auto-commentaires : 0.25 crédit par commentaire
-- Le Coach IA (Pro/Elite) ne consomme PAS de crédits
-
-**Packs de crédits supplémentaires (via Systeme.io) :** Starter 25 crédits / 3€, Standard 100 / 10€, Pro 250 / 22€. Ils n'expirent pas et sont consommés APRÈS les crédits mensuels.`);
+  // ── 3-4. Tipote : fonctionnalités et tarifs ──
+  //
+  // VOLONTAIREMENT ABSENTS D'ICI. Ils étaient recopiés dans cette
+  // fonction alors que les articles `what-is-tipote` et `plans-overview`
+  // les disent déjà, et que ces articles sont maintenant injectés EN
+  // ENTIER plus bas. Deux copies d'un même fait finissent toujours par
+  // diverger : le 6 août 2026, cette copie annonçait les
+  // auto-commentaires dès le plan Basic (le code les réserve au Pro) et
+  // 8 réseaux publiables (il y en a 7). Le bot répétait donc, avec
+  // aplomb, deux informations fausses.
+  //
+  // Ce qui reste ci-dessous est ce qu'AUCUN article ne dit : la carte de
+  // navigation, et le fonctionnement interne.
 
   // ── 5. Tipote : navigation ──
   sections.push(`### Tipote : navigation de l'application
 
-**Section principale (sidebar) :**
-- Aujourd'hui (/app) - Dashboard avec prochaine tâche + stats
-- Ma Stratégie (/strategy) - Pyramide d'offres + plan en 3 phases + persona
-- Créer (/create) - Hub de création (8 types de contenu)
-- Mes Contenus (/contents) - Liste + calendrier éditorial
-- Templates (/templates) - Templates Systeme.io
-- Automatisations (/automations) - Auto-commentaires et webhooks
-- Mes Leads (/leads) - Gestion des leads capturés
+Donne TOUJOURS le chemin exact, jamais "dans les réglages".
 
-**Section secondaire :** Analytics (/analytics), Pépites (/pepites), Aide (/support).
+**Menu de gauche :**
+- Aujourd'hui (/app) : le tableau de bord, la prochaine tâche
+- Ma Stratégie (/strategy) : pyramide d'offres, plan en 3 phases, persona
+- Créer (/create) : le hub de création (post, email, article, script vidéo, offre, quiz, stratégie éditoriale)
+- Mes Contenus (/contents) : la liste et le calendrier éditorial
+- Mes Pages (/pages) : les pages hébergées (capture, vente, vitrine, multiliens)
+- Templates (/templates) : les modèles à importer dans Systeme.io
+- Automatisations (/automations) : les DM et emails automatiques sur commentaire
+- Mes Leads (/leads) : les contacts capturés
+- Mes Clients (/clients) : le suivi des clientes et de leurs accompagnements
+- Analytics (/analytics), Pépites (/pepites), Widgets (/widgets), Événements live (/webinars), Extension (/boost)
+- Paramètres, Aide, Devenir affilié
 
-**Workflow typique :** Onboarding → Aujourd'hui → Créer → Publier → Mes Contenus → Analytics`);
+**Paramètres**, 7 onglets : Profil (nom, mission, niche, storytelling en 6 étapes, offres), Connexions (réseaux sociaux, Systeme.io, auto-commentaires), Réglages (email, mot de passe, langue), Positionnement, Branding (police, couleurs, logo, photo, ton de voix), IA (crédits), Abonnement.
+
+**Parcours typique :** onboarding → Aujourd'hui → Créer → Publier → Mes Contenus → Analytics.
+
+**Ne pas confondre :** *Mes Leads* = les emails capturés (haut de l'entonnoir). *Mes Clients* = celles qui ont acheté (le suivi). *Mes Pages* = les pages hébergées par Tipote. *Templates* = des modèles pour construire dans Systeme.io.`);
 
   // ── 6. Technique commun ──
   sections.push(`### Sous le capot (les deux apps)

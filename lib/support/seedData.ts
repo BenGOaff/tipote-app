@@ -1,4 +1,11 @@
 // lib/support/seedData.ts
+//
+// ATTENTION EN ECRIVANT DU MARKDOWN ICI : le contenu vit dans des
+// template literals JavaScript. Un backtick de code inline (`comme ca`)
+// FERME la chaine et casse tout le fichier. Il faut l'echapper : \`.
+// `npx tsc --noEmit` l'attrape, mais l'erreur pointe 400 lignes plus
+// loin, sur le `];` final, et ne dit rien du backtick.
+//
 // Comprehensive help center content.
 //
 // Chaque article porte FR/EN/ES/IT/AR. FR et EN sont complets, ES/IT/AR
@@ -1072,25 +1079,31 @@ Tipote متاح بـ 5 لغات. اذهب إلى **الإعدادات > الإع
       ar: "تغيير كلمة المرور",
     },
     content: {
-      fr: `## Modifier votre mot de passe
+      fr: `## Quand tu es connectée
 
-### Depuis l'application
+**Paramètres > Réglages**, section Mot de passe. Tu n'as pas besoin de l'ancien : tu es déjà identifiée.
 
-1. Allez dans **Paramètres > Réglages**
-2. Section **"Mot de passe"**
-3. Entrez votre nouveau mot de passe
-4. Confirmez et sauvegardez
+Le nouveau doit faire **8 caractères minimum** et être différent de l'actuel.
 
-### Mot de passe oublié ?
+## Quand tu l'as oublié
 
-1. Sur la page de connexion, cliquez sur **"Mot de passe oublié ?"**
-2. Entrez votre adresse email
-3. Vous recevrez un **lien de réinitialisation** par email
-4. Cliquez sur le lien et choisissez un nouveau mot de passe
+Sur l'écran de connexion, **Mot de passe oublié ?**, ton email, puis le lien reçu par email.
 
-> 💡 **Astuce :** Utilisez un mot de passe fort d'au moins 8 caractères avec des majuscules, chiffres et caractères spéciaux.
+Si rien n'arrive : regarde dans les **spams** (ou l'onglet Promotions de Gmail), vérifie que l'adresse est exactement celle du compte, et laisse une à deux minutes. Par sécurité, l'écran affiche le même message que le compte existe ou non.
 
-> **Voir aussi :** [Les paramètres](/support/article/settings-overview)`,
+Un lien de réinitialisation ne sert qu'**une fois** et il expire. "Session expirée" veut dire qu'il faut en redemander un neuf.
+
+## Tu n'as jamais défini de mot de passe
+
+C'est possible : si tu t'es toujours connectée par **lien magique**, il n'y en a jamais eu. Tu peux en définir un depuis Paramètres, ou passer par "Mot de passe oublié" qui fait la même chose.
+
+Le lien magique reste utilisable ensuite : avoir un mot de passe ne le désactive pas.
+
+## Deux comptes séparés
+
+Tipote et Tiquiz sont **deux applications distinctes**. Le même email peut exister des deux côtés avec deux mots de passe différents : changer l'un ne change pas l'autre.
+
+> Le détail complet, avec les cas de connexion qui coincent : [Se connecter, et que faire si tu n'y arrives pas](/support/article/connexion-mot-de-passe)`,
       en: `## Change your password
 
 ### From the app
@@ -1125,33 +1138,39 @@ Vai in **Impostazioni > Impostazioni**. Password dimenticata? Usa "Password dime
       ar: "تخصيص علامتك التجارية",
     },
     content: {
-      fr: `## Votre identité visuelle dans Tipote
+      fr: `## Pourquoi le remplir tôt
 
-Le branding que vous configurez est utilisé dans les **pages hébergées**, les **quiz** et les **contenus générés**.
+Ton branding est utilisé **automatiquement** dans tout ce que Tipote fabrique : tes pages de vente, tes tunnels, tes quiz, tes visuels. Le remplir une fois t'évite de reprendre chaque page à la main ensuite.
 
-### Accès
+C'est dans **Paramètres > Branding**, en quatre blocs.
 
-**Paramètres > Branding**
+## La typographie
 
-### Ce que vous pouvez personnaliser
+La police principale de ta marque. Elle est injectée dans les pages et les tunnels générés, avec un aperçu en direct pour voir ce que ça donne sur un titre et sur un paragraphe.
 
-#### Police de marque
-Choisissez la police qui représente votre marque. Elle sera appliquée aux pages et quiz.
+Choisis une police lisible avant d'en choisir une originale : ton visiteur lit sur un téléphone.
 
-#### Couleurs
-- **Couleur de base** : couleur principale de votre marque
-- **Couleur d'accent** : couleur des boutons et éléments d'action
+## La palette de couleurs
 
-#### Logo
-Uploadez votre logo (format recommandé : PNG transparent, 500x500px min).
+Les couleurs principales de ta marque. Elles sont reprises dans les pages, les boutons et les titres de tout ce qui est généré.
 
-#### Photo auteur
-Votre photo sera affichée dans certains templates de pages et les contenus qui le nécessitent.
+L'aperçu montre la base, l'accent, un titre de section et un bouton d'action : si le bouton devient illisible, c'est là que ça se voit, pas en production.
 
-#### Ton de voix
-Définissez votre tonalité préférée (ex: "Professionnel mais accessible", "Amical et expert"). L'IA adaptera le contenu généré.
+## Les images
 
-> **Voir aussi :** [Créer une page](/support/article/create-page) • [Créer un quiz](/support/article/create-quiz)`,
+Ton **logo** et ta **photo d'auteur**. Elles sont intégrées automatiquement dans les tunnels, et tu peux toujours les remplacer page par page ensuite.
+
+Une photo de toi sur une page de vente change le taux de conversion plus que la police : ne saute pas ce champ.
+
+## Le ton de voix
+
+C'est le bloc qu'on remplit le plus vite et qui pèse le plus lourd. Décris comment tu parles à ton audience : tutoiement ou vouvoiement, direct ou chaleureux, sérieux ou drôle, les mots que tu emploies et ceux que tu refuses.
+
+Il est prérempli depuis ton onboarding s'il y avait de quoi. **Relis-le** : c'est ce qui fait la différence entre un contenu qui te ressemble et un contenu générique.
+
+## Enregistrer
+
+Bouton **Enregistrer le branding** en bas. Les contenus déjà générés ne changent pas rétroactivement : le nouveau branding s'applique à ce que tu génères ensuite.`,
       en: `## Your visual identity in Tipote
 
 Your branding is used in **hosted pages**, **quizzes**, and **generated content**.
@@ -1602,31 +1621,40 @@ Crea > Post → scegli piattaforma → configura argomento/tono → Genera → a
       ar: "إنشاء بريد إلكتروني أو نشرة إخبارية",
     },
     content: {
-      fr: `## Emails qui convertissent, générés par l'IA
+      fr: `## Un email, ou une séquence entière
 
-### Types d'emails disponibles
+**Créer > Email** fait les deux, et c'est la case qu'on ne voit pas : **Séquence complète (7 emails)** génère les sept d'un coup, cohérents entre eux, au lieu de te faire écrire sept fois le même brief.
 
-- **Newsletter** - Actualités, valeur, engagement
-- **Séquence de bienvenue** - Onboarding de vos nouveaux abonnés
-- **Email de vente** - Promotion d'une offre
-- **Séquence de nurturing** - Éducation progressive
+Pour un lancement ou une séquence de bienvenue, c'est la case à cocher.
 
-### Comment créer ?
+## Les champs
 
-1. **Créer > Email**
-2. Choisissez le **type** d'email
-3. Indiquez le **sujet** et le **contexte**
-4. **Générez** - L'IA crée l'email avec objet, corps et CTA
-5. **Copiez** le résultat dans votre outil d'emailing (Systeme.io, Mailchimp, etc.)
+- **Thème** : le sujet de l'email ou le fil de la séquence.
+- **Offre à vendre** : ton offre, choisie dans celles de ton profil. C'est ce qui donne à l'email un but au lieu d'un joli texte.
+- **Résultat principal** (optionnel) : ce que le lecteur obtient. Renseigne-le, c'est ce qui remplit les promesses.
+- **CTA** : ce que tu veux qu'il fasse. Une seule action par email.
+- **Lien** : l'adresse du bouton.
 
-### Personnalisation
+## Le déroulé
 
-L'IA utilise votre persona, vos offres et votre tonalité pour créer des emails qui :
-- Parlent les **douleurs** de votre audience
-- Utilisent le bon **vocabulaire**
-- Incluent des **CTAs** pertinents
+1. Remplis, **Générer**.
+2. Relis dans l'aperçu ou en texte brut.
+3. **Copier**, **PDF**, **Brouillon** ou **Programmer**.
+4. **Regénérer** si le ton ne va pas.
 
-> **Voir aussi :** [Hub de création](/support/article/create-content-overview) • [Templates Systeme.io](/support/article/systemeio-templates)`,
+## Où l'envoyer
+
+Tipote **écrit** les emails, il ne les envoie pas. Tu copies le texte dans Systeme.io (ou ton outil d'emailing) et c'est lui qui expédie.
+
+C'est aussi ce qui permet de brancher la séquence sur un **tag** : le tag posé par un quiz ou une page de capture déclenche la séquence que tu viens d'écrire, sans que tu touches à rien.
+
+## Ce qui rend un email lisible
+
+L'objet fait tout le travail d'ouverture. Le premier paragraphe fait le travail de lecture. Le reste ne sert que si les deux premiers ont fonctionné : relis-les deux fois plus que le corps.
+
+## Coût
+
+1 crédit par email généré. Une séquence de 7 emails coûte donc 7 crédits.`,
       en: `## Emails that convert, AI-generated
 
 Create > Email → Choose type (newsletter, welcome, sales, nurturing) → Set subject/context → Generate → Copy to your email tool.
@@ -1657,25 +1685,39 @@ Crea > Email → scegli tipo → indica argomento → Genera → Copia nel tuo s
       ar: "إنشاء مقال مدونة",
     },
     content: {
-      fr: `## Articles longs et structurés par l'IA
+      fr: `## Pourquoi ça se fait en deux temps
 
-### Comment créer ?
+**Créer > Article Blog** ne rédige pas d'un bloc : il génère d'abord un **plan**, tu le valides, et seulement ensuite il rédige.
 
-1. **Créer > Article**
-2. Indiquez le **sujet** et les **mots-clés** SEO
-3. Choisissez le **format** : tutoriel, guide, article d'opinion, étude de cas
-4. **Générez** - L'IA crée un article complet avec titres, sous-titres, introduction et conclusion
-5. **Modifiez** si nécessaire, puis sauvegardez ou copiez
+Ce n'est pas une lourdeur. Un article de 1500 mots parti sur un mauvais plan, c'est 1500 mots à jeter ; un plan corrigé en trente secondes, c'est un article juste du premier coup.
 
-### Optimisation SEO
+## Les champs
 
-L'IA génère automatiquement :
-- Des **titres et sous-titres** (H2, H3) structurés
-- Une **introduction** accrocheuse
-- Une **conclusion** avec CTA
-- Des suggestions de **mots-clés**
+- **Sujet ou mot-clé SEO** (obligatoire). Sois précise : "comment augmenter son trafic organique" vaut mieux que "trafic".
+- **Mot-clé SEO principal** : celui sur lequel tu veux ressortir. Il guide la structure et les titres.
+- **Objectif** (obligatoire) : ce que l'article doit produire chez le lecteur.
+- **Liens à placer** : colle tes URLs, une par ligne. L'IA les insère là où c'est naturel, au lieu de te laisser les recaser après coup.
 
-> **Voir aussi :** [Hub de création](/support/article/create-content-overview)`,
+## Le déroulé
+
+1. Remplis les champs, clique sur **Générer le plan**.
+2. **Relis le plan.** C'est la seule étape où ton temps compte vraiment.
+3. **Valider le plan et rédiger l'article.**
+4. Relis, ajuste, et enregistre en brouillon ou programme.
+
+Le bouton **Regénérer l'article** repart du plan validé : tu changes la rédaction sans reperdre la structure que tu venais d'approuver.
+
+## Ce que tu récupères
+
+Un aperçu mis en forme et une version en **texte brut**, à copier telle quelle dans WordPress, Systeme.io ou n'importe quel éditeur. Bouton **Copier** pour les deux.
+
+## Le SEO, honnêtement
+
+L'IA structure bien et place tes mots-clés, ce qui est nécessaire mais pas suffisant. Ce qui fait la différence, c'est ce que tu ajoutes : tes exemples, tes chiffres, tes cas clients. Un article qui ne dit rien que d'autres n'ont pas déjà dit ne se classera pas, quelle que soit sa structure.
+
+## Coût
+
+1 crédit pour le plan, 1 crédit pour la rédaction.`,
       en: `## Long-form articles, AI-structured
 
 Create > Article → Set topic and SEO keywords → Choose format → Generate → Edit and save.
@@ -1706,23 +1748,40 @@ Crea > Articolo → argomento e parole chiave → formato → Genera.`,
       ar: "إنشاء نص فيديو",
     },
     content: {
-      fr: `## Des scripts vidéo prêts à tourner
+      fr: `## Ce que ça produit
 
-### Formats supportés
+**Créer > Script Vidéo** écrit le texte que tu vas dire, structuré pour le format visé : une accroche qui retient les trois premières secondes, un développement, et un appel à l'action.
 
-- **YouTube** - Scripts longs avec chapitres
-- **Reels / TikTok** - Scripts courts et percutants
-- **Stories** - Scripts de stories séquentielles
+Tipote ne monte pas la vidéo et ne la publie pas : il écrit le script. Le tournage reste à toi.
 
-### Comment créer ?
+## Les formats
 
-1. **Créer > Vidéo**
-2. Choisissez le **format** et la **plateforme**
-3. Indiquez le **sujet** et l'**angle**
-4. **Générez** - L'IA crée un script structuré avec intro hook, développement et CTA
-5. **Tournez** en suivant le script !
+- **YouTube** : script long, avec des chapitres.
+- **Reels et TikTok** : court et percutant, l'accroche fait tout.
+- **Stories** : une suite de séquences courtes.
 
-> **Voir aussi :** [Hub de création](/support/article/create-content-overview) • [Créer un post](/support/article/create-post)`,
+Le choix change vraiment le résultat : un script YouTube posé sur un Reel de 30 secondes ne tient pas.
+
+## Les champs
+
+- **Titre** : pour ta sauvegarde, pas pour la vidéo.
+- **Sujet** : ce dont tu parles. Sois précise ("comment vendre sans être pushy" plutôt que "la vente").
+- **Durée** : elle borne la longueur du script. Une minute, c'est environ 150 mots.
+
+## Le déroulé
+
+1. Choisis le format et la durée, décris ton sujet.
+2. **Générer**.
+3. Relis à voix haute. C'est le seul test qui compte : un script qui se lit bien et s'entend mal est un mauvais script.
+4. **Copier**, **PDF** pour l'avoir sous les yeux au tournage, ou **Brouillon**.
+
+## Ce qu'il faut retoucher à chaque fois
+
+Les trois premières secondes. L'IA écrit une accroche correcte, mais c'est l'endroit où ta façon de parler fait la différence entre quelqu'un qui reste et quelqu'un qui scrolle. Réécris-la avec tes mots.
+
+## Coût
+
+1 crédit par script.`,
       en: `## Video scripts ready to shoot
 
 Formats: YouTube (long), Reels/TikTok (short), Stories. Create > Video → Choose format → Set topic → Generate.
@@ -1753,20 +1812,36 @@ Crea > Video → formato → argomento → Genera.`,
       ar: "إنشاء عرض تجاري",
     },
     content: {
-      fr: `## Du copywriting de vente, par l'IA
+      fr: `## Deux façons d'y aller
 
-### Comment créer ?
+**Créer > Offre** te propose deux modes, et le bon choix dépend de là où tu en es :
 
-1. **Créer > Offre**
-2. Décrivez votre **offre** (nom, prix, bénéfices)
-3. **Générez** - L'IA crée un descriptif complet avec headline, bénéfices, preuves sociales, prix et CTA
-4. Utilisez-le sur votre **page de vente**, **email** ou **site**
+- **Créer à partir de zéro** : tu as une idée, tu veux qu'elle devienne une offre construite.
+- **Améliorer une offre existante** : tu choisis une de tes offres et l'IA te propose des améliorations concrètes.
 
-### Lien avec la pyramide
+Le mode "améliorer" est le plus rentable des deux, et c'est celui qu'on oublie. Une offre qui existe déjà a été confrontée à de vrais clients : la retravailler part de quelque chose de vrai.
 
-Quand vous créez une offre dans le hub, elle peut être **automatiquement ajoutée à votre pyramide d'offres** et déclencher de nouvelles tâches dans le plan d'action.
+## Créer à partir de zéro
 
-> **Voir aussi :** [La pyramide d'offres](/support/article/offer-pyramid) • [Créer une page de vente](/support/article/create-page)`,
+1. Choisis la **catégorie** d'offre.
+2. Décris ce que tu veux vendre, à qui, et le résultat que ça produit.
+3. Génère.
+
+L'IA travaille avec ton **persona**, tes **offres existantes** et ton **ton de voix** : plus ton profil est rempli (Paramètres > Profil), plus l'offre est à toi et pas à n'importe qui.
+
+## Améliorer une offre existante
+
+L'offre doit d'abord exister dans **Paramètres > Profil**, avec son nom, sa promesse, sa description, son prix et son format. Tu la choisis dans la liste, tu dis ce que tu veux améliorer (la rendre plus concrète, ajouter des bonus, simplifier le parcours), et l'IA travaille dessus.
+
+Elle te renvoie l'offre retravaillée **et des tâches** à faire pour la mettre en oeuvre : c'est ce qui évite que l'analyse reste un beau document sans suite.
+
+## Où ça va ensuite
+
+Une offre travaillée alimente le reste : ta **page de vente** (Mes Pages), tes **emails**, ta **pyramide d'offres** dans Ma Stratégie. C'est le document dont tout le reste découle, donc c'est celui qui mérite le plus de temps.
+
+## Coût
+
+1 crédit par génération.`,
       en: `## Sales copywriting, by AI
 
 Create > Offer → Describe your offer → Generate → Use on your sales page or email. New offers can be auto-added to your pyramid.
@@ -1797,22 +1872,41 @@ Crea > Offerta → descrivi la tua offerta → Genera. Può essere aggiunta alla
       ar: "إنشاء قمع مبيعات",
     },
     content: {
-      fr: `## Des funnels complets en quelques clics
+      fr: `## Un mot sur le vocabulaire
 
-Un **funnel** (tunnel de vente) est une séquence de pages et emails qui guide un prospect vers l'achat.
+Ce qu'on appelle ici "tunnel" se construit dans **Mes Pages** : tu crées les pages une par une, et c'est leur enchaînement qui fait le tunnel.
 
-### Comment créer ?
+Il n'y a pas d'écran "tunnel" séparé, et c'est voulu : une page de capture qui mène à une page de vente, c'est déjà un tunnel.
 
-1. **Créer > Funnel**
-2. Décrivez votre **offre cible** et votre **objectif**
-3. **Générez** - L'IA crée le copywriting complet du funnel :
-   - Page de capture
-   - Séquence d'emails
-   - Page de vente
-   - Page de remerciement
-4. **Utilisez** le contenu généré dans vos outils (Systeme.io, etc.)
+## Les quatre types de page
 
-> **Voir aussi :** [Hub de création](/support/article/create-content-overview) • [Templates Systeme.io](/support/article/systemeio-templates)`,
+Dans **Mes Pages > Nouvelle page** :
+
+- **Page de capture** (5 crédits) : récupérer des emails contre un lead magnet.
+- **Page de vente** (6 crédits) : vendre une offre, avec une structure pensée pour la conversion.
+- **Site vitrine** (6 crédits) : présenter ton activité et renvoyer vers un rendez-vous ou un formulaire.
+- **Page multiliens** (**gratuit**) : tous tes liens en une page, pour ta bio Instagram ou TikTok.
+
+## Ce que Tipote fait à ta place
+
+Le texte, la mise en page et l'hébergement. Il utilise **automatiquement** ton branding (police, couleurs, logo), ton **ton de voix** et tes **mentions légales**. Tu n'as pas à les redonner à chaque page.
+
+## Un tunnel simple, dans l'ordre
+
+1. Une **page de capture** avec ton lead magnet.
+2. Un **tag Systeme.io** posé à l'inscription.
+3. Une **séquence email** déclenchée par ce tag (Créer > Email, séquence complète).
+4. Une **page de vente** vers laquelle la séquence renvoie.
+
+Chaque page a son adresse publique en \`/p/[lien]\`, et ses propres statistiques : vues, leads, clics.
+
+## Modifier après coup
+
+Tu peux éditer directement dans la page, ou passer par le **chat IA** intégré : tu demandes le changement en français, il le fait. C'est plus rapide que de chercher le bon bloc quand tu ne sais pas encore où sont les choses.
+
+## Et les templates Systeme.io ?
+
+Si tu préfères construire ton tunnel dans Systeme.io lui-même, la page **Templates** te donne des modèles prêts à importer.`,
       en: `## Complete funnels in a few clicks
 
 Create > Funnel → Describe target offer and goal → Generate → Get complete copywriting (capture page, email sequence, sales page, thank you page).
@@ -2107,33 +2201,46 @@ Gli auto-commenti pubblicano un commento sotto il tuo post automaticamente. 0.25
       ar: "التعليق إلى رسالة مباشرة",
     },
     content: {
-      fr: `## Convertissez les commentaires en conversations privées
+      fr: `## Le principe
 
-Le **Comment-to-DM** détecte des **mots-clés** dans les commentaires de vos posts et envoie automatiquement un **message privé** au commentateur.
+Tu publies un post qui dit "commente GUIDE pour le recevoir". Quelqu'un commente **GUIDE**. Il reçoit ton lien en message privé, dans les secondes qui suivent, sans que tu fasses rien.
 
-### Cas d'usage
+C'est la mécanique la plus efficace des réseaux aujourd'hui : le commentaire fait travailler l'algorithme pour toi, et le message privé ouvre une conversation à laquelle il a répondu de lui-même.
 
-- "Écrivez **GUIDE** en commentaire pour recevoir le guide gratuit"
-- "Commentez **OUI** pour en savoir plus"
-- Détection de mots comme "intéressé", "prix", "info"
+## Où ça marche, et où ça ne marche pas
 
-### Configuration
+**Instagram et Facebook uniquement.** Sur TikTok, la réponse se fait en commentaire et pas en privé.
 
-1. **Automatisations** dans la sidebar
-2. Créez une nouvelle automatisation **Comment-to-DM**
-3. Définissez les **mots-clés déclencheurs**
-4. Rédigez les **variantes de réponse** (Tipote alterne pour éviter la détection de spam)
-5. Activez l'automatisation
+**X (Twitter) et Threads sont impossibles**, et ce n'est pas un manque de Tipote : l'API de X facture les messages privés 5 000 $ par mois, et Threads ne les a pas ouverts aux développeurs. Si quelqu'un te promet ça sur X, demande-lui son budget.
 
-### Logs
+## Les quatre étapes
 
-Chaque exécution est loguée avec :
-- Date/heure
-- Commentaire détecté
-- Réponse envoyée
-- Statut (succès/échec)
+1. **Connecte ton compte Meta.** Paramètres > Connexions, ton compte Instagram et/ou ta Page Facebook. Il faut un compte **professionnel ou créateur** côté Instagram, une **Page** côté Facebook : Meta n'ouvre les messages automatiques qu'à ces comptes.
+2. **Vérifie que tes messages sont ouverts** dans les réglages de confidentialité du compte lui-même. Un compte qui refuse les messages de personnes qu'il ne suit pas bloque tout.
+3. **Crée l'automatisation** dans Automatisations : un nom, le mot-clé déclencheur (PDF, GUIDE, PROMO...), et le message qui partira.
+4. **Teste-la** : publie, commente avec ton mot-clé depuis un autre compte, et regarde arriver le message.
 
-> **Voir aussi :** [Comment-to-Email](/support/article/comment-to-email) • [Les auto-commentaires](/support/article/auto-comments)`,
+## Écrire le message
+
+\`{{prenom}}\` insère le prénom de la personne. Utilise-le : un message qui commence par un prénom se lit deux fois plus.
+
+> Salut \`{{prenom}}\` ! Merci pour ton commentaire. Voici ton guide : [TON LIEN]
+
+**La mention STOP est ajoutée automatiquement si tu l'oublies.** C'est ce qui rend l'envoi conforme, et ce n'est pas négociable.
+
+## Le mot-clé
+
+Il est **insensible aux majuscules**, et il suffit qu'il soit contenu dans le commentaire : "guide stp 🙏" déclenche un mot-clé GUIDE.
+
+Choisis un mot que personne n'écrirait par hasard. "OUI" se déclenchera sur des commentaires qui n'ont rien à voir ; "GUIDE-TDAH" non.
+
+## Le cadre légal, en clair
+
+C'est la personne qui **initie** le contact en commentant : le consentement est implicite, et chaque message porte son STOP. Meta limite en plus les envois à une **fenêtre de 24 heures** après l'interaction. Passé ce délai, plus rien ne part, et c'est normal.
+
+## Cibler un post précis
+
+Une automatisation peut être liée à **un seul post** au moment de sa publication. Utile quand tu ne veux pas qu'un vieux post continue à déclencher un message dont le lien n'est plus valable.`,
       en: `## Convert comments into private conversations
 
 **Comment-to-DM** detects keywords in comments and auto-sends a DM. Set trigger words and response variants in **Automations**.
@@ -2164,22 +2271,38 @@ Comment-to-DM rileva parole chiave nei commenti e invia DM automaticamente. Conf
       ar: "التعليق إلى بريد إلكتروني",
     },
     content: {
-      fr: `## Transformez l'engagement en leads
+      fr: `## La différence avec l'Auto DM
 
-Le **Comment-to-Email** combine Comment-to-DM avec une étape de capture d'email : après avoir envoyé un DM automatique, il demande l'email du commentateur pour lui envoyer une ressource.
+L'**Auto DM** envoie un lien en message privé. La personne reçoit son cadeau, et tu n'as toujours pas son email.
 
-### Fonctionnement
+L'**Auto Email** fait un pas de plus : elle commente, elle reçoit un message qui lui demande son email, elle répond avec son email, et ce contact part dans Systeme.io avec un tag. À partir de là, c'est ta séquence email qui prend le relais.
 
-1. Le commentateur écrit un **mot-clé** sous votre post
-2. Tipote envoie un **DM automatique** avec un message et une demande d'email
-3. Quand l'email est fourni, il est **capturé comme lead** dans votre base (chiffré)
-4. La ressource promise est envoyée
+Tu échanges un peu de friction contre un vrai contact dans ta liste. À toi de voir ce qui compte le plus pour ce contenu-là.
 
-### Configuration
+## Le déroulé, vu par la personne
 
-Identique au Comment-to-DM, avec en plus le message de capture d'email et le contenu à envoyer.
+1. Elle commente ton mot-clé sous ton post.
+2. Elle reçoit un message privé : "envoie-moi ton email en réponse pour recevoir ton guide".
+3. Elle répond avec son email.
+4. Elle reçoit une confirmation, et son email part dans Systeme.io.
+5. Ta séquence Systeme.io lui envoie le guide.
 
-> **Voir aussi :** [Comment-to-DM](/support/article/comment-to-dm) • [Gérer vos leads](/support/article/manage-leads)`,
+## Ce que tu configures
+
+- Le **mot-clé déclencheur**.
+- Le **premier message**, celui qui demande l'email. Sois explicite sur ce qu'elle reçoit en échange.
+- Le **message de confirmation**, celui qui part une fois l'email donné. Ajoute "vérifie tes spams" : c'est la moitié des messages "je n'ai rien reçu" en moins.
+- Le **tag Systeme.io** posé sur le contact. C'est lui qui déclenchera ta séquence.
+
+## Ce qu'il faut préparer AVANT côté Systeme.io
+
+Tipote pose le tag, il n'envoie pas l'email du guide. Sans automatisation en face, la personne donne son email et ne reçoit jamais rien.
+
+Dans Systeme.io : **Automatisations > Règles > Créer une règle**, déclencheur **Tag ajouté à un contact**, action **Envoyer un email** avec ton lien.
+
+## Les mêmes conditions que l'Auto DM
+
+Compte Instagram professionnel ou créateur, Page Facebook, messages ouverts, et la fenêtre de 24 heures de Meta. Si le premier message ne part pas, c'est là qu'il faut regarder avant tout le reste.`,
       en: `## Turn engagement into leads
 
 **Comment-to-Email** sends a DM after keyword detection, asks for email, captures it as a lead.
@@ -2584,26 +2707,49 @@ Tutti i lead catturati sono centralizzati in **I miei Lead**. Ricerca, filtri, e
       ar: "تكامل Systeme.io",
     },
     content: {
-      fr: `## Connectez Tipote à votre CRM Systeme.io
+      fr: `## Ce que l'intégration fait
 
-### Configuration
+Une fois ta clé API renseignée, tout contact capturé par Tipote (quiz, page de capture, automatisation) part dans Systeme.io **tout seul** : le contact est créé ou mis à jour, et le **tag** que tu as choisi lui est posé.
 
-1. **Paramètres > Connexions** → Section Systeme.io
-2. Entrez votre **clé API Systeme.io**
-3. Sauvegardez
+C'est ce tag qui fait ensuite tout le travail : c'est lui qui déclenche tes séquences, tes accès formation, tes communautés.
 
-### Ce que vous pouvez faire
+## La brancher
 
-- **Exporter les leads** de vos quiz et pages vers Systeme.io
-- **Tags de capture** - Ajoutez des tags spécifiques par quiz/page
-- **Synchronisation automatique** - Les nouveaux leads sont envoyés automatiquement
-- **Acheter des crédits** supplémentaires via Systeme.io
+1. Dans **Systeme.io > Paramètres > API**, génère une clé.
+2. Dans Tipote, **Paramètres > Connexions**, colle-la et donne-lui un nom.
 
-### Templates Systeme.io
+C'est tout. Rien à faire par contenu.
 
-Tipote propose aussi une bibliothèque de **templates Systeme.io** téléchargeables et personnalisables via l'IA (accessible depuis **Templates** dans la sidebar).
+## Créer tes tags AVANT
 
-> **Voir aussi :** [Gérer vos leads](/support/article/manage-leads) • [Templates Systeme.io](/support/article/systemeio-templates)`,
+C'est l'ordre qui compte, et c'est là que ça coince le plus souvent. Crée tes tags dans **Systeme.io > Contacts > Tags** avant de configurer ton quiz ou ta page : tu pourras les choisir dans une liste au lieu de les taper de mémoire.
+
+Un tag par résultat de quiz, un tag pour les partages, un tag par page de capture : c'est ce qui te permet plus tard de savoir d'où vient chaque personne.
+
+## Faire partir une séquence
+
+Dans **Systeme.io > Automatisations > Règles > Créer une règle** :
+
+- **Déclencheur** : \`Tag ajouté à un contact\`, puis ton tag.
+- **Actions**, autant que tu veux : abonner à une campagne email, donner accès à une formation, ajouter à une communauté, envoyer un email unique, poser un autre tag, appeler un webhook.
+
+Ensuite, plus rien à faire. Le contact arrive, le tag se pose, tes actions partent.
+
+## Le piège du test, et il piège tout le monde
+
+**Systeme.io ne redéclenche PAS une règle si le tag est déjà sur le contact.**
+
+Tu testes, ça marche. Tu retestes avec le même email, et rien ne part. Tu conclus que c'est cassé alors que tout va bien.
+
+Avant chaque nouveau test avec la même adresse : **Systeme.io > Contacts**, ouvre ton contact de test, **retire le tag à la main**.
+
+## Relier une offre
+
+Dans les réglages d'une offre, tu peux la **lier à un produit Systeme.io**. Tipote attribue alors chaque vente à la bonne offre dans tes analytics. Sans ce lien, on essaie de faire correspondre par le nom ou par le prix, ce qui marche souvent mais pas toujours.
+
+## Si un contact ne part pas
+
+Aucun lead n'est perdu : ils restent en base avec un état de synchronisation visible. Un bouton permet de relancer ceux qui attendent, ce qui couvre le cas d'une clé changée ou d'une erreur passagère de l'API.`,
       en: `## Connect Tipote to Systeme.io
 
 Go to **Settings > Connections**, enter your Systeme.io API key. Export leads, add capture tags, auto-sync.
@@ -2634,21 +2780,44 @@ Vai in **Impostazioni > Connessioni**, inserisci la tua API key Systeme.io. Espo
       ar: "قوالب Systeme.io",
     },
     content: {
-      fr: `## Des templates prêts à l'emploi
+      fr: `## À quoi ça sert
 
-### Accès
+La page **Templates** te donne des modèles de pages Systeme.io prêts à importer : tu les récupères dans TON compte Systeme.io en un clic, puis tu les personnalises là-bas.
 
-**📄 Templates** dans la sidebar.
+C'est pour celles qui construisent leurs tunnels **dans Systeme.io**. Si tu préfères que Tipote héberge tes pages, c'est Mes Pages qu'il te faut, pas cette page-là.
 
-### Fonctionnalités
+## Les catégories
 
-- **Prévisualisation** des templates avant téléchargement
-- **Téléchargement direct** dans votre compte Systeme.io
-- **Itération IA** - Demandez à l'IA de modifier le contenu
-- **Reformulation** - Adaptez le texte à votre tonalité
-- **Personnalisation** - Le contenu est adapté à votre profil business
+- **Capture** : récupérer des emails.
+- **Vente** : présenter et vendre une offre.
+- **Vitrine** : présenter ton activité.
+- **Blog** : publier des articles.
 
-> **Voir aussi :** [Intégration Systeme.io](/support/article/systemeio-integration) • [Hub de création](/support/article/create-content-overview)`,
+L'onglet **Tous** montre l'ensemble.
+
+## Comment faire
+
+1. Choisis un template dans la liste.
+2. Importe-le : il arrive dans ton compte Systeme.io.
+3. Personnalise-le là-bas : ton texte, tes couleurs, ton logo, tes liens.
+
+Il faut évidemment que ton compte Systeme.io soit connecté (**Paramètres > Connexions**).
+
+## Ce qui reste à faire après l'import
+
+Un template est une structure, pas une page finie. Il te reste :
+
+- le **texte**, que tu peux faire écrire par Tipote (Créer > Offre pour l'argumentaire, Créer > Email pour la suite) ;
+- ton **branding** : les templates arrivent avec des couleurs par défaut ;
+- le **branchement** : le formulaire doit pointer vers la bonne liste et poser le bon tag.
+
+## Templates ou Mes Pages ?
+
+**Mes Pages** : Tipote écrit, met en forme et héberge. Plus rapide, et l'adresse est en \`/p/[lien]\` ou sur ton propre domaine.
+
+**Templates Systeme.io** : tout vit chez Systeme.io, avec ses tunnels et ses paiements au même endroit. Plus long à mettre en place, plus intégré si tu vends déjà là-bas.
+
+Les deux se combinent très bien : la page de capture chez Tipote, le paiement chez Systeme.io.`,
       en: `## Ready-to-use templates
 
 Access: **Templates** in sidebar. Preview, download, customize with AI, and import into Systeme.io.
@@ -2690,12 +2859,23 @@ Accedi da **Templates** nella sidebar. Anteprima, scarica e personalizza con l'I
 |---|---|---|---|---|
 | **Prix/mois** | 0€ | 19€ | 49€ | 99€ |
 | **Prix/an** | - | 190€ | 490€ | 990€ |
-| **Crédits IA/mois** | 25 (one-shot) | 40 | 150 | 500 |
-| **Tous les modules** | ✅ | ✅ | ✅ | ✅ |
+| **Crédits IA/mois** | 25 (une seule fois) | 40 | 150 | 500 |
+| **Réseaux sociaux connectables** | 1 | 2 | 4 | tous |
+| **Tous les modules de création** | ✅ | ✅ | ✅ | ✅ |
 | **Publication directe** | ✅ | ✅ | ✅ | ✅ |
-| **Auto-commentaires** | ❌ | ✅ | ✅ | ✅ |
+| **Analyse IA de tes statistiques** | ❌ | ✅ | ✅ | ✅ |
+| **Enrichissement du persona** | ❌ | ✅ | ✅ | ✅ |
+| **Analyse de la concurrence** | ❌ | ✅ | ✅ | ✅ |
+| **Acheter des crédits en plus** | ❌ | ✅ | ✅ | ✅ |
+| **Auto-commentaires** | ❌ | ❌ | ✅ | ✅ |
 | **Coach IA** | ❌ | ❌ | ✅ | ✅ |
 | **Multi-projets** | ❌ | ❌ | ❌ | ✅ |
+
+### Les plafonds du plan gratuit, en plus des crédits
+
+- **1 réseau social** connecté à la fois
+- **1 quiz**, **1 sondage**, **1 page publiée**, **1 popquiz** actifs
+- **10 leads visibles** par fenêtre de 30 jours. Les suivants continuent d'être capturés et ne sont pas supprimés : ils sont masqués, et réapparaissent tous dès le passage en plan payant.
 
 ### Détails par plan
 
@@ -2707,17 +2887,24 @@ Accedi da **Templates** nella sidebar. Anteprima, scarica e personalizza con l'I
 
 #### 💙 Basic - 19€/mois
 - **40 crédits/mois** (renouvelés automatiquement)
-- Auto-commentaires débloqués
+- **2 réseaux sociaux** connectables
+- L'analyse IA de tes statistiques, l'enrichissement du persona et l'analyse de la concurrence se débloquent ici
+- Tu peux acheter des crédits en plus si tu tombes à court
 - Parfait pour les **débutants** qui publient régulièrement
+
+Les auto-commentaires ne sont PAS dans ce plan : ils commencent au Pro.
 
 #### ⭐ Pro - 49€/mois (Populaire)
 - **150 crédits/mois**
-- **Coach IA** inclus (conversations illimitées)
+- **4 réseaux sociaux** connectables
+- **Coach IA** inclus, conversations illimitées et sans crédits
+- **Auto-commentaires** débloqués
 - Idéal pour les **entrepreneurs actifs** qui produisent beaucoup de contenu
 
 #### 💎 Elite - 99€/mois
 - **500 crédits/mois**
-- **Multi-projets** - Gérez plusieurs business depuis un compte
+- **Tous les réseaux sociaux** connectables, sans limite
+- **Multi-projets** : plusieurs business ou clientes depuis un seul compte, chacun avec sa propre stratégie. Attention, les crédits IA sont PARTAGÉS entre tous tes projets.
 - Pour les **entrepreneurs avancés** et **agences**
 
 ### Économisez avec l'abonnement annuel
@@ -2733,11 +2920,18 @@ Les plans annuels offrent l'équivalent de **2 mois gratuits** :
 | | Free | Basic (19€/mo) | Pro (49€/mo) | Elite (99€/mo) |
 |---|---|---|---|---|
 | AI Credits/mo | 25 (one-time) | 40 | 150 | 500 |
-| All modules | ✅ | ✅ | ✅ | ✅ |
+| Connectable social accounts | 1 | 2 | 4 | all |
+| All creation modules | ✅ | ✅ | ✅ | ✅ |
 | Direct publishing | ✅ | ✅ | ✅ | ✅ |
-| Auto-comments | ❌ | ✅ | ✅ | ✅ |
+| AI analysis of your stats | ❌ | ✅ | ✅ | ✅ |
+| Persona enrichment | ❌ | ✅ | ✅ | ✅ |
+| Competitor analysis | ❌ | ✅ | ✅ | ✅ |
+| Buy extra credits | ❌ | ✅ | ✅ | ✅ |
+| Auto-comments | ❌ | ❌ | ✅ | ✅ |
 | AI Coach | ❌ | ❌ | ✅ | ✅ |
 | Multi-projects | ❌ | ❌ | ❌ | ✅ |
+
+Free also caps: 1 quiz, 1 survey, 1 published page, 1 popquiz, and 10 visible leads per rolling 30 days (the rest keep being captured, just hidden).
 
 Annual plans save ~2 months.
 
@@ -2835,30 +3029,41 @@ Check balance in the header or **Settings > AI**.
       ar: "شراء أرصدة إضافية",
     },
     content: {
-      fr: `## Des packs pour ne jamais manquer de crédits
+      fr: `## Quand en acheter
 
-### Packs disponibles
+Tes crédits mensuels se renouvellent au début de chaque cycle et **ne se cumulent pas** d'un mois sur l'autre. Si tu tombes à court en milieu de mois, tu as trois options : attendre, acheter un pack, ou passer au plan au dessus.
+
+Un repère simple : si tu es à court **tous les mois**, un plan supérieur revient moins cher qu'un pack tous les mois. Si c'est arrivé une fois, prends le pack.
+
+## Les packs
 
 | Pack | Crédits | Prix |
-|------|---------|------|
-| 🟢 **Starter** | 25 crédits | 3€ |
-| 🔵 **Standard** | 100 crédits | 10€ |
-| ⭐ **Pro** | 250 crédits | 22€ |
+|---|---|---|
+| Starter | 25 | 3 € |
+| Standard | 100 | 10 € |
+| Pro | 250 | 22 € |
 
-### Caractéristiques
+Achat via Systeme.io, comme le reste.
 
-- **Pas d'expiration** - Les crédits achetés ne périment pas
-- **Cumulables** - Ils s'ajoutent à votre solde existant
-- **Consommation FIFO** - Les crédits mensuels sont utilisés en premier, puis les crédits achetés
+## Deux choses à savoir, et elles sont rassurantes
 
-### Comment acheter ?
+1. **Les crédits achetés n'expirent jamais.** Ils restent sur ton compte, y compris si tu changes de plan.
+2. **Ils sont consommés APRÈS les crédits du mois.** Tu vides d'abord ton quota mensuel, ensuite ta réserve. Tu ne "gaspilles" donc jamais un pack en début de mois.
 
-1. **Paramètres > Abonnement** → Section "Crédits"
-2. Choisissez votre pack
-3. Vous êtes redirigé vers **Systeme.io** pour le paiement
-4. Après paiement, les crédits sont **ajoutés automatiquement** via webhook
+## Où c'est
 
-> **Voir aussi :** [Les crédits expliqués](/support/article/credits-explained) • [Les plans et tarifs](/support/article/plans-overview)`,
+**Paramètres > IA** pour ton solde en direct, ou **Paramètres > Abonnement**. Les deux affichent le détail : ce que tu as acheté, ce que tu as consommé.
+
+## Réservé aux plans payants
+
+L'achat de crédits est disponible **à partir du plan Basic**. En plan gratuit, les 25 crédits sont donnés une fois et ne se rechargent pas : c'est un essai, pas un compteur.
+
+## Ce qui consomme quoi
+
+- une génération de contenu : **1 crédit** ;
+- un auto-commentaire : **0,25 crédit** ;
+- une page générée : **5 ou 6 crédits** selon le type (la page multiliens est gratuite) ;
+- le **Coach IA** : rien du tout, sur les plans Pro et Elite.`,
       en: `## Packs to never run out
 
 | Pack | Credits | Price |
@@ -2897,37 +3102,37 @@ Starter (25/3€)، Standard (100/10€)، Pro (250/22€). بدون انتها�
       ar: "إدارة اشتراكك",
     },
     content: {
-      fr: `## Upgrade, downgrade ou annulation
+      fr: `## Où ça se passe
 
-### Accès
+**Paramètres > Abonnement.** Tu y vois ton plan en cours, ton solde de crédits, les autres plans avec leur prix, et le bouton d'annulation.
 
-**Paramètres > Abonnement**
+Un sélecteur **Mensuel / Annuel** bascule l'affichage : l'annuel revient à dix mois payés pour douze, soit deux mois offerts.
 
-### Ce que vous voyez
+## Changer de plan
 
-- Votre **plan actuel** avec badge
-- Vos **crédits** disponibles / total
-- Le **tableau comparatif** des plans
-- Votre **consommation** par type de contenu
+Clique sur le plan voulu, tu arrives sur la page de commande. Le changement est automatique : le nouveau plan démarre, l'ancien s'arrête. **Tu n'es jamais facturée deux fois.**
 
-### Changer de plan (Upgrade)
+Ce que tu gagnes en montant : plus de crédits, plus de réseaux connectables, et selon le palier l'analyse IA de tes statistiques, les auto-commentaires, le Coach illimité, le multi-projets.
 
-1. Cliquez sur **"Upgrade"** sur le plan souhaité
-2. Vous êtes redirigé vers Systeme.io pour le paiement
-3. Le changement est **immédiat** après paiement
+## Redescendre de plan
 
-### Downgrade
+Même chemin. Tes contenus, tes pages, tes leads et tes projets **restent**. Ce sont les limites du nouveau plan qui s'appliquent, pas un effacement : par exemple tes leads au delà de 10 par 30 jours deviennent masqués en gratuit, et réapparaissent si tu remontes.
 
-Le downgrade prend effet au **prochain renouvellement**. Vous conservez les avantages de votre plan actuel jusqu'à la fin de la période payée.
+Si tu avais plus de réseaux connectés que le nouveau plan n'en autorise, tu devras en déconnecter.
 
-### Annulation
+## Annuler
 
-Si vous annulez :
-- Votre plan revient à **Free** au prochain renouvellement
-- Vos données sont **conservées 90 jours**
-- Vous pouvez vous réabonner à tout moment
+Bouton **Annuler mon abonnement**. L'annulation est **immédiate** : tu repasses en plan Free avec ses 25 crédits. Tu peux te réabonner quand tu veux.
 
-> **Voir aussi :** [Les plans et tarifs](/support/article/plans-overview) • [Les crédits IA](/support/article/credits-explained)`,
+Si tu préfères aller au bout de la période déjà payée, gère l'abonnement depuis **Systeme.io** plutôt que d'annuler ici.
+
+## Les factures
+
+Les paiements passent par **Systeme.io** : Tipote ne stocke aucune donnée bancaire. Tes factures et tes reçus sont dans ton espace Systeme.io ou dans l'email de confirmation d'achat.
+
+## Tu as un accès Beta à vie ?
+
+Tu fais partie des premiers utilisateurs. Ton accès **Pro est garanti à vie**, avec 150 crédits par mois et le Coach IA. Tu n'as rien à renouveler, rien à repayer, et le bandeau de tarifs ne te concerne pas.`,
       en: `## Upgrade, downgrade or cancel
 
 Go to **Settings > Subscription**. Upgrade is immediate. Downgrade takes effect at next renewal. Cancellation = Free plan, data kept 90 days.
@@ -3025,26 +3230,37 @@ Also tracks per-offer metrics.
       ar: "أفكار الأعمال (Pépites)",
     },
     content: {
-      fr: `## Des insights qui font la différence
+      fr: `## Ce que c'est
 
-Les **pépites** sont des insights et recommandations business que Tipote vous envoie régulièrement.
+Les **Pépites** sont de courts conseils business qui arrivent dans ton compte de temps en temps. Une pépite, c'est une idée actionnable, pas un article : quelque chose que tu peux appliquer dans la journée.
 
-### Accès
+Elles s'accumulent dans ta collection, sur la page **Pépites**.
 
-**💎 Pépites** dans la sidebar.
+## Comment elles arrivent
 
-### Types de pépites
+Toutes seules, et **sans horaire fixe**. Tu ne sais jamais exactement quand la prochaine tombe, et c'est fait exprès : une pépite qui arrive à heure fixe devient un bruit de fond qu'on n'ouvre plus.
 
-- **Conseils stratégiques** basés sur votre progression
-- **Opportunités** détectées dans votre marché
-- **Bonnes pratiques** adaptées à votre niche
-- **Alertes** si votre engagement baisse
+Quand une nouvelle arrive, une pastille apparaît sur l'entrée Pépites du menu. Tu cliques sur la carte pour la révéler, tu recliques pour la refermer.
 
-### Notifications
+## Pourquoi elles sont écrites comme ça
 
-Quand une nouvelle pépite arrive, un **badge compteur** apparaît sur l'icône Pépites dans la sidebar. Vous recevez aussi une notification.
+Le texte n'est **jamais reformulé** : tu lis exactement ce qui a été écrit. Le côté "cadeau à ouvrir" est purement visuel.
 
-> **Voir aussi :** [Analytics](/support/article/analytics-overview) • [Le plan stratégique](/support/article/strategic-plan)`,
+C'est un parti pris : une idée juste, courte, non diluée, vaut mieux qu'un article de 2 000 mots qui dit la même chose en la noyant.
+
+## Comment s'en servir vraiment
+
+Le piège est de toutes les lire d'un coup et de n'en appliquer aucune.
+
+Une pépite, une action. Si celle du jour ne te concerne pas maintenant, laisse-la : la collection reste, tu la retrouveras au bon moment.
+
+## Où les retrouver
+
+Menu **Pépites**. Elles ne s'effacent pas, tu peux relire les anciennes quand tu veux.
+
+## D'où elles viennent
+
+Elles sont inspirées du travail de Jean Rivière, cité et remercié directement dans la page.`,
       en: `## Insights that make a difference
 
 **Insights** are business tips and recommendations Tipote sends regularly. Access via **Insights** in sidebar. Badge counter for new ones.
@@ -3214,36 +3430,36 @@ I widget toast mostrano notifiche pop-up sulle tue pagine. Configura posizione, 
       ar: "أدوات المشاركة الاجتماعية",
     },
     content: {
-      fr: `## Facilitez le partage de votre contenu
+      fr: `## Ce que c'est
 
-### Qu'est-ce qu'un Share Widget ?
+Un **widget de partage** est une barre de boutons que tu colles sur TON site : le visiteur clique, et ton article ou ta page part sur son réseau, avec le texte déjà rempli.
 
-Les **share widgets** ajoutent des **boutons de partage** sur vos pages pour que vos visiteurs puissent partager votre contenu sur leurs réseaux.
+À ne pas confondre avec le bouton de partage à la fin d'un quiz, qui lui est intégré au quiz et se règle dans l'éditeur du quiz.
 
-### Plateformes supportées (8)
+## Les réseaux
 
-Facebook, X (Twitter), LinkedIn, WhatsApp, Telegram, Reddit, Pinterest, Email.
+Facebook, X, LinkedIn, WhatsApp, Telegram, Reddit, Pinterest et l'email. Tu choisis lesquels afficher.
 
-### Modes d'affichage
+Un conseil : n'en mets pas neuf. Deux ou trois, ceux où ton audience vit vraiment, valent mieux qu'une rangée que personne ne lit. Sur un contenu professionnel, LinkedIn et l'email suffisent souvent.
 
-- **Inline** - Intégré dans le flux de la page
-- **Floating left/right** - Barre flottante sur le côté
-- **Bottom bar** - Barre fixe en bas de page
+## Le créer
 
-### Personnalisation
+1. **Widgets > Créer un widget**, type Partage.
+2. Choisis les réseaux, la position et le thème (clair ou sombre).
+3. **Copier le code**.
+4. Colle ce code dans ton site, ton blog ou une page Systeme.io (dans un bloc de code).
 
-- **Style** : rounded, square, circle, pill
-- **Taille** : small, medium, large
-- **Couleurs** : marque officielle, mono clair/sombre, couleur personnalisée
-- **Labels** : afficher/masquer les noms
-- **Texte de partage** pré-rempli
-- **Hashtags** automatiques
+Un widget peut être **activé ou désactivé** sans toucher au code du site : tu le coupes depuis Tipote et il disparaît partout.
 
-### Intégration
+## Ce qui fait qu'on partage, ou pas
 
-Copiez le snippet avec \`data-tipote-share\` et collez-le sur votre site.
+Le bouton ne crée pas l'envie de partager, il retire la friction. Ce qui crée l'envie, c'est le contenu, et surtout ce que la personne a l'air de gagner à le partager.
 
-> **Voir aussi :** [Widgets toast](/support/article/toast-widgets) • [Créer une page](/support/article/create-page)`,
+Sur un sujet intime (santé, argent, poids, famille), partager revient à se dévoiler : un taux bas y est normal et ne se corrige pas en ajoutant des boutons.
+
+## L'autre widget
+
+Le widget **Toast** est différent : il affiche des notifications de preuve sociale (visiteurs en direct, inscriptions, achats) en coin d'écran. Les deux se posent de la même façon.`,
       en: `## Make sharing easy
 
 Share widgets add share buttons on your pages. 8 platforms supported. 4 display modes. Fully customizable.
@@ -3276,26 +3492,39 @@ Widget di condivisione con pulsanti per 8 piattaforme. 4 modalità di visualizza
       ar: "مشاريع متعددة (Elite)",
     },
     content: {
-      fr: `## Gérez plusieurs business depuis un seul compte
+      fr: `## À quoi ça sert
 
-### Disponibilité
+Le multi-projets te permet de gérer **plusieurs business, marques ou clientes** depuis un seul compte Tipote.
 
-Le multi-projets est une fonctionnalité **exclusive au plan Elite** (99€/mois).
+Chaque projet est un Tipote **complètement indépendant** : sa stratégie, son persona, ses offres, ses contenus, ses tâches, son branding, ses connexions sociales. Rien ne se mélange.
 
-### Comment ça marche ?
+C'est fait pour les agences, les freelances qui gèrent les réseaux de leurs clientes, et celles qui ont vraiment deux activités séparées.
 
-- Un **sélecteur de projet** apparaît dans le header
-- Chaque projet a son propre **profil business**, **persona**, **plan stratégique**, **contenus** et **leads**
-- Vous basculez d'un projet à l'autre en un clic
-- Les crédits sont **partagés** entre les projets
+## Le point à connaître AVANT de s'y mettre
 
-### Cas d'usage
+**Les crédits IA sont PARTAGÉS entre tous tes projets.** Ils ne sont pas multipliés par le nombre de projets.
 
-- Vous gérez **plusieurs entreprises**
-- Vous êtes une **agence** qui gère des clients
-- Vous avez un **side project** en plus de votre activité principale
+C'est la question qui revient, et c'est mieux de le savoir avant : trois projets sur un plan Elite, ce sont bien 500 crédits par mois au total, pas 500 par projet.
 
-> **Voir aussi :** [Les plans et tarifs](/support/article/plans-overview)`,
+## Comment faire
+
+Le sélecteur de projet est en haut de la barre latérale.
+
+1. Clique dessus, puis **Nouveau projet**.
+2. Donne-lui un nom qui te parle ("Agence Dupont", "Coaching Santé").
+3. Tipote crée un espace vierge : **l'onboarding recommence** pour ce projet, puisque sa stratégie n'a rien à voir avec l'autre.
+
+Ensuite tu bascules de l'un à l'autre par le même sélecteur. Tu peux renommer et supprimer un projet depuis là.
+
+## Réservé au plan Elite
+
+C'est la fonction qui distingue l'Elite. Sur les autres plans, tu as un seul projet, nommé "Mon Tipote" par défaut, que tu peux renommer.
+
+## Si tu hésites entre multi-projets et deux comptes
+
+Deux comptes séparés, ce sont deux abonnements et deux factures, mais des crédits séparés et une étanchéité totale. Le multi-projets, c'est un abonnement, une facture, des crédits communs.
+
+Pour deux activités à toi : le multi-projets. Pour des clientes qui doivent garder la main sur leur compte le jour où vous vous séparez : deux comptes.`,
       en: `## Manage multiple businesses from one account
 
 Multi-projects is **Elite-only** (99€/mo). Each project has its own business profile, persona, plan, content and leads. Credits are shared.
@@ -3326,36 +3555,42 @@ Multi-progetti è esclusivo del piano **Elite** (99€/mese). Ogni progetto ha i
       ar: "حذف حسابك",
     },
     content: {
-      fr: `## Suppression de compte
+      fr: `## Avant de supprimer, deux alternatives
 
-### Comment supprimer votre compte ?
+La suppression est **définitive et irréversible**. Avant d'y aller, regarde si l'une de ces deux options ne répond pas mieux à ce que tu veux :
 
-1. Allez dans **Paramètres > Réglages**
-2. Descendez jusqu'à la section **"Zone de danger"**
-3. Cliquez sur **"Supprimer mon compte"**
-4. Confirmez en tapant votre email
-5. Votre compte est supprimé
+- **Tu veux arrêter de payer ?** Annule ton abonnement (Paramètres > Abonnement). Tu repasses en plan gratuit, ton compte reste, tes contenus aussi.
+- **Tu veux faire une pause ?** Le plan gratuit n'expire jamais. Tu peux ne pas revenir pendant six mois et retrouver tout en l'état.
 
-### Ce qui est supprimé
+## Ce que tu perds vraiment
 
-- Votre profil et données business
-- Tous vos contenus générés
-- Vos leads (données chiffrées)
-- Vos connexions réseaux sociaux
-- Vos crédits restants
+Tout, et sans retour possible :
 
-### Ce qui n'est PAS supprimé
+- ta stratégie, ton persona, ta pyramide d'offres ;
+- tous tes contenus générés, publiés ou en brouillon ;
+- tes pages hébergées, qui **ne s'afficheront plus** pour tes visiteurs ;
+- tes quiz et tes sondages, dont les liens publics renverront une page introuvable ;
+- **tes leads**, avec leurs emails ;
+- tes connexions aux réseaux sociaux et à Systeme.io ;
+- tes crédits, y compris ceux que tu as achetés.
 
-- Les posts déjà publiés sur vos réseaux sociaux (ils restent sur les plateformes)
-- Les pages publiques (elles deviennent inaccessibles)
+## Ce que tu devrais exporter d'abord
 
-### Puis-je récupérer mon compte ?
+Cinq minutes qui évitent un regret :
 
-Non. La suppression est **définitive et irréversible**. Exportez vos données (leads CSV) avant de supprimer.
+1. **Tes leads**, en CSV depuis Mes Leads. C'est ce qu'on regrette en premier.
+2. **Tes contenus** qui te servent encore, en copier-coller ou en PDF.
+3. Le **texte** de tes pages qui convertissent.
 
-> ⚠️ **Important :** Si vous avez un abonnement actif, annulez-le d'abord sur Systeme.io pour éviter d'être facturé.
+Ce qui est déjà parti dans Systeme.io y reste : la suppression du compte Tipote ne touche pas ton compte Systeme.io ni tes contacts là-bas.
 
-> **Voir aussi :** [Gérer votre abonnement](/support/article/manage-subscription)`,
+## Comment faire
+
+**Paramètres > Réglages**, section suppression du compte. Une confirmation est demandée, exprès.
+
+## Et l'abonnement ?
+
+Pense à l'annuler **avant** de supprimer le compte, ou vérifie ensuite dans Systeme.io qu'il n'est plus actif. Supprimer le compte Tipote n'annule pas automatiquement un abonnement qui vit chez Systeme.io.`,
       en: `## Account deletion
 
 Go to **Settings > General** → "Danger zone" → "Delete my account" → Confirm with email. Deletion is **permanent and irreversible**.
@@ -5530,5 +5765,560 @@ Describe what you saw on screen and what you expected instead: that pair saves t
     },
     related_slugs: ["tiquiz-profil-ou-score", "tiquiz-stats", "tiquiz-mise-en-page"],
     tags: ["tiquiz", "probleme", "bug", "404", "depannage", "erreur", "aide"],
+  },
+  {
+    category_slug: "getting-started",
+    slug: "tipote-depannage",
+    sort_order: 7,
+    title: {
+      fr: "Ça ne marche pas : le symptôme, la cause, la solution",
+      en: "It's not working: symptom, cause, fix",
+      es: "No funciona: síntoma, causa, solución",
+      it: "Non funziona: sintomo, causa, soluzione",
+      ar: "لا يعمل: العَرَض والسبب والحل",
+    },
+    content: {
+      fr: `## À lire en premier quand quelque chose cloche
+
+Les cas réels, dans l'ordre de fréquence. Cherche ton symptôme.
+
+---
+
+### "Ma publication a échoué"
+
+**Cause la plus fréquente : le jeton du réseau a expiré.** Les réseaux sociaux font expirer l'autorisation qu'ils nous donnent, régulièrement, et Instagram plus vite que les autres. Tipote tente de la renouveler tout seul avant chaque publication, mais quand le renouvellement échoue il n'y a plus rien à faire de notre côté.
+
+**Solution :** va dans **Paramètres > Connexions**. Le compte concerné affiche **Expiré** au lieu de **Connecté**. Clique sur **Reconnecter** et republie.
+
+Autres causes, plus rares :
+- **Le format n'est pas accepté** par le réseau (une vidéo trop lourde, une image dans un format qu'il refuse). Chaque réseau a ses règles et elles changent.
+- **TikTok prend du temps.** Le traitement dure parfois plusieurs minutes après que Tipote a fini son travail : ce n'est pas un échec, c'est TikTok.
+- **Le compte Instagram doit être un compte professionnel ou créateur**, relié à une Page Facebook. Un compte personnel ne peut pas recevoir de publication automatique, c'est une règle de Meta.
+
+---
+
+### "Je ne peux pas connecter un réseau de plus"
+
+**Cause :** le nombre de réseaux connectables dépend du plan. **1** en gratuit, **2** en Basic, **4** en Pro, tous en Elite.
+
+**Solution :** déconnecte un réseau que tu n'utilises pas, ou passe au plan au dessus. Reconnecter un réseau déjà connecté ne compte pas comme une nouvelle connexion.
+
+---
+
+### "Je n'ai plus de crédits"
+
+**Ce qui consomme :** une génération = **1 crédit**. Un auto-commentaire = **0,25 crédit**. Une page générée = 5 ou 6 crédits selon le type. Le Coach IA, lui, ne consomme **rien** (plans Pro et Elite).
+
+**Ce qui n'est pas vrai :** les crédits ne se cumulent pas d'un mois sur l'autre. Ceux du mois repartent à leur plafond, ils ne s'additionnent pas.
+
+**Solutions :** attendre le renouvellement mensuel, acheter un pack de crédits (à partir du plan Basic), ou passer au plan au dessus. Les crédits achetés, eux, n'expirent jamais et sont consommés APRÈS les crédits du mois.
+
+---
+
+### "L'auto-commentaire ne se lance pas"
+
+**Cause :** c'est une fonction des plans **Pro et Elite**. En gratuit et en Basic, le panneau est visible mais pas modifiable.
+
+Si tu es bien en Pro ou Elite et que rien ne part : vérifie qu'il te reste des crédits (0,25 par commentaire) et que le réseau visé est bien connecté et non expiré.
+
+---
+
+### "Mon automatisation DM ne se déclenche pas"
+
+Dans l'ordre, les quatre causes :
+1. **Le compte n'est pas professionnel.** Instagram doit être en compte professionnel ou créateur, Facebook doit être une Page. Meta n'ouvre les messages automatiques qu'à ces comptes.
+2. **Les messages sont fermés** dans les réglages de confidentialité du compte lui-même.
+3. **Le mot-clé ne correspond pas.** Il est insensible aux majuscules, mais le commentaire doit bien le contenir.
+4. **La fenêtre de 24 heures de Meta est passée.** On ne peut répondre en privé que dans les 24 heures qui suivent l'interaction. C'est une règle de Meta, pas un réglage de Tipote.
+
+À savoir : X (Twitter) et Threads **ne permettent pas** les DM automatiques. Ce n'est pas un manque de Tipote : l'API de X les facture 5 000 $ par mois, et Threads ne les a pas ouverts aux développeurs.
+
+---
+
+### "Le Coach IA me dit que j'ai atteint ma limite"
+
+**Cause :** en gratuit et en Basic, le Coach est limité à **3 messages par mois**. Il devient illimité, et sans crédits, à partir du Pro.
+
+---
+
+### "Je ne vois plus mes leads"
+
+**Cause :** en plan gratuit, seuls **10 leads par fenêtre de 30 jours** sont visibles.
+
+**Rassure-toi tout de suite :** les suivants continuent d'être capturés et **ne sont pas supprimés**, ils sont juste masqués. Ils réapparaissent tous, d'un coup, au passage en plan payant.
+
+---
+
+### "Ma page ne s'affiche pas"
+
+Vérifie qu'elle est **publiée**, pas seulement enregistrée. Une page en brouillon n'est visible que par toi.
+
+En plan gratuit, tu peux avoir **1 page publiée** à la fois. Publier une deuxième demande d'abord de dépublier la première, ou de passer en plan payant.
+
+---
+
+### "L'extension Tipote Boost n'est pas détectée"
+
+**Solution :** installe-la depuis le Chrome Web Store (ou les modules Firefox), puis **recharge la page** de Tipote. C'est l'oubli le plus fréquent : l'extension ne se signale qu'au chargement suivant.
+
+---
+
+### "J'ai perdu ce que j'étais en train d'écrire"
+
+Tipote enregistre en brouillon au fil de l'écriture. Si un bandeau te dit que ta session a expiré, **reconnecte-toi dans un autre onglet** puis reviens : le contenu est toujours là et la sauvegarde repart.
+
+---
+
+### Rien de tout ça ?
+
+Décris ce que tu voyais à l'écran et ce que tu attendais à la place. C'est la paire d'informations qui fait gagner le plus de temps, bien plus que "ça ne marche pas".`,
+      en: `## Read this first when something is off
+
+Real cases, most frequent first.
+
+---
+
+### "My post failed to publish"
+
+**Most common cause: the network's token expired.** Social networks expire the permission they give us, regularly, and Instagram faster than the rest. Tipote tries to renew it before each publish, but when renewal fails there is nothing left on our side.
+
+**Fix:** go to **Settings > Connections**. The account shows **Expired** instead of **Connected**. Click **Reconnect** and publish again.
+
+Rarer causes:
+- **The format isn't accepted** by that network (video too heavy, unsupported image format). Each network has its own rules and they change.
+- **TikTok takes time.** Processing can run several minutes after Tipote is done: not a failure, just TikTok.
+- **Instagram must be a professional or creator account** linked to a Facebook Page. A personal account cannot receive automated posts, that's a Meta rule.
+
+---
+
+### "I can't connect one more network"
+
+**Cause:** connectable accounts depend on your plan. **1** on free, **2** on Basic, **4** on Pro, all on Elite.
+
+**Fix:** disconnect one you don't use, or move up a plan. Reconnecting an already-connected network doesn't count as a new one.
+
+---
+
+### "I'm out of credits"
+
+**What consumes them:** one generation = **1 credit**. One auto-comment = **0.25**. A generated page = 5 or 6 depending on the type. The AI Coach consumes **nothing** (Pro and Elite).
+
+**What isn't true:** credits don't roll over. The monthly ones reset to their ceiling, they don't add up.
+
+**Fixes:** wait for the monthly reset, buy a credit pack (Basic and up), or move up a plan. Purchased credits never expire and are used AFTER the monthly ones.
+
+---
+
+### "Auto-comments don't fire"
+
+**Cause:** it's a **Pro and Elite** feature. On free and Basic the panel is visible but not editable.
+
+Already on Pro or Elite and nothing fires? Check you have credits left (0.25 per comment) and that the target network is connected and not expired.
+
+---
+
+### "My DM automation doesn't trigger"
+
+Four causes, in order:
+1. **The account isn't professional.** Instagram must be professional or creator, Facebook must be a Page. Meta only opens automated messaging to those.
+2. **Messages are closed** in the account's own privacy settings.
+3. **The keyword doesn't match.** It's case-insensitive, but the comment must contain it.
+4. **Meta's 24-hour window has passed.** You may only reply privately within 24 hours of the interaction. That's Meta's rule, not a Tipote setting.
+
+Note: X (Twitter) and Threads **do not allow** automated DMs. Not a Tipote gap: X's API charges $5,000/month for it, and Threads hasn't opened it to developers.
+
+---
+
+### "The AI Coach says I've hit my limit"
+
+**Cause:** on free and Basic the Coach is capped at **3 messages per month**. It becomes unlimited, and credit-free, from Pro.
+
+---
+
+### "I can't see my leads any more"
+
+**Cause:** on the free plan only **10 leads per rolling 30 days** are visible.
+
+**Reassurance first:** the rest keep being captured and are **not deleted**, just hidden. They all reappear at once when you move to a paid plan.
+
+---
+
+### "My page doesn't show"
+
+Check it's **published**, not just saved. A draft page is visible only to you.
+
+On free you get **1 published page** at a time.
+
+---
+
+### "The Tipote Boost extension isn't detected"
+
+**Fix:** install it from the Chrome Web Store (or Firefox add-ons), then **reload** the Tipote page. That's the most common miss: the extension only announces itself on the next load.
+
+---
+
+### "I lost what I was writing"
+
+Tipote saves a draft as you type. If a banner says your session expired, **sign in again in another tab** then come back: the content is still there and saving resumes.
+
+---
+
+### None of these?
+
+Describe what you saw on screen and what you expected instead. That pair saves more time than "it doesn't work".`,
+      es: `## Léelo primero cuando algo falla
+
+- **"Mi publicación ha fallado":** casi siempre el token de la red ha caducado. Ve a **Ajustes > Conexiones**: la cuenta pone **Caducado**. Pulsa **Reconectar** y vuelve a publicar. Instagram debe ser cuenta profesional o de creador. TikTok puede tardar varios minutos: no es un fallo.
+- **"No puedo conectar otra red":** el número depende del plan (1 gratuito, 2 Basic, 4 Pro, todas en Elite).
+- **"Me he quedado sin créditos":** una generación = 1 crédito, un auto-comentario = 0,25, una página 5 o 6. El Coach IA no consume nada. Los créditos mensuales **no se acumulan**; los comprados no caducan y se usan después.
+- **"Los auto-comentarios no se lanzan":** es una función **Pro y Elite**.
+- **"Mi automatización de DM no se dispara":** cuenta no profesional, mensajes cerrados, palabra clave que no coincide, o la ventana de 24 h de Meta ya pasada. X y Threads no permiten DM automáticos.
+- **"No veo mis leads":** en gratuito solo 10 por cada 30 días. Los demás **no se borran**, están ocultos y reaparecen al pasar a un plan de pago.
+- **"Mi página no se ve":** comprueba que esté **publicada**. En gratuito, 1 página publicada a la vez.
+- **"La extensión no se detecta":** instálala y **recarga** la página de Tipote.`,
+      it: `## Da leggere per primo quando qualcosa non va
+
+- **"La pubblicazione è fallita":** quasi sempre il token del social è scaduto. Vai in **Impostazioni > Connessioni**: l'account segna **Scaduto**. Clicca **Riconnetti** e ripubblica. Instagram deve essere un account professionale o creator. TikTok può metterci alcuni minuti: non è un errore.
+- **"Non riesco a collegare un altro social":** il numero dipende dal piano (1 gratuito, 2 Basic, 4 Pro, tutti in Elite).
+- **"Ho finito i crediti":** una generazione = 1 credito, un auto-commento = 0,25, una pagina 5 o 6. Il Coach IA non consuma nulla. I crediti mensili **non si accumulano**; quelli acquistati non scadono e si usano dopo.
+- **"Gli auto-commenti non partono":** è una funzione **Pro ed Elite**.
+- **"La mia automazione DM non si attiva":** account non professionale, messaggi chiusi, parola chiave che non corrisponde, o la finestra di 24 h di Meta è passata. X e Threads non permettono i DM automatici.
+- **"Non vedo più i miei lead":** nel gratuito solo 10 ogni 30 giorni. Gli altri **non vengono cancellati**, sono nascosti e riappaiono passando a un piano a pagamento.
+- **"La mia pagina non si vede":** verifica che sia **pubblicata**. Nel gratuito, 1 pagina pubblicata alla volta.
+- **"L'estensione non viene rilevata":** installala e **ricarica** la pagina di Tipote.`,
+      ar: `## اقرأ هذا أولًا حين يتعطل شيء
+
+- **"فشل النشر":** غالبًا انتهت صلاحية رمز الشبكة. اذهب إلى **الإعدادات > الاتصالات**: الحساب يظهر **منتهي**. اضغط **إعادة الاتصال** ثم أعد النشر. يجب أن يكون حساب Instagram احترافيًا أو حساب منشئ. TikTok قد يستغرق دقائق: هذا ليس فشلًا.
+- **"لا أستطيع ربط شبكة أخرى":** العدد يعتمد على الخطة (1 مجاني، 2 Basic، 4 Pro، الكل في Elite).
+- **"نفدت أرصدتي":** توليد واحد = رصيد واحد، تعليق تلقائي = 0.25، صفحة = 5 أو 6. مدرب الذكاء الاصطناعي لا يستهلك شيئًا. الأرصدة الشهرية **لا تتراكم**؛ المشتراة لا تنتهي وتُستهلك بعدها.
+- **"التعليقات التلقائية لا تنطلق":** ميزة **Pro و Elite**.
+- **"أتمتة الرسائل لا تعمل":** حساب غير احترافي، أو الرسائل مغلقة، أو الكلمة المفتاحية لا تطابق، أو مرّت نافذة 24 ساعة لدى Meta. X و Threads لا تسمحان بالرسائل التلقائية.
+- **"لا أرى عملائي المحتملين":** في المجاني 10 فقط كل 30 يومًا. البقية **لا تُحذف**، بل تُخفى وتعود عند الترقية.
+- **"صفحتي لا تظهر":** تأكد أنها **منشورة**. في المجاني صفحة منشورة واحدة في كل مرة.
+- **"الإضافة غير مكتشفة":** ثبّتها ثم **أعد تحميل** صفحة Tipote.`,
+    },
+    related_slugs: ["connect-social-networks", "credits-explained", "plans-overview"],
+    tags: ["probleme", "bug", "depannage", "erreur", "publication", "credits", "aide"],
+  },
+  {
+    category_slug: "leads-crm",
+    slug: "mes-clients",
+    sort_order: 4,
+    title: {
+      fr: "Suivre tes clients et leurs accompagnements",
+      en: "Tracking your clients and their programmes",
+      es: "Seguir a tus clientes y sus acompañamientos",
+      it: "Seguire i tuoi clienti e i loro percorsi",
+      ar: "متابعة عملائك وبرامجهم",
+    },
+    content: {
+      fr: `## Leads ou clients : deux pages, deux moments
+
+**Mes Leads** contient les gens qui ont laissé leur email. C'est le haut de ton entonnoir.
+
+**Mes Clients** contient ceux qui ont acheté ou avec qui tu travailles. C'est le suivi de la relation, pas la capture.
+
+Un lead ne devient pas un client tout seul : tu l'ajoutes quand la vente est faite.
+
+## Les quatre états
+
+Chaque client porte un statut, et c'est ce qui rend la page utile d'un coup d'oeil :
+
+- **Prospect** : en discussion, pas encore signé.
+- **Actif** : accompagnement en cours.
+- **Terminé** : le programme est allé au bout.
+- **En pause** : suspendu, à reprendre.
+
+Les compteurs en haut te donnent le total et la répartition. C'est ce qui te dit, sans ouvrir un tableur, combien de personnes tu accompagnes vraiment ce mois-ci.
+
+## Les accompagnements
+
+Un **accompagnement** est le modèle de parcours que tu proposes : les étapes, dans l'ordre, que tu fais suivre à chaque client. Tu le crées une fois dans **Mes accompagnements**, puis tu l'appliques à chaque nouveau client.
+
+L'intérêt est là : tu ne réinventes pas le déroulé à chaque personne, et tu vois d'un coup où en est chacune.
+
+## Comment démarrer
+
+1. **Mes Clients > Nouveau client**, avec son nom et son email.
+2. Choisis son statut de départ (souvent Prospect).
+3. Si tu as créé un accompagnement, applique-le.
+4. Mets le statut à jour au fil de la relation.
+
+## Ce que ça ne fait pas
+
+Ce n'est pas un logiciel de facturation, ni un agenda. Ça répond à une seule question, mais bien : où en est chaque personne que j'accompagne.`,
+      en: `## Leads or clients: two pages, two moments
+
+**My Leads** holds people who left their email. Top of your funnel.
+
+**My Clients** holds people who bought, or whom you work with. Relationship tracking, not capture.
+
+A lead doesn't become a client on its own: you add them when the sale is done.
+
+## The four states
+
+Each client carries a status, and that's what makes the page useful at a glance:
+
+- **Prospect**: in conversation, not signed.
+- **Active**: programme running.
+- **Completed**: they went all the way.
+- **Paused**: suspended, to resume.
+
+Counters at the top give you the total and the split. That tells you, without opening a spreadsheet, how many people you're actually working with this month.
+
+## Programmes
+
+A **programme** is the template journey you offer: the steps, in order, that every client goes through. Create it once in **My programmes**, then apply it to each new client.
+
+That's the point: you don't reinvent the sequence per person, and you see at a glance where each one is.
+
+## Getting started
+
+1. **My Clients > New client**, name and email.
+2. Pick a starting status (usually Prospect).
+3. Apply a programme if you've made one.
+4. Update the status as the relationship moves.
+
+## What it isn't
+
+Not invoicing software, not a calendar. It answers one question well: where is each person I'm working with.`,
+      es: `## Leads o clientes: dos páginas, dos momentos
+
+**Mis Leads** son quienes dejaron su email (la parte alta del embudo). **Mis Clientes** son quienes ya compraron o con quienes trabajas. Un lead no se convierte en cliente solo: lo añades tú cuando la venta está hecha.
+
+**Cuatro estados:** Prospecto (en conversación), Activo (acompañamiento en curso), Terminado, En pausa. Los contadores de arriba te dan el total y el reparto sin abrir una hoja de cálculo.
+
+**Los acompañamientos** son la plantilla del recorrido que ofreces: las etapas, en orden, por las que pasa cada cliente. Se crea una vez en **Mis acompañamientos** y se aplica a cada nuevo cliente. Así no reinventas el recorrido con cada persona.
+
+**Para empezar:** Mis Clientes > Nuevo cliente, con nombre y email, elige el estado inicial y aplica un acompañamiento si tienes uno.
+
+No es un software de facturación ni una agenda: responde bien a una sola pregunta, en qué punto está cada persona a la que acompañas.`,
+      it: `## Lead o clienti: due pagine, due momenti
+
+**I miei Lead** sono chi ha lasciato la propria email (la parte alta dell'imbuto). **I miei Clienti** sono chi ha già acquistato o con cui lavori. Un lead non diventa cliente da solo: lo aggiungi tu quando la vendita è fatta.
+
+**Quattro stati:** Prospect (in conversazione), Attivo (percorso in corso), Terminato, In pausa. I contatori in alto danno totale e ripartizione senza aprire un foglio di calcolo.
+
+**I percorsi** sono il modello di accompagnamento che offri: le tappe, in ordine, che ogni cliente attraversa. Si crea una volta in **I miei percorsi** e si applica a ogni nuovo cliente. Così non reinventi la sequenza per ogni persona.
+
+**Per iniziare:** I miei Clienti > Nuovo cliente, nome ed email, scegli lo stato iniziale e applica un percorso se ne hai creato uno.
+
+Non è un software di fatturazione né un'agenda: risponde bene a una sola domanda, a che punto è ogni persona che segui.`,
+      ar: `## عملاء محتملون أم عملاء: صفحتان، لحظتان
+
+**عملائي المحتملون** هم من تركوا بريدهم (أعلى القمع). **عملائي** هم من اشتروا فعلًا أو من تعمل معهم. العميل المحتمل لا يصبح عميلًا تلقائيًا: أنت تضيفه عند إتمام البيع.
+
+**أربع حالات:** محتمل (قيد النقاش)، نشط (برنامج جارٍ)، منتهٍ، متوقف مؤقتًا. العدّادات في الأعلى تعطيك الإجمالي والتوزيع دون فتح جدول بيانات.
+
+**البرامج** هي قالب المسار الذي تقدّمه: المراحل، بالترتيب، التي يمر بها كل عميل. تنشئه مرة واحدة في **برامجي** ثم تطبّقه على كل عميل جديد، فلا تعيد ابتكار المسار مع كل شخص.
+
+**للبدء:** عملائي > عميل جديد، بالاسم والبريد، اختر الحالة الأولى وطبّق برنامجًا إن أنشأت واحدًا.
+
+هذا ليس برنامج فوترة ولا تقويمًا: إنه يجيب جيدًا عن سؤال واحد، أين وصل كل شخص ترافقه.`,
+    },
+    related_slugs: ["manage-leads", "systemeio-integration"],
+    tags: ["clients", "crm", "suivi", "accompagnement", "prospect"],
+  },
+  {
+    category_slug: "social-publishing",
+    slug: "evenements-live",
+    sort_order: 3,
+    title: {
+      fr: "Les événements live : webinaires et challenges",
+      en: "Live events: webinars and challenges",
+      es: "Eventos en directo: webinars y retos",
+      it: "Eventi live: webinar e challenge",
+      ar: "الفعاليات المباشرة: ندوات وتحديات",
+    },
+    content: {
+      fr: `## À quoi ça sert
+
+La page **Événements live** sert à organiser tes webinaires et tes challenges, puis à suivre ce qu'ils rapportent vraiment.
+
+Ce n'est pas un outil de diffusion : tu continues à faire ton live où tu veux (Zoom, YouTube, Instagram). Tipote sert à **préparer, suivre et convertir** autour de l'événement.
+
+## Créer un événement
+
+**Événements live > Nouvel événement.** Tu renseignes le type, les dates et les informations de l'événement, puis tu suis son statut au fil de la préparation.
+
+Les compteurs en haut te donnent le total de tes événements et ceux qui sont terminés : c'est ce qui te permet de comparer un lancement à l'autre au lieu de repartir de zéro à chaque fois.
+
+## La vraie valeur : les KPIs
+
+Un webinaire qui a fait 200 inscrits et 3 ventes ne dit pas la même chose qu'un webinaire à 40 inscrits et 8 ventes. Tant que ces chiffres vivent dans ta tête ou dans un fichier oublié, tu ne peux rien améliorer.
+
+Suivre les inscrits et les conversions au même endroit que tes contenus, c'est ce qui te dit, au troisième événement, ce qui marche chez TOI.
+
+## Le combiner au reste
+
+- Une **page de capture** (Mes Pages) pour les inscriptions.
+- Un **quiz** avant l'événement pour segmenter les inscrits et savoir à qui tu parles.
+- Une **séquence email** (Créer > Email) pour les relances avant et après.
+- Un **tag Systeme.io** pour déclencher tout ça automatiquement.`,
+      en: `## What it's for
+
+The **Live events** page is where you organise your webinars and challenges, then track what they actually earn.
+
+It is not a broadcasting tool: keep running your live wherever you like (Zoom, YouTube, Instagram). Tipote is there to **prepare, track and convert** around the event.
+
+## Creating an event
+
+**Live events > New event.** Fill in the type, the dates and the details, then follow its status as you prepare.
+
+The counters at the top give you your total events and the completed ones: that's what lets you compare one launch to the next instead of starting from scratch every time.
+
+## The real value: KPIs
+
+A webinar with 200 signups and 3 sales tells a very different story from one with 40 signups and 8 sales. While those numbers live in your head or in a forgotten file, you can't improve anything.
+
+Tracking signups and conversions in the same place as your content is what tells you, by the third event, what works for YOU.
+
+## Combining it with the rest
+
+- A **capture page** (My Pages) for signups.
+- A **quiz** before the event to segment registrants and know who you're talking to.
+- An **email sequence** (Create > Email) for reminders before and after.
+- A **Systeme.io tag** to fire all of it automatically.`,
+      es: `## Para qué sirve
+
+La página **Eventos en directo** sirve para organizar tus webinars y retos, y luego seguir lo que realmente aportan. No es una herramienta de emisión: sigues haciendo tu directo donde quieras (Zoom, YouTube, Instagram). Tipote sirve para **preparar, seguir y convertir** alrededor del evento.
+
+**Crear:** Eventos en directo > Nuevo evento, con el tipo, las fechas y los datos. Los contadores de arriba dan el total y los terminados, lo que permite comparar un lanzamiento con otro.
+
+**El valor real son los KPIs:** un webinar con 200 inscritos y 3 ventas no dice lo mismo que uno con 40 inscritos y 8 ventas. Mientras esas cifras vivan en tu cabeza no puedes mejorar nada.
+
+**Combínalo:** una página de captura para las inscripciones, un quiz antes del evento para segmentar, una secuencia de emails para los recordatorios, y un tag de Systeme.io para automatizarlo todo.`,
+      it: `## A cosa serve
+
+La pagina **Eventi live** serve a organizzare webinar e challenge, e poi a seguire cosa rendono davvero. Non è uno strumento di diretta: continui a fare il tuo live dove vuoi (Zoom, YouTube, Instagram). Tipote serve a **preparare, seguire e convertire** attorno all'evento.
+
+**Creare:** Eventi live > Nuovo evento, con tipo, date e informazioni. I contatori in alto danno il totale e quelli conclusi, così puoi confrontare un lancio con l'altro.
+
+**Il valore vero sono i KPI:** un webinar con 200 iscritti e 3 vendite non dice la stessa cosa di uno con 40 iscritti e 8 vendite. Finché quei numeri vivono nella tua testa non puoi migliorare nulla.
+
+**Combinalo:** una pagina di cattura per le iscrizioni, un quiz prima dell'evento per segmentare, una sequenza email per i promemoria, e un tag Systeme.io per automatizzare tutto.`,
+      ar: `## لماذا تُستخدم
+
+صفحة **الفعاليات المباشرة** لتنظيم ندواتك وتحدياتك، ثم متابعة ما تحققه فعلًا. ليست أداة بث: تواصل بثك حيث تشاء (Zoom أو YouTube أو Instagram). دور Tipote هو **التحضير والمتابعة والتحويل** حول الفعالية.
+
+**الإنشاء:** الفعاليات المباشرة > فعالية جديدة، مع النوع والتواريخ والمعلومات. العدّادات في الأعلى تعطي الإجمالي والمنتهية، ما يتيح مقارنة إطلاق بآخر.
+
+**القيمة الحقيقية هي المؤشرات:** ندوة بـ200 مسجّل و3 مبيعات ليست كندوة بـ40 مسجّلًا و8 مبيعات. وما دامت هذه الأرقام في ذهنك فقط، لا يمكنك تحسين شيء.
+
+**اجمعها مع البقية:** صفحة التقاط للتسجيلات، واختبار قبل الفعالية للتقسيم، وسلسلة بريدية للتذكير، ووسم Systeme.io لأتمتة كل ذلك.`,
+    },
+    related_slugs: ["create-page", "create-email", "systemeio-integration"],
+    tags: ["webinaire", "webinar", "live", "challenge", "evenement", "kpi"],
+  },
+  {
+    category_slug: "social-publishing",
+    slug: "tipote-boost",
+    sort_order: 4,
+    title: {
+      fr: "Tipote Boost : l'extension navigateur",
+      en: "Tipote Boost: the browser extension",
+      es: "Tipote Boost: la extensión de navegador",
+      it: "Tipote Boost: l'estensione del browser",
+      ar: "Tipote Boost: إضافة المتصفح",
+    },
+    content: {
+      fr: `## Deux outils dans une extension
+
+**Tipote Boost** s'installe dans Chrome ou Firefox et travaille pendant que TU navigues sur tes réseaux. Elle fait deux choses distinctes :
+
+### 1. Le pod LinkedIn
+
+Quand un membre du pod publie sur LinkedIn depuis Tipote, ton extension like son post automatiquement. Et le tien reçoit les likes des autres, sans que personne ait à y penser.
+
+L'engagement des premières minutes est ce que LinkedIn regarde pour décider de montrer un post plus largement : c'est le moment où un coup de pouce vaut le plus.
+
+### 2. Le commentateur IA
+
+Il te propose des commentaires rédigés pour toi sur les posts que tu lis, sur 7 réseaux. Tu relis, tu ajustes, tu publies. Commenter chez les autres reste le moyen le moins cher de se faire connaître, mais c'est le temps qui manque.
+
+Le ton, les objectifs, les mots-clés et les emojis se règlent dans l'onglet **Réglages** de la page Tipote Boost.
+
+## L'installer
+
+1. Installe l'extension depuis le **Chrome Web Store** ou les **modules Firefox**.
+2. **Recharge la page Tipote.** C'est l'étape qu'on oublie : tant que la page n'a pas été rechargée, elle affiche "Extension non détectée" alors que tout est en place.
+3. Ouvre un de tes réseaux : les deux modes s'activent tout seuls.
+
+## Les garde-fous, et pourquoi ils comptent
+
+L'extension s'impose des limites : **20 likes automatiques par jour maximum**, **12 actions par heure** tous types confondus, et des **délais aléatoires** entre chaque action.
+
+Ce n'est pas une bridure gratuite. Un compte qui like 200 fois en dix minutes se fait repérer et restreindre par LinkedIn. Ces plafonds sont là pour que le pod te serve au lieu de te coûter ton compte.
+
+## Ce qu'elle ne fait pas
+
+Elle ne publie pas à ta place (ça, c'est Tipote lui-même) et elle n'agit jamais sans que tu aies ouvert le réseau concerné dans ton navigateur.`,
+      en: `## Two tools in one extension
+
+**Tipote Boost** installs into Chrome or Firefox and works while YOU browse your networks. It does two distinct things:
+
+### 1. The LinkedIn pod
+
+When a pod member publishes to LinkedIn from Tipote, your extension likes their post automatically. And yours receives the others' likes, with nobody having to remember.
+
+Engagement in the first few minutes is what LinkedIn watches to decide whether to show a post more widely: that's when a nudge is worth the most.
+
+### 2. The AI commenter
+
+It drafts comments for you on the posts you read, across 7 networks. You review, adjust, publish. Commenting on other people's posts is still the cheapest way to get known, but time is what's missing.
+
+Tone, goals, keywords and emojis are set in the **Settings** tab of the Tipote Boost page.
+
+## Installing it
+
+1. Install from the **Chrome Web Store** or **Firefox add-ons**.
+2. **Reload the Tipote page.** This is the forgotten step: until you reload, it shows "Extension not detected" while everything is in fact in place.
+3. Open one of your networks: both modes activate on their own.
+
+## The guardrails, and why they matter
+
+The extension caps itself: **20 automatic likes per day maximum**, **12 actions per hour** across all types, and **randomised delays** between actions.
+
+That's not arbitrary throttling. An account liking 200 times in ten minutes gets flagged and restricted by LinkedIn. These ceilings exist so the pod serves you instead of costing you your account.
+
+## What it doesn't do
+
+It doesn't publish for you (that's Tipote itself) and it never acts unless you've opened the network in your browser.`,
+      es: `## Dos herramientas en una extensión
+
+**Tipote Boost** se instala en Chrome o Firefox y trabaja mientras TÚ navegas por tus redes.
+
+**El pod de LinkedIn:** cuando un miembro publica en LinkedIn desde Tipote, tu extensión da like a su post automáticamente, y el tuyo recibe los likes de los demás. El engagement de los primeros minutos es lo que mira LinkedIn para decidir si muestra un post más ampliamente.
+
+**El comentarista IA:** te propone comentarios redactados para ti en los posts que lees, en 7 redes. Tú revisas, ajustas y publicas. El tono y el vocabulario se ajustan en la pestaña **Ajustes**.
+
+**Instalación:** instala desde el Chrome Web Store o los complementos de Firefox, y luego **recarga la página de Tipote**. Es el paso que se olvida: hasta recargar, pone "Extensión no detectada" aunque todo esté bien.
+
+**Los límites:** máximo 20 likes automáticos al día, 12 acciones por hora y retardos aleatorios. No es una limitación gratuita: una cuenta que da 200 likes en diez minutos acaba restringida por LinkedIn.`,
+      it: `## Due strumenti in un'estensione
+
+**Tipote Boost** si installa su Chrome o Firefox e lavora mentre TU navighi sui tuoi social.
+
+**Il pod LinkedIn:** quando un membro pubblica su LinkedIn da Tipote, la tua estensione mette like al suo post automaticamente, e il tuo riceve i like degli altri. L'engagement dei primi minuti è ciò che LinkedIn guarda per decidere se mostrare un post più ampiamente.
+
+**Il commentatore IA:** ti propone commenti già scritti sui post che leggi, su 7 social. Tu rileggi, aggiusti, pubblichi. Tono e vocabolario si regolano nella scheda **Impostazioni**.
+
+**Installazione:** installa dal Chrome Web Store o dai componenti aggiuntivi Firefox, poi **ricarica la pagina Tipote**. È il passaggio che si dimentica: finché non ricarichi, scrive "Estensione non rilevata" anche se è tutto a posto.
+
+**I limiti:** massimo 20 like automatici al giorno, 12 azioni all'ora e ritardi casuali. Non è una limitazione gratuita: un account che mette 200 like in dieci minuti viene ristretto da LinkedIn.`,
+      ar: `## أداتان في إضافة واحدة
+
+**Tipote Boost** تُثبَّت في Chrome أو Firefox وتعمل بينما **أنت** تتصفح شبكاتك.
+
+**بود LinkedIn:** حين ينشر أحد الأعضاء على LinkedIn من Tipote، تضغط إضافتك إعجابًا على منشوره تلقائيًا، ومنشورك يتلقى إعجابات الآخرين. التفاعل في الدقائق الأولى هو ما ينظر إليه LinkedIn ليقرر توسيع عرض المنشور.
+
+**المعلّق بالذكاء الاصطناعي:** يقترح عليك تعليقات مكتوبة على المنشورات التي تقرأها، على 7 شبكات. تراجع وتعدّل وتنشر. النبرة والمفردات تُضبط في تبويب **الإعدادات**.
+
+**التثبيت:** ثبّت من Chrome Web Store أو إضافات Firefox، ثم **أعد تحميل صفحة Tipote**. هذه هي الخطوة المنسية: قبل إعادة التحميل تظهر "الإضافة غير مكتشفة" رغم أن كل شيء جاهز.
+
+**الحدود:** 20 إعجابًا تلقائيًا كحد أقصى يوميًا، و12 إجراءً في الساعة، وتأخيرات عشوائية. ليست قيودًا اعتباطية: الحساب الذي يضغط 200 إعجاب في عشر دقائق يُقيَّد من LinkedIn.`,
+    },
+    related_slugs: ["auto-comments", "publish-post", "connect-social-networks"],
+    tags: ["boost", "extension", "chrome", "firefox", "pod", "linkedin", "commentaire"],
   },
 ];
