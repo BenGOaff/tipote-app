@@ -7,6 +7,7 @@ import { timingSafeEqual } from "crypto";
 import { getSignatureMode, verifySioSignature } from "@/lib/sioWebhookSig";
 import { attributeSale } from "@/lib/affiliate/attribution";
 import { resolveAppUrl } from "@/lib/authLinks";
+import { affiliateDashboardUrl } from "@/lib/affiliate/urls";
 
 const WEBHOOK_SECRET = process.env.SYSTEME_IO_WEBHOOK_SECRET;
 const APP_URL = resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL);
@@ -658,8 +659,7 @@ export async function POST(req: NextRequest) {
         }
 
         try {
-          const dashboardUrl =
-            process.env.AFFILIATE_DASHBOARD_URL ?? "https://affiliate.tipote.com";
+          const dashboardUrl = affiliateDashboardUrl();
           // Magic link Supabase. shouldCreateUser:true pour les
           // affiliés qui n'ont jamais eu de compte Tipote/Supabase.
           // emailRedirectTo pointe sur notre callback avec un next= qui

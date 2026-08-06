@@ -14,6 +14,7 @@ import { Eye, EyeOff, Mail, Lock, ArrowRight, AlertTriangle, CheckCircle2 } from
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { AFFILIATE_SIGNUP_URL } from "@/lib/affiliate/urls";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -286,13 +287,22 @@ export default function LoginAffiliateForm() {
               </form>
             )}
 
+            {/* Béné, 6 août 2026 : "sur l'accueil d'affiliate, le lien
+                d'inscription pour ceux qui veulent voir l'espace affilié,
+                comme ça ils peuvent s'inscrire directement".
+
+                Ce bouton pointait vers les CONDITIONS GÉNÉRALES. Quelqu'un
+                qui arrive ici sans compte lisait donc un texte juridique
+                au lieu de pouvoir s'inscrire : un cul-de-sac, à l'endroit
+                exact où on perd le plus de monde. La page d'affiliation
+                explique le programme ET permet de s'inscrire. */}
             <div className="mt-6 pt-6 border-t border-border">
               <p className="text-center text-sm text-muted-foreground mb-3">
                 {t.login.no_account}
               </p>
               <Button variant="outline" className="w-full" asChild>
                 <a
-                  href="https://www.tipote.fr/conditions-generales-affiliation"
+                  href={AFFILIATE_SIGNUP_URL}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
