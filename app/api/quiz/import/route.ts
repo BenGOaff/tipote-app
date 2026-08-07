@@ -9,6 +9,8 @@ import { resolveAnthropicModel } from "@/lib/anthropicModel";
 import { buildClaudeMessageBody } from "@/lib/claudeRequest";
 import { sanitizeAiQuizPayload } from "@/lib/aiTextSanitizer";
 import { fetchAnthropic } from "@/lib/aiRetry";
+import { extractImportText } from "@/lib/quizImportExtract";
+import type { ImportFailureReason } from "@/lib/quiz/importFailure";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -35,6 +37,14 @@ function getClaudeModel(): string {
   );
 }
 
+/** Porte la RAISON jusqu'à la réponse HTTP, sans jamais la mettre en mots. */
+class ImportExtractError extends Error {
+  constructor(readonly reason: ImportFailureReason) {
+    super(reason);
+    this.name = "ImportExtractError";
+  }
+}
+
 async function extractTextFromFile(file: File): Promise<string> {
   const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
   const buffer = Buffer.from(await file.arrayBuffer());
@@ -43,17 +53,17 @@ async function extractTextFromFile(file: File): Promise<string> {
     return buffer.toString("utf-8");
   }
 
-  if (ext === "pdf") {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const pdfParse = require("pdf-parse") as (buf: Buffer) => Promise<{ text: string }>;
-    const result = await pdfParse(buffer);
-    return result.text;
-  }
-
-  if (ext === "docx" || ext === "doc") {
-    const mammoth = await import("mammoth");
-    const result = await mammoth.extractRawText({ buffer });
-    return result.value;
+  if (ext === "pdf" || ext === "docx" || ext === "doc") {
+    // Une SEULE lecture de PDF et de .docx dans l'app, celle de
+    // `lib/quizImportExtract.ts`. Cette route avait la sienne, en
+    // `require("pdf-parse")`, écrite pour la v1 de la librairie : depuis
+    // la v2 elle appelait un objet, donc elle levait
+    // `r is not a function` comme l'autre écran (François Xavier,
+    // 7 août 2026). Deux implémentations d'une même chose ne se
+    // corrigent jamais qu'à moitié.
+    const res = await extractImportText(buffer, ext === "pdf" ? "pdf" : "docx");
+    if (!res.ok) throw new ImportExtractError(res.reason);
+    return res.text;
   }
 
   if (ext === "xlsx" || ext === "xls") {
@@ -68,7 +78,7 @@ async function extractTextFromFile(file: File): Promise<string> {
     return lines.join("\n\n");
   }
 
-  throw new Error(`Format de fichier non supporté : .${ext}`);
+  throw new ImportExtractError("unsupported_format");
 }
 
 const SYSTEM_PROMPT = `Tu es un expert en extraction de données de quiz.
@@ -167,18 +177,18 @@ export async function POST(req: NextRequest) {
   let text: string;
   try {
     text = await extractTextFromFile(file);
-  } catch (err: any) {
-    return NextResponse.json(
-      { ok: false, error: err.message || "Impossible de lire le fichier." },
-      { status: 400 },
-    );
+  } catch (err) {
+    // On renvoie la RAISON, jamais `err.message` : c'est ce message brut,
+    // avec ses noms de variables minifiés, qui a fini dans le toast de
+    // François Xavier le 7 août. Le détail reste dans les logs.
+    console.error("[quiz/import] extraction:", err);
+    const reason =
+      err instanceof ImportExtractError ? err.reason : "extract_failed";
+    return NextResponse.json({ ok: false, reason }, { status: 400 });
   }
 
   if (!text.trim()) {
-    return NextResponse.json(
-      { ok: false, error: "Le fichier est vide ou ne contient pas de texte lisible." },
-      { status: 400 },
-    );
+    return NextResponse.json({ ok: false, reason: "empty_file" }, { status: 400 });
   }
 
   // Truncate very large files

@@ -38,11 +38,7 @@ export async function POST(req: NextRequest) {
     const kind = detectKind(file.name, file.type);
     if (!kind) {
       return NextResponse.json(
-        {
-          ok: false,
-          error: "unsupported_format",
-          hint: "Formats acceptés : .txt, .docx, .pdf.",
-        },
+        { ok: false, reason: "unsupported_format" },
         { status: 400 },
       );
     }
@@ -50,8 +46,10 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(await file.arrayBuffer());
     const result = await extractImportText(buffer, kind);
     if (!result.ok) {
-      // 422 sur erreurs métier (fichier vide, pdf scanné, etc.) — le
-      // client surfacera result.hint dans un toast clair.
+      // 422 sur erreurs métier (fichier vide, pdf scanné, etc.). On
+      // renvoie la RAISON : c'est l'écran qui la met en mots, dans la
+      // langue de la créatrice. Jamais `error.message`, qui est écrit
+      // pour nous et pas pour elle (cf. lib/quiz/importFailure.ts).
       return NextResponse.json(result, { status: 422 });
     }
 
@@ -63,9 +61,10 @@ export async function POST(req: NextRequest) {
     });
   } catch (e) {
     console.error("[/api/quiz/import-extract] error:", e);
-    return NextResponse.json(
-      { ok: false, error: e instanceof Error ? e.message : "Unknown error" },
-      { status: 500 },
-    );
+    // Le détail part dans les logs, pas dans le toast : `error.message`
+    // porte des noms de variables minifiés qui ne veulent rien dire pour
+    // la créatrice, et qui masquent le vrai symptôme quand elle nous le
+    // recopie.
+    return NextResponse.json({ ok: false, reason: "extract_failed" }, { status: 500 });
   }
 }

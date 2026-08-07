@@ -7629,5 +7629,15 @@
     "surveyExportPdfFull": "PDF detalhado",
     "quizSectionPriority": "Faça isto agora, uma só coisa",
     "quizLaterToggle": "E depois, quando você tiver medido"
+  },
+  "importErrors": {
+    "file_too_large": "O arquivo passa de 10 MB. Deixe-o mais leve ou divida em dois.",
+    "empty_file": "O arquivo está vazio.",
+    "unsupported_format": "Formato não suportado. Aceitos: .txt, .docx, .pdf.",
+    "docx_no_text": "Nenhum texto encontrado neste .docx. Ele contém apenas imagens?",
+    "pdf_no_text": "Não há texto para extrair deste PDF. Provavelmente é um escaneamento ou uma imagem. Exporte de novo como .docx ou .txt, ou cole seu texto diretamente.",
+    "pdf_password": "Este PDF está protegido por senha. Remova a proteção e tente de novo.",
+    "pdf_damaged": "Não foi possível abrir este PDF: o arquivo parece danificado ou incompleto. Exporte de novo ou use um .docx.",
+    "extract_failed": "A leitura do arquivo falhou. Tente de novo ou exporte seu documento como .docx ou .txt."
   }
 }

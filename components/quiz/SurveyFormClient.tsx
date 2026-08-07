@@ -30,11 +30,14 @@ import { PageHeader } from "@/components/PageHeader";
 import { LanguageCombobox } from "@/components/quiz/LanguageCombobox";
 import { SURVEY_OBJECTIVES } from "@/lib/prompts/quiz/system";
 import { toast } from "sonner";
+import { asImportFailureReason } from "@/lib/quiz/importFailure";
 
 type GeneratedSurvey = Record<string, unknown>;
 
 export default function SurveyFormClient() {
   const t = useTranslations("survey");
+  // Meme namespace partage que l'ecran quiz (cf. lib/quiz/importFailure.ts).
+  const tImport = useTranslations("importErrors");
   const router = useRouter();
 
   const [activeTab, setActiveTab] = useState<"ai" | "import" | "manual">("ai");
@@ -87,7 +90,7 @@ export default function SurveyFormClient() {
         const exRes = await fetch("/api/quiz/import-extract", { method: "POST", body: form });
         const exBody = await exRes.json().catch(() => ({}));
         if (!exRes.ok || !exBody?.ok) {
-          toast.error(exBody?.hint || t("errImport"));
+          toast.error(tImport(asImportFailureReason(exBody?.reason)));
           return;
         }
         text = String(exBody.text || "");

@@ -7,11 +7,29 @@
 // gérait que .txt et tout le reste tombait sur "format non supporté"
 // (cf. import d'Adeline 1er juin 2026, "import a échoué" en .docx).
 //
-// La sortie est un texte brut prêt à être envoyé au prompt IA
-// (buildQuizImportPrompt / buildSurveyImportPrompt), même format
-// qu'auparavant pour .txt → zéro impact sur les prompts existants.
+// -- L'IMPORT PDF N'AVAIT JAMAIS MARCHÉ (François Xavier, 7 août 2026) --
+//
+// `pdf-parse` v1 s'appelait comme une fonction : `pdfParse(buffer)`.
+// La v2 est une réécriture complète : elle exporte une CLASSE `PDFParse`
+// et n'a plus de default export du tout. Le code appelait donc un objet,
+// ce qui lève `pdfParse is not a function`, minifié en prod en
+// `r is not a function`. Tous les PDF, depuis le 27 juillet.
+//
+// **Et le compilateur le savait.** `tsc` répond "Module has no default
+// export" sur `import pdfParse from "pdf-parse"` : les types livrés par
+// la v2 sont justes. Le bug a survécu parce que l'ancien code forçait le
+// silence avec un `as unknown as`, qui ne convertit pas une valeur mais
+// interdit au compilateur de la vérifier.
+//
+// **Règle : pas de `as unknown as` sur un module externe.** Une double
+// assertion désactive exactement le contrôle qui aurait signalé le
+// changement d'API. S'il faut en écrire une, c'est le signe qu'on n'a pas
+// lu ce que le module exporte vraiment.
 
 import mammoth from "mammoth";
+import { PDFParse } from "pdf-parse";
+
+import { classifyPdfError, type ImportFailureReason } from "./quiz/importFailure";
 
 export type ImportSourceKind = "txt" | "docx" | "pdf";
 
@@ -29,24 +47,57 @@ export function detectKind(name: string, mime: string): ImportSourceKind | null 
   return null;
 }
 
-/** Sortie unique : { ok, text, kind } ou { ok:false, error, hint }.
- *  Le hint est destiné au toast côté client. */
+/** Sortie unique : le texte, ou une RAISON que l'écran traduit lui-même. */
 export type ExtractResult =
   | { ok: true; text: string; kind: ImportSourceKind }
-  | { ok: false; error: string; hint?: string };
+  | { ok: false; reason: ImportFailureReason };
+
+/**
+ * Extrait le texte d'un PDF.
+ *
+ * `pageJoiner: ""` retire le séparateur que la v2 ajoute par défaut en
+ * fin de page (`-- 1 of 3 --`). Sans ça il partirait dans le prompt IA
+ * comme s'il faisait partie du document, et l'IA en ferait une question.
+ * Les pages restent séparées : la librairie termine déjà chacune par une
+ * ligne vide.
+ */
+async function extractPdf(bytes: Uint8Array): Promise<ExtractResult> {
+  // `destroy()` libère le document et le worker pdfjs. Le serveur est un
+  // process pm2 qui vit des semaines : sans ce `finally`, chaque import
+  // laisserait derrière lui de quoi grignoter la mémoire jusqu'au
+  // redémarrage.
+  const parser = new PDFParse({ data: bytes });
+  try {
+    const resultat = await parser.getText({ pageJoiner: "" });
+    const text = String(resultat?.text ?? "").trim();
+    if (!text) {
+      // Le PDF est lisible mais ne contient aucun texte : c'est un scan
+      // ou un export en image. Rien à réparer chez nous.
+      return { ok: false, reason: "pdf_no_text" };
+    }
+    return { ok: true, text: text.slice(0, MAX_TEXT_CHARS), kind: "pdf" };
+  } catch (e) {
+    console.error("[quizImportExtract] pdf:", e);
+    return { ok: false, reason: classifyPdfError(e) };
+  } finally {
+    await parser.destroy().catch(() => {
+      /* le nettoyage ne doit jamais masquer l'erreur d'origine */
+    });
+  }
+}
 
 export async function extractImportText(
   buffer: Buffer,
   kind: ImportSourceKind,
 ): Promise<ExtractResult> {
   if (buffer.byteLength > MAX_BYTES) {
-    return { ok: false, error: "file_too_large", hint: "Le fichier dépasse 10 Mo." };
+    return { ok: false, reason: "file_too_large" };
   }
 
   try {
     if (kind === "txt") {
       const text = buffer.toString("utf-8").trim();
-      if (!text) return { ok: false, error: "empty_file", hint: "Le fichier est vide." };
+      if (!text) return { ok: false, reason: "empty_file" };
       return { ok: true, text: text.slice(0, MAX_TEXT_CHARS), kind };
     }
 
@@ -55,39 +106,21 @@ export async function extractImportText(
       // alimenter le prompt IA (le contenu compte, pas la mise en forme).
       const { value } = await mammoth.extractRawText({ buffer });
       const text = String(value || "").trim();
-      if (!text) {
-        return {
-          ok: false,
-          error: "docx_no_text",
-          hint: "Aucun texte trouvé dans le .docx. Le fichier contient-il uniquement des images ?",
-        };
-      }
+      if (!text) return { ok: false, reason: "docx_no_text" };
       return { ok: true, text: text.slice(0, MAX_TEXT_CHARS), kind };
     }
 
     if (kind === "pdf") {
-      // Import dynamique : pdf-parse charge des fonts à l'init du module,
-      // on le retarde au strict moment où on en a besoin pour éviter
-      // un fail global de la route s'il y a un souci d'env.
-      const pdfParseModule = await import("pdf-parse");
-      const pdfParse = (pdfParseModule as unknown as { default?: typeof pdfParseModule } & typeof pdfParseModule).default
-        ?? (pdfParseModule as unknown as (b: Buffer) => Promise<{ text: string }>);
-      const data = await (pdfParse as (b: Buffer) => Promise<{ text: string }>)(buffer);
-      const text = String(data?.text || "").trim();
-      if (!text) {
-        return {
-          ok: false,
-          error: "pdf_no_text",
-          hint: "Aucun texte extractible du PDF. C'est probablement un scan/image — exporte-le en .docx ou .txt et réessaie.",
-        };
-      }
-      return { ok: true, text: text.slice(0, MAX_TEXT_CHARS), kind };
+      // Copie explicite : la librairie peut transférer le tableau au
+      // worker, ce qui DÉTACHE la mémoire sous-jacente. Un Buffer Node
+      // partage souvent son ArrayBuffer avec d'autres, donc on ne lui
+      // donne jamais le nôtre.
+      return await extractPdf(new Uint8Array(buffer));
     }
 
-    return { ok: false, error: "unsupported_kind" };
+    return { ok: false, reason: "unsupported_format" };
   } catch (e) {
     console.error("[quizImportExtract] parse error:", e);
-    const msg = e instanceof Error ? e.message : "Unknown error";
-    return { ok: false, error: "parse_failed", hint: `Erreur lors de la lecture du fichier : ${msg.slice(0, 200)}` };
+    return { ok: false, reason: "extract_failed" };
   }
 }
