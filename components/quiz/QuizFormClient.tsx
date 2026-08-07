@@ -23,6 +23,7 @@ import { QuizIdeaChat, type QuizBrief } from "@/components/quiz/QuizIdeaChat";
 import { QUIZ_OBJECTIVES } from "@/lib/prompts/quiz/system";
 import { LanguageCombobox } from "@/components/quiz/LanguageCombobox";
 import { toast } from "sonner";
+import { asImportFailureReason } from "@/lib/quiz/importFailure";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -177,6 +178,10 @@ function ObjectivesDropdown({
 
 export default function QuizFormClient() {
   const t = useTranslations("quizForm");
+  // Les raisons d'un import rate vivent dans leur propre namespace : les
+  // deux ecrans qui importent un fichier (quiz et sondage) partagent
+  // exactement les memes, et les recopier les ferait diverger.
+  const tImport = useTranslations("importErrors");
   const router = useRouter();
 
   // ---- Manual form state ----
@@ -907,7 +912,7 @@ export default function QuizFormClient() {
         if (!exRes.ok || !exBody?.ok) {
           // Surface le hint utile du serveur (ex: "PDF est un scan,
           // exporte en .docx") ou un fallback générique.
-          toast.error(exBody?.hint || t("errImport"));
+          toast.error(tImport(asImportFailureReason(exBody?.reason)));
           setImporting(false);
           return;
         }

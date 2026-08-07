@@ -12,8 +12,12 @@
 
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { sendEmail } from "@/lib/email";
+import { affiliateDashboardUrl } from "@/lib/affiliate/urls";
 
-const DASHBOARD_URL = process.env.AFFILIATE_DASHBOARD_URL ?? "https://affiliate.tipote.com";
+// Une seule maison pour cette adresse, et une surcharge VALIDÉE : le
+// `??` d'avant ne protégeait que de la variable absente, jamais de la
+// variable fausse, et ce lien part par email à de vrais affiliés.
+const DASHBOARD_URL = affiliateDashboardUrl();
 
 export type AffiliateMagicLinkOptions = {
   email: string;

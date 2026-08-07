@@ -1216,3 +1216,64 @@ faire). Et il lit le `.env` lui-même, en ne cherchant QUE les deux clés
 dont il a besoin : `set -a; . .env; set +a` demande à bash d'interpréter
 tout le fichier, et une clé d'API sans rapport contenant des caractères
 spéciaux faisait échouer le chargement entier.
+## Une librairie qui change d'API, et un `as unknown as` qui l'a caché (drame François Xavier, 7 août 2026)
+
+"Quand j'importe le quiz au format pdf, j'ai ce message d'erreur :
+Erreur lors de la lecture du fichier : r is not a function."
+
+**L'import PDF n'avait jamais marché.** Pas "plus" : jamais. Reproduit le
+jour même, hors bundle : `pdfParse is not a function`.
+
+`pdf-parse` v1 s'appelait comme une fonction. La v2, installée le 27
+juillet, est une réécriture : elle exporte une CLASSE `PDFParse` et n'a
+plus de default export du tout. Le code appelait donc un objet. En prod
+le nom de la variable est minifié, d'où le `r` : un message qui ressemble
+à un problème de fichier alors qu'il décrit notre code.
+
+**Et le compilateur le savait.** `tsc` répond "Module has no default
+export" sur `import pdfParse from "pdf-parse"` : les types livrés par la
+v2 sont justes et ils gagnent sur `@types/pdf-parse` (resté en v1, retiré
+depuis). Le bug a survécu parce que le code forçait le silence :
+
+```ts
+const pdfParse = (m as unknown as { default?: ... }).default ?? (m as unknown as (b: Buffer) => ...)
+```
+
+**Règle : pas de `as unknown as` sur un module externe.** Une double
+assertion ne convertit rien, elle interdit la vérification. Garde-fou :
+`tests/logic/pdf-import.test.mts`.
+
+**Les deux apps étaient cassées, différemment.** Tiquiz en v2 (API
+changée), Tipote resté en v1 dont l'`index.js` lit un fichier de test au
+chargement (`ENOENT ./test/data/05-versions-space.pdf`), le bug connu de
+cette version sous bundler. Deux repos jumeaux, deux versions
+divergentes, donc deux pannes qu'un seul correctif n'aurait pas couvertes.
+Les deux sont maintenant en `^2.4.5`, avec la MÊME implémentation.
+
+**Le vert local ne prouvait rien, et c'est le vrai piège.** Test logique
+vert, `tsc` vert, `next build` vert : l'import PDF échouait quand même une
+fois compilé. `pdf-parse` charge son worker par un import DYNAMIQUE
+construit à l'exécution, que Next ne voit pas passer :
+
+```
+Setting up fake worker failed: Cannot find module '.../pdf.worker.mjs'
+```
+
+D'où DEUX réglages dans `next.config.ts`, tous les deux nécessaires :
+- `serverExternalPackages: ["pdf-parse"]` : sinon le worker est cherché
+  dans les chunks au lieu de node_modules ;
+- `outputFileTracingIncludes` sur `pdfjs-dist/legacy/build/pdf.worker.mjs`
+  : sinon le fichier n'est pas copié dans la sortie standalone.
+
+Vérifié en envoyant un VRAI PDF au serveur de production des deux apps.
+Le test logique fige ces deux lignes, parce qu'elles ne servent à rien en
+local et que rien d'autre ne dirait qu'on les a retirées.
+
+**Et une exception n'est jamais la phrase que lit la cliente.** Le client
+affichait `error.message` tel quel. François Xavier ne pouvait rien en
+faire, et nous non plus : le vrai symptôme était noyé. Le serveur renvoie
+maintenant une RAISON (`lib/quiz/importFailure.ts`), l'écran la traduit
+dans les 7 langues, et les cas qui appellent une action ont leur propre
+phrase : PDF scanné, PDF protégé par mot de passe, PDF abîmé. Même règle
+que la suppression d'un quiz (3 août) : le serveur dit ce qui s'est
+passé, l'interface dit comment le dire.

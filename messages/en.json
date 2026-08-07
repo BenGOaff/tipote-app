@@ -7629,5 +7629,15 @@
     "surveyExportPdfFull": "Detailed PDF",
     "quizSectionPriority": "Do this now, one thing only",
     "quizLaterToggle": "And later, once you have measured"
+  },
+  "importErrors": {
+    "file_too_large": "The file is over 10 MB. Make it lighter or split it in two.",
+    "empty_file": "The file is empty.",
+    "unsupported_format": "Unsupported format. Accepted: .txt, .docx, .pdf.",
+    "docx_no_text": "No text found in this .docx. Does it only contain images?",
+    "pdf_no_text": "No text to extract from this PDF. It is most likely a scan or an image. Export it again as .docx or .txt, or paste your text directly.",
+    "pdf_password": "This PDF is password protected. Remove the protection, then try again.",
+    "pdf_damaged": "This PDF could not be opened: the file looks damaged or incomplete. Export it again, or use a .docx.",
+    "extract_failed": "Reading the file failed. Try again, or export your document as .docx or .txt."
   }
 }
