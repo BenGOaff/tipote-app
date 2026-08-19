@@ -66,7 +66,7 @@ moteur deux fois, et il se contredirait avant la fin du mois.
 | 2 | Effet d'un palier | **À partir de la vente suivante**, jamais rétroactivement |
 | 3 | Attribution | **90 jours, last-touch** (inchangé) |
 | 4 | Paiement | **Seuil 50 €, le 10 du mois, sur les ventes de plus de 30 jours** |
-| 5 | Devenir affilié | **Inscription libre, mais aucun paiement sans profil de facturation complet** |
+| 5 | Devenir affilié | **Inscription libre. Aucun statut exigé, on demande seulement de quoi payer et facturer** |
 
 Trois précisions qui découlent de tes réponses et qu'il faut fixer
 maintenant, parce qu'elles changent le code.
@@ -85,12 +85,13 @@ sens, et c'est aussi une protection anti-triche : un affilié qui
 fabriquerait des abonnements pour monter d'un palier les verrait
 disparaître au premier impayé.
 
-**Le profil de facturation est un mur, pas un formulaire.** Tant que
-SIRET ou SIREN, raison sociale (ou "particulier"), régime de TVA et
-adresse ne sont pas renseignés, les commissions s'accumulent et
-s'affichent, mais aucun lot de paiement ne les prend. L'écran le dit
-avant, pas au moment du virement raté. Et c'est ce profil qui alimente
-la facture : c'est pour ça qu'il est obligatoire et pas optionnel.
+**Le profil de facturation ne juge personne, il sert à payer.** On ne
+demande ni statut ni SIRET : l'affilié déclare ses revenus de son côté,
+ça ne nous regarde pas. On demande son nom, son adresse, son pays, s'il
+est assujetti à la TVA, et où envoyer l'argent. Tant que ces cases ne
+sont pas remplies les commissions s'accumulent et s'affichent, mais
+aucun lot de paiement ne les prend, et l'écran le dit avant, pas au
+moment du virement raté. Le détail champ par champ est en section 7 bis.
 
 ---
 
@@ -323,9 +324,11 @@ tromper sur son identité ni sur son régime.
    erreur" ouvre une ligne dans ta file de vérification. C'est aussi
    une protection pour toi : une facture contestée un an après vaut
    moins qu'une facture jamais regardée.
-3. **Une série de numérotation séparée**, continue, sans trou. Ces
-   factures ne sont pas les tiennes : elles ne doivent pas se mélanger
-   à ta numérotation de ventes.
+3. **Une série de numérotation dédiée PAR AFFILIÉ**, continue, sans
+   trou. Pas une série commune à toutes les autofactures : c'est une
+   série par vendeur, parce que chaque facture appartient à la
+   comptabilité de SON affilié, pas à la tienne. Une seule série
+   partagée ferait des trous dans la numérotation de chacun.
 4. **Le document est FIGÉ.** Une fois émis, il ne se réécrit pas. Une
    erreur se corrige par un avoir, jamais en modifiant le PDF. Sinon le
    montant affiché à l'affilié et le montant déclaré peuvent diverger
@@ -365,46 +368,103 @@ qui détermine ce qui est écrit sur la facture et ce que tu verses.
 Chaque champ existe parce qu'il décide d'une ligne du document. Aucun
 n'est là "au cas où".
 
-| Champ | Ce qu'il décide |
-|---|---|
-| Personne physique ou société | la forme de l'en-tête |
-| Raison sociale ou nom et prénom | à qui la facture est établie |
-| SIREN / SIRET | l'identification légale de l'émetteur |
-| Adresse complète et pays | le pays décide du régime de TVA |
-| Assujetti à la TVA (oui / non) | TVA appliquée ou mention d'exonération |
-| Numéro de TVA intracommunautaire | autoliquidation, après vérification |
-| IBAN ou email PayPal | où part l'argent |
+**Décision Béné, 19 août 2026 : "on n'oblige RIEN, ils déclarent leurs
+revenus de leur côté, ça ne nous regarde pas."**
 
-### Deux points pour ton comptable, et je ne les tranche pas
+Donc aucun statut exigé, aucun plafond, aucune vérification de ce qu'il
+fait de son argent. Le profil ne demande QUE ce dont on a besoin pour le
+payer et pour établir le document, et rien d'autre.
 
-Ce ne sont plus des questions de principe (tu as tranché), ce sont deux
-détails d'exécution qui peuvent changer le format du document.
+| Champ | Obligatoire ? | Ce qu'il décide |
+|---|---|---|
+| Nom et prénom, ou raison sociale | oui | au nom de qui la facture est établie |
+| Adresse complète | oui | mention légale obligatoire |
+| Pays | oui | le régime de TVA applicable |
+| Assujetti à la TVA (oui / non) | oui | TVA appliquée, ou mention d'exonération |
+| Numéro de TVA intracommunautaire | seulement si assujetti | autoliquidation, après vérification |
+| SIREN / SIRET | **non** | ajouté à la facture s'il le donne |
+| IBAN ou email PayPal | oui | où part l'argent |
 
-1. **Un affilié sans entreprise.** Ton profil prévoit "pas
-   d'entreprise", et c'est réaliste : beaucoup de gens commenceront
-   comme ça. Mais des commissions versées régulièrement à un
-   particulier, sans numéro d'identification, ne sont pas de même
-   nature qu'un remboursement ponctuel. À demander : est-ce qu'on les
-   accepte, avec quel plafond, ou est-ce qu'on exige un statut dès le
-   premier virement. **La réponse change une règle de code**, donc mieux
-   vaut la connaître avant d'écrire l'écran.
-2. **Le format de la facture.** La facturation électronique obligatoire
-   arrive en France par étapes, et une facture émise en autofacturation
-   entre professionnels est précisément le cas qu'elle vise. À demander :
-   à quelle date ça te concerne, et sous quel format. Ça ne change rien
-   au plan ni au calendrier, seulement la manière dont le document est
-   produit et transmis. Autant le savoir avant de générer le premier
-   PDF que six mois après.
+Le seul champ vraiment bloquant est celui qui décide de la TVA, et il se
+répond par oui ou non. Un affilié qui ne coche rien est traité comme non
+assujetti : pas de TVA, mention d'exonération, il est payé.
 
-### Ce que ça NE règle pas
+### Ce que dit la réforme de la facturation électronique
 
-Ta réponse referme entièrement la facturation **des affiliés**. Elle ne
-répond pas à l'autre question, qui est différente et qui appartient à la
-phase 3 : quand c'est toi qui vends en direct, **quelle TVA est facturée
-au CLIENT FINAL**, selon son pays et selon qu'il est particulier ou
-professionnel. Aujourd'hui c'est le bon de commande Systeme.io qui s'en
-occupe. Ce n'est pas urgent : elle ne bloque que la vente directe, pas
-le programme d'affiliation.
+Tu m'as demandé de me renseigner plutôt que de te renvoyer vers ton
+comptable. Voilà ce qui est établi, et ce que ça change pour nous.
+
+**Deux dates, et elles ne te concernent pas de la même façon.**
+
+- **1er septembre 2026** (dans deux semaines) : obligation de
+  RÉCEPTION pour toute entreprise assujettie à la TVA en France. Tu dois
+  être capable de recevoir une facture électronique structurée via une
+  plateforme agréée. **Ça concerne ta compta, pas ce code**, et c'est
+  la seule échéance vraiment imminente du document.
+- **1er septembre 2027** : obligation d'ÉMISSION pour les TPE, PME et
+  micro-entreprises, e-reporting compris. **C'est cette date qui compte
+  pour nos factures affiliés.** On a un an.
+
+**Ce que la réforme impose à une autofacture**, et qui confirme ou
+corrige ce que j'avais écrit plus haut :
+
+- l'autofacturation est traitée comme un **mandat d'émission**, qui doit
+  être **préalable et écrit** (c'était déjà dans le plan) ;
+- la facture doit porter la mention **"autofacturation"** ET la
+  **référence au mandat** ;
+- elle porte un **type de facture dédié** dans le format structuré ;
+- **numérotation en série chronologique par vendeur** (c'est ce qui a
+  corrigé le point 3 ci-dessus) ;
+- formats acceptés : **Factur-X, UBL ou CII**, transmis par une
+  **plateforme agréée** (le nouveau nom des PDP).
+
+**La conséquence de conception, et c'est la seule qui compte
+aujourd'hui : on stocke les DONNÉES structurées de chaque facture, pas
+seulement un PDF.** Émetteur, destinataire, mandat, lignes, base HT,
+taux, montant de TVA, mention légale, devise, dates. Le PDF n'est qu'un
+rendu de ces données. À ce prix, passer à Factur-X en 2027 est un export
+à écrire ; si on ne stocke qu'un PDF, c'est une reprise de tout
+l'historique. La différence de coût est d'un facteur dix, pour une
+décision qui se prend maintenant et ne se voit pas.
+
+**Ce qu'on ne fait PAS maintenant :** brancher une plateforme agréée.
+Ce serait payer un an d'avance un service qui n'est pas encore
+obligatoire pour toi, et les offres bougent encore. On garde la porte
+ouverte, on ne la franchit pas.
+
+### La TVA du client final : la règle, c'est ce que Béné a répondu
+
+"Ma TVA c'est 20% en France et après les taux normaux pour mon domaine,
+selon chaque pays."
+
+**C'est exactement la règle**, et il n'y avait rien à demander : depuis
+2015, un service numérique vendu à un particulier est taxé dans le pays
+où il réside, au taux de ce pays. Ma question était mal posée : ce qui
+reste ouvert n'a jamais été QUEL taux, mais **qui fait le travail** une
+fois Systeme.io hors du circuit. Aujourd'hui c'est leur bon de commande
+qui détermine le pays, applique le bon taux et sort les montants. Demain
+ce serait notre code.
+
+Ce que ça veut dire concrètement pour la phase 3, et rien de plus :
+
+- une table des taux par pays, tenue à jour, et le taux GELÉ sur chaque
+  vente (même principe que partout ailleurs dans ce document) ;
+- déterminer le pays du client et en garder la preuve ;
+- **le seuil de 10 000 €** : tant que tes ventes transfrontalières B2C
+  dans l'UE restent en dessous sur l'année, tu peux appliquer la TVA
+  française partout. Au dessus, c'est le taux du pays du client et le
+  guichet unique OSS, une déclaration trimestrielle unique. Donc l'app
+  doit CUMULER ce montant et te prévenir avant que tu franchisses le
+  seuil, pas après ;
+- un professionnel de l'UE qui donne un numéro de TVA valide est en
+  autoliquidation, exactement comme pour les factures affiliés ;
+- et l'e-reporting des ventes B2C à partir de septembre 2027 : montants
+  HT, TVA par taux, devise, dates, transmis par une plateforme agréée.
+  L'amende est de 250 € par transmission manquante, plafonnée à 15 000 €
+  par an, ce qui en fait un poste à ne pas découvrir en route.
+
+Rien de tout ça ne bloque le programme d'affiliation. C'est du travail
+de phase 3, et c'est maintenant chiffrable au lieu d'être un inconnu.
 
 ---
 
@@ -440,13 +500,11 @@ se voie : paiement qui échoue et relances, carte expirée, résiliation,
 remboursement, changement de palier. Chacun devient un événement à
 traiter et un accès à ouvrir ou fermer au bon moment.
 
-Et il reste la question de la TVA facturée au CLIENT FINAL, selon son
-pays et selon qu'il est particulier ou professionnel. Elle est distincte
-de celle des factures affiliés, que tu as tranchée le 19 août :
-aujourd'hui c'est le bon de commande Systeme.io qui s'en charge, demain
-ce serait nous. Selon la réponse de ton comptable, c'est un chantier de
-trois semaines ou de trois mois. **C'est le seul inconnu du document qui
-peut décaler quelque chose, et il ne décale que cette phase.**
+Et il faut reprendre ce que le bon de commande Systeme.io fait
+aujourd'hui sans qu'on le voie : déterminer le pays du client, appliquer
+le taux de ce pays, cumuler le seuil de 10 000 €, sortir les montants
+pour l'OSS. La règle est connue (cf. section 7 bis), donc ce n'est plus
+un inconnu : c'est du travail identifié, à faire une fois.
 
 ---
 
@@ -504,7 +562,10 @@ dans les liens. Rien à reconstruire.
 - couper le tracking actuel avant la période de comparaison ;
 - changer un taux existant : 40% et 70% restent les paliers de base, les
   paliers ne font que monter au dessus ;
-- promettre une date sur la phase 3 tant que la TVA due par le client
-  final n'est pas tranchée (la facturation des affiliés, elle, l'est) ;
 - ouvrir le paiement d'un affilié dont le numéro de TVA n'a pas été
-  vérifié, ni d'un affilié au profil de facturation incomplet.
+  vérifié ;
+- demander à un affilié un statut, un SIRET ou quoi que ce soit sur ses
+  revenus : on n'oblige rien, il déclare de son côté ;
+- brancher une plateforme agréée avant que ce soit nécessaire (septembre
+  2027 pour l'émission), tout en stockant dès maintenant les données
+  structurées qui permettront de le faire sans reprise.
