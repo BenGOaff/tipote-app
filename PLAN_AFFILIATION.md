@@ -291,16 +291,120 @@ tableau par lien et par canal, et il reprend la mise en forme du tableau
 
 Ce que l'app automatise, et c'est le vrai travail : constituer le lot du
 mois (commissions validées, hors garantie, au dessus du seuil, profil de
-facturation complet), **générer la facture ou le relevé
-d'autofacturation** à partir du profil fiscal, marquer les commissions
+facturation complet), **émettre la facture**, marquer les commissions
 comme payées, archiver le document des deux côtés. Le virement lui-même
 peut rester manuel très longtemps sans que ça se voie.
 
-**À confirmer avec ton comptable, pas avec moi :** facture émise par
-l'affilié ou autofacturation par toi, et le traitement de la TVA selon
-qu'il y est assujetti ou non, en France ou hors de France. C'est la
-raison pour laquelle le profil fiscal demande le régime de TVA et
-l'adresse : ce sont eux qui décident du contenu du document.
+---
+
+## 7 bis. La facture : autofacturation, comme Systeme.io
+
+**Décision Béné, 19 août 2026 :** "Facture créée chez moi comme pour
+Systeme io et gestion TVA : si l'affilié est soumis à la TVA notre
+facture le prend en compte."
+
+C'est le bon choix, et le plus automatisable : l'affilié n'a rien à
+produire, donc rien ne bloque son paiement parce qu'il n'a pas envoyé
+son PDF. Mais l'autofacturation a une contrepartie stricte : **on émet
+un document AU NOM de quelqu'un d'autre**, donc on ne peut pas se
+tromper sur son identité ni sur son régime.
+
+### Ce que ça impose, et qui doit exister avant le premier paiement
+
+1. **Un mandat de facturation accepté à l'inscription.** L'affilié
+   autorise expressément Tipote à établir ses factures en son nom et
+   pour son compte. Sans cet accord, l'autofacturation n'est pas
+   opposable. Il est versionné comme les règles du programme
+   (`accepted_terms_version`), et pour la même raison : on ne peut pas
+   invoquer un accord que la personne n'a jamais vu.
+2. **Un droit de contestation, et un délai.** Chaque facture lui est
+   notifiée et il peut la contester. En pratique : la facture apparaît
+   dans son espace, il reçoit un email, et un bouton "Signaler une
+   erreur" ouvre une ligne dans ta file de vérification. C'est aussi
+   une protection pour toi : une facture contestée un an après vaut
+   moins qu'une facture jamais regardée.
+3. **Une série de numérotation séparée**, continue, sans trou. Ces
+   factures ne sont pas les tiennes : elles ne doivent pas se mélanger
+   à ta numérotation de ventes.
+4. **Le document est FIGÉ.** Une fois émis, il ne se réécrit pas. Une
+   erreur se corrige par un avoir, jamais en modifiant le PDF. Sinon le
+   montant affiché à l'affilié et le montant déclaré peuvent diverger
+   sans que rien ne le signale, ce qui est exactement la famille de bug
+   que ce repo passe son temps à fermer.
+
+### La TVA : trois cas, un seul champ décide
+
+Le régime de TVA n'est pas une case cosmétique du profil : c'est LUI
+qui détermine ce qui est écrit sur la facture et ce que tu verses.
+
+| Cas | Ce que la facture porte |
+|---|---|
+| Assujetti en France | commission HT + TVA au taux normal, TTC payé |
+| Franchise en base (micro) | pas de TVA, avec la mention légale correspondante |
+| Entreprise dans un autre pays de l'UE, numéro de TVA valide | pas de TVA française, autoliquidation par lui |
+| Hors UE | hors champ de la TVA française |
+
+**Deux règles de code qui en découlent :**
+
+- **Le régime est GELÉ sur la facture au moment de l'émission**, comme
+  le taux de commission l'est sur la vente. Un affilié qui passe à la
+  TVA en octobre ne doit pas transformer rétroactivement ses factures de
+  juin. Même principe, même raison : un document déjà remis est un
+  engagement.
+- **Un numéro de TVA intracommunautaire se VÉRIFIE, il ne se croit pas.**
+  Un numéro invalide dans la case "UE, autoliquidation" te fait facturer
+  sans TVA une opération qui en devait, et c'est toi qui la dois. La
+  vérification se fait auprès du service européen prévu pour ça, au
+  moment où il saisit son numéro, et le résultat est stocké avec sa
+  date. Un numéro non vérifié = paiement bloqué, pas TVA à zéro par
+  défaut. C'est la règle du `??` qui ne protège que du manquant : ici
+  la valeur fausse est plus dangereuse que la valeur absente.
+
+### Le profil de facturation, champ par champ
+
+Chaque champ existe parce qu'il décide d'une ligne du document. Aucun
+n'est là "au cas où".
+
+| Champ | Ce qu'il décide |
+|---|---|
+| Personne physique ou société | la forme de l'en-tête |
+| Raison sociale ou nom et prénom | à qui la facture est établie |
+| SIREN / SIRET | l'identification légale de l'émetteur |
+| Adresse complète et pays | le pays décide du régime de TVA |
+| Assujetti à la TVA (oui / non) | TVA appliquée ou mention d'exonération |
+| Numéro de TVA intracommunautaire | autoliquidation, après vérification |
+| IBAN ou email PayPal | où part l'argent |
+
+### Deux points pour ton comptable, et je ne les tranche pas
+
+Ce ne sont plus des questions de principe (tu as tranché), ce sont deux
+détails d'exécution qui peuvent changer le format du document.
+
+1. **Un affilié sans entreprise.** Ton profil prévoit "pas
+   d'entreprise", et c'est réaliste : beaucoup de gens commenceront
+   comme ça. Mais des commissions versées régulièrement à un
+   particulier, sans numéro d'identification, ne sont pas de même
+   nature qu'un remboursement ponctuel. À demander : est-ce qu'on les
+   accepte, avec quel plafond, ou est-ce qu'on exige un statut dès le
+   premier virement. **La réponse change une règle de code**, donc mieux
+   vaut la connaître avant d'écrire l'écran.
+2. **Le format de la facture.** La facturation électronique obligatoire
+   arrive en France par étapes, et une facture émise en autofacturation
+   entre professionnels est précisément le cas qu'elle vise. À demander :
+   à quelle date ça te concerne, et sous quel format. Ça ne change rien
+   au plan ni au calendrier, seulement la manière dont le document est
+   produit et transmis. Autant le savoir avant de générer le premier
+   PDF que six mois après.
+
+### Ce que ça NE règle pas
+
+Ta réponse referme entièrement la facturation **des affiliés**. Elle ne
+répond pas à l'autre question, qui est différente et qui appartient à la
+phase 3 : quand c'est toi qui vends en direct, **quelle TVA est facturée
+au CLIENT FINAL**, selon son pays et selon qu'il est particulier ou
+professionnel. Aujourd'hui c'est le bon de commande Systeme.io qui s'en
+occupe. Ce n'est pas urgent : elle ne bloque que la vente directe, pas
+le programme d'affiliation.
 
 ---
 
@@ -336,10 +440,13 @@ se voie : paiement qui échoue et relances, carte expirée, résiliation,
 remboursement, changement de palier. Chacun devient un événement à
 traiter et un accès à ouvrir ou fermer au bon moment.
 
-Et la même question de facturation et de TVA se pose, en plus gros,
-puisque tu deviens le vendeur. Selon la réponse de ton comptable, c'est
-un chantier de trois semaines ou de trois mois. **C'est le seul inconnu
-du document qui peut décaler tout le reste.**
+Et il reste la question de la TVA facturée au CLIENT FINAL, selon son
+pays et selon qu'il est particulier ou professionnel. Elle est distincte
+de celle des factures affiliés, que tu as tranchée le 19 août :
+aujourd'hui c'est le bon de commande Systeme.io qui s'en charge, demain
+ce serait nous. Selon la réponse de ton comptable, c'est un chantier de
+trois semaines ou de trois mois. **C'est le seul inconnu du document qui
+peut décaler quelque chose, et il ne décale que cette phase.**
 
 ---
 
@@ -371,8 +478,11 @@ ne t'oblige à quitter Systeme.io tant que tu ne le décides pas.
 ### Phase 2 : suivi et paiement
 - prochain virement, sa date, ce qui est en garantie, prochain palier ;
 - tableau par lien, par canal, par provenance ;
-- profil de facturation obligatoire avant paiement ;
-- lots mensuels, facture ou autofacturation générée, historique ;
+- profil de facturation obligatoire avant paiement, numéro de TVA
+  intracommunautaire vérifié avant d'être cru ;
+- mandat de facturation accepté et versionné ;
+- lots mensuels, autofacturation émise et figée, série de numérotation
+  séparée, contestation possible, historique ;
 - virement d'abord, PayPal ensuite ;
 - la fenêtre affiliation dans Tiquiz, Tipote et l'Atelier.
 
@@ -394,5 +504,7 @@ dans les liens. Rien à reconstruire.
 - couper le tracking actuel avant la période de comparaison ;
 - changer un taux existant : 40% et 70% restent les paliers de base, les
   paliers ne font que monter au dessus ;
-- promettre une date sur la phase 3 tant que la question de la
-  facturation et de la TVA n'est pas tranchée.
+- promettre une date sur la phase 3 tant que la TVA due par le client
+  final n'est pas tranchée (la facturation des affiliés, elle, l'est) ;
+- ouvrir le paiement d'un affilié dont le numéro de TVA n'a pas été
+  vérifié, ni d'un affilié au profil de facturation incomplet.
