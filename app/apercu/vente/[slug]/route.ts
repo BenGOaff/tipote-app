@@ -40,6 +40,13 @@ const PAGES: Record<string, Omit<SalesPageMeta, "slug">> = {
       "La méthode complète pour créer un quiz qui capture des leads qualifiés et les transforme en clients, en 7 jours, sans compétence technique.",
     locale: "fr_FR",
   },
+  tiquiz: {
+    canonical: "https://www.tipote.fr/tiquiz",
+    title: "Tiquiz : le générateur de quiz qui transforme tes visiteurs en leads",
+    description:
+      "Crée un quiz personnalisé en quelques minutes, capture des emails qualifiés et envoie à chaque visiteur le résultat qui lui parle. Sans code, en 7 langues.",
+    locale: "fr_FR",
+  },
 };
 
 /** Comparaison à durée constante : une clé ne se devine pas à la montre. */
