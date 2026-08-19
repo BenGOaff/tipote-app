@@ -4668,7 +4668,7 @@
     "bonusShareTitle": "Bônus oferecido por compartilhar",
     "bonusShareDesc": "Descreva o que o visitante recebe ao compartilhar.",
     "bonusDescriptionPh": "Ex.: meu mini-curso exclusivo",
-    "shareMessageHint": "Preenchido quando o visitante compartilha no X, WhatsApp, Threads ou pelo celular. O Facebook e o LinkedIn nunca preenchem o texto: eles mostram a prévia do link, cuja descrição usa esta mensagem (a menos que você defina uma descrição OG personalizada).",
+    "shareMessageHint": "Preenchido quando o visitante compartilha no X, WhatsApp, Threads ou pelo celular. O Facebook e o LinkedIn nunca preenchem o texto: eles mostram a prévia do link, cuja descrição usa esta mensagem (a menos que você defina uma descrição OG personalizada). Na tela de resultado, o compartilhamento nomeia automaticamente o perfil obtido. Escreva {resultat} na sua mensagem para colocar esse nome você mesma.",
     "shareMessagePh": "Acabei de fazer o quiz \"{title}\"!",
     "sioShareTagLabel": "Tag Systeme.io após compartilhamento",
     "sioShareTagHint": "Adicionado ao contato quando ele realmente compartilha. Aciona sua automação.",
