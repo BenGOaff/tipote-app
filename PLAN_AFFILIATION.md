@@ -416,14 +416,14 @@ RECEVOIR de l'argent dans plusieurs pays africains. Donc :
 
 - le moyen de paiement est **par affilié**, choisi parmi ce qui est
   réellement possible dans SON pays, pas dans une liste unique ;
-- prévoir une troisième voie de type Wise pour l'international, sinon
-  un affilié canadien ou sénégalais n'a aucune option ;
+- **Wise en troisième voie pour l'international** (validé le 19 août),
+  sinon un affilié canadien ou sénégalais n'a aucune option ;
 - l'écran ne doit jamais proposer un moyen qui ne marchera pas chez
   lui : c'est le genre de découverte qui arrive au moment du premier
   virement, donc au pire moment.
 
-**3. Les frais et la devise.** Les commissions restent **en euros**,
-puisque les ventes le sont : la conversion est à sa charge, et le seuil
+**3. Les frais et la devise.** Les commissions restent **en euros**
+(validé le 19 août), puisque les ventes le sont : la conversion est à sa charge, et le seuil
 de 50 € s'entend en euros. Mais un virement international coûte plus
 cher qu'un virement SEPA. À décider : tu absorbes les frais, ou le seuil
 est plus haut hors SEPA. **Il faut le dire avant**, sinon tu recevras le
@@ -500,20 +500,68 @@ c'est exactement l'erreur du drame Ivan.** Donc je ne conclus pas.
 Systeme.io, pas à notre miroir : sur une vente Atelier à 47 €, quelle
 commission a réellement été versée à l'affiliée, **32,90 € ou 27,42 €** ?
 
-### La règle à figer, quelle que soit la réponse
+### La décision : base HT
 
-1. **La base est un PARAMÈTRE EXPLICITE** (`commission_base` = `ttc` ou
-   `ht`), stocké sur la ligne de commission au même titre que le taux.
-   Jamais deviné, jamais déduit de la présence ou de l'absence d'un
-   champ de taxe dans un paiement.
-2. **Le montant annoncé et le montant payé sortent de la MÊME
-   fonction.** Aujourd'hui l'un est une phrase écrite à la main dans un
-   fichier et l'autre un calcul : c'est mécaniquement voué à diverger,
-   et c'est ce qui est arrivé.
-3. Ma recommandation, si tu me la demandes : **base TTC**, parce que
-   c'est ce qui a été promis, que c'est le prix que l'affiliée voit, et
-   qu'un pourcentage d'un montant qu'elle ne connaît pas n'est pas
-   vérifiable par elle.
+**Décision Béné, 19 août 2026 : "chez nous on va calculer la commission
+sur le HT."** C'est donc tranché, et le code existant était déjà dans ce
+sens. Ce qui doit suivre, c'est ce que les affiliées LISENT.
+
+La base reste un **PARAMÈTRE EXPLICITE** (`commission_base` = `ht`),
+stocké sur la ligne de commission au même titre que le taux. Pas une
+constante, pas une valeur devinée à partir de la présence d'un champ de
+taxe dans un paiement : une colonne, gelée à la vente, qui dit de quoi
+on parle.
+
+Et **le montant annoncé et le montant payé sortent de la MÊME
+fonction**. C'est la seule protection qui tient, et son absence est
+exactement ce qui a produit l'écart ci-dessous.
+
+### Ce que la bascule sur le HT change à l'écran
+
+Tous les montants affichés aux affiliées sont écrits à la main sur la
+base du prix TTC. Sur la base HT, chacun est divisé par 1,2.
+
+| Ce qui est affiché aujourd'hui | Sur base HT (France, 20%) |
+|---|---|
+| Atelier 47 €, 70% -> **32,90 € par vente** | **27,42 €** |
+| Tiquiz 17 €/mois, 40% -> **6,80 €/mois** | **5,67 €/mois** |
+| soit **81,60 € sur l'année** | **68,00 €** |
+| Tiquiz Plus 29 €/mois, 40% -> **11,60 €/mois** | **9,67 €/mois** |
+| soit **139,20 € sur l'année** | **116,00 €** |
+| Tiquiz annuel 170 €, 40% -> **68,00 €** | **56,67 €** |
+| Tiquiz annuel Plus 290 €, 40% -> **116,00 €** | **96,67 €** |
+
+**Soit 16,7% de moins sur chaque montant annoncé.**
+
+**Où ces chiffres vivent** (tous dans `tipote-app`, sauf le dernier) :
+
+- `app/affiliate/i18n/{fr,en,es,it,pt,ar}.ts`, entrées
+  `faq_avg_earnings_a` et `faq_subscriptions_a` : les montants sont
+  écrits en toutes lettres, dans **6 langues** ;
+- `app/affiliate/revenus/RevenueCalculator.tsx` : le simulateur calcule
+  `PRIX_TTC x TAUX`, donc il affiche lui aussi les montants TTC ;
+- `formaquiz/lib/affiliate.ts` : "70% ... soit 32,90 € par vente à 47 €".
+
+### Le point qui mérite une décision, et il n'est pas technique
+
+Un prix fixe TTC avec un taux de TVA qui change par pays veut dire que
+**le HT change selon le pays de l'acheteur, donc la commission aussi.**
+
+| Acheteur | HT sur 47 € TTC | Commission 70% |
+|---|---|---|
+| France (20%) | 39,17 € | 27,42 € |
+| Belgique (21%) | 38,84 € | 27,19 € |
+| Hongrie (27%) | 37,01 € | 25,91 € |
+
+Sur base TTC, la commission était un montant fixe annonçable. **Sur base
+HT, elle devient variable**, et "chacun reçoit ce qui lui a été annoncé"
+(priorité numéro trois) demande alors de formuler autrement : soit
+annoncer le montant France en disant qu'il varie légèrement selon le
+pays de l'acheteur, soit annoncer "70% du montant hors taxes" et laisser
+le tableau de bord donner le chiffre réel.
+
+Rien de tout ça n'est bloquant, mais c'est à décider AVANT de réécrire
+six langues, pas après.
 
 ---
 
@@ -747,5 +795,6 @@ dans les liens. Rien à reconstruire.
 - brancher une plateforme agréée avant d'avoir la réponse de Qonto ou
   d'Indy sur l'autofacturation par API, tout en stockant dès maintenant
   les données structurées qui permettront de le faire sans reprise ;
-- changer la base de calcul des commissions de l'Atelier avant de
-  savoir ce que Systeme.io verse réellement sur une vente à 47 €.
+- réécrire les montants affichés aux affiliées (6 langues plus le
+  simulateur) avant que Béné ait confirmé la baisse de 16,7% que la
+  base HT implique, et la façon de l'annoncer.
