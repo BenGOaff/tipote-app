@@ -1,381 +1,398 @@
 # Programme d'affiliation maison : le plan
 
-Proposition, pas encore validée. Demande Béné du 8 août 2026 :
-sortir de Systeme.io pour l'affiliation de Tipote (quand il sera en
-vente), Tiquiz et l'Atelier. Un programme fiable, avec des paliers de
-commission, un vrai suivi pour les affiliés, et la possibilité
-d'interdire quelqu'un qui ne respecte pas les règles.
+Demande Béné, 8 août 2026 : sortir de Systeme.io pour l'affiliation de
+Tipote (quand il sera en vente), Tiquiz et l'Atelier. Un programme
+fiable, avec des paliers de commission, un vrai suivi pour les affiliés,
+et la possibilité d'interdire quelqu'un qui ne respecte pas les règles.
+
+**Les trois priorités qu'elle a posées, dans son ordre :**
+
+1. personne ne doit pouvoir tricher ;
+2. tout doit être aussi automatique que possible ;
+3. tout doit être fiable : chacun reçoit ce qui lui a été annoncé, tout
+   est bien expliqué, le cookie tient.
+
+Elles ne sont pas décoratives : chaque choix technique du document est
+justifié par l'une des trois, et quand deux se contredisent, c'est
+l'ordre ci-dessus qui tranche.
 
 ---
 
-## 1. Ce qui existe déjà, et qui ne demande qu'à être branché
+## 1. Où on en est vraiment
 
-Tu es beaucoup plus avancée que tu ne le crois. Le programme n'est PAS
-géré par Systeme.io aujourd'hui : il est déjà chez nous.
+**L'affiliation est gérée par Systeme.io aujourd'hui.** C'est leur
+cookie, leur identifiant d'affilié (`sa...`), leur paiement. Ce qui vit
+dans ce repo n'est pas le programme : c'est un MIROIR, construit pour
+récupérer un maximum de données et les afficher proprement.
 
-**Ce qui tourne déjà (repo `tipote-app`) :**
+Ce miroir n'est pas du travail perdu, c'est même la moitié de ce qui
+reste à faire. Ce qui existe et se réutilise tel quel :
 
-| Pièce | Où | Ce qu'elle fait |
+| Pièce | Où | Ce qui sert |
 |---|---|---|
-| Registre des affiliés | table `affiliates` | statut `active` / `paused` / `banned`, PayPal, IBAN |
-| Clics | table `affiliate_clicks` | IP hashée (RGPD), page, referrer |
-| Conversions | table `affiliate_conversions` | l'email capturé, relié à l'affilié |
-| Commissions | table `affiliate_commissions` | montant HT, taux, statut, remboursement |
+| Registre | table `affiliates` | statut actif / en pause / banni, PayPal, IBAN |
+| Clics | `affiliate_clicks` | IP hashée (RGPD), page, referrer |
+| Conversions | `affiliate_conversions` | l'email capturé, relié à l'affilié |
+| Commissions | `affiliate_commissions` | HT, taux, statut, remboursement, récurrent |
 | Attribution | `lib/affiliate/attribution.ts` | last-touch 90 jours, anti-auto-affiliation |
-| Dashboard affilié | `affiliate.tipote.com` | revenus, promouvoir, contenus, essai Tiquiz |
+| Dashboard | `affiliate.tipote.com` | revenus, promouvoir, contenus, essai Tiquiz |
 | Destinations | `affiliate_link_destinations` | tu changes une URL sans commit |
-| Ventes Tiquiz | `/api/affiliate/attribute-sale` | Tiquiz pousse ses ventes ici |
+| Pont Tiquiz | `/api/affiliate/attribute-sale` | Tiquiz pousse déjà ses ventes ici |
 
-**Ce qui manque vraiment**, et c'est court :
+Ce qui manque pour que le programme soit VRAIMENT le nôtre :
 
-1. un identifiant d'affilié **à nous** (aujourd'hui c'est le `sa` de
-   Systeme.io, donc le programme est locataire) ;
-2. les **paliers** (40% et 70% sont écrits en dur dans le code) ;
-3. le **paiement** des affiliés (la colonne `payout_id` existe et ne
-   pointe vers aucune table : rien n'est payé par l'app aujourd'hui) ;
-4. **l'Atelier**, qui tient ses propres tables sur son propre Supabase.
+1. **un identifiant à nous** (la clé de `affiliates` est le `sa` de
+   Systeme.io, donc l'objet le plus central du programme leur appartient) ;
+2. **notre cookie**, posé par notre serveur, sur notre domaine ;
+3. **les paliers** (40% et 70% sont écrits en dur dans le code) ;
+4. **le paiement** (la colonne `payout_id` existe et ne pointe vers
+   aucune table) ;
+5. **l'Atelier**, qui tient ses propres tables sur son propre Supabase,
+   avec son 0.7 écrit en dur de son côté pendant que le 0.4 Tiquiz est
+   écrit en dur du nôtre.
 
-Ce quatrième point est le plus dangereux et je le mets en tête, parce
-que c'est exactement le défaut qui revient dans ce repo depuis trois
-mois : **une même règle écrite à deux endroits finit toujours par
-diverger**. Aujourd'hui le taux Tiquiz (0.4) vit dans
-`tipote-app/lib/affiliate/attribution.ts` et le taux Atelier (0.7) vit
-dans `formaquiz/lib/affiliateTracking.ts`, dans deux bases différentes.
-Ajouter des paliers sans fusionner d'abord, ce serait écrire le moteur
-de paliers deux fois. Il se contredirait avant la fin du mois.
-
----
-
-## 2. Les 5 décisions qui pilotent tout le reste
-
-Je donne ma recommandation à chaque fois. Tu peux répondre en une ligne
-par point, ou juste dire "ok" si les recommandations te vont.
-
-**1. Les paliers : calculés sur quoi ?**
-Recommandation : sur le **nombre de ventes validées des 90 derniers
-jours**, pas sur le chiffre d'affaires. Une affiliée qui vend 10 fois
-l'Atelier à 47 € comprend "10 ventes", elle ne calcule pas son CA. Et
-90 jours glissants récompense celle qui est active MAINTENANT, pas
-celle qui a fait un gros mois en janvier.
-
-**2. Un palier atteint, il s'applique à partir de quand ?**
-Recommandation : **à partir de la vente suivante, jamais rétroactivement**.
-Le rétroactif oblige à recalculer des sommes déjà affichées comme dues,
-donc à faire baisser un montant sur l'écran de quelqu'un. C'est le
-genre de chose qui te coûte un affilié. Et le dashboard affiche
-"encore 3 ventes avant 50%", ce qui est justement le truc qui motive.
-
-**3. La fenêtre d'attribution.**
-Recommandation : on garde **90 jours, last-touch**, comme aujourd'hui.
-C'est le standard, c'est déjà codé, et c'est déjà écrit aux affiliés.
-
-**4. Le paiement.**
-Recommandation : **seuil 50 €, paiement le 10 de chaque mois, sur les
-commissions dont la vente a plus de 30 jours** (le délai de garantie).
-En dessous du seuil, le solde reste et se cumule. Les trois règles sont
-affichées en permanence sur son écran, sinon tu passes tes journées à
-répondre "quand est-ce que je suis payée".
-
-**5. Qui peut devenir affilié ?**
-Recommandation : **inscription libre, validation automatique, mais
-première commission payée seulement après une vérification manuelle**.
-Ouvert ne veut pas dire sans contrôle, et l'argent est le seul endroit
-où le contrôle doit être obligatoire.
+Le point 5 est le plus dangereux et il passe en premier dans le
+chantier : **une même règle écrite à deux endroits finit toujours par
+diverger.** Ajouter des paliers avant de fusionner, ce serait écrire le
+moteur deux fois, et il se contredirait avant la fin du mois.
 
 ---
 
-## 3. L'architecture cible
+## 2. Les décisions, tranchées
 
-### 3.1 Un seul registre, trois apps qui écrivent dedans
+| # | Décision | Ce qui est retenu |
+|---|---|---|
+| 1 | Base des paliers | **Atelier : nombre de ventes. Tiquiz et Tipote : nombre d'abonnés.** |
+| 2 | Effet d'un palier | **À partir de la vente suivante**, jamais rétroactivement |
+| 3 | Attribution | **90 jours, last-touch** (inchangé) |
+| 4 | Paiement | **Seuil 50 €, le 10 du mois, sur les ventes de plus de 30 jours** |
+| 5 | Devenir affilié | **Inscription libre, mais aucun paiement sans profil de facturation complet** |
 
-```
-   Tiquiz            Atelier           Tipote (plus tard)
-      \                 |                    /
-       \                |                   /
-        ---->   affiliate.tipote.com  <----
-             (Supabase Tipote = LE registre)
-```
+Trois précisions qui découlent de tes réponses et qu'il faut fixer
+maintenant, parce qu'elles changent le code.
 
-C'est déjà le dessin actuel pour Tiquiz. Il manque l'Atelier, qui
-écrit chez lui. Le jour où l'Atelier pousse ses ventes vers le registre
-central comme Tiquiz le fait déjà, il n'y a plus qu'un seul endroit qui
-calcule un taux, un seul qui décide qui est banni, un seul qui paie.
+**Un palier PAR PRODUIT, pas un palier global.** Vendre l'Atelier et
+amener des abonnés Tiquiz sont deux métiers différents ; une seule
+échelle mélangerait une vente à 47 € et un abonnement à 17 €/mois. Donc
+un compteur Atelier, un compteur Tiquiz, un compteur Tipote, chacun avec
+sa propre grille.
 
-**Conséquence pratique :** un affilié voit ses gains Tiquiz, Atelier et
-Tipote sur UN écran, avec UN seuil et UN virement. Aujourd'hui, s'il
-promeut les deux, il a deux comptes et deux paiements.
+**"Abonnés" veut dire abonnés ACTIFS.** Un abonné qui résilie sort du
+compteur, donc le palier peut redescendre. Ça ne reprend jamais rien de
+gagné (le taux est gelé à chaque vente), ça règle seulement le taux des
+ventes SUIVANTES. C'est ce qui rend le palier honnête dans les deux
+sens, et c'est aussi une protection anti-triche : un affilié qui
+fabriquerait des abonnements pour monter d'un palier les verrait
+disparaître au premier impayé.
 
-### 3.2 Un identifiant d'affilié qui t'appartient
+**Le profil de facturation est un mur, pas un formulaire.** Tant que
+SIRET ou SIREN, raison sociale (ou "particulier"), régime de TVA et
+adresse ne sont pas renseignés, les commissions s'accumulent et
+s'affichent, mais aucun lot de paiement ne les prend. L'écran le dit
+avant, pas au moment du virement raté. Et c'est ce profil qui alimente
+la facture : c'est pour ça qu'il est obligatoire et pas optionnel.
 
-Aujourd'hui la clé primaire de `affiliates` est le `sa` de Systeme.io
-(`sa00168442b...`). Tant qu'elle y reste, ton programme dépend d'eux
-pour la chose la plus basique : savoir qui est qui.
+---
 
-Le changement est petit et il doit être fait en premier :
+## 3. Le lien affilié
 
-- chaque affilié reçoit un **code lisible** qu'il peut choisir
-  (`?ref=jocelyne`), unique, jamais réattribué ;
-- `sa` devient une simple colonne d'historique, plus une clé ;
-- une seule fonction `resolveAffiliate(ref)` traduit le code en
-  affilié, et plus personne ne lit `sa` ailleurs.
+### 3.1 Un code lisible, choisi, vérifié
 
-Un lien `?ref=jocelyne` se retient, se dicte au téléphone et se met
-dans une bio Instagram. `?sa=sa00168442b3f...` non.
+`?ref=jocelyne` au lieu de `?sa=sa00168442b3f...`. Un lien qui se dicte
+au téléphone et se met dans une bio Instagram.
 
-### 3.3 Le clic passe par NOTRE domaine
+- 3 à 20 caractères, `a-z`, `0-9` et le tiret, insensible à la casse ;
+- vérification de disponibilité en direct pendant la saisie ;
+- les noms de nos propres chemins sont réservés (`go`, `j`, `api`,
+  `admin`) et rien d'autre, pour la même raison que les slugs publics du
+  4 août : une liste d'interdits qui grossit finit par interdire les
+  mots que les gens veulent vraiment.
 
-Aujourd'hui le clic est enregistré par un bout de JavaScript posé sur
-les pages Systeme.io. Trois faiblesses, et elles sont toutes du même
-genre : le tracking dépend de quelque chose qu'on ne contrôle pas.
+**Un ancien code ne meurt JAMAIS.** Si Jocelyne change son code, son
+ancien continue de rediriger et de lui attribuer les ventes, pour
+toujours. Elle a des liens dans des vidéos YouTube et des newsletters
+déjà parties : un code libéré qui serait réattribué à quelqu'un d'autre
+lui volerait son trafic. Un code retiré est donc mort pour tout le
+monde sauf son propriétaire d'origine.
 
-- tu modifies une page de vente, tu perds le snippet sans le voir ;
-- un bloqueur de pub le coupe ;
-- Safari limite le cookie posé par un script tiers à 7 jours.
-
-À la place : un lien de redirection **chez nous**.
+### 3.2 Le clic passe par NOTRE serveur, et le cookie aussi
 
 ```
 https://affiliate.tipote.com/go/jocelyne/atelier
-   -> on enregistre le clic côté serveur
-   -> on pose notre cookie (premier partie, donc durable)
-   -> on redirige vers la page de vente, avec le suivi dans l'URL
+   -> le clic est enregistré côté serveur
+   -> NOTRE cookie est posé (première partie, donc durable)
+   -> redirection vers la page de vente
 ```
 
-Rien à installer sur les pages, rien à casser en les modifiant, et ça
-marche même si le visiteur bloque tout le JavaScript. C'est aussi le
-seul moyen de savoir **quel lien** convertit, ce que tes affiliés te
-demanderont dès qu'ils seront sérieux.
+Aujourd'hui le clic est capté par un bout de JavaScript posé sur les
+pages Systeme.io. Trois faiblesses, et elles disent toutes la même
+chose : le tracking dépend de ce qu'on ne contrôle pas.
 
-### 3.4 Les paliers : une table, pas du code
+- tu modifies une page de vente, tu perds le snippet sans le voir ;
+- un bloqueur de publicité le coupe ;
+- Safari limite à 7 jours un cookie posé par un script tiers.
 
-```
-affiliate_tiers
-  produit      (tiquiz | atelier | tipote)
-  min_ventes   (0, 5, 15, ...)
-  taux         (0.40, 0.45, 0.50 ...)
-```
+Une redirection serveur règle les trois d'un coup, et c'est le seul
+moyen d'avoir des statistiques par lien.
 
-Trois règles non négociables, et elles viennent toutes de bugs qu'on a
-déjà payés cher ici :
+### 3.3 Le lien court est le MÊME objet, pas un raccourcisseur
 
-1. **Le taux est GELÉ sur la commission au moment de la vente**
-   (la colonne `commission_rate` existe déjà et sert à ça). On ne
-   recalcule JAMAIS une commission passée : un montant affiché à un
-   affilié est un engagement.
-2. **Le produit est un paramètre obligatoire**, jamais deviné. Un
-   moteur qui déduit "c'est sûrement Tiquiz" appliquera un jour 70% à
-   une vente Tiquiz. C'est la leçon du quiz scoré à qui on appliquait
-   les contrôles des quiz à profils.
-3. **Les paliers vivent en base**, éditables depuis l'admin. Tu vas les
-   changer, et il ne faut pas que ça demande un déploiement.
+`affiliate.tipote.com/j/a7k` et `affiliate.tipote.com/go/jocelyne/atelier`
+pointent sur la même ligne en base : même cookie, même canal, mêmes
+statistiques. Le lien court ne peut donc pas "casser le cookie",
+puisqu'il ne rajoute aucune étape.
 
-### 3.5 Interdire un affilié, pour de vrai
+**Et c'est exactement pour ça qu'il ne faut pas passer par bit.ly.** Un
+raccourcisseur externe ajoute un saut qu'on ne maîtrise pas, certains
+suppriment les paramètres d'URL, et le cookie ne serait alors jamais
+posé. Un lien affilié raccourci ailleurs que chez nous est un lien qui
+peut cesser de compter sans prévenir personne.
 
-Le statut existe déjà. Ce qui manque, c'est ce qu'il DOIT provoquer :
+### 3.4 D'où vient le clic
 
-| Statut | Le lien | Les nouvelles ventes | Les commissions en cours | Son écran |
+Deux sources, l'une choisie, l'autre gratuite.
+
+- **Le canal, écrit par l'affilié** : il crée ses propres étiquettes
+  (`youtube`, `newsletter`, `insta`, `story-mardi`) et génère un lien par
+  étiquette. C'est ce qui lui permet de comparer ce qui marche.
+- **La provenance, déduite du referrer** : YouTube, Instagram, un
+  webmail, un site. Elle est là même quand il n'a rien étiqueté, donc
+  personne ne se retrouve avec un écran vide parce qu'il n'a pas pensé à
+  taguer.
+
+Chaque clic porte les deux, la conversion et la commission héritent des
+deux. Son tableau devient : par destination, par canal, par provenance,
+avec clics, ventes, taux de conversion et commissions.
+
+---
+
+## 4. Empêcher la triche
+
+C'est ta priorité numéro un, donc elle a sa section.
+
+**Ce qui protège déjà** : l'anti-auto-affiliation par email, l'IP hashée,
+l'unicité de la référence de paiement (un webhook rejoué ne compte pas
+deux fois), le statut de remboursement.
+
+**Ce qu'il faut ajouter, du plus efficace au moins :**
+
+1. **La garantie est le meilleur filtre, et elle est déjà là.** Une
+   commission ne devient payable qu'après 30 jours, et un remboursement
+   l'annule. Toute fraude qui repose sur des achats remboursables meurt
+   toute seule, sans qu'on ait à la détecter.
+2. **Anti-auto-affiliation élargie.** Aujourd'hui on compare l'email de
+   l'affilié à celui du client. Il faut aussi refuser quand c'est la
+   même empreinte de carte (possible dès qu'on vend en direct) ou le
+   même compte, et pas seulement la même adresse.
+3. **Un clic ne compte qu'une fois.** Dédoublonnage par (affilié, IP
+   hashée) sur 24 h : recharger sa page cent fois n'affiche plus cent
+   clics. Ça protège surtout ses chiffres à LUI, qui deviennent
+   lisibles.
+4. **Le cookie ne se pose que sur un vrai passage** par `/go/`, avec le
+   referrer enregistré. On ne peut pas le poser depuis une page tierce,
+   ce qui ferme le bourrage de cookie.
+5. **Des règles écrites, acceptées, versionnées** (`accepted_terms_version`).
+   Pas d'enchère sur ta marque, pas de site de coupons ni de cashback,
+   pas de spam, pas d'auto-affiliation. **Bannir quelqu'un sur une règle
+   qu'il n'a jamais lue, c'est un litige que tu perds** : ce texte doit
+   exister AVANT le premier bannissement, pas après.
+6. **Une file de vérification** dans l'admin : tout ce qui est signalé
+   attend ta décision au lieu de partir en virement.
+
+Et le corollaire, qui vaut pour tout ce document : **on signale, on ne
+supprime jamais en silence.** Une commission écartée reste visible, avec
+son motif. Une commission qui disparaît sans explication est la
+meilleure façon de se faire accuser de tricher soi-même.
+
+---
+
+## 5. Interdire un affilié
+
+Le statut existe déjà. Ce qui manque, ce sont ses effets.
+
+| Statut | Le lien | Nouvelles ventes | Commissions en cours | Son écran |
 |---|---|---|---|---|
-| `active` | marche | attribuées | payables | complet |
-| `paused` | marche | attribuées | **gelées** | bandeau qui explique |
-| `banned` | **redirige quand même** | **plus attribuées** | gelées, motif écrit | fermé, motif affiché |
+| actif | marche | attribuées | payables | complet |
+| en pause | marche | attribuées | **gelées** | bandeau qui explique |
+| banni | **redirige quand même** | **plus attribuées** | gelées, motif écrit | fermé, motif affiché |
 
-Le point qui compte : **un affilié banni redirige toujours**. Le
-visiteur qui a cliqué sur son lien n'a rien fait de mal, il ne doit pas
-tomber sur une page morte. Il arrive sur la page de vente, simplement
-la vente n'est plus attribuée.
+Le point à ne pas rater : **un affilié banni redirige toujours.** Le
+visiteur qui a cliqué n'a rien fait de mal, il ne doit pas tomber sur une
+page morte. Il arrive sur la page de vente, simplement la vente n'est
+plus attribuée.
 
-Et une chose à faire AVANT le premier bannissement, pas après :
-**des règles écrites, acceptées à l'inscription, avec leur numéro de
-version stocké** (`accepted_terms_version`). Bannir quelqu'un sur une
-règle qu'il n'a jamais lue, c'est un litige que tu perds. Les
-interdictions classiques : pas de publicité sur ta marque, pas de
-cashback ni de coupon, pas de spam, pas d'auto-affiliation (ce
-dernier est déjà bloqué dans le code).
+Et on ne supprime jamais une ligne : l'historique doit rester pour la
+comptabilité.
 
 ---
 
-## 4. Le suivi pour l'affilié : ce qui manque vraiment
+## 6. Le suivi affilié : centralisé, avec une fenêtre dans chaque app
 
-L'écran actuel montre clics, conversions, ventes, commissions. Un
-affilié sérieux part quand même, parce qu'il lui manque les réponses
-aux trois questions qu'il se pose vraiment :
+Ta question : tout centraliser sur `affiliate`, ou mettre les stats et
+les liens à disposition dans chaque app ?
 
-1. **"Combien je touche, et quand exactement ?"**
-   Un seul chiffre en haut : ce qui sera viré au prochain paiement, et
-   la date. En dessous : ce qui est encore en garantie, avec la date de
-   déblocage. Pas de total flou qui mélange les deux.
+**Réponse : les DONNÉES et l'ARGENT vivent à un seul endroit
+(`affiliate.tipote.com`), et chaque app en montre une FENÊTRE.**
 
-2. **"Quel lien marche ?"**
-   Le tableau par destination : clics, ventes, taux de conversion. Sans
-   ça il ne peut rien améliorer, donc il ne fait pas mieux le mois
-   suivant.
+Trois raisons, et la première est la plus solide.
 
-3. **"Pourquoi cette vente a disparu ?"**
-   Une commission remboursée doit rester visible, barrée, avec le
-   motif. La faire disparaître silencieusement est la meilleure façon
-   de te faire accuser de tricher. Le remboursement est déjà géré côté
-   Atelier (statut `refunded`), il faut l'afficher.
+1. **Un vrai tableau de bord dans chaque app, ce serait trois fois la
+   même règle.** C'est le défaut qui te coûte cher depuis trois mois, et
+   ici il porterait sur de l'argent : trois écrans qui calculent chacun
+   "ce que je te dois" finiraient par afficher trois montants.
+2. **Pour l'affilié, c'est plus simple.** Un seul seuil, un seul
+   virement, une seule facture, un seul historique, même s'il promeut
+   l'Atelier ET Tiquiz. Aujourd'hui ce sont deux comptes séparés.
+3. **Un affilié n'a pas forcément de compte Tiquiz.** Ceux qui promeuvent
+   tout sans être clients doivent tout trouver au même endroit, et c'est
+   déjà le cas.
 
-Et l'historique des paiements avec un récapitulatif téléchargeable :
-c'est ce qu'il donnera à son comptable.
+**Ce que la fenêtre affiche dans Tiquiz, Tipote et l'Atelier**, dans un
+seul encart :
 
----
+- ce que tu gagnes, en une phrase avec un chiffre réel ("40% sur chaque
+  abonnement, tous les mois, tant que la personne reste") ;
+- ton lien pour CE produit, prêt à copier ;
+- trois nombres : clics, ventes, gains en attente ;
+- un bouton "Voir tout mon suivi" qui mène à l'espace affilié.
 
-## 5. Payer les affiliés : ce qui marche, et ce qui n'existe pas
+Pas de graphique, pas de tableau, pas de réglage : une fenêtre, pas un
+deuxième dashboard.
 
-Il faut que je sois net sur un point, parce que tu as cité Stripe.
+**Et on réutilise l'existant, sans rien redessiner.** Les cartes KPI et
+le graphique de Mes stats (`app/stats/StatsShell.tsx`), la vue
+`affiliate_stats` déjà en base, la page Promouvoir et
+`affiliate_link_destinations`. Le seul écran vraiment nouveau, c'est le
+tableau par lien et par canal, et il reprend la mise en forme du tableau
+"Performances par quiz".
 
-- **Virement bancaire : oui, et c'est ce que je recommande pour
-  commencer.** Tu as déjà les IBAN en base. Tu paies depuis Qonto, en
-  une fois par mois. Zéro frais, zéro intégration, zéro dépendance.
-- **PayPal : oui.** L'API PayPal Payouts existe, elle demande une
-  activation de leur part, elle coûte des frais, et elle est utile pour
-  l'international. Bon deuxième choix.
-- **Stripe : non, pas pour payer des affiliés.** Stripe sait ENCAISSER,
-  il ne sait pas envoyer de l'argent à quelqu'un qui n'est pas un
-  compte connecté chez eux. Il faudrait inscrire chaque affilié comme
-  compte Stripe Connect, avec vérification d'identité. C'est lourd pour
-  eux et pour toi, et ça n'apporte rien de plus qu'un virement.
+**Ce que l'affilié doit lire sans poser la question :**
 
-Ce que l'app doit faire dans les trois cas, c'est la partie utile :
-calculer le lot du mois, l'afficher, tenir l'historique, et marquer les
-commissions comme payées. Le virement lui-même peut rester manuel très
-longtemps sans que personne s'en rende compte.
-
-**Le point administratif, à confirmer avec ton comptable et pas avec
-moi :** un affilié est un prestataire. Soit il t'envoie une facture,
-soit tu émets un relevé d'autofacturation qu'il valide. Ce n'est pas
-optionnel dès que les montants montent, et c'est plus simple à mettre
-en place au début qu'après coup.
+- ce qui part au prochain virement, et sa date ;
+- ce qui est encore en garantie, avec la date de déblocage ;
+- combien de ventes avant le palier suivant ;
+- une commission remboursée, barrée, avec son motif, jamais effacée ;
+- l'historique des paiements avec la facture correspondante.
 
 ---
 
-## 6. Vendre en direct (Stripe / PayPal) en gardant l'emailing sur Systeme.io
+## 7. Payer les affiliés
 
-C'est le morceau le plus gros, et c'est aussi celui qui rend
-l'affiliation **exacte** au lieu de probable. Je le mets en dernier
-exprès : il n'est pas nécessaire pour lancer le programme.
+- **Virement bancaire : oui, et c'est par là qu'on commence.** Les IBAN
+  sont déjà en base, tu paies depuis Qonto une fois par mois. Zéro frais,
+  zéro intégration, zéro dépendance.
+- **PayPal : oui, ensuite.** L'API Payouts existe, elle demande une
+  activation de leur part, elle a des frais, elle sert l'international.
+- **Stripe : non, pas pour payer des affiliés.** Stripe sait encaisser,
+  il ne sait pas envoyer de l'argent à quelqu'un qui n'est pas un compte
+  connecté chez eux. Il faudrait inscrire chaque affilié en Stripe
+  Connect avec vérification d'identité : lourd pour eux, lourd pour toi,
+  et pas mieux qu'un virement.
 
-### Ce que ça change dans le sens de la flèche
+Ce que l'app automatise, et c'est le vrai travail : constituer le lot du
+mois (commissions validées, hors garantie, au dessus du seuil, profil de
+facturation complet), **générer la facture ou le relevé
+d'autofacturation** à partir du profil fiscal, marquer les commissions
+comme payées, archiver le document des deux côtés. Le virement lui-même
+peut rester manuel très longtemps sans que ça se voie.
+
+**À confirmer avec ton comptable, pas avec moi :** facture émise par
+l'affilié ou autofacturation par toi, et le traitement de la TVA selon
+qu'il y est assujetti ou non, en France ou hors de France. C'est la
+raison pour laquelle le profil fiscal demande le régime de TVA et
+l'adresse : ce sont eux qui décident du contenu du document.
+
+---
+
+## 8. Vendre en direct (Stripe / PayPal) en gardant l'emailing sur Systeme.io
+
+C'est le plus gros morceau, et il n'est pas nécessaire pour lancer le
+programme. Il est en dernier exprès.
 
 ```
 Aujourd'hui :  Systeme.io vend  ->  webhook  ->  l'app ouvre l'accès
-Demain      :  l'app vend       ->  l'app ouvre l'accès  ->  l'app
-                                    pousse le contact et le tag vers
-                                    Systeme.io (emailing conservé)
+Demain      :  l'app vend  ->  l'app ouvre l'accès  ->  l'app pousse le
+                              contact et le tag vers Systeme.io
 ```
 
-L'emailing reste chez eux, tu continues à écrire tes séquences au même
-endroit. Ce qui change, c'est qui encaisse et qui décide de l'accès.
+L'emailing reste chez eux, tu écris tes séquences au même endroit. Ce qui
+change, c'est qui encaisse et qui décide de l'accès.
 
-### Pourquoi l'affiliation y gagne énormément
+**Ce que l'affiliation y gagne, et c'est énorme.** Aujourd'hui on
+attribue par EMAIL : on cherche si l'adresse du client correspond à une
+conversion récente. Ça rate dès que le client paie avec une autre adresse
+que celle de son optin, cas vu cette semaine sur l'Atelier. Si c'est
+l'app qui vend, le code affilié voyage DANS le paiement : il n'y a plus
+rien à deviner, la vente arrive signée.
 
-Aujourd'hui on attribue une vente **par email** : on cherche si
-l'adresse du client correspond à une conversion affiliée récente. Ça
-marche, mais ça rate dès que le client paie avec une autre adresse que
-celle qu'il a donnée en optin. On a vu ce cas exact cette semaine avec
-les commandes de l'Atelier.
+**La bonne nouvelle :** le checkout est déjà écrit et déjà testé contre
+les vraies API dans Tiquiz, pour les revendeurs (`lib/stripeRest.ts`,
+`lib/paypalRest.ts`, `lib/resellerPayments.ts`). Encaisser n'est pas à
+inventer.
 
-Si c'est l'app qui vend, le code affilié voyage **dans le paiement
-lui-même** (les métadonnées Stripe ou PayPal). Il n'y a plus rien à
-deviner : la vente arrive déjà signée. Plus de correspondance par
-email, plus de fenêtre de 90 jours à espérer, plus de clic perdu.
+**Le vrai coût n'est pas le checkout**, c'est la vie de l'abonnement
+après la première vente, que Systeme.io absorbe aujourd'hui sans que ça
+se voie : paiement qui échoue et relances, carte expirée, résiliation,
+remboursement, changement de palier. Chacun devient un événement à
+traiter et un accès à ouvrir ou fermer au bon moment.
 
-### La bonne nouvelle sur le chantier
-
-Le checkout est **déjà écrit et déjà testé contre les vraies API** dans
-Tiquiz, pour les revendeurs : `lib/stripeRest.ts`, `lib/paypalRest.ts`,
-`lib/resellerPayments.ts`. On sait créer un abonnement Stripe et un
-abonnement PayPal, vérifier une clé, chiffrer un secret. La partie
-"encaisser" n'est pas à inventer.
-
-### Le vrai coût, qui n'est pas le checkout
-
-C'est la vie de l'abonnement APRÈS la première vente, que Systeme.io
-absorbe aujourd'hui sans que ça se voie : le paiement qui échoue et les
-relances, la carte qui expire, la résiliation, le remboursement, le
-changement de palier. Chacun devient un événement que l'app doit
-traiter, et un accès qui doit s'ouvrir ou se fermer au bon moment.
-
-**Et deux points à trancher avec ton comptable avant de coder quoi que
-ce soit** (je ne les affirme pas, je les signale) : qui est le vendeur
-officiel sur la facture, et qui déclare la TVA sur des produits
-numériques vendus dans plusieurs pays européens. Selon la réponse, la
-vente directe est un chantier de 3 semaines ou de 3 mois. C'est la
-seule question du document qui peut décaler tout le reste.
+Et la même question de facturation et de TVA se pose, en plus gros,
+puisque tu deviens le vendeur. Selon la réponse de ton comptable, c'est
+un chantier de trois semaines ou de trois mois. **C'est le seul inconnu
+du document qui peut décaler tout le reste.**
 
 ---
 
-## 7. L'affiliation vue depuis l'intérieur des apps
+## 9. Le plan en 4 temps
 
-Ta phrase : "que ceux qui sont dans les app et qui ne font pas
-d'affiliation aient l'idée de se lancer parce qu'ils voient les infos
-et le potentiel".
+Chaque phase est utilisable seule et ne casse pas la précédente. Aucune
+ne t'oblige à quitter Systeme.io tant que tu ne le décides pas.
 
-Trois choses, dans cet ordre d'efficacité :
-
-1. **Une entrée permanente dans le menu** ("Gagner avec Tiquiz"), pas
-   une bannière qu'on ferme. La leçon de Jocelyne du 3 août vaut ici :
-   une nouveauté qu'on ne montre pas n'existe pas.
-2. **Des chiffres réels, pas une promesse.** "Tu touches 40% sur chaque
-   abonnement, tous les mois, tant que la personne reste. 3 clients
-   mensuels = 20,40 € par mois qui tombent." Une créatrice qui a déjà
-   un quiz en ligne a déjà une audience : le calcul lui parle.
-3. **Un clic pour rejoindre, sans deuxième inscription.** Elle a déjà
-   un compte Tiquiz. Le passage vers l'espace affilié doit réutiliser
-   le mécanisme de connexion Tiquiz vers Atelier qui existe déjà
-   (`app/api/partner/authorize`), surtout pas en réinventer un.
-
-Et dans l'autre sens, rien ne change : un affilié qui n'a aucun compte
-Tiquiz s'inscrit directement sur `affiliate.tipote.com` et promeut tout
-le catalogue. C'est déjà le cas aujourd'hui.
-
----
-
-## 8. Le plan, en 4 temps
-
-Chaque phase est utilisable seule et ne casse rien de la précédente.
-Aucune ne t'oblige à quitter Systeme.io tant que tu ne le décides pas.
-
-### Phase 0 : le socle (rien ne change pour personne)
-- code affilié à nous, `sa` relégué à l'historique ;
-- lien de redirection sur notre domaine, clic enregistré côté serveur ;
+### Phase 0 : le socle
+- code affilié à nous, choisi, vérifié, avec ses anciens codes en alias
+  permanents ;
+- redirection `/go/...` et lien court, cookie posé par notre serveur ;
+- canal et provenance sur chaque clic ;
 - l'Atelier pousse ses ventes vers le registre central ;
 - un seul écran de gains pour les trois produits.
+- **Les deux systèmes tournent en parallèle**, et on ne coupe le
+  tracking Systeme.io que quand les deux comptages donnent la même chose
+  pendant deux semaines. Comparer avant de couper est la seule façon de
+  savoir qu'on n'a rien perdu.
 
-À la fin de la phase 0, tu es propriétaire de ton programme. Les
-affiliés ne voient qu'une chose : leur lien est plus court.
-
-### Phase 1 : les paliers et les règles
-- table des paliers, éditable depuis l'admin ;
+### Phase 1 : paliers et règles
+- table des paliers par produit, éditable depuis l'admin ;
 - taux gelé à la vente, produit en paramètre obligatoire ;
-- règles écrites, acceptées et versionnées ;
-- pause et bannissement avec leurs effets réels.
+- compteur de ventes (Atelier) et d'abonnés actifs (Tiquiz, Tipote) ;
+- règles écrites, acceptées, versionnées ;
+- pause et bannissement avec leurs effets réels ;
+- dédoublonnage des clics et anti-auto-affiliation élargie.
 
-### Phase 2 : le suivi et le paiement
-- le prochain virement, la date, ce qui est en garantie ;
-- les statistiques par lien ;
-- lots de paiement mensuels, historique, récapitulatif à télécharger ;
-- virement d'abord, PayPal ensuite.
+### Phase 2 : suivi et paiement
+- prochain virement, sa date, ce qui est en garantie, prochain palier ;
+- tableau par lien, par canal, par provenance ;
+- profil de facturation obligatoire avant paiement ;
+- lots mensuels, facture ou autofacturation générée, historique ;
+- virement d'abord, PayPal ensuite ;
+- la fenêtre affiliation dans Tiquiz, Tipote et l'Atelier.
 
-### Phase 3 : la vente directe sur Tiquiz
-- Stripe et PayPal en checkout natif (le code existe déjà) ;
+### Phase 3 : vente directe sur Tiquiz
+- Stripe et PayPal en checkout natif ;
 - le code affilié voyage dans le paiement, l'attribution devient exacte ;
-- le contact et le tag partent vers Systeme.io pour l'emailing ;
-- gestion des échecs de paiement, résiliations, remboursements.
+- contact et tag poussés vers Systeme.io pour l'emailing ;
+- échecs de paiement, résiliations, remboursements.
 
-### Phase 4 : Tipote arrive sur les mêmes rails
-Rien de nouveau à construire : un produit de plus dans la table des
-paliers et une destination de plus dans les liens.
+### Phase 4 : Tipote sur les mêmes rails
+Un produit de plus dans la table des paliers, une destination de plus
+dans les liens. Rien à reconstruire.
 
 ---
 
-## 9. Ce que je ne ferai pas sans que tu le dises
+## 10. Ce que je ne ferai pas sans que tu le dises
 
-- toucher à Systeme.io pour l'emailing : il reste, c'est acté ;
-- couper le tracking actuel avant que le nouveau ait tourné en
-  parallèle et donné les mêmes chiffres pendant au moins deux semaines ;
-- changer un taux existant. 40% et 70% restent les paliers de base, les
+- toucher à l'emailing Systeme.io : il reste, c'est acté ;
+- couper le tracking actuel avant la période de comparaison ;
+- changer un taux existant : 40% et 70% restent les paliers de base, les
   paliers ne font que monter au dessus ;
-- promettre une date. Le seul inconnu réel, c'est la réponse de ton
-  comptable sur la facturation et la TVA au moment de la vente directe.
+- promettre une date sur la phase 3 tant que la question de la
+  facturation et de la TVA n'est pas tranchée.
