@@ -389,6 +389,134 @@ Le seul champ vraiment bloquant est celui qui décide de la TVA, et il se
 répond par oui ou non. Un affilié qui ne coche rien est traité comme non
 assujetti : pas de TVA, mention d'exonération, il est payé.
 
+### Les affiliés hors de France : Europe, Canada, Afrique
+
+Trois choses changent, et le champ "pays" du profil les commande toutes.
+
+**1. La TVA sur leur autofacture.** En pratique, **seul un affilié
+français assujetti reçoit une facture avec de la TVA.** Tous les autres
+sont sans TVA, avec une mention légale différente selon le cas.
+
+| Affilié | Sur son autofacture |
+|---|---|
+| France, assujetti | commission + TVA au taux français |
+| France, non assujetti | pas de TVA, mention d'exonération |
+| UE, entreprise avec numéro de TVA valide | pas de TVA française, autoliquidation |
+| UE, particulier ou sans numéro | pas de TVA |
+| Hors UE (Canada, Afrique, Suisse...) | hors champ de la TVA française |
+
+Le calcul de la TVA (section précédente) ne concerne donc qu'une
+minorité d'affiliés. Ce n'est pas une raison pour le bâcler, c'est une
+raison pour que le pays soit lu AVANT le régime, et jamais l'inverse.
+
+**2. Le moyen de paiement, qui ne peut pas être un réglage global.**
+L'IBAN ne marche que dans la zone SEPA. Le Canada et une grande partie
+de l'Afrique en sont dehors, et PayPal lui-même ne permet pas de
+RECEVOIR de l'argent dans plusieurs pays africains. Donc :
+
+- le moyen de paiement est **par affilié**, choisi parmi ce qui est
+  réellement possible dans SON pays, pas dans une liste unique ;
+- prévoir une troisième voie de type Wise pour l'international, sinon
+  un affilié canadien ou sénégalais n'a aucune option ;
+- l'écran ne doit jamais proposer un moyen qui ne marchera pas chez
+  lui : c'est le genre de découverte qui arrive au moment du premier
+  virement, donc au pire moment.
+
+**3. Les frais et la devise.** Les commissions restent **en euros**,
+puisque les ventes le sont : la conversion est à sa charge, et le seuil
+de 50 € s'entend en euros. Mais un virement international coûte plus
+cher qu'un virement SEPA. À décider : tu absorbes les frais, ou le seuil
+est plus haut hors SEPA. **Il faut le dire avant**, sinon tu recevras le
+message "j'ai reçu 43 € au lieu de 50" et il sera trop tard pour
+expliquer.
+
+---
+
+## 7 ter. Les prix sont TTC, et la base de commission n'est pas claire
+
+**Décision Béné, 19 août 2026 :** "en fait je facture toujours TTC donc
+par exemple c'est 47 € TTC, la TVA doit donc calculer pour arriver à ce
+montant."
+
+### Côté ventes : trois montants stockés, jamais recalculés
+
+Le prix affiché est le TTC, et la TVA se déduit à l'envers :
+
+```
+HT  = arrondi(TTC / (1 + taux))
+TVA = TTC - HT
+```
+
+Calculé en CENTIMES, arrondi UNE fois, et les trois montants (HT, TVA,
+TTC) sont **stockés sur la vente**. On ne garde jamais "le TTC et le
+taux" pour recalculer plus tard : deux lecteurs arrondiraient
+différemment et la somme cesserait de tomber juste. C'est la même règle
+que le taux de commission gelé, pour la même raison.
+
+**La conséquence à connaître, elle est business et pas technique :** un
+prix fixe TTC avec un taux qui change par pays veut dire que **ton
+revenu varie selon le pays de l'acheteur**. 47 € TTC donnent 39,17 € HT
+en France (20%), 38,84 € en Belgique (21%), 37,01 € en Hongrie (27%).
+C'est le choix normal pour un produit numérique, l'alternative étant un
+prix affiché différent dans chaque pays, que personne ne fait. Mais
+autant le savoir : ce n'est pas une perte, c'est la TVA du pays qui
+monte.
+
+### Côté commissions : le code et la promesse ne disent pas la même chose
+
+En vérifiant ce point, j'ai trouvé une contradiction dans l'Atelier.
+**Je ne sais pas laquelle des deux gagne aujourd'hui, et c'est
+justement le problème.**
+
+Ce que l'affiliée LIT dans l'app (`formaquiz/lib/affiliate.ts`) :
+
+> "Tu touches 70% du prix de chaque Atelier du Quiz vendu via ton lien,
+> soit **32,90 € par vente à 47 €**."
+
+32,90 = 47 x 0,70, donc **70% du TTC**.
+
+Ce que le code CALCULE (`formaquiz/lib/affiliateTracking.ts`) :
+
+```
+Montant HT en centimes = base de calcul de la commission (règle Béné :
+70% Atelier / 40% Tiquiz TOUJOURS sur le HT)
+```
+
+70% du HT d'une vente à 47 € TTC avec 20% de TVA = **27,42 €**.
+
+**Écart : 5,48 € par vente, et c'est le montant le plus élevé qui est
+promis à l'écran.**
+
+Ce que je ne peux pas trancher d'ici : la fonction retombe sur le total
+quand le paiement ne porte pas de champ de taxe (`ht > 0 ? ht : total`).
+Si les appels Systeme.io n'envoient pas la taxe, alors HT = TTC = 47 et
+la commission vaut bien 32,90 : aucun écart aujourd'hui, seulement une
+incohérence en sommeil. S'ils l'envoient, l'écart est réel.
+
+**Raisonner sur la forme supposée d'un paiement au lieu de la regarder,
+c'est exactement l'erreur du drame Ivan.** Donc je ne conclus pas.
+
+**La question qui tranche en dix secondes**, et elle se pose à
+Systeme.io, pas à notre miroir : sur une vente Atelier à 47 €, quelle
+commission a réellement été versée à l'affiliée, **32,90 € ou 27,42 €** ?
+
+### La règle à figer, quelle que soit la réponse
+
+1. **La base est un PARAMÈTRE EXPLICITE** (`commission_base` = `ttc` ou
+   `ht`), stocké sur la ligne de commission au même titre que le taux.
+   Jamais deviné, jamais déduit de la présence ou de l'absence d'un
+   champ de taxe dans un paiement.
+2. **Le montant annoncé et le montant payé sortent de la MÊME
+   fonction.** Aujourd'hui l'un est une phrase écrite à la main dans un
+   fichier et l'autre un calcul : c'est mécaniquement voué à diverger,
+   et c'est ce qui est arrivé.
+3. Ma recommandation, si tu me la demandes : **base TTC**, parce que
+   c'est ce qui a été promis, que c'est le prix que l'affiliée voit, et
+   qu'un pourcentage d'un montant qu'elle ne connaît pas n'est pas
+   vérifiable par elle.
+
+---
+
 ### Ce que dit la réforme de la facturation électronique
 
 Tu m'as demandé de me renseigner plutôt que de te renvoyer vers ton
@@ -427,10 +555,60 @@ rendu de ces données. À ce prix, passer à Factur-X en 2027 est un export
 l'historique. La différence de coût est d'un facteur dix, pour une
 décision qui se prend maintenant et ne se voit pas.
 
-**Ce qu'on ne fait PAS maintenant :** brancher une plateforme agréée.
-Ce serait payer un an d'avance un service qui n'est pas encore
-obligatoire pour toi, et les offres bougent encore. On garde la porte
-ouverte, on ne la franchit pas.
+### Qonto ou Indy : oui, et ça ne coûte rien de plus
+
+Question Béné : "ce serait compliqué de l'envisager dès maintenant ?
+C'est forcément via une plateforme payante ? On peut passer par Qonto
+qui le gère déjà ? Ou par Indy ?"
+
+**Non, ce n'est pas forcément payant, et tu as déjà les deux outils.**
+Mais la réponse se coupe en deux, parce que ce ne sont pas les mêmes
+factures.
+
+**a) Tes propres factures clients : rien à construire, rien à payer en
+plus.**
+
+- **Qonto est plateforme agréée**, et la facturation est incluse dans
+  tous les forfaits, sans limite de volume. Tu es déjà cliente.
+- **Indy est plateforme agréée** aussi (immatriculée le 31 mars 2026),
+  et son e-invoicing est inclus jusque dans la version gratuite,
+  émission, réception et e-reporting compris.
+
+Donc la réponse à "c'est forcément une plateforme payante" est non :
+tu en as déjà deux, et l'une des deux est gratuite.
+
+**b) Les autofactures affiliés générées par notre code : c'est
+différent, et je dois être net sur ce que je n'ai PAS pu vérifier.**
+
+Une autofacture est émise **au nom de l'affilié**. De ton point de vue
+comptable, ce n'est pas une facture client, c'est une facture
+FOURNISSEUR. Or l'API Qonto que j'ai sous les yeux sait créer des
+factures CLIENT (toi vendeuse) et seulement LIRE les factures
+fournisseur. **Sous réserve de confirmation par leur support, notre
+code ne pourra donc probablement pas faire émettre l'autofacture PAR
+Qonto.**
+
+Ce qui marche à coup sûr, et qui ne coûte rien : **notre code produit
+l'autofacture** (données structurées plus PDF) et la **dépose dans
+Qonto en pièce fournisseur**, ce que l'API sait faire. Elle atterrit
+dans ta compta, rapprochée du virement, sans double saisie.
+
+**La question exacte à poser à leur support**, une phrase, la même pour
+Qonto et pour Indy :
+
+> "Puis-je, via votre API, faire émettre une autofacture au nom d'un de
+> mes fournisseurs, dans le cadre d'un mandat de facturation ?"
+
+Si la réponse est oui, on branche et on n'a rien d'autre à écrire. Si
+c'est non, le dépôt en pièce fournisseur suffit jusqu'en septembre
+2027, et il faudra alors une plateforme qui sache le faire.
+
+**Ce qu'on fait maintenant, et c'est la seule chose qui compte :** on
+stocke les données structurées dès la première facture. Tant qu'elles
+sont là, brancher Qonto, Indy ou autre chose est un export à écrire,
+pas une reprise d'historique. **Donc non, ce n'est pas compliqué de
+l'envisager dès maintenant : c'est même le bon moment, tant qu'aucune
+facture n'existe encore.**
 
 ### La TVA du client final : la règle, c'est ce que Béné a répondu
 
@@ -566,6 +744,8 @@ dans les liens. Rien à reconstruire.
   vérifié ;
 - demander à un affilié un statut, un SIRET ou quoi que ce soit sur ses
   revenus : on n'oblige rien, il déclare de son côté ;
-- brancher une plateforme agréée avant que ce soit nécessaire (septembre
-  2027 pour l'émission), tout en stockant dès maintenant les données
-  structurées qui permettront de le faire sans reprise.
+- brancher une plateforme agréée avant d'avoir la réponse de Qonto ou
+  d'Indy sur l'autofacturation par API, tout en stockant dès maintenant
+  les données structurées qui permettront de le faire sans reprise ;
+- changer la base de calcul des commissions de l'Atelier avant de
+  savoir ce que Systeme.io verse réellement sur une vente à 47 €.
