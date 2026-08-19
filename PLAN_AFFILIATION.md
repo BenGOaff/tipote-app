@@ -18,6 +18,91 @@ l'ordre ci-dessus qui tranche.
 
 ---
 
+## 0. Reprise du 20 août : ce qui est fait, ce qui reste
+
+Écrit le soir du 19 août. Cette section est la seule à lire pour
+reprendre : le reste du document explique le POURQUOI de chaque choix,
+elle dit OÙ ON EN EST.
+
+Attention à une chose en la lisant : "poussé" veut dire poussé sur la
+branche `claude/atelier-quiz-repos-b225hl` des trois repos. Ça ne veut
+pas dire en production. Rien n'arrive en prod tant que tu n'as pas fait
+ton passage par `main`.
+
+### Ce qui est fait et poussé le 19 août
+
+| Quoi | Repo | Ce que ça change pour de vrai |
+|---|---|---|
+| Chiffres coupés à gauche des graphiques (retour Adeline) | tiquiz, tipote-app | la gouttière est calculée sur la valeur affichée (`lib/charts/yAxis.ts`), 4 graphiques côté Tiquiz, 2 côté Tipote |
+| Commissions calculées sur le HT | tipote-app, formaquiz | une seule fonction décide, les montants des 6 langues et le simulateur en découlent, plus aucun chiffre écrit en dur |
+| Socle du lien affilié (phase 0) | tipote-app | code personnalisable, lien court, cookie posé par nous, canal et provenance du clic, taux négocié par affilié |
+| Écran de chantier affilié | tipote-app | `/apercu/liens`, lié depuis aucun menu, fermé par défaut |
+| Pages de vente Tiquiz et Atelier | tiquiz, formaquiz | répliquées, servies par nous, images optimisées, référencement écrit par nous |
+
+### Ce qui bloque, et qui ne dépend que de toi
+
+Ces trois là ne demandent pas une ligne de code de plus. Tant qu'ils ne
+sont pas faits, la suite ne peut pas être testée.
+
+1. **La migration Supabase de Tipote n'est pas appliquée.** Fichier
+   `supabase/migrations/20260819_affiliate_own_link.sql`. Sans elle, le
+   code affilié personnalisé n'a nulle part où s'écrire.
+2. **`AFFILIATE_PREVIEW_EMAILS` n'est pas posée sur le serveur Tipote.**
+   Sans elle, l'écran de chantier répond 404 même pour toi, exactement
+   comme la page de l'Atelier ce soir. C'est voulu : l'absence de
+   configuration ferme.
+3. **Valider le pixel perfect des deux pages de vente.** Tant que tu
+   n'as pas dit oui, on ne construit pas le bon de commande par dessus.
+
+### L'ordre de la suite, et pourquoi c'est cet ordre là
+
+**1. Les bons de commande, pleine page, sur notre serveur.**
+Un pour l'Atelier (47 € une fois), un pour Tiquiz (les cinq plans).
+Stripe et PayPal. C'est la première brique parce que **presque tout le
+reste en dépend** : sans paiement chez nous, le code promo ne peut rien
+réduire, le cookie ne peut rien attribuer, et la vente directe n'existe
+pas.
+
+**2. Ce qui se passe APRÈS le paiement.** C'est la partie qu'on n'a pas
+le droit de bâcler, pour une raison qui a un nom : Ivan. Un client qui
+a payé et ne reçoit rien, c'est le pire incident possible. Il faut donc,
+dans le même chantier : la facture, le lien d'accès, la création du
+compte, le tag poussé vers Systeme.io pour que l'emailing continue.
+
+**3. Le code promo.** Il devient possible seulement une fois que c'est
+nous qui encaissons.
+
+**4. Les domaines.** `tiquiz.fr` et `atelierduquiz.fr` sont à toi, chez
+Hostinger. Le jour où les pages sont validées, on bascule : l'adresse
+canonique passe de `tipote.fr/...` à ton domaine, et la redirection
+actuelle s'inverse. À ne faire qu'une fois, dans ce sens là, sinon le
+référencement se cannibalise tout seul.
+
+**5. Paliers, admin, paiement des affiliés, autofacturation.**
+C'est la suite du document (phases 1 et 2), inchangée.
+
+**6. Couper Systeme.io sur l'affiliation, et pas avant.** Les deux
+comptages tournent en parallèle jusqu'à ce qu'ils donnent le même
+résultat deux semaines de suite.
+
+### Ce qui attend une réponse de l'extérieur
+
+- **Qonto ou Indy, autofacturation par API.** Les deux sont des
+  plateformes agréées. La question à leur poser est précise : est-ce
+  qu'on peut émettre une facture AU NOM d'un affilié depuis leur API,
+  avec notre propre série de numérotation. Tant que la réponse n'est pas
+  là, on stocke déjà toutes les données structurées nécessaires, donc
+  aucun retard ne se transforme en reprise de travail.
+
+### Ce que je ne fais pas sans que tu le dises
+
+La liste complète est en fin de document (section 10). Les deux qui
+comptent pour demain : je ne touche pas à l'emailing Systeme.io, et je
+n'annonce rien aux affiliées tant que la page de vente et le paiement
+ne sont pas chez nous.
+
+---
+
 ## 1. Où on en est vraiment
 
 **L'affiliation est gérée par Systeme.io aujourd'hui.** C'est leur
