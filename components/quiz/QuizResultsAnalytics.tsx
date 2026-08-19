@@ -38,6 +38,7 @@ import {
 import { stripHtml } from "@/lib/richText";
 import { localDateKey } from "@/lib/dateKeys";
 import { buildQuestionPositions, indexAnswersByPosition } from "@/lib/quiz/questionIdentity";
+import { maxSeriesValue, yAxisWidth } from "@/lib/charts/yAxis";
 
 // Donut palette: primary Tipote + tonal variations, repeats if > 7 slices.
 const CHART_COLORS = [
@@ -452,7 +453,7 @@ export default function QuizResultsAnalytics({
               <ResponsiveContainer width="100%" height={160}>
                 <AreaChart
                   data={trendData}
-                  margin={{ top: 5, right: 8, left: -24, bottom: 0 }}
+                  margin={{ top: 5, right: 8, left: 0, bottom: 0 }}
                 >
                   <defs>
                     <linearGradient id="leadTrend" x1="0" y1="0" x2="0" y2="1">
@@ -480,7 +481,9 @@ export default function QuizResultsAnalytics({
                     tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
                     tickLine={false}
                     axisLine={false}
-                    width={32}
+                    width={yAxisWidth(maxSeriesValue(trendData, ["count"]), {
+                      fontSize: 10,
+                    })}
                   />
                   <Tooltip
                     contentStyle={{
