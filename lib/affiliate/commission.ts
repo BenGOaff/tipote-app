@@ -65,6 +65,34 @@ export const PRICES_TTC_EUR = {
 } as const;
 
 /**
+ * LE TAUX QUI S'APPLIQUE À UNE VENTE.
+ *
+ * Trois étages, du plus fort au plus faible, et le plus fort doit
+ * pouvoir se taire (même modèle que l'alignement des questions) :
+ *
+ *   1. le taux NÉGOCIÉ À LA MAIN pour cet affilié et ce produit
+ *      (`affiliate_rate_overrides`) : un partenariat, un remerciement,
+ *      une sanction ;
+ *   2. le taux de son PALIER, quand les paliers existeront ;
+ *   3. le taux de BASE du produit.
+ *
+ * `null` ne veut pas dire zéro, il veut dire "je ne me prononce pas".
+ * Sans ça, un affilié sans override toucherait 0%, ce qui est la pire
+ * erreur possible sur de l'argent.
+ */
+export function resolveCommissionRate(params: {
+  product: keyof typeof COMMISSION_RATES;
+  override?: number | null;
+  tierRate?: number | null;
+}): number {
+  const valide = (v: number | null | undefined): number | null => {
+    const n = Number(v);
+    return Number.isFinite(n) && n > 0 && n <= 1 ? n : null;
+  };
+  return valide(params.override) ?? valide(params.tierRate) ?? COMMISSION_RATES[params.product];
+}
+
+/**
  * Le montant hors taxes, en centimes, déduit d'un prix TTC.
  *
  * Béné facture TOUJOURS en TTC : le prix affiché est le prix payé, et la

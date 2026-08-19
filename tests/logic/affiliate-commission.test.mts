@@ -27,6 +27,7 @@ import {
   commissionCents,
   commissionEur,
   htFromTtcCents,
+  resolveCommissionRate,
   yearlyRecurringEur,
 } from "../../lib/affiliate/commission.ts";
 
@@ -167,4 +168,21 @@ test("le simulateur appelle la fonction, il ne recalcule pas", () => {
     !/ATELIER_PRICE_EUR \* ATELIER_RATE|tiquizPrice \* TIQUIZ_RATE/.test(src),
     "le simulateur recalcule encore un montant a la main",
   );
+});
+
+test("le taux negocie a la main gagne, et le silence ne vaut pas zero", () => {
+  // Demande Bene du 19 aout : pouvoir monter ou baisser un taux a la
+  // main (partenariat). Trois etages, et `null` veut dire "je ne me
+  // prononce pas", jamais 0% : ce serait la pire erreur possible sur de
+  // l'argent.
+  assert.equal(resolveCommissionRate({ product: "atelier" }), 0.7);
+  assert.equal(resolveCommissionRate({ product: "atelier", override: null }), 0.7);
+  assert.equal(resolveCommissionRate({ product: "atelier", override: 0.8 }), 0.8);
+  assert.equal(resolveCommissionRate({ product: "tiquiz", tierRate: 0.5 }), 0.5);
+  // L'override passe DEVANT le palier.
+  assert.equal(resolveCommissionRate({ product: "tiquiz", override: 0.6, tierRate: 0.5 }), 0.6);
+  // Une valeur absurde est ignoree, elle ne devient pas le taux.
+  for (const absurde of [0, -1, 2, Number.NaN]) {
+    assert.equal(resolveCommissionRate({ product: "tiquiz", override: absurde }), 0.4);
+  }
 });

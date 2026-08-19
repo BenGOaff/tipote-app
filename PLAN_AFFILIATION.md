@@ -751,6 +751,49 @@ ne t'oblige à quitter Systeme.io tant que tu ne le décides pas.
   pendant deux semaines. Comparer avant de couper est la seule façon de
   savoir qu'on n'a rien perdu.
 
+### Phase 0 bis : trois demandes du 19 août
+
+**1. Les liens Systeme.io déjà partagés restent valables.** C'est une
+garantie, pas un espoir, et elle tient à une raison simple : on
+n'enlève rien. Les liens `?sa=` pointent vers les pages Systeme.io, qui
+continuent de suivre le clic et de payer la commission comme avant. Les
+nouveaux liens `/go/...` s'AJOUTENT, ils ne remplacent rien. Une
+affiliée qui a mis son ancien lien dans une vidéo n'a rien à refaire,
+jamais. Ça doit être écrit dans son espace, en clair, le jour où on
+annonce les nouveaux liens : sinon elle croira devoir tout reprendre et
+elle ne fera ni l'un ni l'autre.
+
+**2. La page de vente passe chez nous, avec le paiement.** Réplique de
+la page Systeme.io actuelle, hébergée sur notre serveur, avec Stripe et
+PayPal. Le visiteur ne traverse plus trois domaines.
+
+Et ça change une chose que ce document sous-estimait : **le cookie de
+visite devient enfin utile.** Aujourd'hui il est posé sur
+`affiliate.tipote.com` alors que la vente se fait sur `tipote.fr`, deux
+domaines différents, donc il ne peut rien attribuer. Le jour où la page
+de vente est chez nous, le clic, la page et le paiement sont sur le
+même domaine : l'attribution ne dépend plus de la correspondance
+d'email, qui rate dès que le client paie avec une autre adresse.
+
+Restent chez Systeme.io : les emails MARKETING. Passent chez nous : la
+facture, le lien d'accès, et tout ce qui est transactionnel.
+
+**3. Gérer ses affiliés à la main.** Béné : "je dois pouvoir gérer mes
+affiliés, leur créer un code promo, augmenter ou diminuer manuellement
+leur taux de commission (ex partenariat ou autre)."
+
+- **Le taux négocié existe déjà en base** (`affiliate_rate_overrides`,
+  une ligne par affilié et par produit, avec une NOTE obligatoire dans
+  l'usage : dans six mois, "pourquoi celle-là est à 80%" doit avoir une
+  réponse écrite à côté du chiffre). `resolveCommissionRate()` le lit,
+  et le silence ne vaut jamais 0%.
+- **Le code promo attend la phase 3, et c'est une contrainte, pas un
+  choix.** Un code promo s'applique au moment du PAIEMENT. Tant que
+  c'est Systeme.io qui encaisse, un code créé chez nous ne pourrait
+  rien réduire : il doit être créé chez eux. Le jour où la page de
+  vente est à nous, le code devient une ligne de notre base et se relie
+  à l'affilié.
+
 ### Phase 1 : paliers et règles
 - table des paliers par produit, éditable depuis l'admin ;
 - taux gelé à la vente, produit en paramètre obligatoire ;
