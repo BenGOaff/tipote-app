@@ -4668,7 +4668,7 @@
     "bonusShareTitle": "Bonus offered for sharing",
     "bonusShareDesc": "Describe what the visitor receives when sharing.",
     "bonusDescriptionPh": "E.g. my exclusive mini-course",
-    "shareMessageHint": "Pre-filled when the visitor shares on X, WhatsApp, Threads or from their phone. Facebook and LinkedIn never pre-fill text: they show the link preview, whose description uses this message (unless you set a custom OG description).",
+    "shareMessageHint": "Pre-filled when the visitor shares on X, WhatsApp, Threads or from their phone. Facebook and LinkedIn never pre-fill text: they show the link preview, whose description uses this message (unless you set a custom OG description). On the result screen, the share automatically names the profile the visitor got. Write {resultat} in your message to place that name yourself.",
     "shareMessagePh": "I just took the \"{title}\" quiz!",
     "sioShareTagLabel": "Systeme.io tag after share",
     "sioShareTagHint": "Added to the contact when they actually share. Triggers your automation.",

@@ -110,3 +110,72 @@ export function cleanShareUrl(href: string | null | undefined): string {
   // qui partage.
   return `${url.origin}${url.pathname}${query ? `?${query}` : ""}`;
 }
+
+/**
+ * LES VARIABLES QUI DÉSIGNENT LE PROFIL OBTENU.
+ *
+ * Plusieurs orthographes acceptées : la créatrice écrit dans sa langue et
+ * dans son élan, pas dans notre schéma. `{resultat}` sans accent ET
+ * `{résultat}` avec, parce que les deux se tapent.
+ */
+const RESULT_PLACEHOLDER_RE = /\{\s*(?:r[ée]sultat|result|profil|profile)\s*\}/gi;
+
+/** La créatrice a-t-elle demandé son profil dans son message ? */
+export function mentionsResult(message: string | null | undefined): boolean {
+  RESULT_PLACEHOLDER_RE.lastIndex = 0;
+  return RESULT_PLACEHOLDER_RE.test(String(message ?? ""));
+}
+
+/**
+ * Le texte de partage DEPUIS L'ÉCRAN DE RÉSULTAT.
+ *
+ * -- CE QUI CLOCHAIT (retour client, 7 août 2026) ----------------------
+ *
+ * "Quand je partage le résultat du quiz, le lien pointe vers la page de
+ * bienvenue du quiz et non vers le résultat."
+ *
+ * Le lien, lui, était bon : il porte `?rp=<profil>`, et il DOIT mener au
+ * quiz (Béné : "et pour chacun : lien vers le quiz"), parce que celui qui
+ * le reçoit vient pour passer le test, pas pour lire le résultat d'un
+ * autre. Ce qui manquait, c'est que RIEN dans le message ne parlait du
+ * résultat obtenu : le visiteur partageait le même texte qu'avant de
+ * l'avoir. De son point de vue, il partageait donc "le quiz".
+ *
+ * Et c'est, encore, la moitié client d'une décision que le serveur
+ * prenait déjà correctement : les métadonnées `og:` mettent le profil en
+ * titre et son image en aperçu depuis le 28 juillet. **Deux endroits
+ * calculaient la même chose, un seul avait été corrigé.** Exactement ce
+ * que le haut de ce fichier raconte pour le HTML brut.
+ *
+ * -- LA RÈGLE ----------------------------------------------------------
+ *
+ * 1. La créatrice garde la main : si son message contient `{resultat}`,
+ *    c'est SON texte qui sort, avec le profil dedans.
+ * 2. Sinon, la phrase par défaut NOMME le profil. Un message de quiz
+ *    générique ("j'ai identifié mon profil") ne peut pas le faire, et
+ *    c'est précisément ce que le client a signalé.
+ * 3. Pas de profil connu : on retombe sur le texte du quiz. Fail-open,
+ *    un partage sans texte serait pire.
+ */
+export function buildResultShareText(
+  rawMessage: string | null | undefined,
+  resultLabel: string | null | undefined,
+  rawQuizTitle: string | null | undefined,
+  defaults: {
+    withResult: (result: string) => string;
+    quizOnly: (title: string) => string;
+  },
+): string {
+  const label = toShareLine(resultLabel);
+  if (!label) {
+    return buildShareText(rawMessage, rawQuizTitle, defaults.quizOnly);
+  }
+
+  const message = toShareLine(rawMessage);
+  if (message && mentionsResult(message)) {
+    RESULT_PLACEHOLDER_RE.lastIndex = 0;
+    return toShareLine(message.replace(RESULT_PLACEHOLDER_RE, label));
+  }
+
+  return toShareLine(defaults.withResult(label));
+}

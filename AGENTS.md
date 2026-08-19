@@ -1277,3 +1277,62 @@ dans les 7 langues, et les cas qui appellent une action ont leur propre
 phrase : PDF scanné, PDF protégé par mot de passe, PDF abîmé. Même règle
 que la suppression d'un quiz (3 août) : le serveur dit ce qui s'est
 passé, l'interface dit comment le dire.
+
+## Partager SON résultat, pas le quiz (retour client, 7 août 2026)
+
+"Quand je partage le résultat du quiz, le lien pointe vers la page de
+bienvenue du quiz et non vers le résultat." Le texte qu'il obtenait :
+
+```
+J'ai identifié mon profil de stress dominant. Fais le test pour découvrir
+le tien. https://quiz.tipote.com/q/type-stress-biologique?rp=aa87b13d-...
+```
+
+**Le lien n'était pas le problème**, et c'est le point à ne pas
+inverser : il porte bien `?rp=<profil>`, et il DOIT mener au quiz. Béné :
+"et pour chacun : lien vers le quiz." Celui qui reçoit le lien vient
+passer le test, pas lire le résultat de quelqu'un d'autre.
+
+Ce qui manquait, c'est que **le TEXTE ne parlait pas du résultat obtenu**.
+Le visiteur partageait mot pour mot la phrase d'avant de l'avoir : de son
+point de vue, il partageait donc "le quiz".
+
+**Et c'est encore une moitié de décision.** Le serveur faisait déjà le bon
+travail depuis le 28 juillet : avec `?rp=`, `og:title` vaut "J'ai
+obtenu : <profil>" et `og:image` porte l'image du profil. Le viewer, lui,
+appelait `buildShareText` (le texte du QUIZ) dans les deux cas. **Deux
+endroits calculaient la même chose, un seul avait été corrigé** : c'est
+mot pour mot ce que l'en-tête de `lib/quiz/shareText.ts` racontait déjà
+pour le HTML brut, dans ce même fichier.
+
+**La règle attendue, en deux lignes :**
+
+| Moment | Texte | Aperçu | Lien |
+|---|---|---|---|
+| avant le résultat | le quiz | image du quiz | le quiz |
+| après le résultat | LE PROFIL OBTENU | image du profil | le quiz |
+
+**`buildResultShareText()` (`lib/quiz/shareText.ts`) décide**, et la
+créatrice garde la main : un `{resultat}` dans son message de partage y
+place le nom du profil elle-même (`{résultat}`, `{result}`, `{profil}`
+acceptés aussi, elle écrit dans son élan). Sans variable, la phrase par
+défaut nomme le profil, dans les 8 langues du viewer. Sans profil connu,
+on retombe sur le texte du quiz : un partage sans texte serait pire.
+
+**LA MÉCANIQUE EST UN PARAMÈTRE** (`getShareData(scope)`), jamais déduite
+de la présence d'un `urlOverride`. Déduire marcherait aujourd'hui et
+casserait au premier écran qui partage une autre URL : c'est la leçon des
+contrôles "profil" appliqués à un quiz scoré.
+
+**Et le texte et le lien sortent de la MÊME fonction** (`resultShare()`,
+qui rend `{ scope, url }`). Le réglage `share_result_page` gouverne les
+deux : décoché, le lien perd son `?rp=`, donc l'aperçu redevient celui du
+quiz, et un texte qui annoncerait quand même "j'ai obtenu X" contredirait
+l'image juste en dessous. Deux moitiés d'une même décision calculées
+séparément finissent toujours par se contredire.
+
+**L'écran de fin de SONDAGE reste en `"quiz"`** : il n'y a pas de profil
+à nommer, c'est voulu.
+
+Test : `tests/logic/result-share.test.mts`. Le module quiz de Tipote est
+jumeau : la correction y vit aussi.
