@@ -1174,11 +1174,15 @@ reste.
 
 **Ce que ça implique pour moi, et c'est le point à ne pas oublier :**
 
-- Le copier-coller ne détecte pas les FICHIERS NOUVEAUX ni les
-  SUPPRESSIONS. **Quand j'ajoute ou je supprime un fichier, je le dis
-  explicitement dans mon message final**, avec son chemin. Sinon il
-  n'arrive jamais en prod et on cherche pendant une heure pourquoi une
-  commande "n'existe pas".
+- **Les fichiers SUPPRIMÉS, et EUX SEULS, se signalent** (correction
+  Béné, 22 août 2026 : "bien sûr qu'il le voit ! C'est les fichiers à
+  supprimer qu'il faut me signaler"). Son copier-coller emporte très bien
+  les fichiers nouveaux ; ce qu'il ne fait pas, c'est retirer ce qui a
+  disparu, donc un fichier supprimé survit en prod et continue d'y
+  tourner. Lister les nouveaux fichiers à chaque envoi, c'est du bruit
+  qu'elle doit trier pour rien.
+  -> Message final : la liste des SUPPRESSIONS, avec leur chemin, et
+  rien si la liste est vide.
 - Sur le serveur, un `git pull` peut afficher **"Already up to date"**
   alors que le fetch vient de télécharger des commits : c'est normal,
   `main` est à jour même quand `origin/claude/...` bouge. Ce n'est PAS un
