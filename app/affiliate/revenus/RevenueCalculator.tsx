@@ -5,20 +5,27 @@ import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { useDict } from "../i18n/context";
 import { interpolate } from "../i18n";
+import {
+  COMMISSION_BASE,
+  COMMISSION_RATES,
+  PRICES_TTC_EUR,
+  commissionEur,
+} from "@/lib/affiliate/commission";
 
-// Taux de commission réels du programme (Béné 17 juil 2026 : pas de
-// palier, taux fixes).
-const ATELIER_RATE = 0.7;
-const TIQUIZ_RATE = 0.4;
+// Les taux, les prix et LE CALCUL vivent dans lib/affiliate/commission.ts.
+// Ce composant ne recalcule rien : il affichait `PRIX_TTC x TAUX` alors
+// que le paiement se fait sur le HT, donc il annonçait 16,7% de trop
+// (drame du 19 août 2026, voir l'en-tête du module).
+const ATELIER_PRICE_EUR = PRICES_TTC_EUR.atelier;
+const TIQUIZ_PRICE_EUR = {
+  simple: PRICES_TTC_EUR.tiquiz_monthly,
+  plus: PRICES_TTC_EUR.tiquiz_monthly_plus,
+} as const;
 
-// Prix publics réels. On n'invente aucun chiffre : l'Atelier du Quiz est
-// un paiement unique à 47 €. Tiquiz a deux niveaux mensuels : l'accès
-// simple à 17 € (solo, un seul projet) et le Plus à 29 € (agence,
-// freelance qui vend des prestations de quiz, multi-projets).
-// Les formules annuelles (170 € et 290 €) rapportent une commission
-// légèrement plus faible sur douze mois : on calcule sur le mensuel.
-const ATELIER_PRICE_EUR = 47;
-const TIQUIZ_PRICE_EUR = { simple: 17, plus: 29 } as const;
+/** La commission d'une vente, telle qu'elle sera VERSÉE. */
+function commission(ttcEur: number, rate: number): number {
+  return commissionEur({ ttcEur, rate, base: COMMISSION_BASE });
+}
 
 type TiquizPlan = keyof typeof TIQUIZ_PRICE_EUR;
 
@@ -44,10 +51,12 @@ export function RevenueCalculator({ showAtelier = true }: { showAtelier?: boolea
   const tiquizPrice = TIQUIZ_PRICE_EUR[plan];
 
   const projected = useMemo(() => {
-    const atelierMonth = showAtelier ? atelierSales * ATELIER_PRICE_EUR * ATELIER_RATE : 0;
-    const tiquizMonth = tiquizSubs * tiquizPrice * TIQUIZ_RATE;
+    const atelierUnit = commission(ATELIER_PRICE_EUR, COMMISSION_RATES.atelier);
+    const tiquizUnit = commission(tiquizPrice, COMMISSION_RATES.tiquiz);
+    const atelierMonth = showAtelier ? atelierSales * atelierUnit : 0;
+    const tiquizMonth = tiquizSubs * tiquizUnit;
     const atelierYear = atelierMonth * 12;
-    const tiquizYear = tiquizSubs * tiquizPrice * TIQUIZ_RATE * RECURRING_MONTHS_OVER_YEAR;
+    const tiquizYear = tiquizSubs * tiquizUnit * RECURRING_MONTHS_OVER_YEAR;
     return {
       month: atelierMonth + tiquizMonth,
       year: atelierYear + tiquizYear,
@@ -109,11 +118,11 @@ export function RevenueCalculator({ showAtelier = true }: { showAtelier?: boolea
         <p className="text-xs text-muted-foreground leading-relaxed">
           {showAtelier
             ? interpolate(t.revenus.calculator_per_unit, {
-                atelierUnit: eur(ATELIER_PRICE_EUR * ATELIER_RATE, 2),
-                tiquizUnit: eur(tiquizPrice * TIQUIZ_RATE * 12, 2),
+                atelierUnit: eur(commission(ATELIER_PRICE_EUR, COMMISSION_RATES.atelier), 2),
+                tiquizUnit: eur(commission(tiquizPrice, COMMISSION_RATES.tiquiz) * 12, 2),
               })
             : interpolate(t.revenus.calculator_per_unit_tiquiz, {
-                tiquizUnit: eur(tiquizPrice * TIQUIZ_RATE * 12, 2),
+                tiquizUnit: eur(commission(tiquizPrice, COMMISSION_RATES.tiquiz) * 12, 2),
               })}
         </p>
         <p className="text-xs text-muted-foreground leading-relaxed">

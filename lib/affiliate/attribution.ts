@@ -32,6 +32,25 @@ export type AttributeSaleInput = {
   product_name?: string;
   sale_at: Date;
   raw_payload?: unknown;
+  /**
+   * L'IDENTIFIANT PORTÉ PAR LE LIEN, QUAND IL N'Y A PAS DE CONVERSION.
+   *
+   * Sur un tunnel Systeme.io, le `?sa=` était capté par leur page et
+   * l'optin créait une ligne dans `affiliate_conversions` : l'attribution
+   * par email suffisait donc.
+   *
+   * Depuis que Tiquiz vend sur son propre domaine avec son propre bon de
+   * commande, ce chemin n'existe plus : pas de page Systeme.io, donc pas
+   * d'optin, donc **aucune conversion à retrouver**. Sans cet indice, une
+   * affiliée qui envoie du monde sur tiquiz.fr n'est payée sur rien, et
+   * rien ne le signale.
+   *
+   * Il ne court-circuite AUCUN contrôle : le `sa` doit exister dans
+   * `affiliates`, y être `active`, et ne pas être l'acheteur lui même.
+   * La conversion par email reste prioritaire quand elle existe, parce
+   * qu'elle est la preuve d'un passage réel, pas d'un paramètre d'URL.
+   */
+  sa_hint?: string | null;
 };
 
 export type AttributeSaleResult =
@@ -63,19 +82,24 @@ export async function attributeSale(input: AttributeSaleInput): Promise<Attribut
     const email = input.customer_email.trim().toLowerCase();
     if (!email) return { status: "no_affiliate_match" };
 
+    // La conversion PASSE EN PREMIER quand elle existe : c'est la trace
+    // d'un passage réel, pas un paramètre d'URL. L'indice du lien ne sert
+    // que là où il n'y a rien à retrouver (notre propre bon de commande).
     const conversion = await findRecentConversion(email);
-    if (!conversion) return { status: "no_affiliate_match" };
+    const saHint = (input.sa_hint ?? "").trim();
+    const sa = conversion?.sa ?? (saHint || null);
+    if (!sa) return { status: "no_affiliate_match" };
 
     // Vérifie que l'affilié existe dans notre registre (sinon refuse
     // — un sa valide format mais inconnu = lien forgé ou ex-affilié banni).
     const { data: affRow } = await supabaseAdmin
       .from("affiliates")
       .select("sa, email, status")
-      .eq("sa", conversion.sa)
+      .eq("sa", sa)
       .maybeSingle();
     const aff = affRow as { sa: string; email: string; status: string } | null;
     if (!aff || aff.status !== "active") {
-      return { status: "affiliate_not_registered", sa: conversion.sa };
+      return { status: "affiliate_not_registered", sa };
     }
 
     // Anti-auto-affiliation : on refuse si l'affilié est le client lui-même
@@ -94,11 +118,13 @@ export async function attributeSale(input: AttributeSaleInput): Promise<Attribut
     const { data: inserted, error: insertErr } = await supabaseAdmin
       .from("affiliate_commissions")
       .insert({
-        sa: conversion.sa,
+        sa,
         sio_order_id: input.sio_order_id,
         source_app: input.source_app,
         customer_email: email,
-        conversion_id: conversion.id,
+        // `null` quand l'attribution vient du lien : il n'y a pas de
+        // conversion a rattacher, et en inventer une serait pire.
+        conversion_id: conversion?.id ?? null,
         product_name: input.product_name ?? null,
         sale_amount_cents: input.sale_amount_cents,
         commission_rate: rate,
@@ -122,7 +148,7 @@ export async function attributeSale(input: AttributeSaleInput): Promise<Attribut
 
     return {
       status: "attributed",
-      sa: conversion.sa,
+      sa,
       commission_cents: commissionCents,
       commission_id: (inserted as { id: string }).id,
     };

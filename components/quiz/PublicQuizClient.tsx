@@ -37,6 +37,7 @@ import {
   resolveQuestionAlign,
   resolveQuestionAnswerLayout,
 } from "@/lib/quiz/questionLayout";
+import { nativeShareResolveIsProof, readShareCredit } from "@/lib/quiz/shareCredit";
 import {
   beatShell,
   bridgeTextColor,
@@ -2338,27 +2339,54 @@ export default function PublicQuizClient({
     }
   }, [email, quizId, isPreviewMode]);
 
-  // Anti-cheat threshold: opening a share popup and closing it under this many
-  // milliseconds is considered a fake share. Tuned to allow a quick tweet but
-  // reject one-click fraud.
-  const MIN_SHARE_DWELL_MS = 3500;
-  const MIN_COPY_DWELL_MS = 5000;
+  // Les seuils anti-triche vivent dans lib/quiz/shareCredit.ts, avec la
+  // decision qui les utilise. Deux copies d'un seuil finissent par ne
+  // plus valoir la meme chose.
 
   const shareOn = (platform: string, scope: ShareScope = "quiz", urlOverride?: string) => {
     const { shareText, shareUrl } = getShareData(scope, urlOverride);
     const encoded = encodeURIComponent(shareUrl);
     const text = encodeURIComponent(shareText);
 
-    // Web Share API (mainly mobile) — only resolves when the user actually
-    // completes the share sheet, so we can credit without heuristics.
+    // ── WEB SHARE API : LA RESOLUTION N'EST PAS UNE PREUVE ──
+    //
+    // Signale par une cliente le 20 aout 2026 : le bouton debloquait le
+    // bonus sans partage. La cause etait ici, et le commentaire qui
+    // occupait ces lignes affirmait l'inverse ("only resolves when the
+    // user actually completes the share sheet"). La doc du navigateur
+    // dit : "On Windows this happens WHEN THE SHARE POPUP IS LAUNCHED".
+    //
+    // La decision vit desormais dans `readShareCredit`, testee, avec le
+    // canal en parametre obligatoire : cf. lib/quiz/shareCredit.ts.
     if (
       platform === "native" &&
       typeof navigator !== "undefined" &&
       typeof navigator.share === "function"
     ) {
+      const ouvertA = Date.now();
+      const resolutionFaitPreuve = nativeShareResolveIsProof(
+        typeof navigator !== "undefined" ? navigator.userAgent : null,
+      );
+      setShareWarning(false);
       navigator
         .share({ title: stripHtml(quiz?.title || ""), text: shareText, url: shareUrl })
-        .then(() => trackShare())
+        .then(() => {
+          const verdict = readShareCredit({
+            channel: "native",
+            elapsedMs: Date.now() - ouvertA,
+            resolveIsProof: resolutionFaitPreuve,
+          });
+          if (verdict === "credit") {
+            trackShare();
+            return;
+          }
+          // On ne refuse PAS : quelqu'un qui a vraiment partage ne doit
+          // pas perdre son bonus a cause d'une particularite de son
+          // navigateur. On lui demande de confirmer, exactement comme
+          // apres une copie de lien.
+          setCopyTimestamp(ouvertA);
+          setCopyConfirmVisible(true);
+        })
         .catch(() => {
           /* user cancelled */
         });
@@ -2416,8 +2444,11 @@ export default function PublicQuizClient({
     const onReturn = () => {
       if (document.visibilityState === "visible") {
         document.removeEventListener("visibilitychange", onReturn);
-        if (Date.now() - openedAt >= MIN_SHARE_DWELL_MS) trackShare();
-        else setShareWarning(true);
+        if (readShareCredit({ channel: "network", elapsedMs: Date.now() - openedAt }) === "credit") {
+          trackShare();
+        } else {
+          setShareWarning(true);
+        }
       }
     };
     document.addEventListener("visibilitychange", onReturn);
@@ -2434,7 +2465,7 @@ export default function PublicQuizClient({
   };
 
   const confirmCopyShare = () => {
-    if (Date.now() - copyTimestamp < MIN_COPY_DWELL_MS) {
+    if (readShareCredit({ channel: "copy", elapsedMs: Date.now() - copyTimestamp }) !== "credit") {
       setShareWarning(true);
       return;
     }
