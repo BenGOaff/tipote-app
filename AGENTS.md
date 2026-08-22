@@ -228,16 +228,26 @@ que les réponses sont bien en base dans `quiz_leads.answers[].text` /
 Sur le serveur prod, **les deux apps utilisent `.env`** (pas `.env.local`).
 `.env.local` est une convention de DEV Next.js uniquement.
 
-| Repo | Sur prod (à sourcer pour le shell) | En dev local |
+| Repo | Fichier sur prod | En dev local |
 |---|---|---|
 | `~/tipote-app/` | **`.env`** | `.env.local` |
 | `~/tiquiz-app/` | **`.env`** | `.env.local` |
 
-Pour avoir `CRON_SECRET` (et toutes les autres vars) dans le shell :
+**Et le `.env` se lit DANS UNE PARENTHÈSE, jamais dans le shell nu.**
+Cette page recommandait l'inverse jusqu'au 22 août, et ça a mis les deux
+apps par terre (section "Un shell qui garde le `.env` de l'autre app").
+
 ```bash
-cd ~/tiquiz-app && set -a; . .env; set +a
-echo "CRON_SECRET = '$CRON_SECRET'"   # doit afficher une valeur, pas ''
+# Bon : la parenthèse est un sous-shell, tout meurt avec elle.
+( set -a; . ~/tipote-app/.env; set +a; curl -sS -H "X-Cron-Secret: $CRON_SECRET" https://app.tipote.com/api/cron/... )
+
+# Juste vérifier qu'une variable existe, sans l'afficher :
+grep -c '^CRON_SECRET=' ~/tipote-app/.env      # 1 = présente
 ```
+
+**INTERDIT : `set -a; . .env; set +a` sans parenthèses**, et à plus forte
+raison dans un terminal qui servira ensuite à un `npm run build` ou à un
+`pm2 restart --update-env`.
 
 ## Workflow Git — RÈGLE ABSOLUE
 
@@ -1340,3 +1350,53 @@ séparément finissent toujours par se contredire.
 
 Test : `tests/logic/result-share.test.mts`. Le module quiz de Tipote est
 jumeau : la correction y vit aussi.
+
+## Un shell qui garde le `.env` de l'autre app (panne 22 août 2026)
+
+Les deux apps ont servi la base Supabase de l'AUTRE pendant plusieurs
+heures. Tiquiz affichait les quiz de Tipote et répondait `column
+profiles.user_id does not exist` ; Tipote répondait `Could not find the
+table 'public.content_item' in the schema cache`. Les liens de connexion
+envoyés par email depuis `quiz.tipote.com` renvoyaient sur
+`app.tipote.com`.
+
+Les quatre faits qui ont tranché, et qui sont le bon réflexe de
+diagnostic (comparer le FICHIER et le BUILD, pas le fichier seul) :
+
+```
+== tiquiz-app ==  .env: ottpciabnrclwgdlwjdt   build: mmwyfqfbfkvcnrkyvagv
+== tipote-app ==  .env: mmwyfqfbfkvcnrkyvagv   build: ottpciabnrclwgdlwjdt
+```
+
+**Les deux `.env` étaient justes. Les deux builds étaient croisés.**
+
+**La cause.** Un `set -a; . .env; set +a` avait été lancé dans le
+terminal, pour les DEUX apps, dans la même session, juste pour lire une
+variable. `set -a` exporte tout le fichier dans le shell. Or Next lit
+`process.env` **avant** `.env`
+(`node_modules/next/dist/docs/01-app/02-guides/environment-variables.md` :
+"stopping once the variable is found"), et un `NEXT_PUBLIC_*` est gravé
+dans le code au moment du `next build`, avec "the value from the
+environment in which you run `next build`". Le build suivant, lancé dans
+ce terminal, a donc gravé les valeurs de l'autre app, et le
+`pm2 restart --update-env` a poussé le shell pollué dans le processus.
+
+Les bases n'ont jamais été fusionnées : chacune est restée intacte, ce
+sont les pointeurs qui étaient croisés.
+
+**Le garde-fou : `scripts/check-build-env.mjs`, branché en `prebuild`.**
+npm le lance tout seul avant chaque `npm run build`. Il compare toute clé
+du `.env` du repo à celle que porte le shell, et refuse de construire dès
+qu'elles diffèrent, en nommant les deux valeurs. Il vit dans les TROIS
+repos, avec `tests/logic/build-env-guard.test.mts` qui rejoue la panne.
+
+**Il n'imprime jamais la valeur d'une clé qui ressemble à un secret**
+(`estSecret`) : ce rapport finit dans un terminal, un historique, parfois
+un copier-coller. Il dit "les deux valeurs diffèrent" et s'arrête là. Les
+URL et les `NEXT_PUBLIC_*` restent lisibles, ce sont elles qui rendent le
+diagnostic évident.
+
+**Et la leçon qui dépasse cette panne :** une commande donnée à Béné doit
+être sûre même mal replacée. `( ... )` au lieu de `...` coûte deux
+caractères et enferme les dégâts dans un sous-shell. Une variable
+exportée dans un terminal, elle, survit à tout ce qu'on y tapera ensuite.

@@ -9,6 +9,7 @@
   },
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node scripts/check-build-env.mjs",
     "build": "next build",
     "postbuild": "node scripts/postbuild-standalone-static.cjs",
     "start": "next start",
