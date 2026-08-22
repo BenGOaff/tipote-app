@@ -1173,8 +1173,7 @@ cd /home/tipote/tipote-app
 git stash
 git pull origin main
 npm ci
-npm run build
-pm2 restart tipote-prod --update-env
+npm run build && pm2 restart tipote-prod --update-env
 ```
 
 Tu prends ma branche, tu copies le code dans ton dossier local, tu pousses
@@ -1400,3 +1399,62 @@ diagnostic évident.
 être sûre même mal replacée. `( ... )` au lieu de `...` coûte deux
 caractères et enferme les dégâts dans un sous-shell. Une variable
 exportée dans un terminal, elle, survit à tout ce qu'on y tapera ensuite.
+
+## Un garde-fou de build ne protège pas un redémarrage (rechute 22 août au soir)
+
+Le matin, le `prebuild` était posé. Le soir, Tipote était quand même par
+terre : aucun client à l'écran, un bandeau `Invalid API key`, et des 500
+sur toutes les routes serveur. Béné : "qu'est ce que tu as foutu encore
+??? le code est à jour, les migrations aussi."
+
+Elle avait raison sur les deux points. Le garde-fou aussi, d'ailleurs :
+il a bien REFUSÉ de construire, en nommant les neuf variables que le
+terminal contredisait, dont `NEXT_PUBLIC_SUPABASE_URL` (fichier
+`mmwyfqfbfkvcnrkyvagv`, terminal `ottpciabnrclwgdlwjdt`).
+
+**Et la ligne suivante du déploiement a déployé quand même.** Les deux
+commandes sont collées l'une sous l'autre :
+
+```
+npm run build            <- REFUSÉ, code de sortie non nul
+pm2 restart X --update-env   <- exécutée quand même, et --update-env
+                                pousse le terminal DANS le processus
+```
+
+L'app tournait donc avec l'URL d'un projet et la clé de l'autre. C'est
+exactement ce que Supabase appelle `Invalid API key`.
+
+**Trois conséquences, et les trois sont des règles.**
+
+1. **`&&` entre les deux lignes.** `npm run build && pm2 restart ...` :
+   un refus arrête tout. C'est un caractère, ce n'est pas un changement
+   de process, et ça aurait supprimé la panne à elle seule.
+2. **La vérification vit AUSSI au démarrage** (`instrumentation.ts` ->
+   `lib/env/supabaseProject.ts`). `register()` est appelé une fois par
+   Next avant la première requête. Le message part dans `pm2 logs`, il
+   nomme les deux projets, et il dit la seule manoeuvre qui corrige.
+
+   **Ce qu'il compare, et c'est vérifié en démarrant le serveur
+   construit :** Next remplace `process.env.NEXT_PUBLIC_*` par la valeur
+   littérale au moment du `next build`. L'URL lue ici est donc celle
+   GRAVÉE DANS LE BUILD, face à la clé de service qui, elle, vient du
+   PROCESSUS. C'est exactement l'écart du 22 août, et aucun autre endroit
+   ne voit les deux à la fois.
+   Il JOURNALISE, il ne fait pas tomber le serveur : une app qui refuse
+   de démarrer part en boucle sous PM2, ce qui est plus dur à lire.
+3. **Un contrôle doit regarder les TROIS colonnes** : le fichier, le
+   terminal, le build (`npm run check:supabase-keys`). La première
+   version n'en regardait que deux et aurait répondu "rien à signaler"
+   pendant la panne, puisque le fichier ET le build étaient justes.
+
+**Ne jamais imprimer une clé.** Une clé Supabase historique est un JWT :
+sa charge utile porte le projet, le rôle et l'expiration en clair. On
+n'affiche que ces trois valeurs, jamais la clé, jamais un morceau. Les
+nouvelles clés (`sb_publishable_`, `sb_secret_`) ne portent rien de
+lisible : on le DIT au lieu de faire semblant de savoir.
+
+`tests/logic/supabase-project.test.mts` rejoue la panne avec les vrais
+identifiants de projet (qui ne sont pas des secrets : ils se lisent dans
+l'URL publique de la base) et interdit qu'une clé reparte dans un
+journal.
+
