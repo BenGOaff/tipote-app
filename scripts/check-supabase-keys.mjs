@@ -28,7 +28,7 @@
 //
 //   npm run check:supabase-keys
 
-import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync, readlinkSync, statSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -219,9 +219,93 @@ if (build === null) {
   }
 }
 
+// ── LE PROCESSUS QUI TOURNE ──
+//
+// LA COLONNE QUI A MANQUÉ TOUTE LA SOIRÉE DU 22 AOÛT.
+//
+// Le fichier était juste, le build était juste, le terminal était propre,
+// et l'app répondait quand même `Invalid API key`. La mauvaise valeur
+// vivait dans le PROCESSUS, poussée là par un `pm2 restart --update-env`
+// lancé depuis un terminal pollué, et plus rien ne pouvait l'en déloger :
+// `--update-env` remplace les variables que le nouveau terminal DÉFINIT,
+// et un terminal propre n'en définit aucune.
+//
+// `pm2 env <id>` affichait encore l'ancienne clé alors que le processus
+// tournait déjà avec la bonne. `/proc/<pid>/environ`, lui, ne ment pas :
+// c'est l'environnement que le noyau a donné au processus.
+function refsDuProcessus() {
+  if (process.platform !== "linux" || !existsSync("/proc")) return null;
+  // On reconnaît le serveur à son DOSSIER DE TRAVAIL, pas à sa ligne de
+  // commande : `server.js` fait `process.chdir(__dirname)`, donc son cwd
+  // est toujours `.next/standalone`, que PM2 l'ait lancé avec un chemin
+  // absolu ou relatif. Se fier à la ligne de commande ratait le second
+  // cas, ce qui est exactement ce qu'un contrôle ne doit pas faire.
+  const dossierServeur = join(RACINE, ".next", "standalone");
+  const trouves = [];
+  let pids = [];
+  try {
+    pids = readdirSync("/proc").filter((p) => /^\d+$/.test(p));
+  } catch {
+    return null;
+  }
+  for (const pid of pids) {
+    let cwd = "";
+    try {
+      cwd = readlinkSync(`/proc/${pid}/cwd`);
+    } catch {
+      // Un processus qui ne nous appartient pas, ou qui vient de mourir.
+      continue;
+    }
+    if (cwd !== dossierServeur) continue;
+    let brut = "";
+    try {
+      brut = readFileSync(`/proc/${pid}/environ`, "utf8");
+    } catch {
+      continue;
+    }
+    const env = new Map();
+    for (const ligne of brut.split("\0")) {
+      const eq = ligne.indexOf("=");
+      if (eq > 0) env.set(ligne.slice(0, eq), ligne.slice(eq + 1));
+    }
+    trouves.push({
+      pid,
+      url: refDepuisUrl(env.get("NEXT_PUBLIC_SUPABASE_URL")),
+      service: lireJwt(env.get("SUPABASE_SERVICE_ROLE_KEY")),
+    });
+  }
+  return trouves;
+}
+
+const procs = refsDuProcessus();
+console.log("\n  CLÉS SUPABASE : LE PROCESSUS QUI TOURNE\n");
+if (procs === null) {
+  console.log("  Lecture impossible ici (pas de /proc). Sur le serveur, elle marche.");
+} else if (procs.length === 0) {
+  console.log("  Aucun serveur standalone de ce dossier ne tourne en ce moment.");
+} else {
+  for (const p of procs) {
+    console.log(`  pid ${p.pid}`);
+    console.log(`    URL       projet ${p.url ?? "(non transmise, valeur du build)"}`);
+    console.log(`    ${decrire("service", p.service, "du processus")}`);
+    // On compare au FICHIER : c'est lui la référence voulue, et l'écart
+    // avec le processus est exactement la panne du 22 août au soir.
+    if (p.service.etat === "jwt" && refFichier && p.service.ref !== refFichier) {
+      problemes.push(
+        `Le processus ${p.pid} tourne avec une clé de service du projet ${p.service.ref},\n` +
+          `     alors que le .env dit ${refFichier}. C'est « Invalid API key » sur tout ce qui\n` +
+          `     passe par la clé de service, et RIEN sur le reste : les contenus s'affichent,\n` +
+          `     les comptes disparaissent.\n` +
+          `     Un rebuild n'y change rien. Depuis le dossier du repo :\n` +
+          `     ( export SUPABASE_SERVICE_ROLE_KEY="$(grep -m1 '^SUPABASE_SERVICE_ROLE_KEY=' .env | cut -d= -f2-)" ; pm2 restart <app> --update-env )`,
+      );
+    }
+  }
+}
+
 console.log("");
 if (problemes.length === 0) {
-  console.log("  Rien à signaler : le fichier et le build parlent du même projet.\n");
+  console.log("  Rien à signaler : le fichier, le build et le processus s'accordent.\n");
 } else {
   for (const p of problemes) console.log(`  -> ${p}\n`);
 }

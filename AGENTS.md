@@ -1458,3 +1458,87 @@ identifiants de projet (qui ne sont pas des secrets : ils se lisent dans
 l'URL publique de la base) et interdit qu'une clé reparte dans un
 journal.
 
+## Un serveur standalone ne lit AUCUN de tes fichiers .env (panne 22 août, 2e moitié)
+
+Après la rechute du soir, la vraie cause était encore ailleurs, et c'est
+Béné qui a posé la bonne question : "pourquoi j'ai tous mes contenus mais
+pas mes clients dans Tipote ?"
+
+Ce partage EST le diagnostic :
+
+| Ce qu'on voit | Par quelle clé ça passe | D'où vient la valeur |
+|---|---|---|
+| les contenus s'affichent | clé anon | GRAVÉE dans le build |
+| les clients ont disparu | clé de service | lue dans le PROCESSUS |
+
+`pm2 describe` disait `script path .next/standalone/server.js`. Or ce
+serveur fait `process.chdir(__dirname)` : Next cherche donc ses fichiers
+d'environnement dans `.next/standalone/`, où **Next ne copie rien et où
+notre postbuild ne copiait rien non plus**. L'app ne vivait que sur
+l'environnement gardé par PM2, hérité d'un `--update-env` parfois vieux
+de plusieurs mois.
+
+Le soir du 22, un `--update-env` lancé depuis le terminal pollué y a
+écrit la clé de service de TIQUIZ. Mesuré : PM2 portait `...Ksj_chv0`,
+le `.env` disait `...Du09s9rg`.
+
+**Et aucun redémarrage propre ne pouvait l'effacer.** `--update-env`
+remplace les variables que le nouveau terminal DÉFINIT ; un terminal
+propre n'en définit aucune, donc la mauvaise valeur restait. Elle était
+insensible aux rebuilds, puisque `process.env` passe devant tout.
+
+**La sortie, quand ça arrive :** une seule variable, dans un sous-shell,
+depuis le dossier du repo.
+
+```bash
+( export SUPABASE_SERVICE_ROLE_KEY="$(grep -m1 '^SUPABASE_SERVICE_ROLE_KEY=' .env | cut -d= -f2-)" ; pm2 restart tipote-prod --update-env )
+```
+
+**Ne PAS faire `pm2 delete` puis `pm2 start`** sans avoir listé d'abord
+ce que PM2 porte et que le `.env` ne contient pas : on perdrait ces
+variables là sans le voir.
+
+**Les corrections posées :**
+
+1. `scripts/postbuild-standalone-static.cjs` copie `.env`, `.env.local`
+   et leurs variantes `production` dans `.next/standalone/`, en 600.
+   Vérifié en démarrant un vrai build : le serveur les lit. Ça ne
+   remplace PAS le garde-fou de démarrage, `process.env` gagne toujours ;
+   ça donne une source fiable à ce que le processus n'a pas.
+   Effet de bord voulu : le `Missing env var POPQUIZ_TUS_URL` du journal
+   de Tipote disparaît, sa variable ne vivant que dans `.env.local`.
+2. `npm run check:supabase-keys` a une QUATRIÈME colonne, le PROCESSUS,
+   lue dans `/proc/<pid>/environ`. Elle a été la seule fiable ce soir là :
+   `pm2 env` affichait encore l'ancienne clé alors que le processus
+   tournait déjà avec la bonne. La détection se fait sur le DOSSIER DE
+   TRAVAIL du processus, jamais sur sa ligne de commande, qui peut être
+   relative.
+3. `tests/logic/standalone-env.test.mts` EXÉCUTE le postbuild dans un
+   dossier jetable. Une assertion sur le texte du script passerait au
+   vert le jour où il plante avant la copie.
+
+**Ce qui reste à vérifier, et qu'on n'a PAS deviné :** l'Atelier
+(`formaquiz`) est aussi en `output: standalone` mais n'a pas de
+postbuild, donc on ne sait pas comment `formaquiz-prod` est lancé. Rien
+n'y a été changé. `pm2 describe formaquiz-prod | grep -i 'script path'`
+répond en une seconde.
+
+**Et les erreurs de diagnostic de cette soirée, à ne pas refaire :**
+
+- **`/rest/v1/` ne teste pas ce qu'on croit.** Il répond `401` à une clé
+  anon parfaitement valide (elle n'a pas le droit d'y lire), et `200` à
+  n'importe quelle clé valide du projet, quel que soit son rôle. Il a
+  donc produit une fausse accusation contre la clé anon, puis un faux
+  acquittement de la clé de service. Pour tester une clé anon :
+  `/auth/v1/settings`. Pour tester une clé de service :
+  `/auth/v1/admin/users?page=1&per_page=1`. Et pour savoir ce qu'une clé
+  EST, on décode son `role`, on ne le déduit pas d'un code HTTP.
+- **Un `401` peut vouloir dire "clé vide".** Une extraction ratée envoie
+  un en-tête vide, que Supabase refuse exactement comme une mauvaise clé.
+  Mesurer la LONGUEUR de ce qu'on a extrait avant de conclure.
+- **Le corps de la réponse était lisible depuis le début.**
+  `/api/admin/users` renvoie `{"ok":false,"error":"<message Supabase>"}`,
+  et `/proc/<pid>/environ` donnait la valeur fautive en une commande.
+  Une heure d'hypothèses avant d'aller regarder les deux.
+
+
