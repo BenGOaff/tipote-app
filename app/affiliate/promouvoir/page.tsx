@@ -5,7 +5,7 @@
 // désormais dans /contenus.
 
 import { redirect } from "next/navigation";
-import { Link2, FileText, ExternalLink, AlertTriangle, GraduationCap } from "lucide-react";
+import { Link2, FileText, ExternalLink, AlertTriangle, GraduationCap, Gift } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -36,6 +36,7 @@ function buildLinkDestinations(
   // (DB), le label/description vient de l'i18n locale par locale.
   // Ordre = sort_order de la table (cf. getActiveLinkDestinations).
   const I18N: Record<LinkDestinationSlug, { label: string; description: string }> = {
+    tiquiz_direct:       { label: ld.tiquiz_direct_label,       description: ld.tiquiz_direct_description },
     atelier:             { label: ld.atelier_label,             description: ld.atelier_description },
     tiquiz_main:         { label: ld.tiquiz_main_label,         description: ld.tiquiz_main_description },
     tiquiz_free:         { label: ld.tiquiz_free_label,         description: ld.tiquiz_free_description },
@@ -170,6 +171,29 @@ export default async function PromouvoirPage({
           </CardContent>
         </Card>
       </div>
+
+      {/* ── LE MOIS OFFERT, ARGUMENT DE VENTE DE L'AFFILIE ──
+          Bene 23 aout 2026 : "qu'ils puissent offrir un mois gratuit pour
+          tester a tous leurs affilies comme argument de vente".
+          La NOTE n'est pas un detail : le cadeau ne s'ouvre que sur les
+          liens fabriques ici (marqueur `mo=1`, cf.
+          lib/affiliate/links.ts). Un affilie qui continue de partager son
+          ancien lien Systeme.io serait paye normalement mais promettrait
+          un mois que personne ne recevrait, et c'est LUI qui passerait
+          pour un menteur. */}
+      <Card className="border-primary/40 bg-primary/5">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Gift className="h-4 w-4 text-primary" />
+            {t.promouvoir.mois_offert_title}
+          </CardTitle>
+          <CardDescription>{t.promouvoir.mois_offert_body}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          <p>{t.promouvoir.mois_offert_note}</p>
+          <p className="text-muted-foreground text-xs">{t.promouvoir.mois_offert_limit}</p>
+        </CardContent>
+      </Card>
 
       {/* Garde-fou Bene 8 juin 2026 : l'URL "nue" tipote.fr/tiquiz n'est
           PAS taggee affiliation cote Systeme.io, donc un affilie qui la

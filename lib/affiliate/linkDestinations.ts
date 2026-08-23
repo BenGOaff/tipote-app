@@ -14,6 +14,7 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export type LinkDestinationSlug =
+  | "tiquiz_direct"
   | "tiquiz_main"
   | "tiquiz_free"
   | "tiquiz_monthly"
@@ -34,7 +35,13 @@ export type LinkDestinationRow = {
 // L'Atelier du Quiz (formation, commission 70%) : tunnel affilié
 // tipote.fr/atelier-du-quiz. Uniquement FR (la formation n'est vendue
 // qu'en français) : la page Promouvoir filtre ce slug hors marché FR.
+// `tiquiz_direct` est le SEUL lien qui ouvre les 30 jours offerts :
+// c'est le seul qui atterrit sur NOTRE domaine, donc le seul dont le
+// marqueur `mo=1` arrive jusqu'a notre middleware. Les autres pointent
+// vers des tunnels Systeme.io, qui commissionnent comme avant mais ne
+// transmettent rien de ce qu'on ajoute a l'URL.
 const FALLBACK: LinkDestinationRow[] = [
+  { slug: "tiquiz_direct",       path: "https://tiquiz.fr/",         sort_order: 8,  enabled: true },
   { slug: "atelier",             path: "/atelier-du-quiz",           sort_order: 5,  enabled: true },
   { slug: "tiquiz_main",         path: "/part-tiquiz",               sort_order: 10, enabled: true },
   { slug: "tiquiz_free",         path: "/part-tiquiz-gratuit",       sort_order: 20, enabled: true },

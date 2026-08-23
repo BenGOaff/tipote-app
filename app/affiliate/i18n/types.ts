@@ -201,6 +201,10 @@ export type AffiliateDict = {
 
   // ─── Default LinksManager link destinations ──────────────────────
   link_destinations: {
+    // Le bon de commande sur NOTRE domaine : le seul lien qui ouvre
+    // les 30 jours offerts (cf. lib/affiliate/links.ts).
+    tiquiz_direct_label: string;
+    tiquiz_direct_description: string;
     tiquiz_main_label: string;
     tiquiz_main_description: string;
     tiquiz_free_label: string;
@@ -227,6 +231,11 @@ export type AffiliateDict = {
     page_subtitle: string;
     market_label: string; // "Marché" (sélecteur de marché de diffusion)
     market_hint: string; // "Liens et contenus adaptés au marché {market}."
+    // Le mois offert : l'argument de vente de l'affilié, et sa limite.
+    mois_offert_title: string;
+    mois_offert_body: string;
+    mois_offert_note: string;
+    mois_offert_limit: string;
     main_link_title: string;
     main_link_description: string;
     warning_naked_url_title: string;

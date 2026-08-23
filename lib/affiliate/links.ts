@@ -13,6 +13,29 @@
 
 export type AffiliateMarket = "fr" | "en";
 
+/**
+ * LE MARQUEUR DU SYSTÈME D'AFFILIATION COURANT.
+ *
+ * Béné, 23 août 2026, sur le mois offert : "uniquement avec le système
+ * d'affiliation en cours et pas sur les anciens liens systeme io (qui
+ * restent valides mais ne seront plus ceux à utiliser dans le futur)".
+ *
+ * Le `?sa=` ne peut pas porter cette information : un ancien lien
+ * Systeme.io et un lien fabriqué ici portent le MÊME identifiant, avec
+ * la même forme et le même propriétaire. Une fois arrivés sur nos
+ * pages, ils sont indiscernables.
+ *
+ * D'où ce paramètre, ajouté ICI et nulle part ailleurs : tout ce que
+ * l'espace affilié fabrique aujourd'hui le porte, tout ce qui a été
+ * copié dans Systeme.io avant ne le portera jamais. Les anciens liens
+ * commissionnent exactement comme avant : c'est le CADEAU qui est
+ * réservé, pas la vente.
+ *
+ * Le lecteur est côté Tiquiz (`lib/affiliate/moisOffertLien.ts`), qui
+ * le range dans un cookie `httpOnly` au passage du visiteur.
+ */
+export const AFFILIATE_LINK_MARKER = "mo=1";
+
 const DOMAINS: Record<AffiliateMarket, string> = {
   fr: "https://www.tipote.fr",
   en: "https://www.tipote.blog",
@@ -45,5 +68,6 @@ export function buildAffiliateLink(locale: string | null | undefined, path: stri
     const origin = affiliateOrigin(locale);
     abs = p ? `${origin}${p.startsWith("/") ? "" : "/"}${p}` : `${origin}/`;
   }
-  return `${abs}${abs.includes("?") ? "&" : "?"}sa=${sa}`;
+  const avecSa = `${abs}${abs.includes("?") ? "&" : "?"}sa=${sa}`;
+  return `${avecSa}&${AFFILIATE_LINK_MARKER}`;
 }

@@ -32,6 +32,7 @@ import {
   resolveClickSource,
   sanitizeChannel,
 } from "../../lib/affiliate/clickSource.ts";
+import { AFFILIATE_LINK_MARKER, buildAffiliateLink } from "../../lib/affiliate/links.ts";
 import {
   VISIT_COOKIE_MAX_AGE_SECONDS,
   parseVisit,
@@ -231,4 +232,66 @@ test("le `?sa=` reste propage tant que Systeme.io encaisse", () => {
     "utf8",
   );
   assert.ok(src.includes("buildAffiliateLink"), "la destination ne porte plus le ?sa=");
+});
+
+// -- Le marqueur du systeme courant --------------------------------------
+//
+// Bene, 23 aout 2026 : le mois offert vaut "uniquement avec le systeme
+// d'affiliation en cours et pas sur les anciens liens systeme io (qui
+// restent valides mais ne seront plus ceux a utiliser dans le futur)".
+//
+// Les deux generations de liens portent le MEME `?sa=` : sans ce
+// marqueur, elles sont indiscernables une fois arrivees chez nous, et
+// le cadeau s'ouvrirait sur les anciens liens.
+
+test("tout lien fabrique ici porte le marqueur, et le `sa` d'abord", () => {
+  const sa = "sa1234567890abcdef1234";
+  const lien = buildAffiliateLink("fr", "/part-tiquiz", sa);
+  assert.equal(lien, `https://www.tipote.fr/part-tiquiz?sa=${sa}&${AFFILIATE_LINK_MARKER}`);
+
+  // Une URL absolue (l'affiliee a choisi sa cible) le porte aussi.
+  const article = buildAffiliateLink("en", "https://www.tipote.blog/x?utm=1", sa);
+  assert.equal(article, `https://www.tipote.blog/x?utm=1&sa=${sa}&${AFFILIATE_LINK_MARKER}`);
+
+  // Le marche ne change que le domaine, jamais le marqueur.
+  assert.ok(buildAffiliateLink("en", "/part-tiquiz", sa).endsWith(AFFILIATE_LINK_MARKER));
+});
+
+test("le marqueur est ecrit a UN seul endroit", () => {
+  // Recopie ailleurs, il finirait par manquer sur un ecran et par
+  // promettre un cadeau que le serveur refuserait.
+  const racine = process.cwd();
+  const suspects: string[] = [];
+  const parcourir = (dir: string) => {
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (e.name === "node_modules" || e.name === ".next" || e.name === ".git") continue;
+      const complet = path.join(dir, e.name);
+      if (e.isDirectory()) { parcourir(complet); continue; }
+      if (!/\.(ts|tsx)$/.test(e.name)) continue;
+      if (complet.endsWith("lib/affiliate/links.ts")) continue;
+      if (complet.includes("/tests/")) continue;
+      // Les commentaires ont le droit de le NOMMER : ce qu'on traque,
+      // c'est un deuxieme endroit qui le FABRIQUE.
+      const src = fs
+        .readFileSync(complet, "utf8")
+        .replace(/\/\*[\s\S]*?\*\//g, "")
+        .replace(/^\s*\/\/.*$/gm, "");
+      if (/["'`&?]mo=1/.test(src)) suspects.push(path.relative(racine, complet));
+    }
+  };
+  parcourir(path.join(racine, "lib"));
+  parcourir(path.join(racine, "app"));
+  assert.deepEqual(suspects, [], `marqueur recopie : ${suspects.join(", ")}`);
+});
+
+test("la destination sur NOTRE domaine existe : sans elle le cadeau est mort", () => {
+  // Les tunnels Systeme.io ne nous transmettent rien de ce qu'on ajoute
+  // a l'URL. Le marqueur ne peut arriver chez nous que par un lien qui
+  // atterrit sur un de nos domaines.
+  const src = fs.readFileSync(
+    path.join(process.cwd(), "lib/affiliate/linkDestinations.ts"),
+    "utf8",
+  );
+  assert.ok(src.includes('"tiquiz_direct"'), "slug tiquiz_direct absent du type");
+  assert.ok(src.includes("https://tiquiz.fr/"), "destination tiquiz.fr absente du seed");
 });
