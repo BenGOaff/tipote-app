@@ -50,12 +50,13 @@ export const PRODUCT_FR_ONLY: Record<ContentProduct, boolean> = {
 export async function productAffiliateLink(
   product: ContentProduct,
   market: string,
-  sa: string,
+  /** Le code public de l'affiliée (`?ref=`). Jamais son `sa`. */
+  ref: string,
 ): Promise<string> {
   const path = await getLinkPath(
     product === "atelier" ? "atelier" : "tiquiz_main",
   );
-  return buildAffiliateLink(market, path, sa);
+  return buildAffiliateLink(market, path, ref);
 }
 
 export function contentHref(

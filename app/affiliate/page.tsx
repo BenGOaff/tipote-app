@@ -9,6 +9,7 @@ import { getAffiliateSession } from "@/lib/affiliate/session";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getDict, interpolate, normaliseLocale } from "./i18n";
 import { buildAffiliateLink } from "@/lib/affiliate/links";
+import { assurerRefAffiliee } from "@/lib/affiliate/refServer";
 import { getLinkPath } from "@/lib/affiliate/linkDestinations";
 import type { AffiliateDict } from "./i18n/types";
 import { TrendingUp, MousePointerClick, Users, ShoppingCart, GraduationCap, Wrench, ArrowRight, Gift } from "lucide-react";
@@ -118,14 +119,22 @@ export default async function AffiliateOverviewPage() {
   // depuis la table affiliate_link_destinations (admin-editable, defaut
   // /part-tiquiz).
   const mainPath = await getLinkPath("tiquiz_main");
-  const linkUrl = buildAffiliateLink(session.locale, mainPath, session.sa);
+  // LE CODE PUBLIC, JAMAIS LE `sa` (Béné, 24 août 2026). Fabriqué au
+  // premier passage si l'affiliée n'en a pas encore.
+  const refCode = await assurerRefAffiliee({
+    sa: session.sa,
+    email: session.email,
+    displayName: session.display_name,
+    refConnu: session.ref,
+  });
+  const linkUrl = refCode ? buildAffiliateLink(session.locale, mainPath, refCode) : null;
   // Lien Atelier du Quiz (formation, 70%). Bene 31 juillet 2026 : le
   // dashboard donnait l'impression que seul Tiquiz comptait, alors que
   // la priorite strategique est la formation. Les deux produits sont
   // desormais presentes cote a cote, l'Atelier en premier. Formation
   // vendue en FR uniquement -> carte affichee seulement en FR.
   const atelierPath = await getLinkPath("atelier");
-  const atelierUrl = buildAffiliateLink(session.locale, atelierPath, session.sa);
+  const atelierUrl = refCode ? buildAffiliateLink(session.locale, atelierPath, refCode) : null;
   const conversionRate =
     stats.total_clicks > 0
       ? `${((stats.total_sales / stats.total_clicks) * 100).toFixed(1)}%`
@@ -159,7 +168,8 @@ export default async function AffiliateOverviewPage() {
                 badge={t.overview.promote_atelier_badge}
                 pitch={t.overview.promote_atelier_pitch}
                 url={atelierUrl}
-                hint={interpolate(t.overview.promote_link_hint, { sa: session.sa })}
+                hint={interpolate(t.overview.promote_link_hint, { ref: refCode ?? "" })}
+                urlIndisponible={t.promouvoir.link_unavailable}
                 ctaLabel={t.overview.promote_atelier_cta}
                 ctaHref="/contenus"
                 highlight
@@ -172,7 +182,8 @@ export default async function AffiliateOverviewPage() {
               rate="40%"
               pitch={t.overview.promote_tiquiz_pitch}
               url={linkUrl}
-              hint={interpolate(t.overview.promote_link_hint, { sa: session.sa })}
+              hint={interpolate(t.overview.promote_link_hint, { ref: refCode ?? "" })}
+              urlIndisponible={t.promouvoir.link_unavailable}
               ctaLabel={t.overview.promote_tiquiz_cta}
               ctaHref="/promouvoir"
             />
@@ -229,6 +240,7 @@ function PromoteCard({
   pitch,
   url,
   hint,
+  urlIndisponible,
   ctaLabel,
   ctaHref,
   highlight = false,
@@ -239,8 +251,11 @@ function PromoteCard({
   rate: string;
   badge?: string;
   pitch: string;
-  url: string;
+  /** `null` = le code public n'a pas pu être préparé. On le DIT. */
+  url: string | null;
   hint: string;
+  /** La phrase à afficher quand il n'y a pas de lien. */
+  urlIndisponible: string;
   ctaLabel: string;
   ctaHref: string;
   highlight?: boolean;
@@ -276,8 +291,17 @@ function PromoteCard({
         <CardDescription className="leading-relaxed pt-2">{pitch}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-2">
-        <AffiliateLinkCopy url={url} />
-        <p className="text-xs text-muted-foreground">{hint}</p>
+        {/* Pas de code = pas de lien. Un champ vide se copie quand même,
+            et un lien muet se partage : chaque partage est alors une
+            vente perdue que personne ne peut plus retrouver. */}
+        {url ? (
+          <>
+            <AffiliateLinkCopy url={url} />
+            <p className="text-xs text-muted-foreground">{hint}</p>
+          </>
+        ) : (
+          <p className="text-sm text-destructive">{urlIndisponible}</p>
+        )}
         <Button variant={highlight ? "default" : "outline"} size="sm" asChild className="mt-1">
           <Link href={ctaHref}>
             {ctaLabel}

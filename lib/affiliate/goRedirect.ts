@@ -233,9 +233,15 @@ export async function recordClick(params: {
 /**
  * L'URL de destination finale.
  *
- * `?sa=` est propagé tant que la vente se fait chez Systeme.io : c'est
- * lui qui porte encore l'attribution. Le jour où on vend en direct, le
- * cookie prendra le relais et cette ligne pourra disparaître.
+ * Elle porte `?ref=<code public>` depuis le 24 août 2026, et plus
+ * jamais le `?sa=` de Systeme.io. Béné : "je ne veux surtout pas de sa
+ * dans les nouveaux liens sinon y'a forcément un moment où on va
+ * merder." Le `sa` reste la clé INTERNE des commissions, il ne sort
+ * plus dans une URL publique.
+ *
+ * Conséquence directe et voulue : le nom du paramètre dit à lui seul la
+ * génération du lien. Un `?ref=` vient d'ici, un `?sa=` vient d'un
+ * ancien tunnel Systeme.io.
  */
 export async function destinationUrl(
   destination: string,
@@ -247,7 +253,7 @@ export async function destinationUrl(
     const { affiliateOrigin } = await import("@/lib/affiliate/links");
     return `${affiliateOrigin("fr")}${path.startsWith("/") ? "" : "/"}${path}`;
   }
-  return buildAffiliateLink(affiliate.locale, path, affiliate.sa);
+  return buildAffiliateLink(affiliate.locale, path, affiliate.ref);
 }
 
 /** L'en-tête `Set-Cookie` de la visite, ou `null` si rien à poser. */

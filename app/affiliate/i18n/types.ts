@@ -41,6 +41,7 @@ export type AffiliateDict = {
   nav: {
     overview: string;
     promouvoir: string;
+    liens: string;
     contenus: string;
     trial: string;
     revenus: string;
@@ -201,6 +202,10 @@ export type AffiliateDict = {
 
   // ─── Default LinksManager link destinations ──────────────────────
   link_destinations: {
+    // Le bon de commande sur NOTRE domaine : le seul lien qui ouvre
+    // les 30 jours offerts (cf. lib/affiliate/links.ts).
+    tiquiz_direct_label: string;
+    tiquiz_direct_description: string;
     tiquiz_main_label: string;
     tiquiz_main_description: string;
     tiquiz_free_label: string;
@@ -222,11 +227,41 @@ export type AffiliateDict = {
   };
 
   // ─── Promouvoir ──────────────────────────────────────────────────
+  // ─── Mes liens (inspiré de l'espace ambassadeur Waalaxy, 24 août) ──
+  liens: {
+    page_title: string;
+    page_subtitle: string;
+    stat_links: string;
+    stat_clicks: string;
+    stat_signups: string;
+    stat_commissions: string;
+    col_name: string;
+    col_link: string;
+    col_clicks: string;
+    col_signups: string;
+    col_paying: string;
+    col_commissions: string;
+    col_actions: string;
+    copy_short: string;
+    copy_long: string;
+    open: string;
+    empty_title: string;
+    empty_body: string;
+    empty_cta: string;
+  };
   promouvoir: {
     page_title: string;
     page_subtitle: string;
     market_label: string; // "Marché" (sélecteur de marché de diffusion)
     market_hint: string; // "Liens et contenus adaptés au marché {market}."
+    // Le code public n'a pas pu être préparé : on le DIT au lieu
+    // d'afficher un champ vide (un lien muet se partage).
+    link_unavailable: string;
+    // Le mois offert : l'argument de vente de l'affilié, et sa limite.
+    mois_offert_title: string;
+    mois_offert_body: string;
+    mois_offert_note: string;
+    mois_offert_limit: string;
     main_link_title: string;
     main_link_description: string;
     warning_naked_url_title: string;

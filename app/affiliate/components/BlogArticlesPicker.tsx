@@ -2,7 +2,9 @@
 
 // Liste des articles de blog (FR ou US selon le marché choisi) que
 // l'affilié peut promouvoir directement. Chaque ligne propose un bouton
-// "Copier" qui copie le lien tracké (article URL + ?sa=<sa>).
+// "Copier" qui copie le lien tracké (article URL + ?ref=<code>).
+// `ref` et pas `sa` depuis le 24 août : nos liens ne portent plus
+// l'identifiant Systeme.io (cf. lib/affiliate/links.ts).
 //
 // Adeline (1er juin 2026) : "ce serait cool de pusher les articles de
 // blog pour créer des liens affiliés depuis les articles. L'user choisit
@@ -20,11 +22,17 @@ import type { BlogArticle } from "@/lib/affiliate/blogFeed";
 
 type Props = {
   articles: BlogArticle[];
-  sa: string;
+  /**
+   * Le code public de l'affiliée (`?ref=`), jamais son `sa`.
+   *
+   * La prop ne s'appelle PAS `ref` : React réserve ce nom sur un
+   * composant et le retirerait des props au lieu de le transmettre.
+   */
+  refCode: string;
   market: "fr" | "en";
 };
 
-export function BlogArticlesPicker({ articles, sa, market }: Props) {
+export function BlogArticlesPicker({ articles, refCode, market }: Props) {
   const t = useDict();
   const [filter, setFilter] = useState("");
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
@@ -40,7 +48,7 @@ export function BlogArticlesPicker({ articles, sa, market }: Props) {
   }, [articles, filter]);
 
   async function copyLink(article: BlogArticle) {
-    const trackedUrl = buildAffiliateLink(market, article.url, sa);
+    const trackedUrl = buildAffiliateLink(market, article.url, refCode);
     try {
       await navigator.clipboard.writeText(trackedUrl);
       setCopiedUrl(article.url);
@@ -87,7 +95,7 @@ export function BlogArticlesPicker({ articles, sa, market }: Props) {
             </p>
           ) : (
             filtered.map((article) => {
-              const trackedUrl = buildAffiliateLink(market, article.url, sa);
+              const trackedUrl = buildAffiliateLink(market, article.url, refCode);
               const copied = copiedUrl === article.url;
               return (
                 <div

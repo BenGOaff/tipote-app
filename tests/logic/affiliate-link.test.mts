@@ -32,6 +32,7 @@ import {
   resolveClickSource,
   sanitizeChannel,
 } from "../../lib/affiliate/clickSource.ts";
+import { AFFILIATE_LINK_PARAM, buildAffiliateLink } from "../../lib/affiliate/links.ts";
 import {
   VISIT_COOKIE_MAX_AGE_SECONDS,
   parseVisit,
@@ -231,4 +232,133 @@ test("le `?sa=` reste propage tant que Systeme.io encaisse", () => {
     "utf8",
   );
   assert.ok(src.includes("buildAffiliateLink"), "la destination ne porte plus le ?sa=");
+});
+
+// -- NOS LIENS PORTENT `?ref=`, PLUS JAMAIS `?sa=` -----------------------
+//
+// Bene, 24 aout 2026 : "je ne veux surtout pas de sa dans les nouveaux
+// liens sinon y'a forcement un moment ou on va merder, trouver autre
+// chose nom de zeus ! Y'a pas que ce systeme, c'est celui de systeme io
+// c'est tout !!"
+//
+// Le `sa` reste la cle INTERNE des commissions (tout l'historique est
+// dessus). Ce qui change, c'est qu'il ne sort plus dans une URL
+// publique. Effet de bord decisif : le NOM DU PARAMETRE dit a lui seul
+// la generation du lien, ce qui a permis de supprimer le marqueur
+// `mo=1` du 23 aout.
+
+test("un lien fabrique ici porte le code public, et RIEN d'autre", () => {
+  const lien = buildAffiliateLink("fr", "/part-tiquiz", "jocelyne");
+  assert.equal(lien, "https://www.tipote.fr/part-tiquiz?ref=jocelyne");
+
+  // Une URL absolue (l'affiliee a choisi sa cible) le porte aussi.
+  const article = buildAffiliateLink("en", "https://www.tipote.blog/x?utm=1", "jocelyne");
+  assert.equal(article, "https://www.tipote.blog/x?utm=1&ref=jocelyne");
+
+  // Le marche ne change que le domaine, jamais le parametre.
+  assert.ok(buildAffiliateLink("en", "/part-tiquiz", "bene").endsWith("?ref=bene"));
+});
+
+test("AUCUN lien fabrique ici ne porte de `sa`", () => {
+  // C'est la demande, mot pour mot. Un `?sa=` qui reviendrait ici
+  // remelangerait les deux systemes, et la premiere consequence serait
+  // d'offrir le mois sur des liens qui ne doivent pas l'ouvrir.
+  for (const cible of ["/part-tiquiz", "/atelier-du-quiz", "", "https://exemple.fr/x"]) {
+    const lien = buildAffiliateLink("fr", cible, "jocelyne");
+    assert.ok(!/[?&]sa=/.test(lien), `un sa dans ${lien}`);
+    assert.ok(!/[?&]mo=/.test(lien), `un marqueur mo dans ${lien}`);
+  }
+  assert.equal(AFFILIATE_LINK_PARAM, "ref");
+});
+
+test("le code est encode : un lien ne se casse pas sur un caractere", () => {
+  // `sanitizeRef` ne laisse passer que [a-z0-9-], mais cette fonction
+  // recoit une chaine, pas une garantie.
+  const lien = buildAffiliateLink("fr", "/x", "a b");
+  assert.ok(!lien.includes(" "), lien);
+});
+
+test("le parametre est ecrit a UN seul endroit", () => {
+  // Recopie ailleurs, il finirait par diverger, et le jour ou il diverge
+  // plus personne n'est paye.
+  const racine = process.cwd();
+  const suspects: string[] = [];
+  const parcourir = (dir: string) => {
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (e.name === "node_modules" || e.name === ".next" || e.name === ".git") continue;
+      const complet = path.join(dir, e.name);
+      if (e.isDirectory()) { parcourir(complet); continue; }
+      if (!/\.(ts|tsx)$/.test(e.name)) continue;
+      if (complet.endsWith("lib/affiliate/links.ts")) continue;
+      if (complet.includes("/tests/")) continue;
+      // Les commentaires ont le droit de le NOMMER : ce qu'on traque,
+      // c'est un deuxieme endroit qui FABRIQUE un lien.
+      const src = fs
+        .readFileSync(complet, "utf8")
+        .replace(/\/\*[\s\S]*?\*\//g, "")
+        .replace(/^\s*\/\/.*$/gm, "");
+      // Un appel a NOTRE propre API (`/api/affiliate/ref?ref=...`) n'est
+      // pas un lien d'affiliation : ce qu'on traque, c'est une deuxieme
+      // fabrication de lien PUBLIC.
+      const fabrique = src
+        .split("\n")
+        .some((l) => /[?&`]ref=\$\{/.test(l) && !l.includes("/api/"));
+      if (fabrique) suspects.push(path.relative(racine, complet));
+    }
+  };
+  parcourir(path.join(racine, "lib"));
+  parcourir(path.join(racine, "app"));
+  assert.deepEqual(suspects, [], `parametre recopie : ${suspects.join(", ")}`);
+});
+
+test("le `sa` reste la cle INTERNE, il n'est pas supprime", () => {
+  // Toutes les commissions, conversions et versements sont dessus : le
+  // retirer de la base perdrait l'historique. Ce qui est interdit, c'est
+  // qu'il sorte dans une URL publique.
+  const session = fs.readFileSync(
+    path.join(process.cwd(), "lib/affiliate/session.ts"),
+    "utf8",
+  );
+  assert.match(session, /sa: row\.sa/);
+  assert.match(session, /ref: row\.ref/);
+});
+
+test("toute affiliee finit par avoir un code, meme inscrite avant", () => {
+  // Sans code, `buildAffiliateLink` n'aurait rien a ecrire, et le repli
+  // evident (son `sa`) ramenerait exactement ce qui vient d'etre refuse.
+  const src = fs.readFileSync(
+    path.join(process.cwd(), "lib/affiliate/refServer.ts"),
+    "utf8",
+  );
+  assert.match(src, /export async function assurerRefAffiliee/);
+  // Le code de repli est DETERMINISTE : deux onglets ouverts doivent
+  // proposer le meme, sinon on ecrit deux codes pour la meme personne.
+  assert.ok(!/randomBytes|Math\.random/.test(src), "le code de repli est tire au hasard");
+});
+
+test("les ecrans ne proposent AUCUN lien plutot qu'un lien muet", () => {
+  // Un lien sans code se partage quand meme, et chaque partage est une
+  // vente perdue que personne ne peut plus retrouver.
+  for (const f of ["app/affiliate/promouvoir/page.tsx", "app/affiliate/page.tsx"]) {
+    const src = fs.readFileSync(path.join(process.cwd(), f), "utf8");
+    assert.match(src, /refCode \? buildAffiliateLink/, `${f} : lien construit sans code`);
+  }
+});
+
+test("une destination ajoutee en code n'exige plus de migration", () => {
+  // Chaque nouvelle destination demandait un INSERT a passer a la main,
+  // donc une migration de plus a ne pas oublier : exactement la
+  // mecanique qui a coute 15 jours de stats en juin.
+  const src = fs.readFileSync(
+    path.join(process.cwd(), "lib/affiliate/linkDestinations.ts"),
+    "utf8",
+  );
+  assert.match(src, /const manquants = FALLBACK\.filter\(\(f\) => !connus\.has\(f\.slug\)\)/);
+  // Et ca ne ressuscite rien : l'admin desactive (enabled=false), il ne
+  // supprime jamais une ligne.
+  const admin = fs.readFileSync(
+    path.join(process.cwd(), "app/affiliate/api/admin/links/route.ts"),
+    "utf8",
+  );
+  assert.ok(!/\.delete\(\)/.test(admin), "l'admin supprime des lignes : le seed les ferait revenir");
 });

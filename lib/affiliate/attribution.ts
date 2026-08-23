@@ -13,6 +13,7 @@
 // Si Systeme.io retry le webhook on ignore silencieusement.
 
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { REF_MIN_LENGTH, sanitizeRef } from "@/lib/affiliate/ref";
 
 const ATTRIBUTION_WINDOW_DAYS = 90;
 
@@ -51,6 +52,20 @@ export type AttributeSaleInput = {
    * qu'elle est la preuve d'un passage réel, pas d'un paramètre d'URL.
    */
   sa_hint?: string | null;
+  /**
+   * LE CODE PUBLIC PORTÉ PAR LE LIEN (`?ref=jocelyne`).
+   *
+   * Depuis le 24 août 2026, nos liens ne portent plus le `sa` de
+   * Systeme.io (Béné : "je ne veux surtout pas de sa dans les nouveaux
+   * liens"). C'est donc ce champ qui arrive sur une vente prise sur
+   * notre propre bon de commande.
+   *
+   * Il se traduit en `sa` ICI, contre la table `affiliates`, avec les
+   * MÊMES contrôles ensuite : l'affiliée doit exister, être active, et
+   * ne pas être l'acheteur. `ref_hint` et `sa_hint` sont deux entrées
+   * d'une même porte, jamais deux portes.
+   */
+  ref_hint?: string | null;
 };
 
 export type AttributeSaleResult =
@@ -59,6 +74,39 @@ export type AttributeSaleResult =
   | { status: "duplicate" }
   | { status: "affiliate_not_registered"; sa: string }
   | { status: "error"; error: string };
+
+/**
+ * Le `sa` derrière un code public, ou `null`.
+ *
+ * Regarde le code ACTUEL puis les ANCIENS (`affiliate_ref_aliases`) :
+ * une affiliée qui change de code a des liens dans des vidéos déjà
+ * publiées, et ces liens doivent continuer de la payer. C'est la même
+ * garantie que `resolveAffiliateByRef` côté redirection, et les deux
+ * doivent rester d'accord.
+ */
+async function saDepuisRef(brut: string | null | undefined): Promise<string | null> {
+  const ref = sanitizeRef(brut);
+  if (ref.length < REF_MIN_LENGTH) return null;
+
+  const { data: direct, error } = await supabaseAdmin
+    .from("affiliates")
+    .select("sa")
+    .ilike("ref", ref)
+    .maybeSingle();
+  if (error) {
+    // On ne se tait pas : c'est de l'argent dû à quelqu'un.
+    console.error(`[affiliate/attribution] lecture du code ${ref} impossible : ${error.message}`);
+    return null;
+  }
+  if (direct) return (direct as { sa: string }).sa;
+
+  const { data: alias } = await supabaseAdmin
+    .from("affiliate_ref_aliases")
+    .select("sa")
+    .eq("ref", ref)
+    .maybeSingle();
+  return alias ? (alias as { sa: string }).sa : null;
+}
 
 async function findRecentConversion(email: string): Promise<{ id: string; sa: string } | null> {
   const since = new Date(Date.now() - ATTRIBUTION_WINDOW_DAYS * 24 * 3600 * 1000).toISOString();
@@ -86,8 +134,11 @@ export async function attributeSale(input: AttributeSaleInput): Promise<Attribut
     // d'un passage réel, pas un paramètre d'URL. L'indice du lien ne sert
     // que là où il n'y a rien à retrouver (notre propre bon de commande).
     const conversion = await findRecentConversion(email);
+    // Le code public d'abord (c'est ce que portent tous nos liens
+    // depuis le 24 août), le `sa` ensuite (anciens liens Systeme.io).
+    const saDuRef = await saDepuisRef(input.ref_hint);
     const saHint = (input.sa_hint ?? "").trim();
-    const sa = conversion?.sa ?? (saHint || null);
+    const sa = conversion?.sa ?? saDuRef ?? (saHint || null);
     if (!sa) return { status: "no_affiliate_match" };
 
     // Vérifie que l'affilié existe dans notre registre (sinon refuse

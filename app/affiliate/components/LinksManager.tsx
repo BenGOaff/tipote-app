@@ -33,13 +33,19 @@ async function persist(items: LinkItem[]) {
 }
 
 export function LinksManager({
-  sa,
+  refCode,
   locale,
   defaults,
   saved,
   sectionTitle,
 }: {
-  sa: string;
+  /**
+   * Le code public de l'affiliée (`?ref=`), jamais son `sa`.
+   *
+   * La prop ne s'appelle PAS `ref` : React réserve ce nom sur un
+   * composant et le retirerait des props au lieu de le transmettre.
+   */
+  refCode: string;
   /** Langue d'interface de l'affilié → choisit le domaine (FR=.fr, EN=.blog). */
   locale: string;
   defaults: LinkItem[];
@@ -102,7 +108,7 @@ export function LinksManager({
       <div className="space-y-1">
         <Label className="text-xs">{tl.destination_field}</Label>
         <Input value={draft.path} onChange={(e) => setDraft((d) => ({ ...d, path: e.target.value }))} placeholder={interpolate(tl.destination_placeholder, { host: marketHost })} />
-        <p className="text-[11px] text-muted-foreground">{interpolate(tl.destination_hint, { host: marketHost, sa })}</p>
+        <p className="text-[11px] text-muted-foreground">{interpolate(tl.destination_hint, { host: marketHost, ref: refCode })}</p>
       </div>
       <div className="flex items-center gap-2">
         <Button size="sm" onClick={save} disabled={!draft.label.trim() || !draft.path.trim()}>
@@ -148,7 +154,7 @@ export function LinksManager({
                     </Button>
                   </div>
                 </div>
-                <AffiliateLinkCopy url={buildAffiliateLink(locale, item.path, sa)} />
+                <AffiliateLinkCopy url={buildAffiliateLink(locale, item.path, refCode)} />
               </>
             )}
           </CardContent>

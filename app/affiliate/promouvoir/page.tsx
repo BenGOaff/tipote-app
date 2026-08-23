@@ -5,7 +5,7 @@
 // désormais dans /contenus.
 
 import { redirect } from "next/navigation";
-import { Link2, FileText, ExternalLink, AlertTriangle, GraduationCap } from "lucide-react";
+import { Link2, FileText, ExternalLink, AlertTriangle, GraduationCap, Gift } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import { LinksManager, type LinkItem } from "../components/LinksManager";
 import { BlogArticlesPicker } from "../components/BlogArticlesPicker";
 import { getDict, interpolate, normaliseLocale } from "../i18n";
 import { buildAffiliateLink } from "@/lib/affiliate/links";
+import { assurerRefAffiliee } from "@/lib/affiliate/refServer";
 import { fetchBlogArticles } from "@/lib/affiliate/blogFeed";
 import { resolveAffiliateMarket, localeLabel, AFFILIATE_LIVE_LOCALES } from "@/lib/affiliate/contentLocales";
 import { ContentLocalePicker } from "../components/ContentLocalePicker";
@@ -36,6 +37,7 @@ function buildLinkDestinations(
   // (DB), le label/description vient de l'i18n locale par locale.
   // Ordre = sort_order de la table (cf. getActiveLinkDestinations).
   const I18N: Record<LinkDestinationSlug, { label: string; description: string }> = {
+    tiquiz_direct:       { label: ld.tiquiz_direct_label,       description: ld.tiquiz_direct_description },
     atelier:             { label: ld.atelier_label,             description: ld.atelier_description },
     tiquiz_main:         { label: ld.tiquiz_main_label,         description: ld.tiquiz_main_description },
     tiquiz_free:         { label: ld.tiquiz_free_label,         description: ld.tiquiz_free_description },
@@ -83,14 +85,25 @@ export default async function PromouvoirPage({
   // Systeme.io -> les affilies perdaient leur commission. Maintenant lu
   // depuis la table (defaut /part-tiquiz).
   const mainPath = await getLinkPath("tiquiz_main");
-  const baseLink = buildAffiliateLink(market, mainPath, session.sa);
+  // LE CODE PUBLIC, JAMAIS LE `sa` (Béné, 24 août 2026). Fabriqué au
+  // premier passage si l'affiliée n'en a pas encore. `null` = la base
+  // n'a pas répondu : on n'affiche AUCUN lien plutôt qu'un lien qui
+  // n'attribuerait rien, parce qu'un lien muet se partage.
+  const refCode = await assurerRefAffiliee({
+    sa: session.sa,
+    email: session.email,
+    displayName: session.display_name,
+    refConnu: session.ref,
+  });
+  const baseLink = refCode ? buildAffiliateLink(market, mainPath, refCode) : null;
   // Lien Atelier du Quiz (70%) mis au meme niveau que le lien Tiquiz en tete
   // de page (Bene 31 juillet 2026). Hors marche FR, le slug a ete retire
   // plus haut : on n'affiche alors que le lien Tiquiz.
   const atelierAvailable = pathBySlug.has("atelier");
-  const atelierLink = atelierAvailable
-    ? buildAffiliateLink(market, pathBySlug.get("atelier") as string, session.sa)
-    : null;
+  const atelierLink =
+    atelierAvailable && refCode
+      ? buildAffiliateLink(market, pathBySlug.get("atelier") as string, refCode)
+      : null;
   // Articles de blog du marché courant — 20 derniers, antéchrono. Best-effort :
   // si le feed est down, on retourne tableau vide et la section n'affiche rien.
   const blogMarket: "fr" | "en" = market === "en" ? "en" : "fr";
@@ -166,10 +179,40 @@ export default async function PromouvoirPage({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <AffiliateLinkCopy url={baseLink} />
+            {/* Pas de code = pas de lien. On le DIT au lieu d'afficher un
+                champ vide : un lien muet se partage, et chaque partage
+                est une vente perdue que personne ne peut retrouver. */}
+            {baseLink ? (
+              <AffiliateLinkCopy url={baseLink} />
+            ) : (
+              <p className="text-sm text-destructive">{t.promouvoir.link_unavailable}</p>
+            )}
           </CardContent>
         </Card>
       </div>
+
+      {/* ── LE MOIS OFFERT, ARGUMENT DE VENTE DE L'AFFILIE ──
+          Bene 23 aout 2026 : "qu'ils puissent offrir un mois gratuit pour
+          tester a tous leurs affilies comme argument de vente".
+          La NOTE n'est pas un detail : le cadeau ne s'ouvre que sur les
+          liens fabriques ici, qui portent `?ref=` et pas `?sa=` (cf.
+          lib/affiliate/links.ts). Un affilie qui continue de partager son
+          ancien lien Systeme.io serait paye normalement mais promettrait
+          un mois que personne ne recevrait, et c'est LUI qui passerait
+          pour un menteur. */}
+      <Card className="border-primary/40 bg-primary/5">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Gift className="h-4 w-4 text-primary" />
+            {t.promouvoir.mois_offert_title}
+          </CardTitle>
+          <CardDescription>{t.promouvoir.mois_offert_body}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          <p>{t.promouvoir.mois_offert_note}</p>
+          <p className="text-muted-foreground text-xs">{t.promouvoir.mois_offert_limit}</p>
+        </CardContent>
+      </Card>
 
       {/* Garde-fou Bene 8 juin 2026 : l'URL "nue" tipote.fr/tiquiz n'est
           PAS taggee affiliation cote Systeme.io, donc un affilie qui la
@@ -186,7 +229,7 @@ export default async function PromouvoirPage({
       </Card>
 
       <LinksManager
-        sa={session.sa}
+        refCode={refCode ?? ""}
         locale={market}
         defaults={LINK_DESTINATIONS}
         saved={savedLinks}
@@ -205,7 +248,7 @@ export default async function PromouvoirPage({
           hop il a son lien." */}
       <BlogArticlesPicker
         articles={blogArticles}
-        sa={session.sa}
+        refCode={refCode ?? ""}
         market={blogMarket}
       />
 

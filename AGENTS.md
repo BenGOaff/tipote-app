@@ -1551,3 +1551,168 @@ avec une ligne rouge dans `pm2 logs`.
 `lib/support/relayRules.ts`, à part de `relayTicket.ts` qui importe
 `supabaseAdmin` : un module qui exige des variables au chargement est un
 module qu'aucun test ne peut importer.
+
+## Le mois offert ne s'ouvre QUE sur un lien du système courant (23 août 2026)
+
+Béné : "on le met sur l'espace affilié en expliquant que c'est
+uniquement avec le système d'affiliation en cours et pas sur les anciens
+liens systeme io (qui restent valides mais ne seront plus ceux à
+utiliser dans le futur)."
+
+**Le piège : les deux générations de liens portent le MÊME `?sa=`.**
+Même forme, même propriétaire. Le `sa` dit QUI est payé, il ne peut pas
+dire par quelle génération de lien la personne est venue : le déduire
+reviendrait à offrir le mois sur les anciens liens Systeme.io, ce qui
+est exactement ce qui est exclu.
+
+**Règle : `buildAffiliateLink()` ajoute `&mo=1`, et c'est le SEUL
+endroit qui l'écrit.** Tout ce que l'espace affilié fabrique aujourd'hui
+le porte (Promouvoir, `/go/<ref>`, les articles de blog) ; rien de ce
+qui a été copié dans Systeme.io ne le portera jamais. Les anciens liens
+commissionnent exactement comme avant : c'est le CADEAU qui est réservé,
+pas la vente. Le test `affiliate-link.test.mts` interdit une deuxième
+écriture du marqueur.
+
+**Sans destination sur le domaine de Tiquiz, le cadeau est mort.** Les
+tunnels Systeme.io ne transmettent rien de ce qu'on ajoute à l'URL : leur
+page ne nous passe pas la query. D'où le slug `tiquiz_direct`
+(`https://tiquiz.fr/`, migration `20260823_affiliate_tiquiz_direct.sql`),
+le seul lien par lequel le marqueur peut arriver jusqu'au middleware de
+Tiquiz. Les autres destinations restent en place et restent valides.
+
+**La page Promouvoir DOIT porter la note.** Un affilié qui continue de
+partager son ancien lien Systeme.io serait payé normalement mais
+promettrait un mois que personne ne recevrait : c'est LUI qui passerait
+pour un menteur. La carte dit les trois choses (l'argument, la limite
+d'un mois par personne, et que ça ne marche qu'avec les liens de cette
+page), en 6 langues.
+
+Le lecteur du marqueur vit côté Tiquiz
+(`lib/affiliate/moisOffertLien.ts`), qui le range dans un cookie
+`httpOnly` dont la VALEUR est l'identifiant. Toute évolution du format
+se porte des deux côtés.
+
+## Nos liens portent `?ref=`, plus jamais le `?sa=` de Systeme.io (24 août 2026)
+
+Béné : "je ne veux surtout pas de sa dans les nouveaux liens sinon y'a
+forcément un moment où on va merder, trouver autre chose nom de zeus !
+Y'a pas que ce système, c'est celui de systeme io c'est tout !!"
+
+Elle a raison, et le mot juste est "le leur". `sa` est l'identifiant que
+Systeme.io fabrique pour SES tunnels. Le reprendre dans nos liens
+mélangeait deux systèmes qui n'ont pas les mêmes règles, et rendait les
+deux générations de liens INDISCERNABLES une fois arrivées chez nous.
+
+**Le système de codes publics existait déjà** (`lib/affiliate/ref.ts`,
+`?ref=jocelyne`), il n'était branché nulle part. Il l'est.
+
+| Ce qui vit où | |
+|---|---|
+| `sa` | la CLÉ INTERNE : commissions, conversions, versements. Tout l'historique est dessus, il ne bouge pas. |
+| `ref` | le code PUBLIC : c'est lui, et lui seul, qui sort dans une URL. |
+
+**Trois pièces, les trois obligatoires :**
+
+1. `buildAffiliateLink(locale, path, ref)` écrit `?ref=`. Le paramètre
+   est nommé UNE fois (`AFFILIATE_LINK_PARAM`), le test interdit qu'un
+   deuxième endroit fabrique un lien public.
+2. `assurerRefAffiliee()` (`lib/affiliate/refServer.ts`) : toute
+   affiliée a un code, fabriqué au premier écran qui en a besoin si elle
+   n'en avait pas. **Le code de repli est DÉTERMINISTE** (dérivé du
+   `sa`) : deux onglets ouverts doivent proposer le même, sinon on écrit
+   deux codes pour la même personne. Pas de code -> AUCUN lien affiché,
+   jamais un lien muet : un lien muet se partage, et chaque partage est
+   une vente perdue que personne ne peut plus retrouver.
+3. `attributeSale({ ref_hint })` traduit le code en `sa` contre la
+   table, **anciens codes compris** (`affiliate_ref_aliases`).
+   `sa_hint` reste, pour les anciens liens.
+
+**EFFET DE BORD DÉCISIF : le nom du paramètre dit la génération du
+lien.** Un `?ref=` vient d'ici, un `?sa=` vient d'un ancien tunnel
+Systeme.io. Le marqueur `mo=1` du 23 août est donc SUPPRIMÉ : le mois
+offert s'ouvre sur un `?ref=`, point. Un marqueur en moins, c'est un
+endroit en moins où on pouvait l'oublier.
+
+**Les deux valeurs ne se mélangent JAMAIS.** Elles voyagent dans des
+champs séparés (`ref`/`sa` dans le corps, `affiliate_code`/
+`affiliate_ref` dans les metadata Stripe, 3e et 6e champs du `custom_id`
+PayPal). Deviner à la forme marcherait aujourd'hui et casserait le jour
+où une affiliée choisit un code qui ressemble à un `sa`.
+
+**Et une prop React ne s'appelle pas `ref`** : React réserve ce nom sur
+un composant et le retire des props au lieu de le transmettre. D'où
+`refCode`.
+
+## Une destination ajoutée en code n'exige plus de migration
+
+`getAllLinkDestinations()` complète les lignes de la base avec les slugs
+du seed qu'elle ne contient PAS ENCORE. Sans ça, chaque nouvelle
+destination demandait un `INSERT` à passer à la main : une migration de
+plus à ne pas oublier, exactement la mécanique qui a coûté 15 jours de
+statistiques en juin.
+
+Ça ne ressuscite rien : l'admin ne SUPPRIME jamais une ligne, il pose
+`enabled = false`. Une destination éteinte a donc une ligne, elle n'est
+pas "manquante", et le seed ne la recouvre pas. Le test l'exige.
+
+## L'audit du 24 août : ce qui pouvait merder, et qui a été réparé
+
+Béné : "tu me fais un audit complet de tout ce qui pourrait merder aussi
+bien dans les abonnements, que les paiements ou l'affiliation ou
+ticketing... Je veux un système fiable et stable."
+
+Cinq trous, tous invisibles jusqu'à la production. Garde-fou commun :
+`tests/logic/audit-24-aout.test.mts` (ici et côté Tiquiz).
+
+**1. La limite par IP du centre d'aide se désarmait toute seule.**
+`compteur.clear()` remettait à zéro le compteur de TOUT LE MONDE dès que
+la table dépassait sa taille. Un garde-fou qu'on peut désarmer en le
+remplissant n'en est pas un, et celui-ci se désarmait aussi un jour de
+trafic normal. On purge ce qui a EXPIRÉ, puis les plus anciennes.
+
+**2. La limite doit rester ICI, et AVANT le relais.** Le relais vers
+Tiquiz part toujours de la même IP serveur : la limite de là-bas
+couperait tout le centre d'aide dès la sixième personne de la journée.
+Le test vérifie l'ORDRE des appels, pas des imports (ceux-ci sont rangés
+alphabétiquement en haut du fichier : même piège que le 23 août).
+
+Les quatre autres vivent dans le repo Tiquiz (verrou des webhooks,
+remboursement d'échéance, domaines de vente, comparaison de secret) et
+sont décrits dans SON `AGENTS.md`.
+
+## L'espace affilié s'inspire de Waalaxy : un lien par canal (24 août 2026)
+
+Béné, en montrant l'espace ambassadeur de Waalaxy : "sers-t'en pour
+améliorer l'UX et l'UI de notre design, j'aime beaucoup ce qu'ils font
+c'est moderne et ça donne envie."
+
+Ce qu'ils font de mieux : leur page "Mes liens d'affiliation" est un
+TABLEAU. Une ligne par lien nommé, avec ses propres clics, ses propres
+inscrits, ses propres commissions. "Lien par défaut" 915 clics,
+"Upgrade" 96, "Demo" 5 : en un coup d'oeil, l'affiliée sait lequel de
+ses canaux travaille.
+
+**La donnée dormait depuis le 19 août.** `affiliate_links`,
+`affiliate_clicks.link_id` et `affiliate_conversions.link_id` existent
+déjà : la page `/liens` n'ajoute aucune colonne, elle affiche ce qui
+était écrit et que personne ne montrait.
+
+**Quatre décisions à ne pas défaire** (`lib/affiliate/mesLiens.ts`, pur
+et testé) :
+
+- **le lien du tableau passe par NOTRE redirecteur** (`/go/<code>/...`).
+  Un lien qui va droit sur la page de vente commissionne toujours (le
+  `?ref=` est propagé) mais ses chiffres restent à zéro POUR TOUJOURS,
+  et l'affiliée conclut que son canal ne marche pas ;
+- **le meilleur canal en premier.** Trier par date mettrait son plus
+  vieux lien en haut et son meilleur canal en bas ;
+- **le lien par défaut ne se supprime pas.** Il vit dans des vidéos
+  déjà publiées, et un lien mort est une vente perdue pour toujours ;
+- **les chiffres du bandeau sont la SOMME du tableau.** Deux chiffres
+  calculés séparément finissent toujours par se contredire, et c'est
+  celui du haut qu'elle croit.
+
+Et le VIDE parle (titre, phrase, sortie) : un tableau vide sans un mot
+se lit "c'est cassé" ou "je n'ai rien à faire ici", et les deux coûtent
+une affiliée. Sur mobile, des cartes : un tableau à sept colonnes sur un
+téléphone se fait glisser sans jamais voir la colonne qui compte.

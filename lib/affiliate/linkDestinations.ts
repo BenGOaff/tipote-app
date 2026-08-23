@@ -14,6 +14,7 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export type LinkDestinationSlug =
+  | "tiquiz_direct"
   | "tiquiz_main"
   | "tiquiz_free"
   | "tiquiz_monthly"
@@ -34,7 +35,13 @@ export type LinkDestinationRow = {
 // L'Atelier du Quiz (formation, commission 70%) : tunnel affilié
 // tipote.fr/atelier-du-quiz. Uniquement FR (la formation n'est vendue
 // qu'en français) : la page Promouvoir filtre ce slug hors marché FR.
+// `tiquiz_direct` est le SEUL lien qui ouvre les 30 jours offerts, et
+// ce n'est pas un choix : c'est le seul qui atterrit sur NOTRE domaine,
+// donc le seul dont le `?ref=` arrive jusqu'a notre middleware. Les
+// autres pointent vers des tunnels Systeme.io, qui commissionnent comme
+// avant mais ne nous transmettent rien de ce qu'on ajoute a l'URL.
 const FALLBACK: LinkDestinationRow[] = [
+  { slug: "tiquiz_direct",       path: "https://tiquiz.fr/",         sort_order: 8,  enabled: true },
   { slug: "atelier",             path: "/atelier-du-quiz",           sort_order: 5,  enabled: true },
   { slug: "tiquiz_main",         path: "/part-tiquiz",               sort_order: 10, enabled: true },
   { slug: "tiquiz_free",         path: "/part-tiquiz-gratuit",       sort_order: 20, enabled: true },
@@ -44,17 +51,38 @@ const FALLBACK: LinkDestinationRow[] = [
   { slug: "tiquiz_yearly_plus",  path: "/tiquiz-annuel-plus-part",   sort_order: 60, enabled: true },
 ];
 
-/** Lit toutes les destinations (toutes lignes, y compris désactivées —
- *  l'admin a besoin de voir les desactivees pour les ressusciter). En
- *  cas d'echec DB (table absente, RLS), fallback hard-coded. */
+/**
+ * Toutes les destinations (y compris désactivées : l'admin a besoin de
+ * les voir pour les ressusciter).
+ *
+ * -- UNE DESTINATION AJOUTÉE EN CODE N'EXIGE PLUS DE MIGRATION --------
+ *
+ * Les lignes de la BASE gagnent toujours, et les slugs du seed qu'elle
+ * ne contient PAS ENCORE sont ajoutés par dessus. Sans ça, chaque
+ * nouvelle destination demandait un `INSERT` à passer à la main, donc
+ * une migration de plus à ne pas oublier : exactement la mécanique qui
+ * a coûté 15 jours de statistiques en juin, et une journée entière le
+ * 22 août.
+ *
+ * Ça ne ressuscite RIEN de désactivé : l'admin ne supprime jamais une
+ * ligne, il pose `enabled = false` (cf. `app/affiliate/api/admin/links`).
+ * Une destination éteinte a donc une ligne, elle n'est pas "manquante",
+ * et le seed ne la recouvre pas.
+ */
 export async function getAllLinkDestinations(): Promise<LinkDestinationRow[]> {
   try {
     const { data, error } = await supabaseAdmin
       .from("affiliate_link_destinations")
       .select("slug, path, sort_order, enabled")
       .order("sort_order", { ascending: true });
+    // Table absente ou vide : le seed EST la source. C'est le cas d'un
+    // déploiement qui devance la migration, et l'écran doit marcher.
     if (error || !data || data.length === 0) return FALLBACK;
-    return data as LinkDestinationRow[];
+
+    const rows = data as LinkDestinationRow[];
+    const connus = new Set(rows.map((r) => r.slug));
+    const manquants = FALLBACK.filter((f) => !connus.has(f.slug));
+    return [...rows, ...manquants].sort((a, b) => a.sort_order - b.sort_order);
   } catch {
     return FALLBACK;
   }
