@@ -129,6 +129,32 @@ export default function AdminTicketsClient() {
 
   return (
     <div className="space-y-4">
+      {/* LA FILE VIVANTE N'EST PLUS ICI, ET IL FAUT LE DIRE.
+          Depuis le 23 aout, les nouvelles demandes partent dans Tiquiz,
+          ou elles s'affichent sur la fiche du client a cote de ses acces
+          et de ses paiements. Cet ecran garde l'historique et sert de
+          filet quand le relais echoue. Sans ce bandeau, Bene
+          surveillerait un ecran qui ne bouge plus. */}
+      <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm dark:border-amber-900/50 dark:bg-amber-900/20">
+        <p className="font-medium text-amber-900 dark:text-amber-100">
+          Les nouvelles demandes arrivent dans Tiquiz.
+        </p>
+        <p className="mt-1 text-amber-800 dark:text-amber-200">
+          Le formulaire du centre d&apos;aide et le robot envoient maintenant les tickets dans la
+          file unique de Tiquiz, ou chacun s&apos;affiche sur la fiche du client.{" "}
+          <a
+            href="https://quiz.tipote.com/admin"
+            className="font-semibold underline"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Ouvrir la file
+          </a>
+          . Cet ecran garde l&apos;historique d&apos;avant le 23 aout, et recoit les demandes qui
+          n&apos;ont pas pu etre relayees.
+        </p>
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

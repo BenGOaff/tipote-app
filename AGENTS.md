@@ -1501,3 +1501,53 @@ Le filet vit côté Tiquiz (`tests/logic/genre-neutre.test.mts`) et ne
 regarde que l'ADRESSE DIRECTE au lecteur : un accord avec un nom féminin
 ("analyse prête", "vidéo prête") est correct et ne doit pas le faire
 rougir. Un test qui crie pour rien finit désactivé.
+
+## Le centre d'aide est la PORTE, la file vit dans Tiquiz (23 août 2026)
+
+Béné : "s'il n'a pas reçu ses accès, comment il accède à
+`quiz.tipote.com/support` ? Pas con hein ??? Je veux un service de
+ticketing dans le centre d'aide commun à toutes les app, essentiellement
+pour Tiquiz et L'Atelier qui sont vendus en ce moment, avec ticket relié
+à la fiche client si elle existe."
+
+**Il y avait DEUX files de tickets.** `support_tickets` ici depuis le 12
+mars (les escalades du robot d'aide) et `support_tickets` dans Tiquiz
+depuis le 22 août (son formulaire). Deux bases, deux écrans d'admin. Une
+demande pouvait attendre des jours dans celle qu'on ne regardait pas, et
+aucune des deux ne connaissait L'Atelier.
+
+**Règle : la porte est ici, la file est là-bas.**
+
+Le centre d'aide (`app.tipote.com/support`) porte les 57 articles, le
+robot ET un formulaire de contact (7 langues, sélecteur de produit,
+`?produit=` pré-sélectionne). `POST /api/support/ticket` ne écrit plus en
+local : il RELAIE vers `quiz.tipote.com/api/partner/support-ticket` avec
+`x-partner-secret`.
+
+La file vit dans Tiquiz parce que le ticket doit s'afficher sur la FICHE
+CLIENT, à côté des accès, des paiements et du statut Atelier, et que
+c'est l'admin de Tiquiz qui porte cette fiche. Une donnée dans une autre
+base est une donnée qu'on ne croisera jamais.
+
+**Trois choses à ne pas défaire :**
+
+1. **La limite par IP reste ICI**, sur l'adresse réelle de la personne.
+   Le relais part toujours de la même IP serveur : la limite de Tiquiz
+   couperait tout le centre d'aide dès la sixième personne de la journée.
+2. **Le filet local.** Si Tiquiz ne répond pas, on écrit dans la table
+   locale et on crie dans le journal. Elle a vu "envoyé" : la demande
+   doit exister quelque part.
+3. **Le bandeau de `/admin/support`** dit que la file vivante est dans
+   Tiquiz. Sans lui, Béné surveille un écran qui ne bouge plus.
+
+**`PARTNER_SHARED_SECRET` doit être posée sur CE serveur aussi**, avec la
+même valeur que côté Tiquiz. Sans elle le relais répond `not_configured`
+et tout retombe dans l'ancienne file, en silence pour la cliente mais
+avec une ligne rouge dans `pm2 logs`.
+
+`tiquizBaseUrl()` refuse toute adresse locale, comme `resolveAppUrl` : un
+`??` ne protège que de la variable absente, jamais de la variable fausse
+(drame Véronique, 2 août). Les décisions pures vivent dans
+`lib/support/relayRules.ts`, à part de `relayTicket.ts` qui importe
+`supabaseAdmin` : un module qui exige des variables au chargement est un
+module qu'aucun test ne peut importer.
