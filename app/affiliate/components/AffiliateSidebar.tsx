@@ -15,6 +15,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  Link2,
   LayoutDashboard, Megaphone, Library, HelpCircle,
   LogOut, Gift, Menu, X, ShieldCheck, Wallet, CreditCard,
 } from "lucide-react";
@@ -25,7 +26,7 @@ import { LocaleSwitcher } from "./LocaleSwitcher";
 
 type NavItem = {
   href: string;
-  key: "overview" | "promouvoir" | "contenus" | "trial" | "revenus" | "paiement" | "support";
+  key: "overview" | "promouvoir" | "liens" | "contenus" | "trial" | "revenus" | "paiement" | "support";
   icon: React.ComponentType<{ className?: string }>;
 };
 
@@ -36,6 +37,8 @@ type NavItem = {
 const NAV: NavItem[] = [
   { href: "/", key: "overview", icon: LayoutDashboard },
   { href: "/promouvoir", key: "promouvoir", icon: Megaphone },
+  // Un lien par canal, et chacun sait ce qu'il rapporte (24 aout).
+  { href: "/liens", key: "liens", icon: Link2 },
   { href: "/contenus", key: "contenus", icon: Library },
   { href: "/revenus", key: "revenus", icon: Wallet },
   { href: "/paiement", key: "paiement", icon: CreditCard },

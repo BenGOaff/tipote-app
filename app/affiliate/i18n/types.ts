@@ -41,6 +41,7 @@ export type AffiliateDict = {
   nav: {
     overview: string;
     promouvoir: string;
+    liens: string;
     contenus: string;
     trial: string;
     revenus: string;
@@ -226,6 +227,28 @@ export type AffiliateDict = {
   };
 
   // ─── Promouvoir ──────────────────────────────────────────────────
+  // ─── Mes liens (inspiré de l'espace ambassadeur Waalaxy, 24 août) ──
+  liens: {
+    page_title: string;
+    page_subtitle: string;
+    stat_links: string;
+    stat_clicks: string;
+    stat_signups: string;
+    stat_commissions: string;
+    col_name: string;
+    col_link: string;
+    col_clicks: string;
+    col_signups: string;
+    col_paying: string;
+    col_commissions: string;
+    col_actions: string;
+    copy_short: string;
+    copy_long: string;
+    open: string;
+    empty_title: string;
+    empty_body: string;
+    empty_cta: string;
+  };
   promouvoir: {
     page_title: string;
     page_subtitle: string;
