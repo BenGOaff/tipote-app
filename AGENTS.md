@@ -1551,3 +1551,43 @@ avec une ligne rouge dans `pm2 logs`.
 `lib/support/relayRules.ts`, à part de `relayTicket.ts` qui importe
 `supabaseAdmin` : un module qui exige des variables au chargement est un
 module qu'aucun test ne peut importer.
+
+## Le mois offert ne s'ouvre QUE sur un lien du système courant (23 août 2026)
+
+Béné : "on le met sur l'espace affilié en expliquant que c'est
+uniquement avec le système d'affiliation en cours et pas sur les anciens
+liens systeme io (qui restent valides mais ne seront plus ceux à
+utiliser dans le futur)."
+
+**Le piège : les deux générations de liens portent le MÊME `?sa=`.**
+Même forme, même propriétaire. Le `sa` dit QUI est payé, il ne peut pas
+dire par quelle génération de lien la personne est venue : le déduire
+reviendrait à offrir le mois sur les anciens liens Systeme.io, ce qui
+est exactement ce qui est exclu.
+
+**Règle : `buildAffiliateLink()` ajoute `&mo=1`, et c'est le SEUL
+endroit qui l'écrit.** Tout ce que l'espace affilié fabrique aujourd'hui
+le porte (Promouvoir, `/go/<ref>`, les articles de blog) ; rien de ce
+qui a été copié dans Systeme.io ne le portera jamais. Les anciens liens
+commissionnent exactement comme avant : c'est le CADEAU qui est réservé,
+pas la vente. Le test `affiliate-link.test.mts` interdit une deuxième
+écriture du marqueur.
+
+**Sans destination sur le domaine de Tiquiz, le cadeau est mort.** Les
+tunnels Systeme.io ne transmettent rien de ce qu'on ajoute à l'URL : leur
+page ne nous passe pas la query. D'où le slug `tiquiz_direct`
+(`https://tiquiz.fr/`, migration `20260823_affiliate_tiquiz_direct.sql`),
+le seul lien par lequel le marqueur peut arriver jusqu'au middleware de
+Tiquiz. Les autres destinations restent en place et restent valides.
+
+**La page Promouvoir DOIT porter la note.** Un affilié qui continue de
+partager son ancien lien Systeme.io serait payé normalement mais
+promettrait un mois que personne ne recevrait : c'est LUI qui passerait
+pour un menteur. La carte dit les trois choses (l'argument, la limite
+d'un mois par personne, et que ça ne marche qu'avec les liens de cette
+page), en 6 langues.
+
+Le lecteur du marqueur vit côté Tiquiz
+(`lib/affiliate/moisOffertLien.ts`), qui le range dans un cookie
+`httpOnly` dont la VALEUR est l'identifiant. Toute évolution du format
+se porte des deux côtés.
