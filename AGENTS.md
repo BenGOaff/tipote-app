@@ -254,8 +254,10 @@ raison dans un terminal qui servira ensuite à un `npm run build` ou à un
 **Avant TOUT push, lire `CLAUDE_WORKFLOW.md`.**
 
 Résumé : je ne pousse JAMAIS sur `main`. Je pousse uniquement sur la
-branche `claude/busy-wright-501xR`. Béné est seule maître de
-`main` côté GitHub.
+branche de travail **indiquée dans la consigne de session**. Ce nom
+CHANGE à chaque session : ne jamais recopier celui trouvé dans un
+fichier, il y est forcément périmé. Béné est seule maître de `main`
+côté GitHub.
 
 ## URLs canoniques prod — À NE PAS INVENTER (drame 3 juin 2026)
 
@@ -420,7 +422,7 @@ alors que ces trois bugs vivent dans des fonctions.
 
 ```bash
 npm run test:logic     # runner natif Node, ~1s, aucune dependance
-npm run test:visual    # 90/90, uniquement si le design/UX bouge
+npm run test:visual    # 99/99 côté Tiquiz, uniquement si le design/UX bouge
 npx tsc --noEmit       # exit 0
 ```
 
@@ -1173,8 +1175,7 @@ cd /home/tipote/tipote-app
 git stash
 git pull origin main
 npm ci
-npm run build
-pm2 restart tipote-prod --update-env
+npm run build && pm2 restart tipote-prod --update-env
 ```
 
 Tu prends ma branche, tu copies le code dans ton dossier local, tu pousses
@@ -1353,15 +1354,18 @@ jumeau : la correction y vit aussi.
 
 ## Un shell qui garde le `.env` de l'autre app (panne 22 août 2026)
 
-Les deux apps ont servi la base Supabase de l'AUTRE pendant plusieurs
-heures. Tiquiz affichait les quiz de Tipote et répondait `column
+Les deux apps ont servi la base Supabase de l'AUTRE, deux fois dans la
+même journée, pour deux raisons différentes. Une journée entière perdue.
+
+### Le matin : le BUILD gravait les valeurs du terminal
+
+Tiquiz affichait les quiz de Tipote et répondait `column
 profiles.user_id does not exist` ; Tipote répondait `Could not find the
 table 'public.content_item' in the schema cache`. Les liens de connexion
-envoyés par email depuis `quiz.tipote.com` renvoyaient sur
-`app.tipote.com`.
+envoyés depuis `quiz.tipote.com` renvoyaient sur `app.tipote.com`.
 
-Les quatre faits qui ont tranché, et qui sont le bon réflexe de
-diagnostic (comparer le FICHIER et le BUILD, pas le fichier seul) :
+Les quatre faits qui ont tranché, et c'est le bon réflexe de diagnostic
+(comparer le FICHIER et le BUILD, jamais le fichier seul) :
 
 ```
 == tiquiz-app ==  .env: ottpciabnrclwgdlwjdt   build: mmwyfqfbfkvcnrkyvagv
@@ -1370,33 +1374,107 @@ diagnostic (comparer le FICHIER et le BUILD, pas le fichier seul) :
 
 **Les deux `.env` étaient justes. Les deux builds étaient croisés.**
 
-**La cause.** Un `set -a; . .env; set +a` avait été lancé dans le
-terminal, pour les DEUX apps, dans la même session, juste pour lire une
-variable. `set -a` exporte tout le fichier dans le shell. Or Next lit
-`process.env` **avant** `.env`
-(`node_modules/next/dist/docs/01-app/02-guides/environment-variables.md` :
-"stopping once the variable is found"), et un `NEXT_PUBLIC_*` est gravé
+Un `set -a; . .env; set +a` avait été lancé dans le terminal, pour les
+DEUX apps, dans la même session, juste pour lire une variable. `set -a`
+exporte tout le fichier dans le shell. Or Next lit `process.env` **avant**
+`.env` (`node_modules/next/dist/docs/01-app/02-guides/environment-variables.md`
+: "stopping once the variable is found"), et un `NEXT_PUBLIC_*` est gravé
 dans le code au moment du `next build`, avec "the value from the
-environment in which you run `next build`". Le build suivant, lancé dans
-ce terminal, a donc gravé les valeurs de l'autre app, et le
-`pm2 restart --update-env` a poussé le shell pollué dans le processus.
+environment in which you run `next build`".
 
 Les bases n'ont jamais été fusionnées : chacune est restée intacte, ce
 sont les pointeurs qui étaient croisés.
 
-**Le garde-fou : `scripts/check-build-env.mjs`, branché en `prebuild`.**
-npm le lance tout seul avant chaque `npm run build`. Il compare toute clé
-du `.env` du repo à celle que porte le shell, et refuse de construire dès
-qu'elles diffèrent, en nommant les deux valeurs. Il vit dans les TROIS
-repos, avec `tests/logic/build-env-guard.test.mts` qui rejoue la panne.
+### Le soir : la même panne, par une autre porte
 
-**Il n'imprime jamais la valeur d'une clé qui ressemble à un secret**
-(`estSecret`) : ce rapport finit dans un terminal, un historique, parfois
-un copier-coller. Il dit "les deux valeurs diffèrent" et s'arrête là. Les
-URL et les `NEXT_PUBLIC_*` restent lisibles, ce sont elles qui rendent le
-diagnostic évident.
+Béné : "pourquoi j'ai tous mes contenus mais pas mes clients dans
+Tipote ?" La question contenait le diagnostic.
 
-**Et la leçon qui dépasse cette panne :** une commande donnée à Béné doit
-être sûre même mal replacée. `( ... )` au lieu de `...` coûte deux
-caractères et enferme les dégâts dans un sous-shell. Une variable
-exportée dans un terminal, elle, survit à tout ce qu'on y tapera ensuite.
+Le garde-fou du matin a bien REFUSÉ de construire. Mais la ligne suivante
+du déploiement, `pm2 restart --update-env`, a poussé ce terminal pollué
+DANS le processus. Et comme `server.js` fait `process.chdir(__dirname)`,
+le serveur standalone cherche ses fichiers d'environnement dans
+`.next/standalone/`, où personne ne copiait rien : l'app ne vivait donc
+QUE sur ce que PM2 gardait en mémoire, insensible à tous les rebuilds.
+
+Le partage des symptômes disait exactement où regarder :
+- les CONTENUS s'affichaient (clé anon, GRAVÉE dans le build, donc juste) ;
+- les CLIENTS avaient disparu (clé de service, lue dans le PROCESSUS,
+  donc celle de l'autre app).
+
+**Un garde-fou qui protège le build ne protège pas le redémarrage.**
+
+### Les garde-fous, et pourquoi il en faut plusieurs
+
+Chacun couvre un MOMENT différent. En zapper un rouvre la porte par
+laquelle la panne est déjà passée.
+
+| Quand | Quoi | Ce qu'il attrape |
+|---|---|---|
+| avant le build | `prebuild` -> `scripts/check-build-env.mjs` | le terminal contredit le `.env` du repo : le build est REFUSÉ |
+| après le build | `postbuild` -> copie `.env*` dans `.next/standalone/` en 600 | le serveur standalone a enfin une source de vérité, versionnée avec le déploiement |
+| au démarrage | `instrumentation.ts` -> `lib/env/supabaseProject.ts` | la clé ne parle pas du même projet que l'URL : ça CRIE dans `pm2 logs`, à chaque démarrage |
+| à la demande | `npm run check:supabase-keys` | compare le FICHIER, le TERMINAL, le BUILD et le PROCESSUS (`/proc/<pid>/environ`) |
+
+**Le postbuild ne dispense JAMAIS d'`instrumentation.ts`** : `process.env`
+passe toujours devant les fichiers, donc une valeur fausse héritée de PM2
+gagne encore. Ce qui change, c'est qu'une variable ABSENTE du processus a
+désormais une source fiable, versionnée avec le déploiement, au lieu de
+dépendre de la mémoire de PM2.
+
+Aucun de ces contrôles n'imprime la valeur d'une clé qui ressemble à un
+secret (`estSecret`) : ces rapports finissent dans un terminal, un
+historique, parfois un copier-coller. Ils disent "les deux valeurs
+diffèrent" et s'arrêtent là. Les URL et les `NEXT_PUBLIC_*` restent
+lisibles, ce sont elles qui rendent le diagnostic évident.
+
+### Un journal se LIT, il ne se déduit pas
+
+L'agent a mis une heure à trouver, en théorisant. Deux sources donnaient
+la réponse en une commande : le corps de la réponse HTTP (onglet Réseau)
+et `/proc/<pid>/environ`. Il a lancé quatre hypothèses avant d'aller les
+regarder, et fait accuser une clé anon parfaitement bonne pendant trois
+échanges parce que son test tapait sur un point d'entrée que cette clé
+n'a pas le droit de lire.
+
+**Un test qui ne distingue pas ce qu'il est censé distinguer est pire
+qu'un test absent.** `/rest/v1/` répond 200 à n'importe quelle clé valide
+du projet, quel que soit son rôle, et 401 à une clé anon valide.
+
+| Ce qu'on veut savoir | Où taper |
+|---|---|
+| une clé anon est-elle bonne | `/auth/v1/settings` |
+| une clé de service est-elle bonne | `/auth/v1/admin/users?page=1&per_page=1` |
+| ce qu'une clé EST | décoder son `role` (`lireCleSupabase`) |
+
+Et **un 401 peut vouloir dire "clé vide"** : mesurer la longueur de ce
+qu'on a extrait avant de conclure quoi que ce soit.
+
+### Un garde-fou non fusionné ne protège personne (23 août 2026)
+
+Les trois derniers garde-fous ont été écrits le 22 au soir sur une branche
+de travail, et ne sont jamais arrivés dans `main`. Pendant 24 heures, cette
+page les décrivait comme actifs et le serveur ne les avait pas : la cause
+exacte de la panne du soir était toujours là, derrière une doc qui disait
+le contraire.
+
+**Règle : quand une session écrit un garde-fou, la dernière étape n'est
+pas de l'écrire, c'est de vérifier qu'il est arrivé.**
+
+```bash
+git log origin/main -1 --oneline -- instrumentation.ts scripts/check-supabase-keys.mjs
+```
+
+Aucune ligne = il n'est pas déployé, quoi qu'en dise la doc.
+
+### Et la leçon qui dépasse cette panne
+
+Une commande donnée à Béné doit être sûre même mal replacée.
+
+- `( set -a; . .env; set +a; ... )` : la parenthèse est un sous-shell,
+  tout meurt avec elle. **INTERDIT sans les parenthèses.** Une variable
+  exportée dans un terminal survit à tout ce qu'on y tapera ensuite.
+- `npm run build && pm2 restart <app> --update-env` : le `&&` n'est pas
+  cosmétique. Sans lui, un build REFUSÉ se déployait quand même, et c'est
+  exactement ce qui a mis Tipote par terre. Ne jamais donner ces deux
+  commandes sur deux lignes séparées.

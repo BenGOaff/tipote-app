@@ -3,11 +3,17 @@
 **Règle absolue : je ne pousse JAMAIS rien sur `main`. Béné est seule
 maître de `main` côté GitHub et côté VPS.**
 
+> **Le nom de ma branche CHANGE à chaque session.** Il est écrit dans la
+> consigne que je reçois, et je le redonne en toutes lettres à la fin de
+> chaque envoi. Ne jamais recopier un nom de branche trouvé dans un
+> fichier du repo : il y est forcément périmé. (Le nom
+> `claude/busy-wright-501xR` a traîné ici jusqu'au 23 août 2026.)
+
 ## Comment Béné déploie
 
 Le process invariable de Béné, à respecter à 100 % :
 
-1. Béné **télécharge** depuis ma branche de travail (`claude/busy-wright-501xR`) vers son dossier local
+1. Béné **télécharge** depuis ma branche de travail (`claude/<ma-branche-de-session>`) vers son dossier local
 2. Elle **remplace** son ancien code local par mon code à jour
 3. Elle **commit + push sur main** depuis son PC vers GitHub
 4. Elle **pull main sur le VPS** + rebuild
@@ -31,8 +37,7 @@ cd /home/tipote/tipote-app
 git stash
 git pull origin main
 npm ci
-npm run build
-pm2 restart tipote-prod --update-env
+npm run build && pm2 restart tipote-prod --update-env
 ```
 
 Idem pour `tiquiz` (chemin `C:\Users\hello\Desktop\tiquiz` côté PC,
@@ -42,13 +47,13 @@ Idem pour `tiquiz` (chemin `C:\Users\hello\Desktop\tiquiz` côté PC,
 
 À chaque sprint où je code :
 
-1. Je travaille sur la branche `claude/busy-wright-501xR`
+1. Je travaille sur la branche `claude/<ma-branche-de-session>`
 2. Je push sur cette branche UNIQUEMENT
 3. **NE JAMAIS faire `git push origin main` directement**
 4. **NE JAMAIS faire `git merge` vers main puis push**
 
 Quand le code est prêt, je dis à Béné :
-> « C'est pushé sur `claude/busy-wright-501xR`. Récupère mes
+> « C'est pushé sur `claude/<ma-branche-de-session>`. Récupère mes
 >   fichiers et push sur main avec ton process habituel. »
 
 Et je lui donne la commande pour récupérer mes fichiers sans casser sa branche main locale :
@@ -56,8 +61,8 @@ Et je lui donne la commande pour récupérer mes fichiers sans casser sa branche
 ```powershell
 # Sur son PC : récupère mes derniers fichiers depuis ma branche
 # (sans switcher de branche, applique mes fichiers dans son working tree main)
-git fetch origin claude/busy-wright-501xR
-git checkout origin/claude/busy-wright-501xR -- .
+git fetch origin claude/<ma-branche-de-session>
+git checkout origin/claude/<ma-branche-de-session> -- .
 
 # Puis son process habituel
 git add .
