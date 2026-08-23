@@ -1792,3 +1792,29 @@ Et le VIDE parle (titre, phrase, sortie) : un tableau vide sans un mot
 se lit "c'est cassé" ou "je n'ai rien à faire ici", et les deux coûtent
 une affiliée. Sur mobile, des cartes : un tableau à sept colonnes sur un
 téléphone se fait glisser sans jamais voir la colonne qui compte.
+
+## Sortir de Systeme.io : l'état des lieux vit dans le dépôt Tiquiz
+
+Béné, 24 août 2026 : "note où on s'arrête et ce qu'il reste à faire pour
+qu'à terme mon système remplace complètement Systeme io pour les ventes
+et l'affiliation sauf pour les emails."
+
+C'est **`ROADMAP_SORTIE_SIO.md`, à la racine du dépôt TIQUIZ**, et il n'y
+en a qu'un exemplaire : trois copies d'un état des lieux divergeraient en
+une semaine.
+
+**Ce qui concerne CE dépôt :** l'affiliation. Trois verrous y sont
+décrits, et le deuxième est le plus dur.
+1. **Rien ne paie les affiliés chez nous.** `affiliate_commissions` a des
+   statuts (`pending / approved / paid`) et une colonne `payout_id`, mais
+   aucune table `affiliate_payouts` n'existe et AUCUN code ne fait passer
+   une commission d'un statut à l'autre. Tout se passe encore chez
+   Systeme.io, et `app/affiliate/paiement/page.tsx` le dit.
+2. **`affiliates.sa` est la clé primaire**, et toutes les tables du
+   programme y font référence. Tant que c'est vrai, on ne peut pas
+   recruter un affilié qui n'a pas de compte Systeme.io.
+3. **7 des 8 destinations de `lib/affiliate/linkDestinations.ts` mènent
+   à des tunnels Systeme.io.** Leurs pages ne nous transmettent pas la
+   query : un `?ref=` posé dessus n'atteint jamais notre bon de commande,
+   donc ni notre commissionnement ni le mois offert. Seule
+   `tiquiz_direct` arrive chez nous.
