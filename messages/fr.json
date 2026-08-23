@@ -656,7 +656,7 @@
     "errorHeading": "Oups, ça n'a pas marché",
     "errUnknown": "Erreur inconnue",
     "errExpired": "Ce lien n'est plus valide. Il a peut-être déjà été utilisé ou a expiré.",
-    "errNotAuth": "Tu n'es pas connectée. Merci de relancer le lien depuis ton email.",
+    "errNotAuth": "Ta session n'est pas active. Merci de relancer le lien depuis ton email.",
     "resendInfo": "Pas de panique : tu peux recevoir un nouveau lien pour définir ton mot de passe.",
     "labelEmail": "Ton email",
     "placeholderEmail": "nom@domaine.com",
@@ -774,7 +774,7 @@
       "lateNightWithName": "Toujours là {name} ? ☕"
     },
     "subtitleRotation": {
-      "0": "Prêt·e à booster ton business aujourd'hui ?",
+      "0": "On booste ton business aujourd'hui ?",
       "1": "On crée du contenu qui convertit ?",
       "2": "Une nouvelle journée, une nouvelle opportunité ✨",
       "3": "Qu'est-ce qu'on lance aujourd'hui ?",
@@ -6091,7 +6091,7 @@
     },
     "disclaimer": {
       "headline": "Tipote t'aide à anticiper, pas à déclarer.",
-      "body": "Cet onglet agrège tes encaissements (Stripe, PayPal, Mollie, Systeme.io…) et te prévient sur les seuils, échéances et documents à préparer. <strong>Il ne remplace ni un·e comptable, ni les déclarations officielles</strong> sur <impots>impots.gouv.fr</impots> et <urssaf>urssaf.fr</urssaf>. Vérifie toujours tes chiffres avant de déclarer."
+      "body": "Cet onglet agrège tes encaissements (Stripe, PayPal, Mollie, Systeme.io…) et te prévient sur les seuils, échéances et documents à préparer. <strong>Il ne remplace ni la comptabilité, ni les déclarations officielles</strong> sur <impots>impots.gouv.fr</impots> et <urssaf>urssaf.fr</urssaf>. Vérifie toujours tes chiffres avant de déclarer."
     },
     "configure": {
       "title": "Configure ta compta",
@@ -6111,7 +6111,7 @@
     "unsupported": {
       "title": "Bientôt disponible pour {country}",
       "body": "L'aide compta Tipote n'est aujourd'hui disponible que pour : <strong>{countries}</strong>. On ouvre les autres pays un par un - Belgique, Suisse, Québec, Portugal, Espagne… arrivent.",
-      "noList": "<strong>Pas besoin de t'inscrire à une liste</strong> : tu seras prévenu·e par email dès que ton pays est ouvert, on t'identifie automatiquement.",
+      "noList": "<strong>Pas besoin de t'inscrire à une liste</strong> : tu reçois un email dès que ton pays est ouvert, on t'identifie automatiquement.",
       "wrongCountry": "Mauvais pays ? Corriger"
     },
     "summary": {
@@ -7572,7 +7572,7 @@
     "tipoteAffiliateDesc": "Sur chaque popquiz publié, un discret <em>« Cette vidéo vous est proposée via Tiquiz »</em> redirige vers la page de présentation de Tiquiz. Si tu colles ton identifiant affilié Systeme.io ci-dessous, chaque inscription qui en découle te rapporte une commission - automatiquement.",
     "tipoteAffiliateIdLabel": "Mon identifiant affilié Tipote",
     "tipoteAffiliateWhereToFind": "<strong>Où trouver mon ID ?</strong> Connecte-toi à Systeme.io → <em>Tableau de bord affilié</em> → en haut à droite tu vois ton <em>identifiant affilié</em> (qui commence par <code>sa</code>). Copie-le, colle-le ici, c'est tout.",
-    "tipoteAffiliateNotRegistered": "Pas encore inscrit·e au programme ?",
+    "tipoteAffiliateNotRegistered": "Pas encore dans le programme ?",
     "tipoteAffiliateDiscoverProgram": "Découvrir le programme d'affiliation Tipote",
     "tipoteAffiliateTerms": "Conditions générales",
     "tipoteAffiliateEmptyHint": "Si tu laisses ce champ vide, le footer reste visible mais sans tracking - les inscriptions ne te rapporteront rien."

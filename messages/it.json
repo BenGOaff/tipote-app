@@ -656,7 +656,7 @@
     "errorHeading": "Ops, qualcosa è andato storto",
     "errUnknown": "Errore sconosciuto",
     "errExpired": "Questo link non è più valido. Potrebbe essere già stato usato o scaduto.",
-    "errNotAuth": "Non sei connesso. Riapri il link dalla tua email.",
+    "errNotAuth": "La tua sessione non è attiva. Riapri il link dalla tua email.",
     "resendInfo": "Nessun problema: puoi ricevere un nuovo link per impostare la tua password.",
     "labelEmail": "La tua email",
     "placeholderEmail": "nome@dominio.com",
@@ -774,7 +774,7 @@
       "lateNightWithName": "Sempre qui {name}? ☕"
     },
     "subtitleRotation": {
-      "0": "Pronta/o a far crescere il tuo business oggi?",
+      "0": "Facciamo crescere il tuo business oggi?",
       "1": "Creiamo contenuti che convertono?",
       "2": "Un nuovo giorno, una nuova opportunità ✨",
       "3": "Cosa lanciamo oggi?",
@@ -1872,7 +1872,7 @@
     "scenariosAvailable": "{n} scenari disponibili - scelta su /strategy/pyramids."
   },
   "onboarding": {
-    "title": "Benvenuto/a su Tipote",
+    "title": "Ti diamo il benvenuto su Tipote",
     "subtitle": "Alcune domande per creare la tua strategia personalizzata.",
     "continue": "Continua",
     "back": "Indietro",
@@ -1893,7 +1893,7 @@
     "offerFormatPlaceholder": "es. corso online, coaching, SaaS…",
     "steps": {
       "firstName": {
-        "question": "Benvenuto/a! Come ti chiami?",
+        "question": "Ti diamo il benvenuto! Come ti chiami?",
         "placeholder": "Il tuo nome"
       },
       "revenueGoal": {
@@ -2036,7 +2036,7 @@
         }
       },
       "satisfiedWithOffers": {
-        "question": "Sei soddisfatto/a delle tue offerte attuali?",
+        "question": "Le tue offerte attuali ti convincono?",
         "options": {
           "yes": "Sì, mi si addicono bene",
           "improve": "Voglio migliorarle",
@@ -6091,7 +6091,7 @@
     },
     "disclaimer": {
       "headline": "Tipote ti aiuta ad anticipare, non a dichiarare.",
-      "body": "Questa scheda aggrega i tuoi incassi (Stripe, PayPal, Mollie, Systeme.io…) e ti avvisa su soglie, scadenze e documenti da preparare. <strong>Non sostituisce un·a commercialista, né le dichiarazioni ufficiali</strong> su <impots>impots.gouv.fr</impots> e <urssaf>urssaf.fr</urssaf>. Verifica sempre i tuoi numeri prima di dichiarare."
+      "body": "Questa scheda aggrega i tuoi incassi (Stripe, PayPal, Mollie, Systeme.io…) e ti avvisa su soglie, scadenze e documenti da preparare. <strong>Non sostituisce la contabilità, né le dichiarazioni ufficiali</strong> su <impots>impots.gouv.fr</impots> e <urssaf>urssaf.fr</urssaf>. Verifica sempre i tuoi numeri prima di dichiarare."
     },
     "configure": {
       "title": "Configura la tua contabilità",
@@ -6882,7 +6882,7 @@
     "deleteAccountTitle": "Elimina il mio account",
     "deleteAccountDesc": "Elimina definitivamente il tuo account Tipote, tutti i tuoi dati, e annulla l'abbonamento se presente. È irreversibile. Non potrai recuperare account o dati.",
     "deleteAccountBtn": "Elimina il mio account",
-    "deleteAccountConfirm": "Sei davvero sicuro/a?",
+    "deleteAccountConfirm": "Confermi davvero?",
     "deleteYes": "Sì, elimina definitivamente",
     "deleting": "Eliminazione…",
     "cancel": "Annulla",
@@ -6892,7 +6892,7 @@
     "unknownError": "Errore sconosciuto",
     "deleteErrorTitle": "Eliminazione impossibile",
     "resetConfirm1": "⚠️ Resettare QUESTO Tipote?\n\nTutti i contenuti, le attività e le personalizzazioni di questo Tipote saranno eliminati. I tuoi altri Tipote (se esistono) NON sono interessati. È definitivo.",
-    "resetConfirm2": "Conferma finale: sei sicuro/a al 100%?",
+    "resetConfirm2": "Conferma finale: confermi al 100%?",
     "resetErrorTitle": "Reset impossibile",
     "resetSuccessTitle": "Tipote resettato ✅",
     "resetSuccessDesc": "Ritorno all'onboarding…",
@@ -7572,7 +7572,7 @@
     "tipoteAffiliateDesc": "Su ogni popquiz pubblicato, un discreto <em>«Questo video ti è proposto da Tiquiz»</em> reindirizza alla pagina di presentazione di Tiquiz. Se incolli qui sotto il tuo identificativo affiliato Systeme.io, ogni iscrizione che ne deriva ti porta una commissione - automaticamente.",
     "tipoteAffiliateIdLabel": "Il mio ID affiliato Tipote",
     "tipoteAffiliateWhereToFind": "<strong>Dove trovo il mio ID?</strong> Accedi a Systeme.io → <em>Dashboard affiliato</em> → in alto a destra vedi il tuo <em>ID affiliato</em> (inizia con <code>sa</code>). Copialo, incollalo qui, ecco fatto.",
-    "tipoteAffiliateNotRegistered": "Non ancora iscritto/a al programma?",
+    "tipoteAffiliateNotRegistered": "Non sei ancora nel programma?",
     "tipoteAffiliateDiscoverProgram": "Scopri il programma di affiliazione Tipote",
     "tipoteAffiliateTerms": "Condizioni generali",
     "tipoteAffiliateEmptyHint": "Se lasci questo campo vuoto, il footer resta visibile ma senza tracking - le iscrizioni non ti porteranno nulla."

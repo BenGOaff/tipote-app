@@ -116,6 +116,39 @@ function installStyleStripperHook(): void {
       .join("; ");
     data.attrValue = filtered;
   });
+
+  // ── HOOK 3 : TOUT LIEN S'OUVRE DANS UN NOUVEL ONGLET ──
+  //
+  // Béné, 24 août 2026 : "pour toutes les pages créées dans Tiquiz et
+  // Tipote : un lien vers la politique de confi etc. doit s'ouvrir dans
+  // un nouvel onglet et JAMAIS faire quitter la page à un visiteur !!
+  // D'autant que sur le quiz, la personne doit tout recommencer suivant
+  // les situations... c'est infernal."
+  //
+  // Elle l'avait déjà demandé, et le code DISAIT le faire : `ADD_ATTR:
+  // ["target"]` portait le commentaire "Force links to open safely".
+  // Sauf que `ADD_ATTR` ne fait qu'AUTORISER l'attribut à survivre au
+  // nettoyage : il n'en ajoute aucun. Un lien écrit par la créatrice
+  // dans son texte riche (consentement, page de résultat, bouton, pied
+  // de page) sortait donc SANS `target`, donc dans le même onglet.
+  //
+  // Le visiteur au milieu d'un quiz qui clique sur la politique de
+  // confidentialité perdait toutes ses réponses. C'est le pire moment
+  // possible : juste avant de laisser son email.
+  //
+  // C'est ici et pas dans les composants : un lien peut venir de
+  // n'importe quel champ riche de n'importe quel écran, et une règle
+  // recopiée dans chaque composant finit toujours par en oublier un
+  // (le sous-titre, les réseaux, l'alignement : quatre fois déjà).
+  //
+  // `rel` va avec, et ce n'est pas décoratif : sans `noopener`, la page
+  // ouverte garde une poignée sur la nôtre via `window.opener`.
+  DOMPurify.addHook("afterSanitizeAttributes", (node: Element) => {
+    if (node?.tagName?.toLowerCase?.() !== "a") return;
+    if (!node.getAttribute?.("href")) return;
+    node.setAttribute("target", "_blank");
+    node.setAttribute("rel", "noopener noreferrer");
+  });
 }
 
 const SAFE_URL_RE = /^(https?:\/\/|mailto:|tel:|\/)/i;
@@ -158,7 +191,9 @@ export function sanitizeRichText(input: string | null | undefined): string {
     ALLOWED_TAGS,
     ALLOWED_ATTR,
     ALLOW_DATA_ATTR: false,
-    // Force links to open safely
+    // Autorise `target` à survivre au nettoyage. C'est le HOOK 3 qui le
+    // POSE : `ADD_ATTR` ne fait qu'autoriser, il n'ajoute rien, et le
+    // commentaire qui disait le contraire a coûté le retour du 24 août.
     ADD_ATTR: ["target"],
   });
   return typeof clean === "string" ? clean : String(clean);

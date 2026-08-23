@@ -656,7 +656,7 @@
     "errorHeading": "Erro de autenticação",
     "errUnknown": "Erro desconhecido",
     "errExpired": "Este link expirou. Pede um novo link abaixo.",
-    "errNotAuth": "Não estás autenticado.",
+    "errNotAuth": "A tua sessão não está ativa. Volta a abrir o link do teu email.",
     "resendInfo": "Introduz o teu email para receber um novo link.",
     "labelEmail": "Email",
     "placeholderEmail": "o.teu@email.com",
@@ -774,7 +774,7 @@
       "lateNightWithName": "Ainda por aqui {name}? ☕"
     },
     "subtitleRotation": {
-      "0": "Pronto·a para impulsionar o teu negócio hoje?",
+      "0": "Vamos impulsionar o teu negócio hoje?",
       "1": "Vamos criar conteúdo que converte?",
       "2": "Um novo dia, uma nova oportunidade ✨",
       "3": "O que vamos lançar hoje?",
@@ -6091,7 +6091,7 @@
     },
     "disclaimer": {
       "headline": "O Tipote ajuda-te a antecipar, não a declarar.",
-      "body": "Este separador agrega as tuas entradas (Stripe, PayPal, Mollie, Systeme.io…) e avisa-te sobre limiares, prazos e documentos a preparar. <strong>Não substitui um·a contabilista, nem as declarações oficiais</strong> em <impots>impots.gouv.fr</impots> e <urssaf>urssaf.fr</urssaf>. Verifica sempre os teus números antes de declarar."
+      "body": "Este separador agrega as tuas entradas (Stripe, PayPal, Mollie, Systeme.io…) e avisa-te sobre limiares, prazos e documentos a preparar. <strong>Não substitui a contabilidade, nem as declarações oficiais</strong> em <impots>impots.gouv.fr</impots> e <urssaf>urssaf.fr</urssaf>. Verifica sempre os teus números antes de declarar."
     },
     "configure": {
       "title": "Configura a tua contabilidade",
@@ -6111,7 +6111,7 @@
     "unsupported": {
       "title": "Em breve para {country}",
       "body": "A ajuda contabilística do Tipote está hoje disponível apenas para: <strong>{countries}</strong>. Abrimos os outros países um a um - Bélgica, Suíça, Quebeque, Portugal, Espanha… estão a caminho.",
-      "noList": "<strong>Não precisas de te inscrever numa lista</strong>: serás avisado·a por email assim que o teu país for aberto, identificamos-te automaticamente.",
+      "noList": "<strong>Não precisas de te inscrever numa lista</strong>: recebes um email assim que o teu país for aberto, identificamos-te automaticamente.",
       "wrongCountry": "País errado? Corrigir"
     },
     "summary": {

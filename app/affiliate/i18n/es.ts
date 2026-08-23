@@ -75,7 +75,7 @@ export const ES: AffiliateDict = {
   signup: {
     title: "Activa tu espacio de afiliados",
     description: "Revisa tus datos rellenados desde Systeme.io. Puedes corregirlos si hace falta.",
-    success_title: "¡Bienvenido/a!",
+    success_title: "¡Te damos la bienvenida!",
     success_with_password:
       "Ya puedes iniciar sesión con tu email {email} y la contraseña que acabas de definir.",
     success_with_magic_link:
@@ -402,7 +402,7 @@ export const ES: AffiliateDict = {
     err_network: "No se pudo contactar el servidor.",
     why_offered_title: "¿Por qué te lo ofrecemos?",
     why_offered_body_1:
-      "Serás mejor embajador/a tras ver Tiquiz Plus funcionar con tus propios datos. Podrás mostrar capturas auténticas a tu audiencia, hacer un vídeo tipo «esto es lo que creé con Tiquiz en 10 min» y responder a las preguntas de tus leads con precisión.",
+      "Serás mejor embajador tras ver Tiquiz Plus funcionar con tus propios datos. Podrás mostrar capturas auténticas a tu audiencia, hacer un vídeo tipo «esto es lo que creé con Tiquiz en 10 min» y responder a las preguntas de tus leads con precisión.",
     why_offered_body_2:
       "Es un win-win: te facilitamos la venta, tú cobras tus comisiones más fácilmente.",
     active_title: "Mes Tiquiz Plus activo",
@@ -432,7 +432,7 @@ export const ES: AffiliateDict = {
     continue_promoting: "Seguir promocionando",
   },
   tour: {
-    step1_title: "Bienvenido/a al espacio de afiliados 👋",
+    step1_title: "Te damos la bienvenida al espacio de afiliados 👋",
     step1_subtitle: "1 minuto para entender cómo funciona.",
     step1_body_1:
       "Ahora formas parte del programa de afiliación. Ganas un 70% en L'Atelier du Quiz (la formación) y un 40% en cada venta de Tiquiz (la herramienta) generada por tu enlace.",

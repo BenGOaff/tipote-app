@@ -375,13 +375,18 @@ export default function LoginForm() {
             ['mentions', t('legalMentions')],
             ['cookies', t('legalCookies')],
           ] as const).map(([slug, label]) => (
-            <Link
+            // Nouvel onglet : quelqu'un qui a déjà saisi son adresse et
+            // son mot de passe et qui va lire les CGV perdait sa saisie.
+            // Règle Béné du 24 août, garde-fou tests/logic/liens-legaux.
+            <a
               key={slug}
               href={`/legal/${slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
               className="text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
               {label}
-            </Link>
+            </a>
           ))}
         </div>
       </div>

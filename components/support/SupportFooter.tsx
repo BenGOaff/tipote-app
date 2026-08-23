@@ -1,6 +1,25 @@
 "use client";
 
-import Link from "next/link";
+// components/support/SupportFooter.tsx
+//
+// LES LIENS LÉGAUX S'OUVRENT DANS UN NOUVEL ONGLET, TOUJOURS.
+//
+// Béné, 24 août 2026 : "un lien vers la politique de confi etc. doit
+// s'ouvrir dans un nouvel onglet et JAMAIS faire quitter la page à un
+// visiteur !!"
+//
+// Ce pied de page est celui du CENTRE D'AIDE, qui porte le formulaire de
+// contact. Quelqu'un qui vient d'écrire dix lignes pour décrire son
+// problème et qui clique sur "Confidentialité" perdait tout son message,
+// et repartait sans jamais l'envoyer. C'est la personne qui a le plus
+// besoin d'aide qui payait le plus cher.
+//
+// Et les deux liens pointaient sur des pages qui N'EXISTENT PAS :
+// `/legal/conditions-utilisation` et `/legal/politique-confidentialite`
+// ne sont pas dans `VALID_SLUGS` (cgu, cgv, privacy, mentions, cookies),
+// donc la route dynamique répondait `notFound()`. Un 404 depuis le
+// centre d'aide, sur la page où on demande de faire confiance.
+
 import { useTranslations } from "next-intl";
 
 export default function SupportFooter() {
@@ -21,12 +40,22 @@ export default function SupportFooter() {
         <div className="mt-8 pt-6 border-t border-border/30 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted-foreground">
           <span>&copy; {new Date().getFullYear()} Tipote. {t("rights")}.</span>
           <div className="flex items-center gap-4">
-            <Link href="/legal/conditions-utilisation" className="hover:text-foreground">
+            <a
+              href="/legal/cgu"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-foreground"
+            >
               {t("terms")}
-            </Link>
-            <Link href="/legal/politique-confidentialite" className="hover:text-foreground">
+            </a>
+            <a
+              href="/legal/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-foreground"
+            >
               {t("privacy")}
-            </Link>
+            </a>
           </div>
         </div>
       </div>
