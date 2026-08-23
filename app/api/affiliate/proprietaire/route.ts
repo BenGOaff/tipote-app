@@ -2,7 +2,8 @@
 //
 // À QUI APPARTIENT CE LIEN D'AFFILIATION ?
 //
-//   POST { sa }  ->  { ok: true, existe, actif, email }
+//   POST { ref }  ->  { ok: true, existe, actif, email }
+//   POST { sa }   ->  idem, pour les anciens liens Systeme.io
 //   header X-Affiliate-Secret
 //
 // Béné, 23 août 2026 : le mois offert à qui s'inscrit par le lien d'une
@@ -30,6 +31,7 @@ import { timingSafeEqual } from "node:crypto";
 
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { SA_RE } from "@/lib/affiliate/saFormat";
+import { REF_MIN_LENGTH, sanitizeRef } from "@/lib/affiliate/ref";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -49,20 +51,31 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ ok: false, reason: "unauthorized" }, { status: 401 });
   }
 
-  const body = (await req.json().catch(() => ({}))) as { sa?: unknown };
+  const body = (await req.json().catch(() => ({}))) as { ref?: unknown; sa?: unknown };
+
+  // DEUX ENTRÉES, ET ELLES NE SE MÉLANGENT PAS.
+  //
+  // `ref` est notre code public, celui de tous les liens fabriqués
+  // depuis le 24 août. `sa` est l'identifiant Systeme.io, qui n'arrive
+  // plus que par un ancien lien. On ne DEVINE pas laquelle on a reçu :
+  // l'appelant nomme le champ, donc on interroge la bonne colonne.
+  // Deviner à la forme marcherait aujourd'hui et casserait le jour où
+  // quelqu'un choisit un code qui ressemble à un `sa`.
+  const ref = sanitizeRef(body.ref);
   const sa = String(body.sa ?? "").trim();
 
+  const parRef = ref.length >= REF_MIN_LENGTH;
   // On ne va pas interroger la base avec n'importe quoi : la forme est
-  // vérifiée d'abord, comme partout où un `sa` entre chez nous.
-  if (!SA_RE.test(sa)) {
+  // vérifiée d'abord, comme partout où un identifiant entre chez nous.
+  if (!parRef && !SA_RE.test(sa)) {
     return NextResponse.json({ ok: true, existe: false, actif: false, email: null });
   }
 
-  const { data, error } = await supabaseAdmin
-    .from("affiliates")
-    .select("sa, email, status")
-    .eq("sa", sa)
-    .maybeSingle();
+  const requete = supabaseAdmin.from("affiliates").select("sa, email, status");
+  const { data, error } = await (parRef
+    ? requete.ilike("ref", ref)
+    : requete.eq("sa", sa)
+  ).maybeSingle();
 
   if (error) {
     console.error(`[affiliate/proprietaire] lecture impossible : ${error.message}`);

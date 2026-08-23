@@ -10,31 +10,40 @@
 //
 // Source de vérité = la langue d'INTERFACE de l'affilié (session.locale).
 // Tout marché non-anglophone retombe sur tipote.fr (marché par défaut).
+//
+// -- NOS LIENS PORTENT `?ref=`, PLUS JAMAIS `?sa=` (24 août 2026) ------
+//
+// Béné : "je ne veux surtout pas de sa dans les nouveaux liens sinon
+// y'a forcément un moment où on va merder, trouver autre chose nom de
+// zeus ! Y'a pas que ce système, c'est celui de systeme io c'est tout !!"
+//
+// `sa` est l'identifiant que Systeme.io fabrique pour SES tunnels. Le
+// reprendre dans nos liens mélangeait deux systèmes qui n'ont pas les
+// mêmes règles, et rendait les deux générations de liens
+// INDISCERNABLES une fois arrivées chez nous : même forme, même
+// propriétaire, impossible de dire par où quelqu'un était passé.
+//
+// Le code public (`?ref=jocelyne`, cf. `ref.ts`) règle les deux
+// problèmes d'un coup. Il se dicte au téléphone, il tient dans une bio
+// Instagram, et **le nom du paramètre dit à lui seul la génération du
+// lien**. C'est ce qui a permis de supprimer le marqueur `mo=1` :
+// un lien `?ref=` est forcément un lien d'ici, un lien `?sa=` est
+// forcément un ancien lien Systeme.io.
+//
+// Les anciens liens restent valides et continuent de commissionner :
+// Tiquiz lit encore `?sa=` en entrée. Ce qui change, c'est ce que NOUS
+// fabriquons.
 
 export type AffiliateMarket = "fr" | "en";
 
 /**
- * LE MARQUEUR DU SYSTÈME D'AFFILIATION COURANT.
+ * LE NOM DU PARAMÈTRE DANS NOS LIENS.
  *
- * Béné, 23 août 2026, sur le mois offert : "uniquement avec le système
- * d'affiliation en cours et pas sur les anciens liens systeme io (qui
- * restent valides mais ne seront plus ceux à utiliser dans le futur)".
- *
- * Le `?sa=` ne peut pas porter cette information : un ancien lien
- * Systeme.io et un lien fabriqué ici portent le MÊME identifiant, avec
- * la même forme et le même propriétaire. Une fois arrivés sur nos
- * pages, ils sont indiscernables.
- *
- * D'où ce paramètre, ajouté ICI et nulle part ailleurs : tout ce que
- * l'espace affilié fabrique aujourd'hui le porte, tout ce qui a été
- * copié dans Systeme.io avant ne le portera jamais. Les anciens liens
- * commissionnent exactement comme avant : c'est le CADEAU qui est
- * réservé, pas la vente.
- *
- * Le lecteur est côté Tiquiz (`lib/affiliate/moisOffertLien.ts`), qui
- * le range dans un cookie `httpOnly` au passage du visiteur.
+ * Écrit une seule fois, et lu tel quel par le middleware de Tiquiz.
+ * Deux chaînes séparées pour le même nom finiraient par diverger, et le
+ * jour où elles divergent plus personne n'est payé.
  */
-export const AFFILIATE_LINK_MARKER = "mo=1";
+export const AFFILIATE_LINK_PARAM = "ref";
 
 const DOMAINS: Record<AffiliateMarket, string> = {
   fr: "https://www.tipote.fr",
@@ -57,9 +66,16 @@ export function affiliateOrigin(locale?: string | null): string {
  * - chemin relatif ("/commande", "tiquiz/affiliation", "") → préfixé du domaine
  *   du marché de l'affilié ;
  * - URL absolue (https://…) → laissée telle quelle (l'affilié a choisi sa cible) ;
- * puis on ajoute `?sa=` (ou `&sa=` si la query existe déjà).
+ * puis on ajoute `?ref=` (ou `&ref=` si la query existe déjà).
+ *
+ * `ref` est le CODE PUBLIC de l'affiliée, jamais son `sa` : cf. le bloc
+ * en tête de fichier.
  */
-export function buildAffiliateLink(locale: string | null | undefined, path: string, sa: string): string {
+export function buildAffiliateLink(
+  locale: string | null | undefined,
+  path: string,
+  ref: string,
+): string {
   const p = (path ?? "").trim();
   let abs: string;
   if (/^https?:\/\//i.test(p)) {
@@ -68,6 +84,5 @@ export function buildAffiliateLink(locale: string | null | undefined, path: stri
     const origin = affiliateOrigin(locale);
     abs = p ? `${origin}${p.startsWith("/") ? "" : "/"}${p}` : `${origin}/`;
   }
-  const avecSa = `${abs}${abs.includes("?") ? "&" : "?"}sa=${sa}`;
-  return `${avecSa}&${AFFILIATE_LINK_MARKER}`;
+  return `${abs}${abs.includes("?") ? "&" : "?"}${AFFILIATE_LINK_PARAM}=${encodeURIComponent(ref)}`;
 }

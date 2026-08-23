@@ -57,7 +57,7 @@ export type RefError = "empty" | "too_short" | "too_long" | "charset" | "reserve
  * tirets de tête, de queue et doublés supprimés. Quelqu'un qui tape
  * "Jocelyne Dupré" obtient `jocelyne-dupre`, ce qu'elle attend.
  */
-export function sanitizeRef(raw: string | null | undefined): string {
+export function sanitizeRef(raw: unknown): string {
   return String(raw ?? "")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")

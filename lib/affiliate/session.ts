@@ -11,7 +11,17 @@ import { createServerClient } from "@supabase/ssr";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export type AffiliateSession = {
+  /**
+   * L'identifiant Systeme.io. Reste la CLÉ INTERNE (commissions,
+   * conversions, versements) parce que tout l'historique est dessus.
+   *
+   * **Il ne sort JAMAIS dans un lien public.** Béné, 24 août : "je ne
+   * veux surtout pas de sa dans les nouveaux liens". Les liens portent
+   * `ref` (cf. `lib/affiliate/refServer.ts`).
+   */
   sa: string;
+  /** Le code public, celui qui se dicte et qui vit dans les liens. */
+  ref: string | null;
   email: string;
   display_name: string | null;
   locale: string;
@@ -51,14 +61,26 @@ export async function getAffiliateSession(): Promise<AffiliateSession | null> {
   const email = user.email.toLowerCase();
   const { data } = await supabaseAdmin
     .from("affiliates")
-    .select("sa, email, display_name, locale, status")
+    .select("sa, ref, email, display_name, locale, status")
     .ilike("email", email)
     .maybeSingle();
-  const row = data as { sa: string; email: string; display_name: string | null; locale: string | null; status: string } | null;
+  const row = data as {
+    sa: string;
+    ref: string | null;
+    email: string;
+    display_name: string | null;
+    locale: string | null;
+    status: string;
+  } | null;
   if (!row || row.status !== "active") return null;
 
   return {
     sa: row.sa,
+    // Peut être `null` : une affiliée inscrite avant le système de codes
+    // n'en a pas encore. `assurerRefAffiliee()` lui en fabrique un au
+    // premier écran qui a besoin d'un lien. Une SESSION ne doit rien
+    // écrire, donc ce n'est pas fait ici.
+    ref: row.ref ?? null,
     email: row.email,
     display_name: row.display_name,
     locale: row.locale ?? "fr",

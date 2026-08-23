@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
 import { getAffiliateSession } from "@/lib/affiliate/session";
+import { assurerRefAffiliee } from "@/lib/affiliate/refServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getDict, interpolate, normaliseLocale } from "../../../i18n";
 import { ContentBreadcrumb } from "../../../components/ContentNav";
@@ -45,6 +46,13 @@ export default async function ArticlesSectionPage({
   if (!isContentProduct(product)) notFound();
 
   const t = getDict(normaliseLocale(session.locale));
+  // Le code public de l'affiliée, jamais son `sa` (Béné, 24 août).
+  const refCode = await assurerRefAffiliee({
+    sa: session.sa,
+    email: session.email,
+    displayName: session.display_name,
+    refConnu: session.ref,
+  });
   const cs = t.content_space;
   const sp = await searchParams;
   const market =
@@ -127,7 +135,7 @@ export default async function ArticlesSectionPage({
       {blogArticles.length > 0 && (
         <BlogArticlesPicker
           articles={blogArticles}
-          sa={session.sa}
+          refCode={refCode ?? ""}
           market={blogMarket}
         />
       )}

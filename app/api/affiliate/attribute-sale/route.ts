@@ -48,9 +48,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     product_name?: string;
     sale_at?: string;
     raw_payload?: unknown;
-    /** Le `sa` porte par le lien, quand il n'y a pas de conversion a
-     *  retrouver (bon de commande servi sur notre propre domaine). */
+    /** Le `sa` porte par un ANCIEN lien Systeme.io. */
     affiliate_ref?: string | null;
+    /** Le CODE PUBLIC porte par nos liens depuis le 24 aout 2026. */
+    affiliate_code?: string | null;
   };
   try {
     body = await req.json();
@@ -78,11 +79,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     product_name: body.product_name,
     sale_at: body.sale_at ? new Date(body.sale_at) : new Date(),
     raw_payload: body.raw_payload,
-    // On ne fait PAS confiance a la forme recue : le `sa` finit dans une
-    // ligne de commission, donc dans un versement.
+    // On ne fait PAS confiance a la forme recue : ces valeurs finissent
+    // dans une ligne de commission, donc dans un versement.
     sa_hint: typeof body.affiliate_ref === "string" && SA_RE.test(body.affiliate_ref.trim())
       ? body.affiliate_ref.trim()
       : null,
+    // Le code public est nettoye et traduit en `sa` par `attributeSale`,
+    // contre la table `affiliates`. Un code invente n'y correspond a
+    // personne, donc n'attribue rien.
+    ref_hint: typeof body.affiliate_code === "string" ? body.affiliate_code : null,
   });
 
   return NextResponse.json({ ok: true, result });

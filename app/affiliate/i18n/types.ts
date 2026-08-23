@@ -231,6 +231,9 @@ export type AffiliateDict = {
     page_subtitle: string;
     market_label: string; // "Marché" (sélecteur de marché de diffusion)
     market_hint: string; // "Liens et contenus adaptés au marché {market}."
+    // Le code public n'a pas pu être préparé : on le DIT au lieu
+    // d'afficher un champ vide (un lien muet se partage).
+    link_unavailable: string;
     // Le mois offert : l'argument de vente de l'affilié, et sa limite.
     mois_offert_title: string;
     mois_offert_body: string;
