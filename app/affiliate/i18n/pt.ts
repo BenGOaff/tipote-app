@@ -75,7 +75,7 @@ export const PT: AffiliateDict = {
   signup: {
     title: "Ativa o teu espaço de afiliados",
     description: "Verifica os teus dados pré-preenchidos a partir do Systeme.io. Podes corrigir se necessário.",
-    success_title: "Bem-vindo/a!",
+    success_title: "Damos-te as boas-vindas!",
     success_with_password:
       "Já podes iniciar sessão com o teu email {email} e a palavra-passe que acabaste de definir.",
     success_with_magic_link:
@@ -432,7 +432,7 @@ export const PT: AffiliateDict = {
     continue_promoting: "Continuar a promover",
   },
   tour: {
-    step1_title: "Bem-vindo/a ao espaço de afiliados 👋",
+    step1_title: "Damos-te as boas-vindas ao espaço de afiliados 👋",
     step1_subtitle: "1 minuto para perceber como funciona.",
     step1_body_1:
       "Agora fazes parte do programa de afiliação. Ganhas 70% em L'Atelier du Quiz (a formação) e 40% em cada venda Tiquiz (a ferramenta) gerada pelo teu link.",

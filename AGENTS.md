@@ -1479,28 +1479,104 @@ Une commande donnée à Béné doit être sûre même mal replacée.
   exactement ce qui a mis Tipote par terre. Ne jamais donner ces deux
   commandes sur deux lignes séparées.
 
-## On ne vend pas qu'à des femmes (Béné, 23 août 2026)
+## On ne vend pas qu'à des femmes (Béné, 23 puis 24 août 2026)
 
-Repéré sur la page de remerciement du bon de commande de Tiquiz : "'Et te
+Le 23, sur la page de remerciement du bon de commande de Tiquiz : "'Et te
 voilà dans Tiquiz, prête à créer ton premier quiz' : c'est genré
 automatiquement ou tu pars du principe que je ne vends qu'à des femmes ??
 Ce qui n'est PAS le cas évidemment."
+
+Le 24, en lisant ma propre phrase "toute affiliée a un code" : "arrête de
+penser que je n'ai que des users féminines putain !!! d'où ça vient cette
+merde ??"
 
 Les prénoms de ces dépôts le disent tout seuls : François Xavier, Éric,
 Maurice, Ivan. Un accord au féminin dans un message adressé au lecteur,
 c'est un message qui dit "ce produit n'est pas pour toi".
 
-Ici, l'écran de session expirée portait le même défaut, en français
-("Tu as été déconnectée") et en italien ("Sei stata disconnessa").
+**Règle : on tourne la phrase autrement.** Ni accord au féminin, ni point
+médian, ni double forme. "Tu n'es pas connectée" devient "Ta session
+n'est pas active", "Bienvenido/a" devient "Te damos la bienvenida",
+"Prêt·e à booster ton business" devient "On booste ton business".
+Une phrase tournée marche dans les 7 langues ; le point médian n'existe
+qu'en français, et "Lista/o" ne fait que lister les deux genres au lieu
+de n'en imposer aucun.
 
-**Règle : on tourne la phrase autrement, on ne met pas de point médian.**
-"Tu as été déconnectée" devient "Ta session a expiré". Ça marche dans les
-7 langues, alors que le point médian n'existe qu'en français.
+**Ce qui a été corrigé ici le 24 :** le retour de connexion
+(`callbackPage.errNotAuth`, féminin en français, masculin par défaut dans
+les 5 autres), l'accueil espagnol et italien (`Bienvenido/a`,
+`Benvenuto/a`) dans `messages/` ET dans l'espace affilié, la rotation du
+tableau de bord (`Prêt·e à booster`), l'invite d'affiliation
+(`inscrit·e`), et les mentions `un·e comptable` en 4 langues.
 
-Le filet vit côté Tiquiz (`tests/logic/genre-neutre.test.mts`) et ne
-regarde que l'ADRESSE DIRECTE au lecteur : un accord avec un nom féminin
-("analyse prête", "vidéo prête") est correct et ne doit pas le faire
-rougir. Un test qui crie pour rien finit désactivé.
+**Le filet vit maintenant DANS LES DEUX DÉPÔTS**
+(`tests/logic/genre-neutre.test.mts`). Il n'était que côté Tiquiz, et
+Tipote portait exactement les mêmes fautes : un garde-fou qui ne protège
+qu'un des deux jumeaux ne protège personne (leçon des deux versions
+divergentes de `pdf-parse`, 7 août). Ici il couvre les 7 fichiers de
+`messages/` ET les 6 dictionnaires de `app/affiliate/i18n/`.
+
+Il ne regarde que l'ADRESSE DIRECTE au lecteur : un accord avec un nom
+féminin ("analyse prête", "vidéo prête", "la campagne prête à envoyer")
+est correct et ne doit pas le faire rougir. Un test qui crie pour rien
+finit désactivé. **Exception assumée :** l'aide de l'éditeur qui explique
+la variante selon le genre DOIT montrer un exemple ("cher·e"), sinon la
+fonctionnalité ne s'explique pas.
+
+## Un lien légal ne fait JAMAIS quitter la page (Béné, 24 août 2026)
+
+"Pour toutes les pages créées dans Tiquiz et Tipote : un lien vers la
+politique de confi etc. doit s'ouvrir dans un nouvel onglet et JAMAIS
+faire quitter la page à un visiteur !! D'autant que sur le quiz, la
+personne doit tout recommencer suivant les situations... c'est infernal
+et le genre de choses pratiques auxquelles tu dois penser. Je ne sais pas
+quand ça a sauté mais en tous cas je l'ai demandé et ça a été codé, puis
+retiré."
+
+**Ça n'avait pas sauté : ça n'avait jamais été posé** pour les liens
+écrits par les créatrices. Le code DISAIT le faire. `sanitizeRichText`
+portait `ADD_ATTR: ["target"]` sous le commentaire "Force links to open
+safely", et **`ADD_ATTR` ne fait qu'AUTORISER l'attribut à survivre au
+nettoyage : il n'en ajoute aucun.** Un lien posé dans n'importe quel
+champ riche (consentement, page de résultat, bouton, pied de page)
+sortait donc sans `target`, donc dans le même onglet.
+
+Encore une règle écrite en commentaire, donc pas une règle (comme le
+`w-full h-auto` des images de réponse, 4 août).
+
+**Règle, et elle tient en deux moitiés :**
+
+1. **Le sanitizer pose le `target`** (HOOK 3 de `lib/richText.ts`,
+   `afterSanitizeAttributes`), sur tout `<a>` qui a un `href`, avec
+   `rel="noopener noreferrer"` (sans `noopener`, la page ouverte garde
+   une poignée sur la nôtre via `window.opener`). C'est là et pas dans
+   les composants : un lien peut venir de n'importe quel champ de
+   n'importe quel écran, et une règle recopiée dans chaque composant
+   finit toujours par en oublier un.
+2. **Nos liens légaux écrits en dur** utilisent `<a target="_blank">` et
+   jamais `<Link>` de Next, qui fait une navigation INTERNE, c'est à dire
+   exactement ce qu'on ne veut pas.
+
+**Endroits à respecter :** `components/quiz/PublicQuizClient.tsx` (les 3
+branches de `ConsentText`), `components/LoginForm.tsx` (adresse et mot de
+passe déjà saisis), `components/support/SupportFooter.tsx` (un message de
+support à moitié écrit).
+
+**Trouvé au passage :** les deux liens du pied de page du centre d'aide
+pointaient sur `/legal/conditions-utilisation` et
+`/legal/politique-confidentialite`, absents de `VALID_SLUGS` (`cgu`,
+`cgv`, `privacy`, `mentions`, `cookies`). La route dynamique répondait
+`notFound()` : un 404 depuis la page où on demande de faire confiance.
+
+**Ce qui n'est PAS visé :** la navigation ENTRE pages légales (le
+sommaire de `/legal`, un renvoi d'un document à l'autre). On n'y perd
+rien, et forcer un onglet à chaque clic y serait juste pénible.
+
+Garde-fou : `tests/logic/liens-legaux.test.mts`, qui tient les deux
+moitiés (il SANITISE vraiment, il ne relit pas la source) et qui exige
+que les écrans surveillés portent encore des liens légaux : un test qui
+ne peut plus échouer ment. Le module quiz de Tiquiz est jumeau : le même
+test y vit.
 
 ## Le centre d'aide est la PORTE, la file vit dans Tiquiz (23 août 2026)
 

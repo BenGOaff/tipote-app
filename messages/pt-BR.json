@@ -656,7 +656,7 @@
     "errorHeading": "Erro de autenticação",
     "errUnknown": "Erro desconhecido",
     "errExpired": "Este link expirou. Solicite um novo link abaixo.",
-    "errNotAuth": "Você não está autenticado.",
+    "errNotAuth": "Sua sessão não está ativa. Abra novamente o link do seu e-mail.",
     "resendInfo": "Digite seu email para receber um novo link.",
     "labelEmail": "Email",
     "placeholderEmail": "seu@email.com",
@@ -774,7 +774,7 @@
       "lateNightWithName": "Ainda por aqui {name}? ☕"
     },
     "subtitleRotation": {
-      "0": "Pronto·a para alavancar seu negócio hoje?",
+      "0": "Vamos alavancar seu negócio hoje?",
       "1": "Vamos criar conteúdo que converte?",
       "2": "Um novo dia, uma nova oportunidade ✨",
       "3": "O que vamos lançar hoje?",
@@ -6091,7 +6091,7 @@
     },
     "disclaimer": {
       "headline": "O Tipote te ajuda a antecipar, não a declarar.",
-      "body": "Esta aba agrega suas entradas (Stripe, PayPal, Mollie, Systeme.io…) e avisa sobre limites, prazos e documentos a preparar. <strong>Não substitui um·a contador·a nem as declarações oficiais</strong> em <impots>impots.gouv.fr</impots> e <urssaf>urssaf.fr</urssaf>. Sempre confira seus números antes de declarar."
+      "body": "Esta aba agrega suas entradas (Stripe, PayPal, Mollie, Systeme.io…) e avisa sobre limites, prazos e documentos a preparar. <strong>Não substitui a contabilidade nem as declarações oficiais</strong> em <impots>impots.gouv.fr</impots> e <urssaf>urssaf.fr</urssaf>. Sempre confira seus números antes de declarar."
     },
     "configure": {
       "title": "Configure sua contabilidade",
@@ -6111,7 +6111,7 @@
     "unsupported": {
       "title": "Em breve para {country}",
       "body": "A ajuda contábil do Tipote está hoje disponível apenas para: <strong>{countries}</strong>. Abrimos os outros países um por um - Bélgica, Suíça, Quebec, Portugal, Espanha… estão a caminho.",
-      "noList": "<strong>Não precisa entrar em uma lista de espera</strong>: você será avisado·a por email assim que seu país for aberto, identificamos automaticamente.",
+      "noList": "<strong>Não precisa entrar em uma lista de espera</strong>: você recebe um email assim que seu país for aberto, identificamos automaticamente.",
       "wrongCountry": "País errado? Corrigir"
     },
     "summary": {
