@@ -16,9 +16,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 import { attributeSale } from "@/lib/affiliate/attribution";
+import { SA_RE } from "@/lib/affiliate/saFormat";
 
 /** Format Systeme.io : "sa" + 20 a 80 caracteres hexadecimaux. */
-const SA_RE = /^sa[a-f0-9]{20,80}$/i;
+
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
