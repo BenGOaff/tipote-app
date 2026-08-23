@@ -4750,7 +4750,7 @@
     "applyLayoutToAll": "Tout réaligner sur ce réglage",
     "applyLayoutToAllHint": "Retire les exceptions posées sur les questions et les alignements appliqués à la main dans les champs. Ton réglage ci-dessus reprend la main partout. Le gras, les couleurs et les tailles ne bougent pas.",
     "applyLayoutToAllDone": "Toutes les questions suivent ton réglage. Pense à enregistrer.",
-    "sessionLostTitle": "Tu as été déconnectée",
+    "sessionLostTitle": "Ta session a expiré",
     "sessionLostBody": "Ton travail en cours est gardé dans ce navigateur, rien n'est perdu. Reconnecte-toi et tu reviendras directement sur ce quiz.",
     "sessionLostAction": "Me reconnecter",
     "otherResultsPositionLabel": "Où placer ce bloc",

@@ -8,6 +8,7 @@ import {
   HelpCircle,
 } from "lucide-react";
 import SupportHeader from "./SupportHeader";
+import SupportContactForm from "@/components/support/SupportContactForm";
 import SupportFooter from "./SupportFooter";
 import SupportChatWidget from "./SupportChatWidget";
 
@@ -89,7 +90,13 @@ const POPULAR_SLUGS = [
   "create-post",
 ];
 
-export default function SupportCenterClient({ locale }: { locale: string }) {
+export default function SupportCenterClient({
+  locale,
+  produit,
+}: {
+  locale: string;
+  produit?: string;
+}) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -255,6 +262,13 @@ export default function SupportCenterClient({ locale }: { locale: string }) {
             )}
           </>
         )}
+
+        {/* ÉCRIRE À UN HUMAIN. Toujours visible, meme quand une
+            recherche est en cours : celle qui cherche sans trouver est
+            exactement celle qui a besoin de ce formulaire. */}
+        <div className="mt-12">
+          <SupportContactForm locale={locale} produitParDefaut={produit} />
+        </div>
       </div>
 
       <SupportFooter />
