@@ -52,11 +52,32 @@ function tropDeDemandes(ip: string): boolean {
   const vu = compteur.get(ip);
   if (!vu || now > vu.jusqu) {
     compteur.set(ip, { n: 1, jusqu: now + 3_600_000 });
+    if (compteur.size > 5000) purger(now);
     return false;
   }
   vu.n += 1;
-  if (compteur.size > 5000) compteur.clear();
   return vu.n > 3;
+}
+
+/**
+ * Ne garde que ce qui court encore.
+ *
+ * L'ancienne version faisait `compteur.clear()` : elle remettait à zéro
+ * le compteur de TOUT LE MONDE dès que la table dépassait sa taille.
+ * Un garde-fou qu'on peut désarmer en le remplissant n'en est pas un
+ * (audit du 24 août).
+ *
+ * Si purger ne suffit pas (5000 adresses actives dans la même heure),
+ * on retire les plus ANCIENNES, jamais toutes : la mémoire est bornée
+ * et la limite continue de s'appliquer.
+ */
+function purger(now: number): void {
+  for (const [cle, v] of compteur) {
+    if (now > v.jusqu) compteur.delete(cle);
+  }
+  if (compteur.size <= 5000) return;
+  const parAnciennete = [...compteur.entries()].sort((a, b) => a[1].jusqu - b[1].jusqu);
+  for (const [cle] of parAnciennete.slice(0, compteur.size - 5000)) compteur.delete(cle);
 }
 
 export async function POST(req: NextRequest) {
