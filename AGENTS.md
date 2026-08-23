@@ -1478,3 +1478,26 @@ Une commande donnée à Béné doit être sûre même mal replacée.
   cosmétique. Sans lui, un build REFUSÉ se déployait quand même, et c'est
   exactement ce qui a mis Tipote par terre. Ne jamais donner ces deux
   commandes sur deux lignes séparées.
+
+## On ne vend pas qu'à des femmes (Béné, 23 août 2026)
+
+Repéré sur la page de remerciement du bon de commande de Tiquiz : "'Et te
+voilà dans Tiquiz, prête à créer ton premier quiz' : c'est genré
+automatiquement ou tu pars du principe que je ne vends qu'à des femmes ??
+Ce qui n'est PAS le cas évidemment."
+
+Les prénoms de ces dépôts le disent tout seuls : François Xavier, Éric,
+Maurice, Ivan. Un accord au féminin dans un message adressé au lecteur,
+c'est un message qui dit "ce produit n'est pas pour toi".
+
+Ici, l'écran de session expirée portait le même défaut, en français
+("Tu as été déconnectée") et en italien ("Sei stata disconnessa").
+
+**Règle : on tourne la phrase autrement, on ne met pas de point médian.**
+"Tu as été déconnectée" devient "Ta session a expiré". Ça marche dans les
+7 langues, alors que le point médian n'existe qu'en français.
+
+Le filet vit côté Tiquiz (`tests/logic/genre-neutre.test.mts`) et ne
+regarde que l'ADRESSE DIRECTE au lecteur : un accord avec un nom féminin
+("analyse prête", "vidéo prête") est correct et ne doit pas le faire
+rougir. Un test qui crie pour rien finit désactivé.
