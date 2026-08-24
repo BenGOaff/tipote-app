@@ -234,7 +234,8 @@ verifier("NEXT_PUBLIC_ASSETS_BASE_URL", {
   requis: false,
   quoi:
     "ABSENTE = les images continuent d'aller chez Supabase, exactement comme avant.\n" +
-    "       Posee (https://assets....), les NOUVELLES images vont sur ce serveur.\n" +
+    "       Posee, les NOUVELLES images vont sur ce serveur. Elle vaut l'adresse\n" +
+    "       servie par nginx, /assets sur le domaine des videos (infra/nginx).\n" +
     "       Rien n'est migre : les anciennes URL Supabase marchent pour toujours.",
 });
 verifier("ASSETS_DIR", {
