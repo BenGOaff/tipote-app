@@ -279,6 +279,7 @@ export const IT: AffiliateDict = {
   },
   revenus: {
     page_title: "Guadagni",
+    paye_par_sio: "Pagato da Systeme.io",
     page_subtitle: "Monitoraggio delle tue commissioni su Tiquiz e L'Atelier du Quiz.",
     total_gains: "Guadagni totali",
     pending: "In attesa",

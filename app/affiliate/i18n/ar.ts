@@ -279,6 +279,7 @@ export const AR: AffiliateDict = {
   },
   revenus: {
     page_title: "الأرباح",
+    paye_par_sio: "مدفوع عبر Systeme.io",
     page_subtitle: "تتبّع عمولاتك على Tiquiz وعلى L'Atelier du Quiz.",
     total_gains: "إجمالي الأرباح",
     pending: "قيد الانتظار",

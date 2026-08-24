@@ -280,6 +280,7 @@ export const FR: AffiliateDict = {
   },
   revenus: {
     page_title: "Revenus",
+    paye_par_sio: "Versé par Systeme.io",
     page_subtitle: "Suivi de tes commissions sur Tiquiz et L'Atelier du Quiz.",
     total_gains: "Gains totaux",
     pending: "En attente",

@@ -62,6 +62,26 @@ export type AttributeSaleInput = {
    * plausible et un HT plausible.
    */
   base: CommissionBase;
+  /**
+   * QUI VERSE CETTE COMMISSION. JAMAIS DEVINÉ.
+   *
+   * Béné, 26 août : "ce qui est vendu dans systeme io est payé sur
+   * systeme io mais doit être tracké pour un dashboard affilié fiable
+   * pour l'affilié et pour moi, et ce qui passe sur nos nouvelles pages
+   * bah c'est ok on peut tout tracker proprement ?"
+   *
+   * Les deux populations vivent dans la MÊME table, et c'est voulu :
+   * l'affilié doit voir TOUT ce qu'il a gagné, quel que soit le tunnel.
+   * Mais `preparerLot` ne doit virer que les nôtres, sinon le premier
+   * lot paie une deuxième fois ce que Systeme.io a déjà versé.
+   *
+   * On POURRAIT le déduire du préfixe de `sio_order_id`. On ne le fait
+   * pas : deviner la mécanique au lieu de la porter est le défaut qui a
+   * produit la fausse alerte de Véronique et les deux bases de
+   * commission divergentes. Le jour où un troisième encaisseur arrive,
+   * la déduction se tait et l'argent part.
+   */
+  reglePar: "nous" | "systeme_io";
   currency?: string;
   source_app: "tipote" | "tiquiz";
   sio_order_id: string;
@@ -236,6 +256,7 @@ export async function attributeSale(input: AttributeSaleInput): Promise<Attribut
         commission_rate: rate,
         commission_cents: commissionCents,
         currency: input.currency ?? "EUR",
+        regle_par: input.reglePar,
         status: "pending",
         sale_at: input.sale_at.toISOString(),
         raw_payload: input.raw_payload ?? null,

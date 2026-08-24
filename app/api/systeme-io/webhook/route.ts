@@ -1039,6 +1039,10 @@ export async function POST(req: NextRequest) {
             // Bene du 19 aout) se fait dans `attributeSale`, une seule
             // fois, pour tous les appelants.
             base: "ttc",
+            // CETTE VENTE EST PASSEE PAR LEUR TUNNEL, DONC ILS LA
+            // VERSENT. On l'enregistre pour que le tableau de bord de
+            // l'affilie soit complet, jamais pour la virer nous memes.
+            reglePar: "systeme_io",
             currency:
               typeof rawBody?.data?.price_plan?.currency === "string"
                 ? rawBody.data.price_plan.currency.toUpperCase()

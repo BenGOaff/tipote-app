@@ -297,6 +297,7 @@ export type AffiliateDict = {
   // ─── Revenus ─────────────────────────────────────────────────────
   revenus: {
     page_title: string;
+    paye_par_sio: string;
     page_subtitle: string;
     total_gains: string;
     pending: string;

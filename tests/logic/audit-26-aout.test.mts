@@ -212,3 +212,80 @@ describe("Le montant d'une vente Systeme.io", () => {
     assert.match(src, /base: "ttc"/);
   });
 });
+
+// ── 5. QUI VERSE : NOUS, OU SYSTEME.IO ? ────────────────────────────
+//
+// Béné, 26 août : "ce qui est vendu dans systeme io est payé sur systeme
+// io mais doit être tracké pour un dashboard affilié fiable pour
+// l'affilié et pour moi, et ce qui passe sur nos nouvelles pages bah
+// c'est ok on peut tout tracker proprement ?"
+//
+// C'est exactement le bon modèle, et le code ne le connaissait pas :
+// `preparerLot` prenait TOUT ce qui était `approved`. Le premier lot
+// aurait donc viré une deuxième fois les commissions que Systeme.io a
+// déjà payées. Aucun lot n'avait encore tourné : c'est pris avant le
+// premier virement, pas après.
+
+describe("Qui verse cette commission", () => {
+  const store = lire("lib/affiliate/versementStore.ts");
+
+  test("LE LOT NE PREND QUE LES NÔTRES", () => {
+    const bloc = store.slice(store.indexOf("export async function preparerLot"));
+    assert.match(bloc.slice(0, 3000), /\.eq\("regle_par", "nous"\)/);
+  });
+
+  test("ET L'APPROBATION NON PLUS NE FAIT PAS MÛRIR LES LEURS", () => {
+    // Sinon elles deviendraient `approved` et seraient indiscernables
+    // des nôtres au premier coup d'oeil dans l'admin.
+    const bloc = store.slice(store.indexOf("export async function approuverCommissionsMures"));
+    assert.match(bloc.slice(0, 2000), /\.eq\("regle_par", "nous"\)/);
+  });
+
+  test("LE PAYEUR EST ÉCRIT À LA CRÉATION, jamais déduit du préfixe", () => {
+    // On POURRAIT le deviner (`stripe:` = nous). Deviner la mécanique au
+    // lieu de la porter est le défaut qui a produit la fausse alerte de
+    // Véronique : le jour où un troisième encaisseur arrive, la
+    // déduction se tait et l'argent part.
+    const src = lire("lib/affiliate/attribution.ts");
+    assert.match(src, /reglePar: "nous" \| "systeme_io";/);
+    assert.match(src, /regle_par: input\.reglePar,/);
+  });
+
+  test("UN APPELANT MUET EST COMPTÉ COMME SYSTEME.IO, ET ÇA CRIE", () => {
+    // Le repli est CONSERVATEUR : une ligne dont on ignore le payeur ne
+    // partira PAS dans un lot. Elle s'affichera comme versée par eux, ce
+    // qui se corrige d'un UPDATE ; l'inverse partirait en virement.
+    const route = lire("app/api/affiliate/attribute-sale/route.ts");
+    assert.match(route, /reglePar \?\? "systeme_io"/);
+    assert.match(route, /EXCLUE des lots/);
+  });
+
+  test("LE WEBHOOK SYSTEME.IO DIT QUE C'EST EUX", () => {
+    assert.match(lire("app/api/systeme-io/webhook/route.ts"), /reglePar: "systeme_io"/);
+  });
+
+  test("LA MIGRATION REMPLIT L'HISTORIQUE ET FIGE LE DÉFAUT", () => {
+    const sql = lire("supabase/migrations/20260826_commission_regle_par.sql");
+    // Le seul endroit où on déduit : ces lignes existent déjà, personne
+    // ne peut plus leur demander d'où elles viennent.
+    assert.match(sql, /sio_order_id like 'stripe:%'/);
+    assert.match(sql, /set default 'systeme_io'/);
+    assert.match(sql, /check \(regle_par in \('nous', 'systeme_io'\)\)/);
+    assert.match(sql, /if not exists/);
+    assert.match(sql, /notify pgrst, 'reload schema'/);
+  });
+
+  test("L'AFFILIÉ VOIT TOUT, ET SAIT QUI LE PAIE", () => {
+    // Les deux populations vivent dans la MÊME table, et c'est voulu :
+    // son tableau doit être complet. Mais une affiliée qui ne sait pas
+    // lequel des deux systèmes regarde son argent, c'est un ticket de
+    // support par mois et par personne.
+    const page = lire("app/affiliate/revenus/page.tsx");
+    assert.match(page, /regle_par/);
+    assert.match(page, /paye_par_sio/);
+    // Et le libellé existe dans les six langues.
+    for (const f of ["fr", "en", "es", "it", "pt", "ar"]) {
+      assert.match(lire(`app/affiliate/i18n/${f}.ts`), /paye_par_sio:/, `${f} sans libelle`);
+    }
+  });
+});
