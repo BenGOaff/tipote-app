@@ -1,12 +1,12 @@
 // scripts/storage-audit.mjs
 //
-// COMBIEN PÈSE LE STOCKAGE, ET COMBIEN DE FICHIERS NE SERVENT PLUS.
+// COMBIEN PÈSE LE STOCKAGE, ET QUELS FICHIERS PLUS PERSONNE NE CITE.
 //
 // -- POURQUOI CE SCRIPT EXISTE (24 août 2026) --------------------------
 //
-// Le stockage Supabase est à 73 % du plan gratuit (0,73 / 1 Go) avec 43
-// utilisateurs actifs. La base, elle, est à 16 %. Ce n'est donc pas la
-// base qu'il faut alléger : ce sont les FICHIERS.
+// L'alerte Supabase portait sur le STOCKAGE (0,73 / 1 Go sur Tiquiz, avec
+// 43 utilisateurs actifs), pas sur la base, qui était à 16 %. Ce n'est
+// donc pas la base qu'il faut alléger : ce sont les FICHIERS.
 //
 // La cause est structurelle et elle est dans le code :
 //
@@ -23,20 +23,48 @@
 //
 // -- CE QUE CE SCRIPT FAIT, ET CE QU'IL NE FAIT PAS --------------------
 //
-// Il MESURE. Il liste ce qui est stocké, croise chaque fichier avec les
-// colonnes qui pourraient le citer, et dit combien pèse ce que plus
-// personne ne référence.
+// Il MESURE. Il liste ce qui est stocké, croise chaque fichier avec tout
+// ce que la base cite encore, et dit combien pèse ce que plus personne
+// ne référence.
 //
 // **Il ne supprime RIEN, et il n'en a pas le pouvoir.** Un fichier
 // effacé par erreur, c'est l'image de couverture d'une cliente qui
 // disparaît de son quiz en ligne, sans retour arrière. On regarde
 // d'abord, on décide ensuite.
 //
+// -- PLUS AUCUNE LISTE DE COLONNES ÉCRITE À LA MAIN (26 août 2026) -----
+//
+// La première version portait une liste `SOURCES` de tables et de
+// colonnes, et elle a rendu un verdict FAUX dès son premier passage :
+//
+//   - `quizzes.brand_favicon_url` n'existe pas (la colonne est sur
+//     `profiles`). PostgREST refuse le SELECT ENTIER sur une colonne
+//     inconnue, donc AUCUNE image de quiz n'a été lue ;
+//   - `quiz_questions.image_url` n'existe pas non plus : les images des
+//     questions et des réponses vivent dans le JSONB `options` ;
+//   - et surtout, la moitié du bucket (`rich-content`, 373 Mo) est citée
+//     DANS DU HTML de texte riche, à l'intérieur de colonnes de texte
+//     qu'aucune liste de colonnes d'images n'aurait pensé à lire.
+//
+// Résultat annoncé : "642 fichiers ne sont cités NULLE PART". C'était
+// l'inverse : le script n'avait pas su lire ce qui les citait. Une liste
+// écrite à la main finit toujours par diverger du schéma, et ici la
+// divergence se paie en contenus de clientes supprimés.
+//
+// **Règle : on demande son schéma à la base, et on lit TOUT ce qui peut
+// contenir du texte.** Le contenu total de la base est de l'ordre de
+// 80 Mo (16 % de 500 Mo) : la lire en entier coûte quelques secondes, et
+// ça supprime définitivement la classe de bugs "colonne oubliée".
+//
+// **Et si une seule table n'a pas pu être lue, AUCUN verdict n'est
+// rendu.** Un chiffre d'orphelins calculé sur une lecture partielle est
+// pire que pas de chiffre : il a l'air d'une mesure.
+//
 // -- USAGE -------------------------------------------------------------
 //
-//   cd ~/tiquiz-app
 //   node scripts/storage-audit.mjs            # le resume
 //   node scripts/storage-audit.mjs --detail   # + les 40 plus gros orphelins
+//   node scripts/storage-audit.mjs --tables   # + ce qui a ete lu, table par table
 //
 // Pas besoin de sourcer le .env : le script le lit lui même, et
 // seulement les deux lignes dont il a besoin (même raison que
@@ -46,15 +74,6 @@
 import { readFileSync } from "node:fs";
 
 const BUCKET = "public-assets";
-
-/** Les colonnes qui peuvent citer un fichier. Une oubliée = un faux orphelin. */
-const SOURCES = [
-  { table: "quizzes", colonnes: ["bonus_image_url", "og_image_url", "background_image_url", "intro_image_url", "split_image_url", "brand_logo_url"] },
-  { table: "quiz_results", colonnes: ["image_url"] },
-  { table: "quiz_questions", colonnes: ["image_url"] },
-  // Tipote stocke aussi les visuels des contenus generes.
-  { table: "content_item", colonnes: ["image_url"] },
-];
 
 function readVar(name) {
   const fromEnv = (process.env[name] ?? "").trim();
@@ -134,42 +153,110 @@ async function listerRecursif(prefixe, profondeur = 0) {
   return fichiers;
 }
 
-/** Toutes les URL citées par une colonne, en une requête paginée. */
-async function urlsCitees() {
+/**
+ * Le schéma, demandé à la base.
+ *
+ * PostgREST publie son OpenAPI à la racine : chaque table y porte ses
+ * colonnes et leur format. On ne devine plus rien.
+ */
+async function lireSchema() {
+  const res = await fetch(`${URL_BASE}/rest/v1/`, { headers: entetes });
+  if (!res.ok) {
+    console.error(`\nLe schema n'a pas pu etre lu (${res.status}) : ${(await res.text()).slice(0, 200)}`);
+    process.exit(2);
+  }
+  const spec = await res.json();
+  const definitions = spec?.definitions ?? {};
+  const tables = [];
+  for (const [table, def] of Object.entries(definitions)) {
+    const colonnes = Object.entries(def?.properties ?? {})
+      // Tout ce qui peut PORTER du texte : text, varchar, citext, json,
+      // jsonb, et leurs tableaux. Un nombre ou une date ne peut pas
+      // contenir une URL, les lire ne ferait que grossir la reponse.
+      .filter(([, p]) => /text|char|json/i.test(String(p?.format ?? "")))
+      .map(([nom]) => nom);
+    if (colonnes.length > 0) tables.push({ table, colonnes });
+  }
+  return tables.sort((a, b) => a.table.localeCompare(b.table));
+}
+
+/**
+ * Toutes les références au bucket, où qu'elles soient.
+ *
+ * On descend dans les objets et les tableaux : une image de réponse vit
+ * dans le JSONB `options`, une image de texte riche vit dans un `<img
+ * src>` au milieu d'une colonne de texte. Chercher `/public-assets/`
+ * dans la valeur BRUTE les attrape toutes les deux, sans avoir à savoir
+ * laquelle est où.
+ */
+const MOTIF = new RegExp(`/${BUCKET}/([^\\s"'<>)\\\\]+)`, "g");
+
+function recolter(valeur, citees) {
+  if (valeur == null) return;
+  if (typeof valeur === "string") {
+    for (const m of valeur.matchAll(MOTIF)) {
+      let chemin = m[1].split("?")[0].split("#")[0];
+      // Le HTML de texte riche est stocké échappé : un `&amp;` ou un
+      // `&quot;` collé à la fin du src ferait un chemin qui n'existe pas.
+      chemin = chemin.replace(/&(amp|quot|apos|lt|gt|#\d+);.*$/i, "");
+      try {
+        chemin = decodeURIComponent(chemin);
+      } catch {
+        /* une URL mal encodee reste lisible telle quelle */
+      }
+      if (chemin) citees.add(chemin);
+    }
+    return;
+  }
+  if (Array.isArray(valeur)) {
+    for (const v of valeur) recolter(v, citees);
+    return;
+  }
+  if (typeof valeur === "object") {
+    for (const v of Object.values(valeur)) recolter(v, citees);
+  }
+}
+
+async function urlsCitees(tables, montrerTables) {
   const citees = new Set();
-  // UNE SEULE TABLE ILLISIBLE INTERDIT DE CONCLURE.
-  //
-  // Si on n'a pas pu lire `quiz_results`, tous les fichiers qu'elle cite
-  // paraissent orphelins. Rendre ce chiffre quand meme, c'est proposer
-  // de supprimer les images de resultat de toutes les clientes. Une
-  // connaissance partielle ne doit JAMAIS ressembler a une connaissance
-  // complete : le script le dit et refuse le verdict.
   const rates = [];
-  for (const { table, colonnes } of SOURCES) {
+  const lues = [];
+  for (const { table, colonnes } of tables) {
+    let n = 0;
+    let echec = null;
     for (let offset = 0; ; offset += 1000) {
       const params = new URLSearchParams({ select: colonnes.join(","), limit: "1000", offset: String(offset) });
-      const res = await fetch(`${URL_BASE}/rest/v1/${table}?${params}`, { headers: entetes });
+      let res;
+      try {
+        res = await fetch(`${URL_BASE}/rest/v1/${table}?${params}`, { headers: entetes });
+      } catch (e) {
+        echec = String(e?.message ?? e).slice(0, 120);
+        break;
+      }
       if (!res.ok) {
-        rates.push(`${table} (${(await res.text()).slice(0, 100)})`);
+        echec = `${res.status} ${(await res.text()).slice(0, 120)}`;
         break;
       }
       const lignes = await res.json();
       if (!Array.isArray(lignes) || lignes.length === 0) break;
-      for (const l of lignes) {
-        for (const c of colonnes) {
-          const v = l[c];
-          if (typeof v === "string" && v.includes(`/${BUCKET}/`)) {
-            citees.add(decodeURIComponent(v.split(`/${BUCKET}/`)[1].split("?")[0]));
-          }
-        }
-      }
+      n += lignes.length;
+      for (const l of lignes) recolter(l, citees);
       if (lignes.length < 1000) break;
+    }
+    if (echec) rates.push(`${table} (${echec})`);
+    else lues.push({ table, n, colonnes: colonnes.length });
+  }
+  if (montrerTables) {
+    console.log("\nCe qui a ete lu :");
+    for (const l of lues) {
+      console.log(`  ${l.table.padEnd(34)} ${String(l.n).padStart(7)} lignes   ${String(l.colonnes).padStart(3)} colonnes de texte`);
     }
   }
   return { citees, rates };
 }
 
 const detail = process.argv.includes("--detail");
+const montrerTables = process.argv.includes("--tables");
 
 console.log(`\nStockage de ${URL_BASE.replace(/^https?:\/\//, "").split(".")[0]}, bucket "${BUCKET}"\n`);
 
@@ -196,29 +283,40 @@ for (const [topic, e] of [...parTopic].sort((a, b) => b[1].taille - a[1].taille)
   console.log(`  ${topic.padEnd(20)} ${String(e.n).padStart(5)} fichiers   ${mo(e.taille).padStart(10)}`);
 }
 
-console.log("\nCroisement avec ce que la base cite encore...");
-const { citees, rates } = await urlsCitees();
+const tables = await lireSchema();
+console.log(`\nCroisement avec ce que la base cite encore (${tables.length} tables)...`);
+const { citees, rates } = await urlsCitees(tables, montrerTables);
 
 if (rates.length > 0) {
   console.error(
     `\nLECTURE INCOMPLETE, AUCUN VERDICT RENDU.\n\n` +
-      `Ces sources n'ont pas pu etre lues :\n` +
+      `Ces tables n'ont pas pu etre lues :\n` +
       rates.map((r) => `  - ${r}`).join("\n") +
-      `\n\nTout fichier qu'elles citent paraitrait orphelin. Corriger la liste\n` +
-      `SOURCES en tete du script, puis relancer. Le poids total et la\n` +
-      `repartition par dossier, eux, restent justes : ils sont au dessus.\n`,
+      `\n\nTout fichier qu'elles citent paraitrait orphelin, et un fichier\n` +
+      `supprime a tort est le contenu d'une cliente qui disparait de son\n` +
+      `quiz en ligne. Le poids total et la repartition par dossier, eux,\n` +
+      `restent justes : ils sont au dessus.\n`,
   );
   process.exit(2);
 }
 
+const dansLeBucket = new Set(fichiers.map((f) => f.chemin));
 const orphelins = fichiers.filter((f) => !citees.has(f.chemin));
 const poidsOrphelins = orphelins.reduce((s, f) => s + f.taille, 0);
+const citeesReelles = [...citees].filter((c) => dansLeBucket.has(c)).length;
+const citeesFantomes = citees.size - citeesReelles;
 
 console.log(
-  `\n${citees.size} fichiers cites par une ligne vivante.\n` +
+  `\n${citeesReelles} fichiers du bucket sont cites par une ligne vivante.\n` +
     `${orphelins.length} fichiers ne sont cites NULLE PART : ${mo(poidsOrphelins)} ` +
     `(${total > 0 ? Math.round((poidsOrphelins / total) * 100) : 0} % du bucket).`,
 );
+if (citeesFantomes > 0) {
+  console.log(
+    `\n${citeesFantomes} URL citees par la base ne correspondent a AUCUN fichier du\n` +
+      `bucket : ce sont des images deja cassees a l'ecran, a regarder de pres.`,
+  );
+}
 
 if (detail && orphelins.length > 0) {
   console.log("\nLes 40 plus gros orphelins :");
@@ -228,7 +326,9 @@ if (detail && orphelins.length > 0) {
 }
 
 console.log(
-  "\nCE SCRIPT NE SUPPRIME RIEN.\n" +
-    "Un orphelin peut etre cite par une colonne que SOURCES ne connait pas :\n" +
-    "verifier cette liste AVANT de supprimer quoi que ce soit.\n",
+  "\nCE SCRIPT NE SUPPRIME RIEN, ET RIEN NE DOIT ETRE SUPPRIME SUR SA SEULE FOI.\n" +
+    "Il lit la base a un instant donne : un brouillon en cours d'edition, une\n" +
+    "sauvegarde qui n'est pas encore partie, une table ajoutee depuis, et le\n" +
+    "fichier parait orphelin sans l'etre. On ARCHIVE (storage:archive), on ne\n" +
+    "supprime pas.\n",
 );
