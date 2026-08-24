@@ -7,6 +7,7 @@
 //   POST { action: "figer" }     -> crée le lot, marque les commissions
 //   POST { action: "marquer", id, statut }
 //   GET  ?fichier=sepa|paypal&id=<lot>  -> télécharge le fichier
+//   GET  ?pieces=<lot>           -> les autofactures émises pour ce lot
 //
 // Béné, 24 août : export SEPA et virement à la main. **Aucun argent ne
 // part d'ici.** On produit un fichier ; c'est elle qui le dépose dans sa
@@ -31,6 +32,7 @@ import { periodeDe, type LigneLot } from "@/lib/affiliate/versement";
 import {
   approuverCommissionsMures,
   figerLot,
+  lireAutofacturesDuLot,
   lireLot,
   lireLots,
   marquerLot,
@@ -64,6 +66,14 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
   const fichier = req.nextUrl.searchParams.get("fichier");
   const id = req.nextUrl.searchParams.get("id");
+
+  // LES PIÈCES DU LOT. Le lot dit combien on a versé, ces lignes disent
+  // sur quelle facture : l'écran compare les deux comptes, parce qu'une
+  // pièce non émise ne vit sinon que dans `pm2 logs`.
+  const pieces = req.nextUrl.searchParams.get("pieces");
+  if (pieces) {
+    return NextResponse.json({ ok: true, pieces: await lireAutofacturesDuLot(pieces) });
+  }
 
   if (fichier && id) {
     const lot = (await lireLot(id)) as

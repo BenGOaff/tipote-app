@@ -93,8 +93,19 @@ export interface AffilieePayable {
   displayName?: string | null;
   /** Ce qu'elle a renseigné, déjà normalisé et validé. */
   coordonnees: Coordonnees;
-  /** `false` = ses coordonnées sont incomplètes ou fausses. */
+  /** `false` = ses coordonnées de versement sont incomplètes ou fausses. */
   payable: boolean;
+  /**
+   * `false` = on ne peut pas ÉMETTRE sa facture (mandat non accepté,
+   * SIREN manquant, adresse absente).
+   *
+   * **C'est distinct de `payable`, et il le faut** : les deux se
+   * remplissent sur le même écran mais répondent à deux questions
+   * différentes ("où j'envoie l'argent" et "sur quelle pièce"). Les
+   * confondre dirait "coordonnées manquantes" à quelqu'un qui a très
+   * bien rempli son IBAN et qui a juste oublié de cocher le mandat.
+   */
+  profilComplet: boolean;
 }
 
 /**
@@ -125,6 +136,8 @@ export interface LigneLot {
 export type RaisonEcartee =
   /** Elle n'a pas encore dit comment être payée, ou ses infos sont fausses. */
   | "coordonnees"
+  /** Ses infos fiscales manquent, ou le mandat de facturation n'est pas accepté. */
+  | "profil-fiscal"
   /** Sous le minimum : acquis, mais reporté au lot suivant. */
   | "sous-le-minimum"
   /** On ne connaît pas cette affiliée : ça ne doit jamais arriver en silence. */
@@ -192,6 +205,17 @@ export function construireLot(
     const methode = aff.coordonnees.methode;
     if (!aff.payable || !methode) {
       ecartees.push({ sa, raison: "coordonnees", montantCents: montant, commissionIds: ids });
+      continue;
+    }
+    // SANS MANDAT, ON N'ÉMET PAS SA FACTURE, DONC ON NE LA PAIE PAS.
+    //
+    // Écrire une facture au nom de quelqu'un sans son accord n'est pas
+    // une facilité, c'est un faux (article 289 I-2 du CGI). Et comme
+    // c'est cette facture qui justifie le virement, pas de facture veut
+    // dire pas de virement. Elle est écartée EN LE DISANT : son argent
+    // reste acquis, il part au lot suivant.
+    if (!aff.profilComplet) {
+      ecartees.push({ sa, raison: "profil-fiscal", montantCents: montant, commissionIds: ids });
       continue;
     }
     if (montant < minimumCents) {

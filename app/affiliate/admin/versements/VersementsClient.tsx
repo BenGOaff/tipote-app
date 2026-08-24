@@ -21,8 +21,15 @@ interface Ligne {
 }
 interface Ecartee {
   sa: string;
-  raison: "coordonnees" | "sous-le-minimum" | "affiliee-inconnue";
+  raison: "coordonnees" | "profil-fiscal" | "sous-le-minimum" | "affiliee-inconnue";
   montantCents: number;
+}
+interface Piece {
+  numero: string;
+  sa: string;
+  email: string;
+  ttc_cents: number;
+  a_verifier: string[] | null;
 }
 interface Lot {
   id: string;
@@ -33,6 +40,8 @@ interface Lot {
   total_virement_cents: number;
   prepare_le: string;
   paye_le: string | null;
+  /** Le NOMBRE de virements, jamais les lignes : elles portent les IBAN. */
+  nbLignes: number;
 }
 interface Reponse {
   ok?: boolean;
@@ -44,6 +53,12 @@ interface Reponse {
 
 const RAISONS: Record<Ecartee["raison"], string> = {
   coordonnees: "n'a pas encore dit comment être payée",
+  // DISTINCT des coordonnées, et il le faut : dire "coordonnées
+  // manquantes" à quelqu'un qui a très bien rempli son IBAN et qui a
+  // juste oublié de cocher le mandat l'envoie chercher au mauvais
+  // endroit. Sans mandat on ne peut pas écrire sa facture, et c'est
+  // cette facture qui justifie le virement.
+  "profil-fiscal": "infos de facturation incomplètes ou mandat non accepté, à relancer",
   "sous-le-minimum": "sous 20 €, reporté au versement suivant",
   "affiliee-inconnue": "affiliée introuvable, à regarder",
 };
@@ -63,6 +78,28 @@ export default function VersementsClient() {
   const [data, setData] = useState<Reponse | null>(null);
   const [enCours, setEnCours] = useState<string | null>(null);
   const [message, setMessage] = useState<{ ok: boolean; texte: string } | null>(null);
+  // Les pièces d'un lot ne se chargent qu'à la demande : elles ne
+  // servent qu'au moment de la compta, et les charger d'office
+  // ralentirait l'écran qu'on ouvre tous les mois pour payer.
+  const [pieces, setPieces] = useState<Record<string, Piece[]>>({});
+
+  async function chargerPieces(lotId: string) {
+    if (pieces[lotId]) {
+      setPieces((p) => {
+        const suite = { ...p };
+        delete suite[lotId];
+        return suite;
+      });
+      return;
+    }
+    try {
+      const r = await fetch(`/api/affiliate/admin/versements?pieces=${lotId}`, { cache: "no-store" });
+      const j = (await r.json()) as { pieces?: Piece[] };
+      setPieces((p) => ({ ...p, [lotId]: j.pieces ?? [] }));
+    } catch {
+      setMessage({ ok: false, texte: "Les factures de ce lot n'ont pas pu être lues." });
+    }
+  }
 
   const charger = useCallback(async () => {
     try {
@@ -248,6 +285,13 @@ export default function VersementsClient() {
                       PayPal ({euros(l.total_paypal_cents)})
                     </a>
                   )}
+                  <button
+                    type="button"
+                    onClick={() => void chargerPieces(l.id)}
+                    className="text-xs font-semibold text-primary hover:underline"
+                  >
+                    {pieces[l.id] ? "Masquer les factures" : "Les factures"}
+                  </button>
                   {l.statut !== "paye" && (
                     <button
                       type="button"
@@ -256,6 +300,55 @@ export default function VersementsClient() {
                     >
                       Marquer payé
                     </button>
+                  )}
+
+                  {/* LES DEUX COMPTES, CÔTE À CÔTE.
+                      Une pièce qui n'a pas pu être émise ne vit sinon que
+                      dans `pm2 logs` : elle déposerait le fichier à la
+                      banque en croyant sa compta complète. */}
+                  {pieces[l.id] && (
+                    <div className="w-full rounded-md bg-muted/50 px-3 py-2">
+                      {pieces[l.id].length === 0 ? (
+                        <p className="text-amber-900 dark:text-amber-200">
+                          Aucune facture émise pour ce lot. Les virements sont bons, la compta
+                          non : regarde <code>pm2 logs</code>, ligne <code>[autofacture]</code>.
+                        </p>
+                      ) : (
+                        <>
+                          <p className="mb-1 text-xs text-muted-foreground">
+                            {pieces[l.id].length} facture(s) pour {l.nbLignes} virement(s).
+                            {pieces[l.id].length !== l.nbLignes && (
+                              <strong className="text-amber-700 dark:text-amber-300">
+                                {" "}Les deux comptes diffèrent.
+                              </strong>
+                            )}
+                          </p>
+                          <ul className="space-y-0.5">
+                            {pieces[l.id].map((f) => (
+                              <li key={f.numero} className="flex flex-wrap items-center gap-x-2">
+                                <a
+                                  className="font-mono text-primary hover:underline"
+                                  href={`/facture-affilie/${f.numero}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  {f.numero}
+                                </a>
+                                <span className="flex-1 truncate text-muted-foreground">
+                                  {f.email}
+                                </span>
+                                <span className="font-semibold">{euros(f.ttc_cents)}</span>
+                                {f.a_verifier && f.a_verifier.length > 0 && (
+                                  <span className="text-xs text-amber-700 dark:text-amber-300">
+                                    à vérifier : {f.a_verifier.join(", ")}
+                                  </span>
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                        </>
+                      )}
+                    </div>
                   )}
                 </li>
               ))}

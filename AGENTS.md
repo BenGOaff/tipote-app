@@ -1992,3 +1992,143 @@ parce que le cycle existe enfin.** La page continue de dire ce qui reste
 chez eux : les commissions des ventes arrivées par leurs anciens tunnels.
 
 Test : `tests/logic/versement-affilies.test.mts`.
+
+## On écrit la facture À LA PLACE de l'affilié (Béné, 25 août 2026)
+
+"Je veux le même truc que systeme io : l'affilié complète ses infos, son
+numéro de TVA et siren s'il a, ses coordonnées, son mode paiement et tous
+les mois on génère sa facture pour sa compta, il peut la télécharger et
+nous on peut le payer via cette facture qu'on a générée pour lui."
+
+Et, dans le même message, la distinction qui structure tout :
+
+> "Ne pas confondre :
+> - les factures qu'on crée pour nos acheteurs
+> - les factures qu'on crée à la place de nos affiliés pour les payer et
+>   ne pas avoir à attendre leurs propres factures"
+
+**LES DEUX VONT DANS DES SENS OPPOSÉS, ET C'EST LE PIÈGE PRINCIPAL.**
+
+| | Facture de VENTE (dépôt Tiquiz) | AUTOFACTURE (ici) |
+|---|---|---|
+| qui vend | nous | l'affilié |
+| le montant de départ | le prix, **TTC** | la commission, **nette de taxe** |
+| la TVA | se calcule DEDANS | s'AJOUTE par dessus |
+| série | `TQ-` (et `AQ-` pour l'Atelier) | `AFF-` |
+
+Recopier l'une sur l'autre ferait des factures fausses **des deux côtés**,
+et rien ne le signalerait avant une réclamation. `COMMISSION_EST_HT` est
+donc une constante NOMMÉE (`lib/affiliate/fiscal.ts`) : le sens se lit,
+il ne se devine pas, et si Béné décide un jour que la commission est TTC
+c'est une ligne à changer, pas un calcul à retrouver.
+
+### Sans mandat, pas de facture, donc pas de virement
+
+Écrire une facture au nom de quelqu'un sans son accord n'est pas une
+facilité, c'est un faux. L'autofacturation exige un mandat (art. 289 I-2
+du CGI), la mention "Autofacturation" sur la pièce (art. 242 nonies A) et
+le droit de la contester. Le texte du mandat vit dans le CODE
+(`TEXTE_MANDAT`), pas dans un fichier de langue : c'est un acte
+juridique, et sa VERSION est stockée avec la date d'acceptation.
+
+`construireLot` écarte donc l'affilié sans profil complet ou sans mandat,
+avec la raison `profil-fiscal`, **distincte de `coordonnees`**. Les deux
+se remplissent sur le même écran mais répondent à deux questions
+différentes : dire "coordonnées manquantes" à quelqu'un qui a très bien
+rempli son IBAN et qui a juste oublié de cocher le mandat l'envoie
+chercher au mauvais endroit. Son argent reste acquis, il part au lot
+suivant.
+
+**La date de l'acceptation vient du SERVEUR.** Le navigateur dit qu'il
+accepte, il ne dit pas quand.
+
+### Les quatre régimes de TVA, et le piège est le même qu'à la vente
+
+`resoudreTvaAutofacture()` décide : `france-tva` (20 %),
+`franchise-en-base` (0 %, le cas le plus fréquent), `autoliquidation-ue`,
+`autoliquidation-hors-ue`. Un particulier ne facture pas de TVA et le cas
+est SIGNALÉ : payer une commission à quelqu'un qui n'a aucun statut est
+une question pour un comptable, pas pour du code.
+
+**ASSUJETTI N'EST PAS DÉDUCTIBLE DE LA PRÉSENCE D'UN NUMÉRO DE TVA.**
+Beaucoup d'auto-entrepreneurs en franchise en base en ont un sans facturer
+de TVA. Le déduire ajouterait 20 % à des factures qui n'en portent pas.
+C'est une case à cocher, et l'écran le dit en toutes lettres.
+
+### La numérotation : un compteur, jamais une séquence
+
+Une séquence Postgres saute des numéros dès qu'une transaction est
+annulée, c'est même sa raison d'être. Une numérotation de factures doit
+être continue : un trou est exactement ce qu'un contrôle cherche. D'où
+`autofacture_compteurs` + `emettre_autofacture()`, qui alloue le numéro
+ET insère dans la MÊME transaction.
+
+**Elle ne lève JAMAIS sur un doublon.** Un lot rejoué rend la pièce déjà
+émise. Deux appels SIMULTANÉS passent tous les deux le premier SELECT :
+le bloc `exception when unique_violation` les rattrape, et comme c'est
+une sous-transaction, le compteur revient en arrière avec. Sans lui la
+fonction lèverait, donc le lot échouerait, donc les virements
+attendraient une pièce comptable.
+
+### L'ordre dans `figerLot`, et il n'est pas décoratif
+
+**le lot -> les factures -> les commissions marquées `paid`.**
+
+Avant le lot, la facture n'aurait pas d'identifiant de versement à
+porter. Après le marquage, une panne laisserait des commissions soldées
+sans la pièce qui les justifie.
+
+**Une facture ratée ne bloque JAMAIS un virement** : l'émission ne rend
+rien, ne lève pas, et chaque échec passe au suivant en criant dans le
+journal. Une pièce manquante se réémet, un virement perdu non. L'écran
+d'admin affiche le nombre de factures À CÔTÉ du nombre de virements, et
+dit quand les deux comptes diffèrent : sans ça, une pièce non émise ne
+vivrait que dans `pm2 logs`.
+
+### Le profil est RECOPIÉ dans la pièce, jamais relu
+
+Une facture émise ne bouge plus : c'est la loi, et c'est la même règle
+que les factures de vente (24 août). Elle porte l'adresse du jour de
+l'émission. Un écran qui lirait le profil COURANT réécrirait tout
+l'historique au premier déménagement, sans que personne ne le voie. La
+mention légale suit la même règle : la page imprimable rend `f.mentions`,
+figée à l'émission, et n'importe PAS `MENTION_AUTOFACTURATION`.
+
+### Deux trouvailles au passage, et les deux étaient des trous réels
+
+1. **La route des coordonnées acceptait le profil fiscal et le mandat
+   dans son corps et ne les écrivait NULLE PART.** L'affilié remplissait,
+   lisait "enregistré", et restait écarté du lot pour "profil fiscal
+   incomplet". Le silence exact que le `ok: false` du 3 août interdit.
+   Le profil est accepté MÊME INCOMPLET (ce qui manque part dans
+   `manquesFiscaux`) : refuser tout parce qu'il manque une ligne fait
+   tout ressaisir, et c'est comme ça qu'on perd la moitié d'un
+   formulaire.
+2. **L'écran d'admin recevait les IBAN en clair.** `affiliate_payouts.
+   lignes` porte les coordonnées FIGÉES, donc des IBAN, et `lireLots`
+   faisait `select("*")`. La règle écrite la veille dit l'inverse :
+   "aucune route ne le renvoie à un navigateur, pas même à sa
+   propriétaire". L'écran reçoit désormais un COMPTE (`nbLignes`), pas
+   des comptes bancaires. Seul le constructeur du fichier SEPA lit les
+   lignes, et il tourne sur le serveur.
+
+### À faire relire par son comptable, une fois
+
+Trois choix sont défendables et sont les siens, pas les miens :
+- **une seule série `AFF-` pour tous les affiliés** (l'autre usage est
+  une série par prestataire) ;
+- **le cas du particulier non assujetti**, accepté et signalé ;
+- **`COMMISSION_EST_HT = true`** : un affilié assujetti coûte 20 % de
+  trésorerie en plus, récupérable, mais ça sort du compte le mois même.
+
+### Endroits à respecter
+
+`lib/affiliate/fiscal.ts` et `lib/affiliate/autofacture.ts` (purs et
+testés, ils n'importent jamais `supabaseAdmin`),
+`lib/affiliate/versementStore.ts` (l'émission, sans aucune décision),
+`app/api/affiliate/coordonnees/route.ts`,
+`app/affiliate/components/CoordonneesVersement.tsx`,
+`app/facture-affilie/[numero]/page.tsx`,
+`app/affiliate/admin/versements/VersementsClient.tsx`,
+`supabase/migrations/20260825_autofacturation.sql`.
+Test : `tests/logic/autofacture.test.mts`.

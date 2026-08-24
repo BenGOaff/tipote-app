@@ -247,7 +247,7 @@ function affiliee(sa: string, sur: Partial<AffilieePayable> = {}): AffilieePayab
   });
   return {
     sa, email: `${sa}@exemple.fr`, displayName: "Marie Dupont",
-    coordonnees, payable: peutEtrePayee(coordonnees), ...sur,
+    coordonnees, payable: peutEtrePayee(coordonnees), profilComplet: true, ...sur,
   };
 }
 
@@ -322,6 +322,34 @@ describe("Le lot du mois", () => {
     assert.equal(lot.lignes.length, 0);
     assert.equal(lot.ecartees[0].raison, "coordonnees");
     assert.equal(lot.ecartees[0].montantCents, 9900);
+  });
+
+  test("SANS MANDAT DE FACTURATION, écartée et DITE", () => {
+    // On n'émet pas sa facture, donc on ne la paie pas : écrire une
+    // facture au nom de quelqu'un sans son accord est un faux. Son
+    // argent reste acquis et part au lot suivant.
+    const lot = construireLot(
+      [commission("sa1", "c1", 9900)],
+      [affiliee("sa1", { profilComplet: false })],
+    );
+    assert.equal(lot.lignes.length, 0);
+    assert.equal(lot.ecartees[0].raison, "profil-fiscal");
+    assert.equal(lot.ecartees[0].montantCents, 9900);
+  });
+
+  test("les deux raisons sont DISTINCTES", () => {
+    // "coordonnées manquantes" à quelqu'un qui a très bien rempli son
+    // IBAN et qui a juste oublié de cocher le mandat l'enverrait
+    // chercher au mauvais endroit.
+    const sansCoord = affiliee("sa1", { coordonnees: lireCoordonnees({}), payable: false });
+    const sansMandat = affiliee("sa2", { profilComplet: false });
+    const lot = construireLot(
+      [commission("sa1", "c1", 5000), commission("sa2", "c2", 5000)],
+      [sansCoord, sansMandat],
+    );
+    const raisons = Object.fromEntries(lot.ecartees.map((e) => [e.sa, e.raison]));
+    assert.equal(raisons.sa1, "coordonnees");
+    assert.equal(raisons.sa2, "profil-fiscal");
   });
 
   test("une affiliée inconnue ne disparaît pas non plus", () => {

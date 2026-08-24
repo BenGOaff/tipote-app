@@ -2,8 +2,13 @@
 //
 // L'AFFILIÉE DIT COMMENT ELLE VEUT ÊTRE PAYÉE.
 //
-//   GET  -> { ok, coordonnees }        (l'IBAN sort MASQUÉ, toujours)
-//   PUT  { methode, ... } -> { ok }
+//   GET  -> { ok, coordonnees, profil, factures }  (l'IBAN sort MASQUÉ)
+//   PUT  { methode, ..., profil, accepteLeMandat } -> { ok }
+//
+// Les coordonnées de VERSEMENT et le profil FISCAL se remplissent sur le
+// même écran, parce que ce sont les deux moitiés de la même question :
+// "où j'envoie l'argent" et "sur quelle pièce". Ils restent DEUX champs
+// distincts dans la réponse : l'écran doit pouvoir dire lequel manque.
 //
 // Béné, 25 août 2026 : "on doit proposer le choix aux affiliés : Paypal
 // ou virement bancaire. Ils doivent pouvoir indiquer leur mail paypal OU
@@ -37,10 +42,20 @@ import {
   manquesVersement,
   type MethodeVersement,
 } from "@/lib/affiliate/coordonnees";
+import {
+  MANDAT_VERSION,
+  lireProfilFiscal,
+  manquesFiscaux,
+  profilFiscalComplet,
+} from "@/lib/affiliate/fiscal";
+import { TEXTE_MANDAT } from "@/lib/affiliate/autofacture";
 import { getAffiliateSession } from "@/lib/affiliate/session";
 import {
   ecrireCoordonneesAffiliee,
+  ecrireProfilFiscalAffiliee,
+  lireAutofactures,
   lireCoordonneesAffiliee,
+  lireProfilFiscalAffiliee,
 } from "@/lib/affiliate/versementStore";
 
 export const runtime = "nodejs";
@@ -51,8 +66,27 @@ export async function GET(): Promise<NextResponse> {
   if (!session) {
     return NextResponse.json({ ok: false, reason: "not_signed_in" }, { status: 401 });
   }
-  const coordonnees = await lireCoordonneesAffiliee(session.sa);
-  return NextResponse.json({ ok: true, coordonnees });
+  const [coordonnees, profil, factures] = await Promise.all([
+    lireCoordonneesAffiliee(session.sa),
+    lireProfilFiscalAffiliee(session.sa),
+    lireAutofactures(session.sa),
+  ]);
+  return NextResponse.json({
+    ok: true,
+    coordonnees,
+    profil,
+    // Ce qui manque est calculé PAR LA MÊME fonction que celle qui
+    // décide, au moment du lot, si on peut émettre sa facture. Deux
+    // règles écrites séparément finiraient par ne pas dire la même
+    // chose, et c'est l'écran qui mentirait.
+    manquesFiscaux: manquesFiscaux(profil ?? lireProfilFiscal({})),
+    // "Es-tu payable" est répondu par la MÊME fonction que celle
+    // qu'appelle `preparerLot`. L'écran ne redérive rien : un aperçu
+    // qui recalcule une décision finit toujours par mentir.
+    profilComplet: profilFiscalComplet(profil ?? lireProfilFiscal({})),
+    mandat: { version: MANDAT_VERSION, texte: TEXTE_MANDAT },
+    factures,
+  });
 }
 
 export async function PUT(req: NextRequest): Promise<NextResponse> {
@@ -67,6 +101,8 @@ export async function PUT(req: NextRequest): Promise<NextResponse> {
     titulaire?: string;
     iban?: string;
     bic?: string;
+    profil?: unknown;
+    accepteLeMandat?: boolean;
   };
   try {
     body = (await req.json()) as typeof body;
@@ -107,8 +143,60 @@ export async function PUT(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ ok: false, reason: ecrit.reason ?? "base" }, { status: 500 });
   }
 
+  // LE PROFIL FISCAL, ÉCRIT DANS LA MÊME REQUÊTE.
+  //
+  // Il est ACCEPTÉ MÊME INCOMPLET, et c'est voulu : quelqu'un qui donne
+  // son IBAN aujourd'hui et cherchera son SIREN demain doit pouvoir
+  // enregistrer ce qu'il a. Ce qui manque part dans `manquesFiscaux`,
+  // et l'écran le dit. Refuser tout parce qu'il manque une ligne lui
+  // ferait tout ressaisir, et c'est comme ça qu'on perd la moitié d'un
+  // formulaire.
+  //
+  // Ce qui n'est PAS négociable, c'est le lien avec l'argent : sans
+  // profil complet ET sans mandat, `construireLot` l'écarte en le
+  // DISANT (raison `profil-fiscal`, distincte de `coordonnees`). Son
+  // argent reste acquis et part au lot suivant.
+  const profilRecu = lireProfilFiscal(
+    (body.profil ?? {}) as Parameters<typeof lireProfilFiscal>[0],
+  );
+  const ecritProfil = await ecrireProfilFiscalAffiliee({
+    sa: session.sa,
+    profil: profilRecu,
+    // LA DATE DE L'ACCEPTATION VIENT DU SERVEUR (voir le store). Le
+    // navigateur dit qu'il accepte, il ne dit pas QUAND.
+    accepteLeMandat: body.accepteLeMandat === true,
+  });
+  if (!ecritProfil.ok) {
+    // Les coordonnées sont passées, le profil non : le dire, sinon elle
+    // repart en croyant les deux enregistrés et se retrouve écartée du
+    // lot sans comprendre pourquoi.
+    return NextResponse.json(
+      { ok: false, reason: "profil_non_enregistre" },
+      { status: 500 },
+    );
+  }
+
   // On relit : l'écran doit afficher le MASQUE que la base porte
   // désormais, pas la saisie qu'il vient d'envoyer.
-  const coordonnees = await lireCoordonneesAffiliee(session.sa);
-  return NextResponse.json({ ok: true, coordonnees });
+  const [coordonnees, profil, factures] = await Promise.all([
+    lireCoordonneesAffiliee(session.sa),
+    lireProfilFiscalAffiliee(session.sa),
+    lireAutofactures(session.sa),
+  ]);
+  return NextResponse.json({
+    ok: true,
+    coordonnees,
+    profil,
+    // Ce qui manque est calculé PAR LA MÊME fonction que celle qui
+    // décide, au moment du lot, si on peut émettre sa facture. Deux
+    // règles écrites séparément finiraient par ne pas dire la même
+    // chose, et c'est l'écran qui mentirait.
+    manquesFiscaux: manquesFiscaux(profil ?? lireProfilFiscal({})),
+    // "Es-tu payable" est répondu par la MÊME fonction que celle
+    // qu'appelle `preparerLot`. L'écran ne redérive rien : un aperçu
+    // qui recalcule une décision finit toujours par mentir.
+    profilComplet: profilFiscalComplet(profil ?? lireProfilFiscal({})),
+    mandat: { version: MANDAT_VERSION, texte: TEXTE_MANDAT },
+    factures,
+  });
 }
