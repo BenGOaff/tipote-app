@@ -45,6 +45,7 @@
 //   3. NEXT_PUBLIC_ASSETS_BASE_URL est posee dans le .env
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 
 function readVar(name) {
@@ -264,7 +265,15 @@ for (const { table, colonnes, pk } of tables) {
 // La sauvegarde est ecrite MEME en simulation : c'est elle qui permet de
 // relire ce qui allait etre touche avant de se lancer.
 if (journal.length > 0) {
-  const chemin = join(DOSSIER, "..", `_urls-avant-migration-${appliquer ? "applique" : "simulation"}.json`);
+  // Le dossier personnel, jamais `/srv` (qui appartient a root) ni
+  // `DOSSIER` (qui est SERVI publiquement par le serveur web : cette
+  // sauvegarde porte des adresses de contenus de clientes, elle n'a
+  // rien a faire derriere une URL publique).
+  const iSauvegarde = process.argv.indexOf("--sauvegarde");
+  const chemin =
+    iSauvegarde >= 0
+      ? process.argv[iSauvegarde + 1]
+      : join(homedir(), `_urls-avant-migration-${appliquer ? "applique" : "simulation"}.json`);
   try {
     mkdirSync(dirname(chemin), { recursive: true });
     writeFileSync(chemin, JSON.stringify(journal, null, 2));
