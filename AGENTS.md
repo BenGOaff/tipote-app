@@ -1842,17 +1842,29 @@ en bas. Le hub et l'Atelier mènent à leurs pages sur nos domaines.
 | Destination | Où elle mène |
 |---|---|
 | `tiquiz_direct`, `tiquiz_main` | `https://tiquiz.fr/` |
-| `atelier` | `https://atelierduquiz.fr/` |
 | les 4 paliers | `https://tiquiz.fr/commande/<produit>` |
 | `tiquiz_free` | **reste chez Systeme.io** |
+| `atelier` | **reste chez Systeme.io** |
 
-**`tiquiz_free` reste là-bas, et c'est délibéré.** C'est un optin, pas
+**DEUX destinations restent là-bas, et les deux raisons sont nommées.**
+
+**`tiquiz_free`, et c'est délibéré.** C'est un optin, pas
 une vente : son formulaire crée le contact et pose le tag chez eux, et
 c'est le seul événement qui porte une URL de tunnel, donc le seul qui
 sait d'où vient l'inscrit. Le remplacer par notre `/signup` ferait
 disparaître ces inscrits de ses séquences email. À refaire le jour où
 notre inscription gratuite créera elle aussi le contact chez Systeme.io
 (le chemin d'ACHAT le fait depuis le 25 août, pas encore l'inscription).
+
+**`atelier`, et on ne l'a vu qu'en allant lire son code.** L'Atelier a
+son PROPRE registre d'affiliés : `attributeQuizingSale` résout le `sa`
+contre `profiles.sio_affiliate_id` dans SA base, pas contre la table
+`affiliates` d'ici. Une affiliée Tipote qui n'est pas élève de l'Atelier
+serait donc `affiliate_not_registered`, alors que le tunnel Systeme.io
+la paie. Et l'Atelier ne lit que `?sa=`, jamais `?ref=`. **Repointer ce
+lien change QUI est payé** : c'est un chantier à part (unifier les deux
+registres, ou porter `?ref=` là-bas), pas une ligne à changer ici. Le
+lien a été repointé puis REMIS, avant de partir.
 
 La chaîne est complète et elle a été vérifiée bout en bout : le `?ref=`
 arrive dans l'URL, le middleware le range dans `tq_ref`, le bon de

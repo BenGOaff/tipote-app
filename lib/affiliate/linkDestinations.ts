@@ -61,7 +61,18 @@ export type LinkDestinationRow = {
 // Systeme.io.
 const FALLBACK: LinkDestinationRow[] = [
   { slug: "tiquiz_direct",       path: "https://tiquiz.fr/",                        sort_order: 8,  enabled: true },
-  { slug: "atelier",             path: "https://atelierduquiz.fr/",                 sort_order: 5,  enabled: true },
+  // L'ATELIER RESTE CHEZ SYSTEME.IO AUSSI, et pour une raison qu'on n'a
+  // vue qu'en allant lire son code : il a son PROPRE registre d'affiliés.
+  // `attributeQuizingSale` résout le `sa` contre `profiles.
+  // sio_affiliate_id` dans SA base, pas contre la table `affiliates`
+  // d'ici. Une affiliée Tipote qui n'est pas élève de l'Atelier serait
+  // donc `affiliate_not_registered`, alors que le tunnel Systeme.io la
+  // paie. Et l'Atelier ne lit que `?sa=`, jamais `?ref=`.
+  //
+  // Repointer ce lien change donc QUI est payé : c'est un chantier à
+  // part (unifier les deux registres, ou porter `?ref=` côté Atelier),
+  // pas une ligne à changer ici.
+  { slug: "atelier",             path: "/atelier-du-quiz",                          sort_order: 5,  enabled: true },
   { slug: "tiquiz_main",         path: "https://tiquiz.fr/",                        sort_order: 10, enabled: true },
   // Le seul qui reste chez eux : voir le bloc ci-dessus.
   { slug: "tiquiz_free",         path: "/part-tiquiz-gratuit",                      sort_order: 20, enabled: true },

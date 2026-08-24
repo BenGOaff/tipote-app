@@ -399,9 +399,20 @@ test("les 8 destinations du seed sont toujours la", () => {
   ]);
 });
 
-test("TOUTES les destinations menent chez nous, sauf l'optin gratuit", () => {
+/**
+ * LES DEUX EXCEPTIONS, ET ELLES SONT NOMMÉES.
+ *
+ * - `tiquiz_free` : un optin, dont le formulaire cree le contact et pose
+ *   le tag chez Systeme.io.
+ * - `atelier` : l'Atelier a son PROPRE registre d'affiliés
+ *   (`profiles.sio_affiliate_id` dans SA base, pas la table `affiliates`
+ *   d'ici) et ne lit que `?sa=`. Repointer changerait QUI est payé.
+ */
+const RESTENT_CHEZ_SYSTEME_IO = ["tiquiz_free", "atelier"];
+
+test("TOUTES les destinations menent chez nous, sauf deux exceptions nommees", () => {
   for (const d of seedDestinations()) {
-    if (d.slug === "tiquiz_free") continue;
+    if (RESTENT_CHEZ_SYSTEME_IO.includes(d.slug)) continue;
     assert.ok(
       /^https?:\/\//i.test(d.path),
       `${d.slug} : un chemin relatif part sur le domaine de vente Systeme.io (${d.path})`,
@@ -421,6 +432,8 @@ test("L'OPTIN GRATUIT RESTE chez Systeme.io, et c'est deliberé", () => {
   // de ses sequences email.
   const gratuit = seedDestinations().find((d) => d.slug === "tiquiz_free");
   assert.equal(gratuit?.path, "/part-tiquiz-gratuit");
+  // Et l'Atelier, pour la raison ecrite juste au dessus.
+  assert.equal(seedDestinations().find((d) => d.slug === "atelier")?.path, "/atelier-du-quiz");
   const src = fs.readFileSync(
     path.join(process.cwd(), "lib/affiliate/linkDestinations.ts"),
     "utf8",
@@ -428,6 +441,7 @@ test("L'OPTIN GRATUIT RESTE chez Systeme.io, et c'est deliberé", () => {
   // Et la RAISON est ecrite a cote : sans elle, le prochain qui passe
   // "finit le travail" et casse le tunnel gratuit.
   assert.match(src, /RESTE chez Systeme\.io, et c'est deliberé/);
+  assert.match(src, /son PROPRE registre d'affiliés/);
 });
 
 test("les paliers menent a NOTRE bon de commande, pas a une page morte", () => {
