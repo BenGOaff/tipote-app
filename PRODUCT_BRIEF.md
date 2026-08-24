@@ -219,6 +219,7 @@ Variations selon le canal :
 - Essai gratuit : accès Tipote Elite offert pour créer du contenu de promo authentique.
 - **Il choisit comment il est payé** : PayPal ou virement bancaire. L'IBAN est chiffré et ne ressort jamais en clair, pas même à son propriétaire (un écran se photographie) : il en voit un masque, et le ressaisit pour le changer.
 - **On écrit sa facture à sa place**, chaque mois, avec son accord (mandat d'autofacturation). Il la télécharge pour sa comptabilité et n'a rien à nous envoyer.
+- **La commission est RÉCURRENTE** : 40 % sur Tiquiz versés chaque mois tant que la personne recommandée reste abonnée, pas une prime une seule fois. Elle s'arrête si la personne part ou se fait rembourser ; les mois déjà versés restent acquis. C'est l'argument principal du programme, et il ne doit jamais être présenté comme un paiement unique.
 - **Ce qu'on promet, on le tient dans les deux sens** : une commission tombe si la vente est remboursée ou impayée, comme le disent les conditions du programme. Un affilié qui découvrirait l'inverse cesserait de nous croire sur le reste.
 - Ne jamais annoncer un délai de versement inférieur à 21 jours après la vente : c'est le délai de rétractation plus une marge, et une commission virée ne se reprend pas.
 
