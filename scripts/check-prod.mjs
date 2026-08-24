@@ -229,6 +229,20 @@ verifier("CRON_SECRET", {
 });
 console.log(lignes.splice(0).join("\n"));
 
+console.log("\n  Images servies par notre serveur (facultatif)");
+verifier("NEXT_PUBLIC_ASSETS_BASE_URL", {
+  requis: false,
+  quoi:
+    "ABSENTE = les images continuent d'aller chez Supabase, exactement comme avant.\n" +
+    "       Posee (https://assets....), les NOUVELLES images vont sur ce serveur.\n" +
+    "       Rien n'est migre : les anciennes URL Supabase marchent pour toujours.",
+});
+verifier("ASSETS_DIR", {
+  requis: false,
+  quoi: "Le dossier ecrit sur ce serveur. Absente, c'est le defaut du code, servi par nginx.",
+});
+console.log(lignes.splice(0).join("\n"));
+
 // ── LES SECRETS QUI DOIVENT ÊTRE LES MÊMES AILLEURS ──
 //
 // C'est le seul contrôle qu'aucune des deux apps ne pouvait faire toute

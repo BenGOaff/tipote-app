@@ -175,7 +175,11 @@ test("tous les points d'envoi passent par prepareUpload", () => {
     "components/quiz/SurveyDetailClient.tsx",
   ]) {
     const src = lire(f);
-    const envois = [...src.matchAll(/\.upload\(path, ([\w.]+),/g)].map((m) => m[1]);
+    // Depuis le 26 aout les composants ne televersent plus en direct :
+    // ils passent par `televerserAsset`, qui decide entre notre serveur
+    // et Supabase. Le garde-fou, lui, ne change pas : ce qui part doit
+    // toujours etre le fichier COMPRESSE.
+    const envois = [...src.matchAll(/televerserAsset\(supabase, path, ([\w.]+)\)/g)].map((m) => m[1]);
     assert.ok(envois.length > 0, `${f} : aucun envoi trouve`);
     for (const quoi of envois) {
       assert.equal(quoi, "prepared.blob", `${f} envoie \`${quoi}\` au lieu du fichier prepare`);

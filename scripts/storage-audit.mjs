@@ -73,7 +73,24 @@
 
 import { readFileSync } from "node:fs";
 
-const BUCKET = "public-assets";
+/**
+ * TOUS les buckets, demandes a Supabase.
+ *
+ * `public-assets` etait ecrit en dur, et Tipote en a un SECOND
+ * (`content-images`, les visuels du generateur de contenu) que l'audit
+ * ne regardait donc pas du tout. Mesurer un bucket sur deux et annoncer
+ * un total, c'est la meme faute que la liste de colonnes ecrite a la
+ * main : un chiffre qui a l'air d'une mesure.
+ */
+async function lireBuckets() {
+  const res = await fetch(`${URL_BASE}/storage/v1/bucket`, { headers: entetes });
+  if (!res.ok) {
+    console.error(`\nLa liste des buckets n'a pas pu etre lue (${res.status}) : ${(await res.text()).slice(0, 200)}`);
+    process.exit(2);
+  }
+  const liste = await res.json();
+  return (Array.isArray(liste) ? liste : []).map((b) => String(b?.name ?? "")).filter(Boolean).sort();
+}
 
 function readVar(name) {
   const fromEnv = (process.env[name] ?? "").trim();
@@ -116,17 +133,17 @@ const mo = (octets) => `${(octets / 1024 / 1024).toFixed(1)} Mo`;
  * pagination on mesurerait une fraction du bucket en croyant l'avoir vu
  * en entier, ce qui est pire que ne pas mesurer.
  */
-async function lister(prefixe) {
+async function lister(bucket, prefixe) {
   const tout = [];
   const parPage = 1000;
   for (let offset = 0; ; offset += parPage) {
-    const res = await fetch(`${URL_BASE}/storage/v1/object/list/${BUCKET}`, {
+    const res = await fetch(`${URL_BASE}/storage/v1/object/list/${bucket}`, {
       method: "POST",
       headers: entetes,
       body: JSON.stringify({ prefix: prefixe, limit: parPage, offset, sortBy: { column: "name", order: "asc" } }),
     });
     if (!res.ok) {
-      console.error(`Lecture de "${prefixe}" refusee (${res.status}) : ${(await res.text()).slice(0, 200)}`);
+      console.error(`Lecture de "${bucket}/${prefixe}" refusee (${res.status}) : ${(await res.text()).slice(0, 200)}`);
       return tout;
     }
     const page = await res.json();
@@ -137,18 +154,18 @@ async function lister(prefixe) {
 }
 
 /** Descend récursivement : le bucket est rangé en `<topic>/<uid>/<fichier>`. */
-async function listerRecursif(prefixe, profondeur = 0) {
-  const entrees = await lister(prefixe);
+async function listerRecursif(bucket, prefixe, profondeur = 0) {
+  const entrees = await lister(bucket, prefixe);
   const fichiers = [];
   for (const e of entrees) {
     const chemin = prefixe ? `${prefixe}/${e.name}` : e.name;
     // Un DOSSIER n'a pas de métadonnées. C'est la seule façon de les
     // distinguer, l'API ne le dit pas autrement.
     if (!e.metadata) {
-      if (profondeur < 3) fichiers.push(...(await listerRecursif(chemin, profondeur + 1)));
+      if (profondeur < 4) fichiers.push(...(await listerRecursif(bucket, chemin, profondeur + 1)));
       continue;
     }
-    fichiers.push({ chemin, taille: Number(e.metadata.size ?? 0), cree: e.created_at ?? null });
+    fichiers.push({ bucket, chemin, cle: `${bucket}/${chemin}`, taille: Number(e.metadata.size ?? 0), cree: e.created_at ?? null });
   }
   return fichiers;
 }
@@ -189,13 +206,19 @@ async function lireSchema() {
  * dans la valeur BRUTE les attrape toutes les deux, sans avoir à savoir
  * laquelle est où.
  */
-const MOTIF = new RegExp(`/${BUCKET}/([^\\s"'<>)\\\\]+)`, "g");
+let MOTIF = null;
+
+/** Construit le motif une fois les buckets connus. */
+function armerMotif(buckets) {
+  const noms = buckets.map((b) => b.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+  MOTIF = new RegExp(`/(${noms})/([^\\s"'<>)\\\\]+)`, "g");
+}
 
 function recolter(valeur, citees) {
   if (valeur == null) return;
   if (typeof valeur === "string") {
     for (const m of valeur.matchAll(MOTIF)) {
-      let chemin = m[1].split("?")[0].split("#")[0];
+      let chemin = m[2].split("?")[0].split("#")[0];
       // Le HTML de texte riche est stocké échappé : un `&amp;` ou un
       // `&quot;` collé à la fin du src ferait un chemin qui n'existe pas.
       chemin = chemin.replace(/&(amp|quot|apos|lt|gt|#\d+);.*$/i, "");
@@ -204,7 +227,7 @@ function recolter(valeur, citees) {
       } catch {
         /* une URL mal encodee reste lisible telle quelle */
       }
-      if (chemin) citees.add(chemin);
+      if (chemin) citees.add(`${m[1]}/${chemin}`);
     }
     return;
   }
@@ -258,30 +281,45 @@ async function urlsCitees(tables, montrerTables) {
 const detail = process.argv.includes("--detail");
 const montrerTables = process.argv.includes("--tables");
 
-console.log(`\nStockage de ${URL_BASE.replace(/^https?:\/\//, "").split(".")[0]}, bucket "${BUCKET}"\n`);
+const projet = URL_BASE.replace(/^https?:\/\//, "").split(".")[0];
+console.log(`\nStockage de ${projet}\n`);
 
-const fichiers = await listerRecursif("");
+const buckets = await lireBuckets();
+if (buckets.length === 0) {
+  console.log("Aucun bucket lu. Verifie que la cle de service est bien celle de CE projet.");
+  process.exit(0);
+}
+armerMotif(buckets);
+
+const fichiers = [];
+for (const b of buckets) fichiers.push(...(await listerRecursif(b, "")));
 if (fichiers.length === 0) {
-  console.log("Aucun fichier lu. Verifie que la cle de service est bien celle de CE projet.");
+  console.log(`Les ${buckets.length} buckets sont vides : ${buckets.join(", ")}`);
   process.exit(0);
 }
 
 const total = fichiers.reduce((s, f) => s + f.taille, 0);
-console.log(`${fichiers.length} fichiers, ${mo(total)} au total.\n`);
+console.log(`${fichiers.length} fichiers, ${mo(total)} au total, dans ${buckets.length} bucket(s).\n`);
 
-// Par dossier de tête : c'est ce qui dit OÙ ça pèse.
-const parTopic = new Map();
-for (const f of fichiers) {
-  const topic = f.chemin.split("/")[0];
-  const e = parTopic.get(topic) ?? { n: 0, taille: 0 };
-  e.n += 1;
-  e.taille += f.taille;
-  parTopic.set(topic, e);
+/** Regroupe et affiche, du plus lourd au plus leger. */
+function repartition(titre, cle) {
+  const par = new Map();
+  for (const f of fichiers) {
+    const k = cle(f);
+    const e = par.get(k) ?? { n: 0, taille: 0 };
+    e.n += 1;
+    e.taille += f.taille;
+    par.set(k, e);
+  }
+  console.log(`${titre} :`);
+  for (const [k, e] of [...par].sort((a, b) => b[1].taille - a[1].taille)) {
+    console.log(`  ${k.padEnd(34)} ${String(e.n).padStart(5)} fichiers   ${mo(e.taille).padStart(10)}`);
+  }
 }
-console.log("Par dossier :");
-for (const [topic, e] of [...parTopic].sort((a, b) => b[1].taille - a[1].taille)) {
-  console.log(`  ${topic.padEnd(20)} ${String(e.n).padStart(5)} fichiers   ${mo(e.taille).padStart(10)}`);
-}
+
+repartition("Par bucket", (f) => f.bucket);
+console.log("");
+repartition("Par dossier", (f) => `${f.bucket}/${f.chemin.split("/")[0]}`);
 
 const tables = await lireSchema();
 console.log(`\nCroisement avec ce que la base cite encore (${tables.length} tables)...`);
@@ -294,34 +332,34 @@ if (rates.length > 0) {
       rates.map((r) => `  - ${r}`).join("\n") +
       `\n\nTout fichier qu'elles citent paraitrait orphelin, et un fichier\n` +
       `supprime a tort est le contenu d'une cliente qui disparait de son\n` +
-      `quiz en ligne. Le poids total et la repartition par dossier, eux,\n` +
-      `restent justes : ils sont au dessus.\n`,
+      `quiz en ligne. Le poids total et la repartition, eux, restent justes :\n` +
+      `ils sont au dessus.\n`,
   );
   process.exit(2);
 }
 
-const dansLeBucket = new Set(fichiers.map((f) => f.chemin));
-const orphelins = fichiers.filter((f) => !citees.has(f.chemin));
+const presents = new Set(fichiers.map((f) => f.cle));
+const orphelins = fichiers.filter((f) => !citees.has(f.cle));
 const poidsOrphelins = orphelins.reduce((s, f) => s + f.taille, 0);
-const citeesReelles = [...citees].filter((c) => dansLeBucket.has(c)).length;
+const citeesReelles = [...citees].filter((c) => presents.has(c)).length;
 const citeesFantomes = citees.size - citeesReelles;
 
 console.log(
-  `\n${citeesReelles} fichiers du bucket sont cites par une ligne vivante.\n` +
+  `\n${citeesReelles} fichiers sont cites par une ligne vivante.\n` +
     `${orphelins.length} fichiers ne sont cites NULLE PART : ${mo(poidsOrphelins)} ` +
-    `(${total > 0 ? Math.round((poidsOrphelins / total) * 100) : 0} % du bucket).`,
+    `(${total > 0 ? Math.round((poidsOrphelins / total) * 100) : 0} % du stockage).`,
 );
 if (citeesFantomes > 0) {
   console.log(
-    `\n${citeesFantomes} URL citees par la base ne correspondent a AUCUN fichier du\n` +
-      `bucket : ce sont des images deja cassees a l'ecran, a regarder de pres.`,
+    `\n${citeesFantomes} URL citees par la base ne correspondent a AUCUN fichier :\n` +
+      `ce sont des images deja cassees a l'ecran, a regarder de pres.`,
   );
 }
 
 if (detail && orphelins.length > 0) {
   console.log("\nLes 40 plus gros orphelins :");
   for (const f of [...orphelins].sort((a, b) => b.taille - a.taille).slice(0, 40)) {
-    console.log(`  ${mo(f.taille).padStart(10)}  ${f.cree?.slice(0, 10) ?? "?"}  ${f.chemin}`);
+    console.log(`  ${mo(f.taille).padStart(10)}  ${f.cree?.slice(0, 10) ?? "?"}  ${f.cle}`);
   }
 }
 
