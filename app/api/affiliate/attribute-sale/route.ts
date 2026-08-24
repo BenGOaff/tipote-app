@@ -42,6 +42,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   let body: {
     customer_email?: string;
     sale_amount_cents?: number;
+    /** "ht" ou "ttc" : sur quoi le pourcentage s'applique. Voir plus bas. */
+    base?: string;
     currency?: string;
     source_app?: "tipote" | "tiquiz";
     sio_order_id?: string;
@@ -70,9 +72,32 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ ok: false, reason: "invalid_fields" }, { status: 400 });
   }
 
+  // LA BASE EST DITE PAR L'APPELANT, JAMAIS DEVINÉE ICI.
+  //
+  // Les trois appelants n'envoyaient pas la même chose dans
+  // `sale_amount_cents` : notre bon de commande et la route SIO de
+  // l'Atelier envoient du HT, les webhooks Systeme.io envoient du TTC.
+  // Le champ portait donc deux sens, et le webhook Systeme.io de Tiquiz
+  // surpayait de ~20 % en silence (audit du 26 août).
+  //
+  // **Un appelant muet est lu comme TTC, et ça crie.** Le repli n'est
+  // pas neutre, il est CONSERVATEUR : lire un HT comme du TTC sous-paie
+  // de 17 %, ce qui se rattrape au lot suivant ; lire un TTC comme du HT
+  // surpaie de 20 %, et un virement parti ne revient pas. Ce cas ne doit
+  // exister que pendant le déploiement, le temps que les deux apps
+  // soient à jour.
+  const base = body.base === "ht" || body.base === "ttc" ? body.base : null;
+  if (!base) {
+    console.error(
+      `[affiliate/attribute-sale] appelant sans \`base\` sur ${body.source_app}:${body.sio_order_id} : ` +
+        `lu comme TTC par prudence. A corriger cote appelant.`,
+    );
+  }
+
   const result = await attributeSale({
     customer_email: body.customer_email,
     sale_amount_cents: body.sale_amount_cents,
+    base: base ?? "ttc",
     currency: body.currency,
     source_app: body.source_app,
     sio_order_id: body.sio_order_id,

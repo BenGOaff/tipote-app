@@ -2132,3 +2132,113 @@ testés, ils n'importent jamais `supabaseAdmin`),
 `app/affiliate/admin/versements/VersementsClient.tsx`,
 `supabase/migrations/20260825_autofacturation.sql`.
 Test : `tests/logic/autofacture.test.mts`.
+
+## L'audit du 26 août : trois trous d'argent dans l'affiliation
+
+Béné : "tu peux auditer tout le parcours de vente tiquiz et l'atelier,
+paypal et stripe plus tout le système d'affiliation ? Je veux que tout
+soit fiable, stable, précis... pour tous les cas de figure (upgrades
+downgrades, remboursement annulation demandes etc... auto affiliation
+factures affiliés, factures clients etc...)"
+
+Les trois trouvailles ont la MÊME forme, celle du 1er août : une logique
+écrite pour un cas, appliquée telle quelle à un autre. Et elles ont
+toutes changé de prix le 25 août : **c'est nous qui virons maintenant, et
+un virement ne se reprend pas.**
+
+### 1. UNE VENTE REMBOURSÉE PAYAIT QUAND MÊME
+
+`affiliate_commissions.cancelled_at` existe depuis le 25 mai. **Aucune
+ligne de code ne l'écrivait.** Un remboursement fermait l'accès, arrêtait
+l'abonnement, émettait l'avoir, et laissait la commission mûrir : 21
+jours plus tard elle entrait dans un lot, et l'argent partait.
+
+Nos propres conditions le promettaient déjà (`lib/legal/affiliate.ts`) :
+"elles peuvent être annulées en cas de remboursement, d'impayé, de
+fraude". Le texte annonçait ce que le code ne faisait pas, exactement
+comme les CGV et le bon de commande le 22 août.
+
+**Et l'Atelier savait déjà le faire.** `refundCommissionByOrder` y vit
+depuis des mois, branchée sur le remboursement SYSTEME.IO. Le jour où
+l'Atelier a eu son propre bon de commande, personne ne l'a rebranchée.
+
+**Règle : `lib/affiliate/annulation.ts` décide, `annulationStore.ts`
+écrit, `POST /api/affiliate/cancel-sale` est la porte.** Les trois
+webhooks appellent, avec la clé de la CRÉATION (`stripe:<ref>` ici,
+`<moyen>:<ref>` côté Atelier) : une clé qui ne correspond pas n'annule
+rien, en silence, ce qui est le bug qu'on ferme.
+
+**Une commission DÉJÀ VERSÉE n'est jamais réécrite.** L'argent est parti
+et la facture d'autofacturation qui le justifie a été remise à un
+comptable. On rend `trop-tard`, et ça CRIE : c'est un cas pour un humain
+(compenser sur le lot suivant, ou écrire à l'affilié).
+
+**L'annulation ne fait JAMAIS échouer le remboursement.** Un
+remboursement doit fermer l'accès même si Tipote ne répond pas ;
+l'inverse ferait rejouer le remboursement en boucle.
+
+### 2. S'AFFILIER À SOI MÊME AVEC UN ALIAS
+
+`attributeSale` comparait `aff.email.toLowerCase() === email`. Acheter
+avec `moi+1@gmail.com` suffisait à se payer 40 % de son propre
+abonnement.
+
+La règle qui voit ces alias existait DÉJÀ, côté Tiquiz, dans
+`lib/trial/moisOffert.ts`, avec ce commentaire : "c'est LE moyen le plus
+simple de s'auto-affilier". Elle n'y gardait que le CADEAU. **On
+protégeait le mois offert mieux que le versement**, alors que c'est le
+versement qui part et ne revient pas.
+
+`lib/affiliate/memeAdresse.ts` vit maintenant dans les TROIS dépôts sous
+le même nom, et `moisOffert.ts` DÉLÈGUE au lieu de redéfinir. Au passage
+`googlemail.com` est ramené à `gmail.com` : c'est la même boîte, et
+l'alias le plus simple qui soit, celui qui ne demande même pas de `+`.
+
+**Les points ne sont retirés que chez Gmail.** Ailleurs `jean.dupont@` et
+`jeandupont@` peuvent être deux personnes, et les confondre refuserait
+une commission légitime : aussi grave que d'en payer une de trop.
+
+### 3. LE TAUX ET LA BASE VENAIENT DE DEUX ENDROITS
+
+**Le taux était écrit en dur** (`const TIQUIZ_COMMISSION_RATE = 0.4`)
+dans le fichier qui PAIE, pendant que `lib/affiliate/commission.ts`
+existait pour être le seul endroit qui dit combien on paie. Le montant
+ANNONCÉ sortait d'un module, le montant VERSÉ d'une constante à côté. Et
+`affiliate_rate_overrides` (créée le 19 août) n'était lue nulle part :
+un partenariat négocié à 60 % aurait été payé 40 %, en silence.
+
+**La base n'était pas la même selon l'appelant**, dans un champ qui
+s'appelle pareil :
+
+| Appelant | Ce qu'il envoyait |
+|---|---|
+| notre bon de commande | HT |
+| la route SIO de l'Atelier | HT |
+| **le webhook Systeme.io** | **TTC** |
+
+40 % de 17,00 € font 6,80 € au lieu de 5,67 € : **1,13 € de trop par
+vente**, invisible. `base` est donc un PARAMÈTRE OBLIGATOIRE de
+`attributeSale`, et le compilateur refuse un appelant qui se tait.
+
+**Un appelant muet est lu comme TTC, et ça crie.** Le repli est
+CONSERVATEUR : lire un HT comme du TTC sous-paie de 17 %, ce qui se
+rattrape au lot suivant ; lire un TTC comme du HT surpaie de 20 %, et un
+virement parti ne revient pas.
+
+**Le montant lui même se lisait au pari.** Le webhook Systeme.io d'ICI
+faisait encore `extractNumber(rawBody, ["order.total_price"])`, donc
+`"17.00"` valait 17 CENTIMES. `readSioAmountCents` avait retiré ce pari
+côté Tiquiz le 22 août ; il vit maintenant ici sous le nom
+`montantSioCents`. Un garde-fou qui ne protège qu'un des deux jumeaux ne
+protège personne.
+
+### Ce que l'audit a laissé ouvert, et qui n'est pas du code
+
+**Les commissions de l'Atelier ne sont dans AUCUN lot.** Elles vivent
+dans SA base (`profiles.sio_affiliate_id` y tient lieu de registre), et
+`preparerLot` ne lit que celle d'ici. L'admin les AFFICHE en interrogeant
+les deux bases, ce qui rend la dette visible sans la solder. Détaillé
+dans `ROADMAP_SORTIE_SIO.md`, chantier 3.
+
+Test : `tests/logic/audit-26-aout.test.mts`, ici et dans les deux autres
+dépôts.
