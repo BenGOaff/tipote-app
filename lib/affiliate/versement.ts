@@ -35,14 +35,25 @@
 import type { Coordonnees, MethodeVersement } from "@/lib/affiliate/coordonnees";
 
 /**
- * LE DÉLAI DE RÉTRACTATION, EN JOURS.
+ * LE DÉLAI AVANT QU'UNE COMMISSION SOIT VERSABLE, EN JOURS.
  *
- * 14 jours légaux pour un achat en ligne, plus une marge : un
- * remboursement demandé le 14e jour peut n'être traité que le 16e, et
- * une commission déjà virée ne se reprend pas. Béné vire entre le 10 et
- * le 13 du mois, ce qui laisse la marge de toute façon.
+ * **30 jours après le paiement du client, comme chez Systeme.io.**
+ * Béné, 26 août 2026 : "s'il achète sans être passé sur un autre cookie
+ * l'affilié touche sa commission à j+30 du paiement de son client
+ * affilié."
+ *
+ * C'était 21 jours (14 jours légaux de rétractation, plus une marge).
+ * Le raisonnement se tenait, mais il ne comptait pas : ses affiliés
+ * connaissent J+30, c'est ce que le programme leur promet depuis des
+ * années, et un délai maison qui diffère du délai annoncé se remarque
+ * au premier virement.
+ *
+ * La marge sur la rétractation reste largement couverte : 30 jours, ça
+ * couvre les 14 jours légaux et le temps de traitement d'un
+ * remboursement demandé le dernier jour. Une commission déjà virée ne
+ * se reprend pas.
  */
-export const DELAI_RETRACTATION_JOURS = 21;
+export const DELAI_RETRACTATION_JOURS = 30;
 
 /**
  * LE MONTANT MINIMUM D'UN VERSEMENT, EN CENTIMES.
@@ -136,6 +147,8 @@ export interface LigneLot {
 export type RaisonEcartee =
   /** Elle n'a pas encore dit comment être payée, ou ses infos sont fausses. */
   | "coordonnees"
+  /** Une commission dans une autre devise : le fichier SEPA est en euros. */
+  | "devise"
   /** Ses infos fiscales manquent, ou le mandat de facturation n'est pas accepté. */
   | "profil-fiscal"
   /** Sous le minimum : acquis, mais reporté au lot suivant. */
@@ -180,6 +193,7 @@ export function construireLot(
   for (const a of affiliees) parSa.set(a.sa, a);
 
   const cumul = new Map<string, { montant: number; ids: string[] }>();
+  const autreDevise = new Map<string, { montant: number; ids: string[] }>();
   for (const c of commissions) {
     // On ne prend QUE les approuvées, et QUE celles qu'aucun lot n'a
     // déjà prises. Sans le second test, un lot construit deux fois
@@ -187,6 +201,27 @@ export function construireLot(
     if (String(c.status ?? "").trim().toLowerCase() !== "approved") continue;
     if (c.payout_id) continue;
     if (!Number.isFinite(c.commission_cents) || c.commission_cents <= 0) continue;
+
+    // ── UNE COMMISSION EN DOLLARS NE PART PAS DANS UN FICHIER EN EUROS ──
+    //
+    // Le fichier SEPA porte `Ccy="EUR"` et la liste PayPal aussi : une
+    // commission en USD additionnée aux autres serait virée en euros,
+    // pour un montant qui n'a jamais été calculé. Trois plans Tiquiz en
+    // dollars existent chez Systeme.io depuis avril, donc le cas n'est
+    // pas théorique.
+    //
+    // On ne convertit PAS : un taux de change inventé produirait un
+    // versement faux qui a l'air juste. On ÉCARTE en le disant, et
+    // quelqu'un tranche.
+    const devise = String(c.currency ?? "EUR").trim().toUpperCase() || "EUR";
+    if (devise !== "EUR") {
+      const hors = autreDevise.get(c.sa) ?? { montant: 0, ids: [] };
+      hors.montant += Math.round(c.commission_cents);
+      hors.ids.push(c.id);
+      autreDevise.set(c.sa, hors);
+      continue;
+    }
+
     const entree = cumul.get(c.sa) ?? { montant: 0, ids: [] };
     entree.montant += Math.round(c.commission_cents);
     entree.ids.push(c.id);
@@ -195,6 +230,10 @@ export function construireLot(
 
   const lignes: LigneLot[] = [];
   const ecartees: Ecartee[] = [];
+
+  for (const [sa, { montant, ids }] of autreDevise) {
+    ecartees.push({ sa, raison: "devise", montantCents: montant, commissionIds: ids });
+  }
 
   for (const [sa, { montant, ids }] of cumul) {
     const aff = parSa.get(sa);

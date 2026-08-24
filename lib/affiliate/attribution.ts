@@ -15,6 +15,10 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { REF_MIN_LENGTH, sanitizeRef } from "@/lib/affiliate/ref";
 import { memePersonne } from "@/lib/affiliate/memeAdresse";
+// LE RATTACHEMENT EST À VIE, et la décision vit dans un module PUR :
+// ce fichier importe `supabaseAdmin`, donc aucun test ne peut
+// l'importer. Voir `fenetreAttribution.ts`.
+import { planchierRattachement } from "@/lib/affiliate/fenetreAttribution";
 import {
   COMMISSION_RATES,
   htFromTtcCents,
@@ -22,7 +26,6 @@ import {
   type CommissionBase,
 } from "@/lib/affiliate/commission";
 
-const ATTRIBUTION_WINDOW_DAYS = 90;
 
 // LE TAUX VIENT DE `commission.ts`, ET DE NULLE PART AILLEURS.
 //
@@ -163,14 +166,23 @@ async function saDepuisRef(brut: string | null | undefined): Promise<string | nu
   return alias ? (alias as { sa: string }).sa : null;
 }
 
+/**
+ * L'AFFILIÉ À QUI CE CONTACT EST RATTACHÉ, s'il y en a un.
+ *
+ * Le PREMIER rattachement, pas le dernier : c'est celui qui a amené la
+ * personne qui la garde. Trier du plus récent donnerait le contact au
+ * dernier affilié dont il a croisé un lien, ce qui viderait de son sens
+ * la promesse "il reste son affilié à vie".
+ */
 async function findRecentConversion(email: string): Promise<{ id: string; sa: string } | null> {
-  const since = new Date(Date.now() - ATTRIBUTION_WINDOW_DAYS * 24 * 3600 * 1000).toISOString();
-  const { data, error } = await supabaseAdmin
+  let requete = supabaseAdmin
     .from("affiliate_conversions")
     .select("id, sa")
-    .eq("email", email.toLowerCase())
-    .gte("created_at", since)
-    .order("created_at", { ascending: false })
+    .eq("email", email.toLowerCase());
+  const plancher = planchierRattachement();
+  if (plancher) requete = requete.gte("created_at", plancher);
+  const { data, error } = await requete
+    .order("created_at", { ascending: true })
     .limit(1)
     .maybeSingle();
   if (error) {

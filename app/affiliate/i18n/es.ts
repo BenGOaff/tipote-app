@@ -376,7 +376,7 @@ export const ES: AffiliateDict = {
     err_bic_invalide: "Este BIC no tiene la forma correcta (8 u 11 caracteres).",
     incomplete_banner: "Tus comisiones se acumulan, pero todavía no podemos pagártelas: faltan tus datos de pago.",
     complete_banner: "Todo listo. Tus comisiones salen en el próximo pago.",
-    minimum_note: "Los pagos salen entre el 10 y el 13 de cada mes, para las comisiones ganadas hace más de 21 días. Por debajo de 20 EUR el importe sigue siendo tuyo y pasa al pago siguiente.",
+    minimum_note: "Los pagos salen entre el 10 y el 13 de cada mes, para las comisiones ganadas hace más de 30 días. Por debajo de 20 EUR el importe sigue siendo tuyo y pasa al pago siguiente.",
     page_title: "Pago",
     page_subtitle_sio: "Los pagos los gestiona Systeme.io. Configura tu método de pago allí, nosotros nos ocupamos del resto.",
     sio_config_title: "Configura tu pago (PayPal o transferencia)",

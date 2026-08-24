@@ -289,3 +289,127 @@ describe("Qui verse cette commission", () => {
     }
   });
 });
+
+// ── 6. LE PROGRAMME SE COMPORTE COMME SYSTEME.IO ────────────────────
+//
+// Béné, 26 août, en listant les règles de Systeme.io : "Je dois être
+// sûre que tu as bien tout compris et pris en compte avant d'envoyer le
+// moindre code."
+//
+// Chacune de ses sept règles est un comportement que Systeme.io donnait
+// gratuitement depuis des années. En reprenant la vente chez nous,
+// chacune doit être réécrite explicitement, et aucune ne se signale
+// toute seule quand elle manque : rien ne casse, l'argent tombe juste
+// au mauvais endroit. Ce bloc les fige une par une.
+
+import { ATTRIBUTION_A_VIE, planchierRattachement } from "@/lib/affiliate/fenetreAttribution";
+import { DELAI_RETRACTATION_JOURS, construireLot } from "@/lib/affiliate/versement";
+
+describe("Les regles du programme, comme chez Systeme.io", () => {
+  test("LA COMMISSION EST VERSABLE À J+30 DU PAIEMENT", () => {
+    // C'était 21 jours, par un raisonnement sur la rétractation légale.
+    // Le raisonnement se tenait, mais ses affiliés connaissent J+30 :
+    // un délai maison qui diffère du délai annoncé se remarque au
+    // premier virement.
+    assert.equal(DELAI_RETRACTATION_JOURS, 30);
+  });
+
+  test("ET CE QUE L'ÉCRAN ANNONCE DIT LE MÊME NOMBRE", () => {
+    // Deux endroits qui disent la même chose sans passer par le même
+    // code finissent toujours par se contredire. Ici le texte est
+    // traduit à la main dans six langues : le test est le seul lien.
+    for (const f of ["fr", "en", "es", "it", "pt", "ar"]) {
+      const src = lire(`app/affiliate/i18n/${f}.ts`);
+      const ligne = src.split("\n").find((l) => l.includes("minimum_note"));
+      assert.ok(ligne, `${f} : la note de versement a disparu`);
+      assert.ok(
+        ligne.includes(String(DELAI_RETRACTATION_JOURS)),
+        `${f} annonce un delai different de ${DELAI_RETRACTATION_JOURS} jours`,
+      );
+    }
+  });
+
+  test("LE RATTACHEMENT EST À VIE", () => {
+    // "S'il s'inscrit en free sur son lien : il reste son affilié à
+    // vie." La fenêtre était de 90 jours : un inscrit de janvier qui
+    // passe payant en juin ne payait plus personne.
+    assert.equal(ATTRIBUTION_A_VIE, true);
+    // Pas de plancher de date : la recherche remonte aussi loin qu'il
+    // faut. `maintenant` est un parametre, sinon le test clignote.
+    assert.equal(planchierRattachement(Date.parse("2027-01-01")), null);
+    // Et la decision vit dans un module PUR : `attribution.ts` importe
+    // `supabaseAdmin`, donc aucun test ne peut l'importer. C'est
+    // exactement le piege qui a cache le verrou des webhooks.
+    // On regarde les IMPORTS, pas la prose : l'en-tete du fichier
+    // EXPLIQUE justement pourquoi il ne doit pas tirer `supabaseAdmin`,
+    // et un test qui rougit sur un commentaire finit desactive.
+    assert.ok(
+      !/^import .*supabaseAdmin/m.test(lire("lib/affiliate/fenetreAttribution.ts")),
+      "le module de decision tire de nouveau la base",
+    );
+  });
+
+  test("LE PREMIER RATTACHEMENT GAGNE, pas le dernier", () => {
+    // Celui qui a AMENÉ la personne la garde. Trier du plus récent
+    // donnerait le contact au dernier affilié dont il a croisé un lien,
+    // ce qui viderait de son sens la promesse "à vie".
+    const src = lire("lib/affiliate/attribution.ts");
+    const bloc = src.slice(src.indexOf("async function findRecentConversion"));
+    assert.match(bloc.slice(0, 900), /\.order\("created_at", \{ ascending: true \}\)/);
+  });
+
+  test("UNE INSCRIPTION GRATUITE RATTACHE VRAIMENT", () => {
+    // La règle ne marchait QUE via Systeme.io : notre propre
+    // inscription ne lisait ni le cookie ni le `?ref=`.
+    const route = lire("app/api/affiliate/rattacher/route.ts");
+    assert.match(route, /affiliate_conversions/);
+    assert.match(route, /x-affiliate-secret/);
+    // Un affilié exclu ne rattache personne : c'est à vie, donc ce
+    // n'est pas l'endroit où être permissif.
+    assert.match(route, /status !== "active"/);
+    // Et on ne se rattache pas à soi même, alias compris.
+    assert.match(route, /memePersonne/);
+    // Le PREMIER rattachement gagne : on n'en écrit pas un deuxième.
+    assert.match(route, /rattache_a_un_autre/);
+  });
+
+  test("UNE COMMISSION EN DEVISE ÉTRANGÈRE NE PART PAS EN EUROS", () => {
+    // Le fichier SEPA porte `Ccy="EUR"`. Trois plans Tiquiz en dollars
+    // existent chez Systeme.io depuis avril : le cas n'est pas
+    // théorique. On n'invente pas de taux de change, on écarte en le
+    // disant.
+    const lot = construireLot(
+      [
+        { id: "c1", sa: "sa1", status: "approved", commission_cents: 5000, currency: "USD", sale_at: "2026-01-01", payout_id: null },
+        { id: "c2", sa: "sa1", status: "approved", commission_cents: 4000, currency: "EUR", sale_at: "2026-01-01", payout_id: null },
+      ],
+      [
+        {
+          sa: "sa1",
+          email: "a@b.fr",
+          displayName: null,
+          coordonnees: { methode: "paypal", paypalEmail: "a@b.fr", titulaire: null, iban: null, bic: null },
+          payable: true,
+          profilComplet: true,
+        },
+      ],
+    );
+    // Seule la ligne en euros est payée.
+    assert.equal(lot.lignes.length, 1);
+    assert.equal(lot.lignes[0].montantCents, 4000);
+    // Et la dollar est DITE, pas avalée.
+    const devise = lot.ecartees.find((e) => e.raison === "devise");
+    assert.ok(devise, "la commission en dollars a disparu en silence");
+    assert.equal(devise.montantCents, 5000);
+  });
+
+  test("LA FILE SE VIDE PAR LE PLUS ANCIEN", () => {
+    // La commission est récurrente : une ligne par abonné et par mois.
+    // Le jour où la file dépasse la limite, une requête sans tri laisse
+    // Postgres choisir, et ce sont toujours les mêmes qui restent
+    // dehors, sans que rien ne le signale.
+    const store = lire("lib/affiliate/versementStore.ts");
+    const occurrences = store.match(/\.order\("sale_at", \{ ascending: true \}\)/g) ?? [];
+    assert.equal(occurrences.length, 2, "une des deux files n'est plus triee");
+  });
+});

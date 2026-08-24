@@ -377,7 +377,7 @@ export const FR: AffiliateDict = {
     err_bic_invalide: "Ce BIC n'a pas la bonne forme (8 ou 11 caractères).",
     incomplete_banner: "Tes commissions s'accumulent, mais on ne peut pas encore te les verser : il manque tes coordonnées.",
     complete_banner: "Tout est prêt. Tes commissions partent au prochain versement.",
-    minimum_note: "Les versements partent entre le 10 et le 13 de chaque mois, pour les commissions acquises depuis plus de 21 jours. En dessous de 20 €, le montant reste acquis et part au versement suivant.",
+    minimum_note: "Les versements partent entre le 10 et le 13 de chaque mois, pour les commissions acquises depuis plus de 30 jours. En dessous de 20 €, le montant reste acquis et part au versement suivant.",
     page_title: "Paiement",
     page_subtitle_sio:
       "Le paiement est géré par Systeme.io. Configure ton moyen de paiement directement chez eux, on s'occupe du reste.",

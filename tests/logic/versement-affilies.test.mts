@@ -215,7 +215,10 @@ describe("Approuver n'est pas payer", () => {
   test("le délai est un PARAMÈTRE, pas une constante enfouie", () => {
     const hier = { ...base, sale_at: "2026-08-24T10:00:00Z" };
     assert.ok(commissionApprouvable(hier, maintenant, 0));
-    assert.equal(DELAI_RETRACTATION_JOURS, 21);
+    // 30 jours depuis le 26 aout : c'est le delai de Systeme.io, celui
+    // que ses affilies connaissent. C'etait 21 (14 legaux + marge), un
+    // raisonnement juste mais qui ne comptait pas.
+    assert.equal(DELAI_RETRACTATION_JOURS, 30);
   });
 
   test("une commission annulée ne repasse JAMAIS approuvable", () => {
