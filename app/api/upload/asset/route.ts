@@ -43,7 +43,7 @@ import { urlAssetLocal, validerCheminAsset } from "@/lib/storage/cheminAsset";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** Le dossier servi par nginx. Voir `infra/nginx/assets.*.conf`. */
+/** Le dossier servi par nginx. Voir le bloc `location ^~ /assets/` dans `infra/nginx/videos.*.conf`. */
 const DOSSIER = (process.env.ASSETS_DIR ?? "/srv/assets-tipote").replace(/\/+$/, "");
 
 /**
