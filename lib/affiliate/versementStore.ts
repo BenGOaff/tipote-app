@@ -46,7 +46,7 @@ const TABLE_COMM = "affiliate_commissions";
 const TABLE_LOTS = "affiliate_payouts";
 
 const CHAMPS_AFF =
-  "sa, email, display_name, payout_method, paypal_email, iban_holder, iban_chiffre, iban_masque, pii_dek, bic";
+  "sa, email, display_name, status, payout_method, paypal_email, iban_holder, iban_chiffre, iban_masque, pii_dek, bic";
 
 /** Le profil fiscal : ce qu'il faut pour ÉMETTRE la facture, pas pour payer. */
 const CHAMPS_FISCAL =
@@ -89,6 +89,7 @@ interface LigneAffiliee {
   sa: string;
   email: string;
   display_name: string | null;
+  status: string | null;
   payout_method: string | null;
   paypal_email: string | null;
   iban_holder: string | null;
@@ -377,10 +378,16 @@ export async function preparerLot(): Promise<Lot | null> {
         iban_number: dechiffrerIban(l),
         bic: l.bic,
       });
+      // Un statut inconnu ou absent est lu comme `active` : c'est le
+      // defaut de la colonne, et refuser de payer quelqu'un sur une
+      // valeur qu'on ne sait pas lire serait la pire des reponses.
+      const brut = String(l.status ?? "active").trim().toLowerCase();
+      const statut = brut === "banned" || brut === "paused" ? brut : "active";
       return {
         sa: l.sa,
         email: l.email,
         displayName: l.display_name,
+        statut,
         coordonnees,
         payable: peutEtrePayee(coordonnees),
         // DISTINCT de `payable` : deux questions différentes, remplies

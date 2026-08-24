@@ -2314,4 +2314,43 @@ l'avenir et qu'on veut qui fonctionne comme systeme io."
   `fenetreAttribution.ts`. C'est le test qui l'a attrapé, et c'est
   exactement le piège qui avait caché le verrou des webhooks le 24 août.
 
+### Un affilié viré n'est pas payé, un affilié en pause si
+
+Béné, 26 août : "affilié viré = pas payé. Point barre. S'il a triché on
+ne lui doit rien."
+
+**La table porte TROIS statuts, et les confondre prendrait l'argent de
+quelqu'un qui n'a rien fait :**
+
+| Statut | Nouvelles commissions | Ce qui est déjà gagné |
+|---|---|---|
+| `active` | oui | payé |
+| `paused` | non (`attributeSale` refuse hors `active`) | **payé** |
+| `banned` | non | **rien n'est dû** |
+
+Un affilié en pause n'a pas triché : il ne peut plus gagner, mais ce
+qu'il a accumulé lui appartient.
+
+Le filtre passe AVANT les coordonnées et le mandat : inutile de
+réclamer un IBAN pour un versement qui n'aura pas lieu, et la raison
+affichée doit être la vraie. La somme reste VISIBLE à l'écran : une
+ligne qui disparaît en silence est une décision qu'on ne peut plus
+expliquer six mois plus tard, ni à lui, ni à un comptable.
+
+**On ne REJETTE pas les lignes en base pour autant.** Réintégrer
+quelqu'un exclu par erreur doit rester possible sans avoir à
+ressusciter ses commissions une par une.
+
+Un statut illisible ou absent est lu comme `active` : refuser de payer
+quelqu'un sur une valeur qu'on ne sait pas lire serait la pire des
+réponses.
+
+### Les trois seuils, tranchés le 26 août
+
+| | Valeur | Décision |
+|---|---|---|
+| délai avant versement | J+30 du paiement | comme Systeme.io |
+| minimum par virement | 20 € | le nôtre, plus généreux que leurs 50 € |
+| calendrier | entre le 10 et le 13 du mois | comme Systeme.io, annoncé dans les 6 langues |
+
 Test : `tests/logic/audit-26-aout.test.mts` (les deux dépôts).

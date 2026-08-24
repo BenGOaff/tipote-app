@@ -250,7 +250,7 @@ function affiliee(sa: string, sur: Partial<AffilieePayable> = {}): AffilieePayab
   });
   return {
     sa, email: `${sa}@exemple.fr`, displayName: "Marie Dupont",
-    coordonnees, payable: peutEtrePayee(coordonnees), profilComplet: true, ...sur,
+    coordonnees, payable: peutEtrePayee(coordonnees), statut: "active", profilComplet: true, ...sur,
   };
 }
 

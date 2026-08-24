@@ -107,6 +107,20 @@ export interface AffilieePayable {
   /** `false` = ses coordonnées de versement sont incomplètes ou fausses. */
   payable: boolean;
   /**
+   * SON STATUT DANS LE PROGRAMME, tel que la base le porte.
+   *
+   * Béné, 26 août 2026 : "affilié viré = pas payé. Point barre. S'il a
+   * triché on ne lui doit rien."
+   *
+   * **`banned` et `paused` ne sont PAS la même chose, et les confondre
+   * prendrait l'argent de quelqu'un qui n'a rien fait.** Un affilié
+   * BANNI a triché : on ne lui doit rien, y compris sur ce qu'il avait
+   * déjà accumulé. Un affilié EN PAUSE n'a rien fait de mal : il ne
+   * peut plus gagner de nouvelles commissions (`attributeSale` refuse
+   * d'en créer hors `active`), mais ce qu'il a déjà gagné reste dû.
+   */
+  statut: "active" | "paused" | "banned";
+  /**
    * `false` = on ne peut pas ÉMETTRE sa facture (mandat non accepté,
    * SIREN manquant, adresse absente).
    *
@@ -145,6 +159,8 @@ export interface LigneLot {
 }
 
 export type RaisonEcartee =
+  /** Exclu du programme pour fraude : rien n'est dû, et ça ne repart pas. */
+  | "affiliee-exclue"
   /** Elle n'a pas encore dit comment être payée, ou ses infos sont fausses. */
   | "coordonnees"
   /** Une commission dans une autre devise : le fichier SEPA est en euros. */
@@ -241,6 +257,25 @@ export function construireLot(
       ecartees.push({ sa, raison: "affiliee-inconnue", montantCents: montant, commissionIds: ids });
       continue;
     }
+    // ── UN AFFILIÉ VIRÉ N'EST PAS PAYÉ ──
+    //
+    // Béné : "s'il a triché on ne lui doit rien." Ce cas passe AVANT
+    // tous les autres : inutile de lui réclamer un IBAN ou un mandat
+    // pour un versement qui n'aura pas lieu.
+    //
+    // On l'ÉCARTE en le disant, avec le montant : la somme doit rester
+    // visible à l'écran. Une ligne qui disparaît en silence, c'est une
+    // décision qu'on ne peut plus expliquer six mois plus tard, ni à
+    // lui, ni à un comptable.
+    //
+    // On ne REJETTE pas les lignes en base pour autant : réintégrer
+    // quelqu'un exclu par erreur doit rester possible sans avoir à
+    // ressusciter ses commissions une par une.
+    if (aff.statut === "banned") {
+      ecartees.push({ sa, raison: "affiliee-exclue", montantCents: montant, commissionIds: ids });
+      continue;
+    }
+
     const methode = aff.coordonnees.methode;
     if (!aff.payable || !methode) {
       ecartees.push({ sa, raison: "coordonnees", montantCents: montant, commissionIds: ids });

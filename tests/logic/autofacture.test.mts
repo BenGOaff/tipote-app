@@ -259,7 +259,7 @@ describe("La facture émise à sa place", () => {
     }));
     return construireLot(commissions, [
       {
-        sa: "sa1", email: "jocelyne@exemple.fr", displayName: "Jocelyne",
+        sa: "sa1", email: "jocelyne@exemple.fr", displayName: "Jocelyne", statut: "active",
         coordonnees, payable: peutEtrePayee(coordonnees), profilComplet: true,
       },
     ]).lignes[0];

@@ -21,7 +21,7 @@ interface Ligne {
 }
 interface Ecartee {
   sa: string;
-  raison: "coordonnees" | "devise" | "profil-fiscal" | "sous-le-minimum" | "affiliee-inconnue";
+  raison: "affiliee-exclue" | "coordonnees" | "devise" | "profil-fiscal" | "sous-le-minimum" | "affiliee-inconnue";
   montantCents: number;
 }
 interface Piece {
@@ -52,6 +52,10 @@ interface Reponse {
 }
 
 const RAISONS: Record<Ecartee["raison"], string> = {
+  // "S'il a triché on ne lui doit rien." La somme reste affichée : une
+  // ligne qui disparaît en silence est une décision qu'on ne peut plus
+  // expliquer six mois plus tard.
+  "affiliee-exclue": "exclu du programme, rien n'est dû",
   coordonnees: "n'a pas encore dit comment être payée",
   // On ne convertit pas : un taux de change inventé produirait un
   // versement faux qui a l'air juste.

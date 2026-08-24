@@ -388,6 +388,7 @@ describe("Les regles du programme, comme chez Systeme.io", () => {
           sa: "sa1",
           email: "a@b.fr",
           displayName: null,
+          statut: "active",
           coordonnees: { methode: "paypal", paypalEmail: "a@b.fr", titulaire: null, iban: null, bic: null },
           payable: true,
           profilComplet: true,
@@ -411,5 +412,67 @@ describe("Les regles du programme, comme chez Systeme.io", () => {
     const store = lire("lib/affiliate/versementStore.ts");
     const occurrences = store.match(/\.order\("sale_at", \{ ascending: true \}\)/g) ?? [];
     assert.equal(occurrences.length, 2, "une des deux files n'est plus triee");
+  });
+});
+
+// ── 7. UN AFFILIÉ VIRÉ N'EST PAS PAYÉ ───────────────────────────────
+
+describe("Un affilie vire n'est pas paye", () => {
+  const commissions = [
+    { id: "c1", sa: "sa1", status: "approved", commission_cents: 9000, currency: "EUR", sale_at: "2026-01-01", payout_id: null },
+  ];
+  const affiliee = (statut: "active" | "paused" | "banned") => ({
+    sa: "sa1",
+    email: "a@b.fr",
+    displayName: null,
+    statut,
+    coordonnees: { methode: "paypal" as const, paypalEmail: "a@b.fr", titulaire: null, iban: null, bic: null },
+    payable: true,
+    profilComplet: true,
+  });
+
+  test("BANNI : rien n'est dû, et la somme reste VISIBLE", () => {
+    // Béné, 26 août : "affilié viré = pas payé. Point barre. S'il a
+    // triché on ne lui doit rien."
+    const lot = construireLot(commissions, [affiliee("banned")]);
+    assert.equal(lot.lignes.length, 0);
+    const ecartee = lot.ecartees.find((e) => e.raison === "affiliee-exclue");
+    assert.ok(ecartee, "la ligne a disparu en silence");
+    assert.equal(ecartee.montantCents, 9000);
+    assert.equal(lot.totalCents, 0);
+  });
+
+  test("EN PAUSE N'EST PAS BANNI : ce qui est gagné reste dû", () => {
+    // Les confondre prendrait l'argent de quelqu'un qui n'a rien fait.
+    // Un affilié en pause ne gagne plus de NOUVELLES commissions
+    // (`attributeSale` refuse d'en créer hors `active`), mais ce qu'il
+    // a déjà gagné lui appartient.
+    const lot = construireLot(commissions, [affiliee("paused")]);
+    assert.equal(lot.lignes.length, 1);
+    assert.equal(lot.lignes[0].montantCents, 9000);
+  });
+
+  test("LE STATUT PASSE AVANT LES COORDONNÉES", () => {
+    // Inutile de réclamer un IBAN ou un mandat pour un versement qui
+    // n'aura pas lieu : la raison affichée doit être la vraie.
+    const lot = construireLot(commissions, [
+      { ...affiliee("banned"), payable: false, profilComplet: false },
+    ]);
+    assert.equal(lot.ecartees[0].raison, "affiliee-exclue");
+  });
+
+  test("UN STATUT ILLISIBLE NE PRIVE PERSONNE", () => {
+    // Refuser de payer quelqu'un sur une valeur qu'on ne sait pas lire
+    // serait la pire des reponses. Le store retombe sur `active`.
+    const store = lire("lib/affiliate/versementStore.ts");
+    assert.match(store, /String\(l\.status \?\? "active"\)/);
+    assert.match(store, /brut === "banned" \|\| brut === "paused" \? brut : "active"/);
+  });
+
+  test("ON NE REJETTE PAS LES LIGNES EN BASE", () => {
+    // Réintégrer quelqu'un exclu par erreur doit rester possible sans
+    // ressusciter ses commissions une par une.
+    const src = lire("lib/affiliate/versement.ts");
+    assert.match(src, /On ne REJETTE pas les lignes en base/);
   });
 });
