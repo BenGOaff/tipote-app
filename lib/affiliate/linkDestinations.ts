@@ -31,24 +31,55 @@ export type LinkDestinationRow = {
 };
 
 // Tipote n'est PAS en vente (Bene 8 juin 2026) : on ne propose AUCUN
-// lien Tipote aux affilies. Uniquement les destinations Tiquiz.
-// L'Atelier du Quiz (formation, commission 70%) : tunnel affilié
-// tipote.fr/atelier-du-quiz. Uniquement FR (la formation n'est vendue
-// qu'en français) : la page Promouvoir filtre ce slug hors marché FR.
-// `tiquiz_direct` est le SEUL lien qui ouvre les 30 jours offerts, et
-// ce n'est pas un choix : c'est le seul qui atterrit sur NOTRE domaine,
-// donc le seul dont le `?ref=` arrive jusqu'a notre middleware. Les
-// autres pointent vers des tunnels Systeme.io, qui commissionnent comme
-// avant mais ne nous transmettent rien de ce qu'on ajoute a l'URL.
+// lien Tipote aux affilies. Uniquement les destinations Tiquiz et
+// l'Atelier du Quiz (formation, commission 70%, uniquement FR : la page
+// Promouvoir filtre ce slug hors marche FR).
+//
+// -- LES LIENS ATTERRISSENT SUR NOS DOMAINES (25 aout 2026) -----------
+//
+// Bene : "toutes, d'un bloc". Jusqu'ici 7 destinations sur 8 menaient a
+// des tunnels Systeme.io, et leurs pages ne nous transmettent RIEN de ce
+// qu'on ajoute a l'URL : un `?ref=` pose dessus n'atteignait jamais
+// notre bon de commande, donc ni notre commissionnement ni le mois
+// offert.
+//
+// **CE QU'ON N'A PAS PU REPRENDRE, ET POURQUOI.** Les pages `-mensuel`,
+// `-annuel` et compagnie de Systeme.io ne sont PAS des pages de vente :
+// ce sont leurs BONS DE COMMANDE. Verifie en les capturant le 25 aout :
+// elles portent un `<form id="form-checkout">` sans action, pilote par
+// leur JavaScript. Les repliquer chez nous donnerait un formulaire de
+// paiement mort. On envoie donc sur NOTRE bon de commande, qui vend le
+// meme palier, affiche le meme prix (il vient du catalogue) et propose
+// les trois autres en bas.
+//
+// **`tiquiz_free` RESTE chez Systeme.io, et c'est deliberé.** C'est un
+// optin, pas une vente : son formulaire cree le contact et pose le tag
+// chez eux, et c'est le seul evenement qui porte une URL de tunnel, donc
+// le seul qui sait d'ou vient l'inscrit. Le remplacer par notre `/signup`
+// ferait disparaitre ces inscrits de ses sequences email. A refaire le
+// jour ou notre inscription gratuite creera elle aussi le contact chez
+// Systeme.io.
 const FALLBACK: LinkDestinationRow[] = [
-  { slug: "tiquiz_direct",       path: "https://tiquiz.fr/",         sort_order: 8,  enabled: true },
-  { slug: "atelier",             path: "/atelier-du-quiz",           sort_order: 5,  enabled: true },
-  { slug: "tiquiz_main",         path: "/part-tiquiz",               sort_order: 10, enabled: true },
-  { slug: "tiquiz_free",         path: "/part-tiquiz-gratuit",       sort_order: 20, enabled: true },
-  { slug: "tiquiz_monthly",      path: "/part-tiquiz-mensuel",       sort_order: 30, enabled: true },
-  { slug: "tiquiz_monthly_plus", path: "/tiquiz-mensuel-plus-part",  sort_order: 40, enabled: true },
-  { slug: "tiquiz_yearly",       path: "/part-tiquiz-annuel",        sort_order: 50, enabled: true },
-  { slug: "tiquiz_yearly_plus",  path: "/tiquiz-annuel-plus-part",   sort_order: 60, enabled: true },
+  { slug: "tiquiz_direct",       path: "https://tiquiz.fr/",                        sort_order: 8,  enabled: true },
+  // L'ATELIER RESTE CHEZ SYSTEME.IO AUSSI, et pour une raison qu'on n'a
+  // vue qu'en allant lire son code : il a son PROPRE registre d'affiliés.
+  // `attributeQuizingSale` résout le `sa` contre `profiles.
+  // sio_affiliate_id` dans SA base, pas contre la table `affiliates`
+  // d'ici. Une affiliée Tipote qui n'est pas élève de l'Atelier serait
+  // donc `affiliate_not_registered`, alors que le tunnel Systeme.io la
+  // paie. Et l'Atelier ne lit que `?sa=`, jamais `?ref=`.
+  //
+  // Repointer ce lien change donc QUI est payé : c'est un chantier à
+  // part (unifier les deux registres, ou porter `?ref=` côté Atelier),
+  // pas une ligne à changer ici.
+  { slug: "atelier",             path: "/atelier-du-quiz",                          sort_order: 5,  enabled: true },
+  { slug: "tiquiz_main",         path: "https://tiquiz.fr/",                        sort_order: 10, enabled: true },
+  // Le seul qui reste chez eux : voir le bloc ci-dessus.
+  { slug: "tiquiz_free",         path: "/part-tiquiz-gratuit",                      sort_order: 20, enabled: true },
+  { slug: "tiquiz_monthly",      path: "https://tiquiz.fr/commande/mensuel",        sort_order: 30, enabled: true },
+  { slug: "tiquiz_monthly_plus", path: "https://tiquiz.fr/commande/mensuel-plus",   sort_order: 40, enabled: true },
+  { slug: "tiquiz_yearly",       path: "https://tiquiz.fr/commande/annuel",         sort_order: 50, enabled: true },
+  { slug: "tiquiz_yearly_plus",  path: "https://tiquiz.fr/commande/annuel-plus",    sort_order: 60, enabled: true },
 ];
 
 /**

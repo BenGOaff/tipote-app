@@ -1792,3 +1792,453 @@ Et le VIDE parle (titre, phrase, sortie) : un tableau vide sans un mot
 se lit "c'est cassé" ou "je n'ai rien à faire ici", et les deux coûtent
 une affiliée. Sur mobile, des cartes : un tableau à sept colonnes sur un
 téléphone se fait glisser sans jamais voir la colonne qui compte.
+
+## Sortir de Systeme.io : l'état des lieux vit dans le dépôt Tiquiz
+
+Béné, 24 août 2026 : "note où on s'arrête et ce qu'il reste à faire pour
+qu'à terme mon système remplace complètement Systeme io pour les ventes
+et l'affiliation sauf pour les emails."
+
+C'est **`ROADMAP_SORTIE_SIO.md`, à la racine du dépôt TIQUIZ**, et il n'y
+en a qu'un exemplaire : trois copies d'un état des lieux divergeraient en
+une semaine.
+
+**Ce qui concerne CE dépôt :** l'affiliation. Trois verrous y sont
+décrits, et le deuxième est le plus dur.
+1. **Rien ne paie les affiliés chez nous.** `affiliate_commissions` a des
+   statuts (`pending / approved / paid`) et une colonne `payout_id`, mais
+   aucune table `affiliate_payouts` n'existe et AUCUN code ne fait passer
+   une commission d'un statut à l'autre. Tout se passe encore chez
+   Systeme.io, et `app/affiliate/paiement/page.tsx` le dit.
+2. **`affiliates.sa` est la clé primaire**, et toutes les tables du
+   programme y font référence. Tant que c'est vrai, on ne peut pas
+   recruter un affilié qui n'a pas de compte Systeme.io.
+3. **7 des 8 destinations de `lib/affiliate/linkDestinations.ts` mènent
+   à des tunnels Systeme.io.** Leurs pages ne nous transmettent pas la
+   query : un `?ref=` posé dessus n'atteint jamais notre bon de commande,
+   donc ni notre commissionnement ni le mois offert. Seule
+   `tiquiz_direct` arrive chez nous.
+
+## Les liens affiliés atterrissent sur NOS domaines (Béné, 25 août 2026)
+
+"Toutes, d'un bloc." Jusqu'ici 7 destinations sur 8 menaient à des
+tunnels Systeme.io, et leurs pages ne nous transmettent RIEN de ce qu'on
+ajoute à l'URL : un `?ref=` posé dessus n'atteignait jamais notre bon de
+commande, donc ni notre commissionnement ni le mois offert.
+
+**CE QU'ON N'A PAS PU REPRENDRE, ET C'EST LA TROUVAILLE DU JOUR.** Les
+pages `tiquiz-mensuel`, `tiquiz-annuel` et compagnie ne sont PAS des
+pages de vente : ce sont les BONS DE COMMANDE de Systeme.io. Vérifié en
+les capturant le 25 août, elles portent un `<form id="form-checkout">`
+sans action, piloté par leur JavaScript. Les répliquer chez nous aurait
+donné un formulaire de paiement mort, et on ne l'aurait vu qu'à la
+première vente perdue.
+
+Les paliers mènent donc à **NOTRE bon de commande**
+(`https://tiquiz.fr/commande/<produit>`), qui vend le même palier,
+affiche le même prix (il vient du catalogue) et propose les trois autres
+en bas. Le hub et l'Atelier mènent à leurs pages sur nos domaines.
+
+| Destination | Où elle mène |
+|---|---|
+| `tiquiz_direct`, `tiquiz_main` | `https://tiquiz.fr/` |
+| les 4 paliers | `https://tiquiz.fr/commande/<produit>` |
+| `tiquiz_free` | **reste chez Systeme.io** |
+| `atelier` | **reste chez Systeme.io** |
+
+**DEUX destinations restent là-bas, et les deux raisons sont nommées.**
+
+**`tiquiz_free`, et c'est délibéré.** C'est un optin, pas
+une vente : son formulaire crée le contact et pose le tag chez eux, et
+c'est le seul événement qui porte une URL de tunnel, donc le seul qui
+sait d'où vient l'inscrit. Le remplacer par notre `/signup` ferait
+disparaître ces inscrits de ses séquences email. À refaire le jour où
+notre inscription gratuite créera elle aussi le contact chez Systeme.io
+(le chemin d'ACHAT le fait depuis le 25 août, pas encore l'inscription).
+
+**`atelier`, et on ne l'a vu qu'en allant lire son code.** L'Atelier a
+son PROPRE registre d'affiliés : `attributeQuizingSale` résout le `sa`
+contre `profiles.sio_affiliate_id` dans SA base, pas contre la table
+`affiliates` d'ici. Une affiliée Tipote qui n'est pas élève de l'Atelier
+serait donc `affiliate_not_registered`, alors que le tunnel Systeme.io
+la paie. Et l'Atelier ne lit que `?sa=`, jamais `?ref=`. **Repointer ce
+lien change QUI est payé** : c'est un chantier à part (unifier les deux
+registres, ou porter `?ref=` là-bas), pas une ligne à changer ici. Le
+lien a été repointé puis REMIS, avant de partir.
+
+La chaîne est complète et elle a été vérifiée bout en bout : le `?ref=`
+arrive dans l'URL, le middleware le range dans `tq_ref`, le bon de
+commande le relit (l'URL gagne sur le cookie), et il part dans les
+metadata Stripe ou le `custom_id` PayPal. Sur `tiquiz.fr` le bon de
+commande est OUVERT sans clé (`isSalesOpen` connaît le domaine public) :
+sans ça, tous ces liens répondraient 404.
+
+Garde-fou : `tests/logic/affiliate-link.test.mts` exige que chaque
+destination sauf l'optin gratuit atterrisse sur un de nos hôtes, et que
+la RAISON de l'exception reste écrite à côté. Sans elle, le prochain qui
+passe "finit le travail" et casse le tunnel gratuit.
+
+## Payer les affiliés : PayPal ou virement, au choix (Béné, 25 août 2026)
+
+"Pour l'affiliation on doit proposer le choix aux affiliés : Paypal ou
+virement bancaire. Ils doivent pouvoir indiquer leur mail paypal OU leur
+rib pour un virement." Et la veille, sur la façon de payer : **export
+SEPA et virement à la main.**
+
+**CE QUI N'EXISTAIT PAS.** `affiliate_commissions` porte les statuts
+`pending / approved / paid / cancelled / rejected` et une colonne
+`payout_id` depuis mai. Aucun code ne faisait passer une commission d'un
+statut à l'autre, et aucune table de versement n'existait : **les statuts
+étaient décoratifs.**
+
+### AUCUN ARGENT NE PART D'UN ÉCRAN
+
+On produit un FICHIER : `pain.001.001.03` pour les virements, une liste
+à tabulations pour PayPal. Béné le dépose dans sa banque ou dans PayPal,
+et c'est sa banque qui exécute. Un bouton qui virerait vraiment de
+l'argent depuis un écran d'admin est exactement ce qu'on ne construit
+pas, et le test l'interdit.
+
+### La méthode est un CHOIX, jamais une déduction
+
+Deviner "il a rempli un IBAN donc virement" marche jusqu'au jour où
+quelqu'un remplit les deux, et c'est alors le code qui décide où part son
+argent. `payout_method` est une colonne. `resoudreMethode` ne devine que
+pour les lignes HISTORIQUES sans choix enregistré, et rend `explicite:
+false` pour que l'écran redemande.
+
+### L'IBAN est chiffré, et il ne ressort JAMAIS en clair
+
+Même mécanisme que les leads (`lib/piiCrypto.ts`, une clé par affiliée
+protégée par `PII_MASTER_KEY`) : un accès direct à la base ne montre que
+du chiffré. Les écrans n'affichent qu'un masque (`FR14••••2606`), **y
+compris à sa propriétaire** : un écran se photographie, se partage, se
+laisse ouvert. Elle a besoin de RECONNAÎTRE le sien, pas de le relire ;
+pour le changer, elle le ressaisit.
+
+La clé de l'affiliée est RÉUTILISÉE d'une écriture à l'autre. En
+regénérer une à chaque fois rendrait l'ancien chiffré illisible.
+
+### Un lot est une PIÈCE, pas un calcul
+
+Il fige les montants ET les coordonnées. Recalculer le total à
+l'affichage donnerait un chiffre qui bouge quand une commission est
+annulée après coup, alors qu'un virement parti ne bouge pas. Et si
+l'affiliée change d'IBAN le lendemain, le fichier déjà déposé ne doit pas
+changer. C'est la règle de la facture émise (24 août), transposée à
+l'argent qui SORT.
+
+**L'ordre compte** : on crée le lot D'ABORD, puis on marque les
+commissions. L'inverse laisserait des commissions `paid` pointant vers un
+lot inexistant, c'est à dire de l'argent qu'on croit versé sans trace de
+virement. Et un lot par mois (`periode` unique) : construire deux fois le
+lot d'août paierait deux fois.
+
+### Les trois seuils, et pourquoi
+
+| | Valeur | Pourquoi |
+|---|---|---|
+| rétractation | 21 jours | 14 jours légaux + marge : une commission virée ne se reprend pas |
+| minimum | 20 € | un virement de 1,20 € coûte plus cher en temps qu'il ne rapporte. **L'argent reste acquis** et part au lot suivant |
+| BIC | facultatif | depuis 2016 un virement SEPA se fait avec le seul IBAN ; l'exiger bloquerait des affiliées pour un champ que leur banque n'imprime plus |
+
+### Ce qui fait refuser un fichier par la banque
+
+Écrit dans `lib/affiliate/sepa.ts`, et testé : identifiants uniques
+(`MsgId` = le lot, donc non rejouable, ce qui est une protection),
+montants à deux décimales avec un POINT, somme des lignes = `CtrlSum` au
+centime, XML échappé (un nom avec `&` casse le fichier entier, et le nom
+vient d'un formulaire), date d'exécution un jour OUVRÉ.
+
+Les accents sont TRANSLITTÉRÉS, pas supprimés : "Bénédicte" doit rester
+lisible sur le relevé, pas devenir "Bndicte".
+
+### Ce qui est écarté du lot est DIT, jamais avalé
+
+Coordonnées manquantes, sous le minimum, affiliée inconnue : chaque cas
+sort dans `ecartees` avec son montant, et l'écran les affiche. Elle a
+gagné cet argent : quelqu'un doit lui écrire. C'est la règle du
+`ok: false` du 3 août.
+
+### NORMALISER N'EST PAS VALIDER
+
+Premier jet : `normaliserBic` rendait `null` dès que la longueur n'était
+pas 8 ou 11. Un BIC tapé de travers devenait donc `null`,
+`manquesVersement` ne voyait plus rien à signaler, et le champ était
+silencieusement vidé : l'affiliée voyait sa saisie disparaître sans un
+mot. Ces fonctions NETTOIENT et rendent ce qui a été saisi ; ce sont
+`ibanValide` / `bicValide` qui jugent.
+
+La clé de contrôle IBAN (modulo 97) attrape la faute de frappe, qui est
+le cas fréquent : un chiffre inversé donne un IBAN plausible et un
+virement rejeté trois jours plus tard. Le reste se calcule par morceaux :
+le nombre entier fait jusqu'à 38 chiffres, bien au delà de ce qu'un
+`number` porte sans perdre en précision.
+
+### À poser sur le serveur
+
+`SEPA_DEBTOR_IBAN` (et `SEPA_DEBTOR_BIC` si la banque l'exige,
+`SEPA_DEBTOR_NAME` sinon "ETHILIFE"). Sans elle, le fichier SEPA n'est
+pas produit et l'écran le DIT au lieu de rendre un fichier que la banque
+refuserait. La liste PayPal, elle, se télécharge sans ça.
+
+### La page Paiement revient de loin
+
+Elle portait un formulaire PayPal/IBAN jusqu'au 8 juin, débranché parce
+qu'il faisait croire que la configuration était chez nous alors que tout
+se passait chez Systeme.io : les affiliées remplissaient et n'étaient pas
+payées ("arrête d'inventer n'importe quoi"). **Le formulaire revient
+parce que le cycle existe enfin.** La page continue de dire ce qui reste
+chez eux : les commissions des ventes arrivées par leurs anciens tunnels.
+
+Test : `tests/logic/versement-affilies.test.mts`.
+
+## On écrit la facture À LA PLACE de l'affilié (Béné, 25 août 2026)
+
+"Je veux le même truc que systeme io : l'affilié complète ses infos, son
+numéro de TVA et siren s'il a, ses coordonnées, son mode paiement et tous
+les mois on génère sa facture pour sa compta, il peut la télécharger et
+nous on peut le payer via cette facture qu'on a générée pour lui."
+
+Et, dans le même message, la distinction qui structure tout :
+
+> "Ne pas confondre :
+> - les factures qu'on crée pour nos acheteurs
+> - les factures qu'on crée à la place de nos affiliés pour les payer et
+>   ne pas avoir à attendre leurs propres factures"
+
+**LES DEUX VONT DANS DES SENS OPPOSÉS, ET C'EST LE PIÈGE PRINCIPAL.**
+
+| | Facture de VENTE (dépôt Tiquiz) | AUTOFACTURE (ici) |
+|---|---|---|
+| qui vend | nous | l'affilié |
+| le montant de départ | le prix, **TTC** | la commission, **nette de taxe** |
+| la TVA | se calcule DEDANS | s'AJOUTE par dessus |
+| série | `TQ-` (et `AQ-` pour l'Atelier) | `AFF-` |
+
+Recopier l'une sur l'autre ferait des factures fausses **des deux côtés**,
+et rien ne le signalerait avant une réclamation. `COMMISSION_EST_HT` est
+donc une constante NOMMÉE (`lib/affiliate/fiscal.ts`) : le sens se lit,
+il ne se devine pas, et si Béné décide un jour que la commission est TTC
+c'est une ligne à changer, pas un calcul à retrouver.
+
+### Sans mandat, pas de facture, donc pas de virement
+
+Écrire une facture au nom de quelqu'un sans son accord n'est pas une
+facilité, c'est un faux. L'autofacturation exige un mandat (art. 289 I-2
+du CGI), la mention "Autofacturation" sur la pièce (art. 242 nonies A) et
+le droit de la contester. Le texte du mandat vit dans le CODE
+(`TEXTE_MANDAT`), pas dans un fichier de langue : c'est un acte
+juridique, et sa VERSION est stockée avec la date d'acceptation.
+
+`construireLot` écarte donc l'affilié sans profil complet ou sans mandat,
+avec la raison `profil-fiscal`, **distincte de `coordonnees`**. Les deux
+se remplissent sur le même écran mais répondent à deux questions
+différentes : dire "coordonnées manquantes" à quelqu'un qui a très bien
+rempli son IBAN et qui a juste oublié de cocher le mandat l'envoie
+chercher au mauvais endroit. Son argent reste acquis, il part au lot
+suivant.
+
+**La date de l'acceptation vient du SERVEUR.** Le navigateur dit qu'il
+accepte, il ne dit pas quand.
+
+### Les quatre régimes de TVA, et le piège est le même qu'à la vente
+
+`resoudreTvaAutofacture()` décide : `france-tva` (20 %),
+`franchise-en-base` (0 %, le cas le plus fréquent), `autoliquidation-ue`,
+`autoliquidation-hors-ue`. Un particulier ne facture pas de TVA et le cas
+est SIGNALÉ : payer une commission à quelqu'un qui n'a aucun statut est
+une question pour un comptable, pas pour du code.
+
+**ASSUJETTI N'EST PAS DÉDUCTIBLE DE LA PRÉSENCE D'UN NUMÉRO DE TVA.**
+Beaucoup d'auto-entrepreneurs en franchise en base en ont un sans facturer
+de TVA. Le déduire ajouterait 20 % à des factures qui n'en portent pas.
+C'est une case à cocher, et l'écran le dit en toutes lettres.
+
+### La numérotation : un compteur, jamais une séquence
+
+Une séquence Postgres saute des numéros dès qu'une transaction est
+annulée, c'est même sa raison d'être. Une numérotation de factures doit
+être continue : un trou est exactement ce qu'un contrôle cherche. D'où
+`autofacture_compteurs` + `emettre_autofacture()`, qui alloue le numéro
+ET insère dans la MÊME transaction.
+
+**Elle ne lève JAMAIS sur un doublon.** Un lot rejoué rend la pièce déjà
+émise. Deux appels SIMULTANÉS passent tous les deux le premier SELECT :
+le bloc `exception when unique_violation` les rattrape, et comme c'est
+une sous-transaction, le compteur revient en arrière avec. Sans lui la
+fonction lèverait, donc le lot échouerait, donc les virements
+attendraient une pièce comptable.
+
+### L'ordre dans `figerLot`, et il n'est pas décoratif
+
+**le lot -> les factures -> les commissions marquées `paid`.**
+
+Avant le lot, la facture n'aurait pas d'identifiant de versement à
+porter. Après le marquage, une panne laisserait des commissions soldées
+sans la pièce qui les justifie.
+
+**Une facture ratée ne bloque JAMAIS un virement** : l'émission ne rend
+rien, ne lève pas, et chaque échec passe au suivant en criant dans le
+journal. Une pièce manquante se réémet, un virement perdu non. L'écran
+d'admin affiche le nombre de factures À CÔTÉ du nombre de virements, et
+dit quand les deux comptes diffèrent : sans ça, une pièce non émise ne
+vivrait que dans `pm2 logs`.
+
+### Le profil est RECOPIÉ dans la pièce, jamais relu
+
+Une facture émise ne bouge plus : c'est la loi, et c'est la même règle
+que les factures de vente (24 août). Elle porte l'adresse du jour de
+l'émission. Un écran qui lirait le profil COURANT réécrirait tout
+l'historique au premier déménagement, sans que personne ne le voie. La
+mention légale suit la même règle : la page imprimable rend `f.mentions`,
+figée à l'émission, et n'importe PAS `MENTION_AUTOFACTURATION`.
+
+### Deux trouvailles au passage, et les deux étaient des trous réels
+
+1. **La route des coordonnées acceptait le profil fiscal et le mandat
+   dans son corps et ne les écrivait NULLE PART.** L'affilié remplissait,
+   lisait "enregistré", et restait écarté du lot pour "profil fiscal
+   incomplet". Le silence exact que le `ok: false` du 3 août interdit.
+   Le profil est accepté MÊME INCOMPLET (ce qui manque part dans
+   `manquesFiscaux`) : refuser tout parce qu'il manque une ligne fait
+   tout ressaisir, et c'est comme ça qu'on perd la moitié d'un
+   formulaire.
+2. **L'écran d'admin recevait les IBAN en clair.** `affiliate_payouts.
+   lignes` porte les coordonnées FIGÉES, donc des IBAN, et `lireLots`
+   faisait `select("*")`. La règle écrite la veille dit l'inverse :
+   "aucune route ne le renvoie à un navigateur, pas même à sa
+   propriétaire". L'écran reçoit désormais un COMPTE (`nbLignes`), pas
+   des comptes bancaires. Seul le constructeur du fichier SEPA lit les
+   lignes, et il tourne sur le serveur.
+
+### À faire relire par son comptable, une fois
+
+Trois choix sont défendables et sont les siens, pas les miens :
+- **une seule série `AFF-` pour tous les affiliés** (l'autre usage est
+  une série par prestataire) ;
+- **le cas du particulier non assujetti**, accepté et signalé ;
+- **`COMMISSION_EST_HT = true`** : un affilié assujetti coûte 20 % de
+  trésorerie en plus, récupérable, mais ça sort du compte le mois même.
+
+### Endroits à respecter
+
+`lib/affiliate/fiscal.ts` et `lib/affiliate/autofacture.ts` (purs et
+testés, ils n'importent jamais `supabaseAdmin`),
+`lib/affiliate/versementStore.ts` (l'émission, sans aucune décision),
+`app/api/affiliate/coordonnees/route.ts`,
+`app/affiliate/components/CoordonneesVersement.tsx`,
+`app/facture-affilie/[numero]/page.tsx`,
+`app/affiliate/admin/versements/VersementsClient.tsx`,
+`supabase/migrations/20260825_autofacturation.sql`.
+Test : `tests/logic/autofacture.test.mts`.
+
+## L'audit du 26 août : trois trous d'argent dans l'affiliation
+
+Béné : "tu peux auditer tout le parcours de vente tiquiz et l'atelier,
+paypal et stripe plus tout le système d'affiliation ? Je veux que tout
+soit fiable, stable, précis... pour tous les cas de figure (upgrades
+downgrades, remboursement annulation demandes etc... auto affiliation
+factures affiliés, factures clients etc...)"
+
+Les trois trouvailles ont la MÊME forme, celle du 1er août : une logique
+écrite pour un cas, appliquée telle quelle à un autre. Et elles ont
+toutes changé de prix le 25 août : **c'est nous qui virons maintenant, et
+un virement ne se reprend pas.**
+
+### 1. UNE VENTE REMBOURSÉE PAYAIT QUAND MÊME
+
+`affiliate_commissions.cancelled_at` existe depuis le 25 mai. **Aucune
+ligne de code ne l'écrivait.** Un remboursement fermait l'accès, arrêtait
+l'abonnement, émettait l'avoir, et laissait la commission mûrir : 21
+jours plus tard elle entrait dans un lot, et l'argent partait.
+
+Nos propres conditions le promettaient déjà (`lib/legal/affiliate.ts`) :
+"elles peuvent être annulées en cas de remboursement, d'impayé, de
+fraude". Le texte annonçait ce que le code ne faisait pas, exactement
+comme les CGV et le bon de commande le 22 août.
+
+**Et l'Atelier savait déjà le faire.** `refundCommissionByOrder` y vit
+depuis des mois, branchée sur le remboursement SYSTEME.IO. Le jour où
+l'Atelier a eu son propre bon de commande, personne ne l'a rebranchée.
+
+**Règle : `lib/affiliate/annulation.ts` décide, `annulationStore.ts`
+écrit, `POST /api/affiliate/cancel-sale` est la porte.** Les trois
+webhooks appellent, avec la clé de la CRÉATION (`stripe:<ref>` ici,
+`<moyen>:<ref>` côté Atelier) : une clé qui ne correspond pas n'annule
+rien, en silence, ce qui est le bug qu'on ferme.
+
+**Une commission DÉJÀ VERSÉE n'est jamais réécrite.** L'argent est parti
+et la facture d'autofacturation qui le justifie a été remise à un
+comptable. On rend `trop-tard`, et ça CRIE : c'est un cas pour un humain
+(compenser sur le lot suivant, ou écrire à l'affilié).
+
+**L'annulation ne fait JAMAIS échouer le remboursement.** Un
+remboursement doit fermer l'accès même si Tipote ne répond pas ;
+l'inverse ferait rejouer le remboursement en boucle.
+
+### 2. S'AFFILIER À SOI MÊME AVEC UN ALIAS
+
+`attributeSale` comparait `aff.email.toLowerCase() === email`. Acheter
+avec `moi+1@gmail.com` suffisait à se payer 40 % de son propre
+abonnement.
+
+La règle qui voit ces alias existait DÉJÀ, côté Tiquiz, dans
+`lib/trial/moisOffert.ts`, avec ce commentaire : "c'est LE moyen le plus
+simple de s'auto-affilier". Elle n'y gardait que le CADEAU. **On
+protégeait le mois offert mieux que le versement**, alors que c'est le
+versement qui part et ne revient pas.
+
+`lib/affiliate/memeAdresse.ts` vit maintenant dans les TROIS dépôts sous
+le même nom, et `moisOffert.ts` DÉLÈGUE au lieu de redéfinir. Au passage
+`googlemail.com` est ramené à `gmail.com` : c'est la même boîte, et
+l'alias le plus simple qui soit, celui qui ne demande même pas de `+`.
+
+**Les points ne sont retirés que chez Gmail.** Ailleurs `jean.dupont@` et
+`jeandupont@` peuvent être deux personnes, et les confondre refuserait
+une commission légitime : aussi grave que d'en payer une de trop.
+
+### 3. LE TAUX ET LA BASE VENAIENT DE DEUX ENDROITS
+
+**Le taux était écrit en dur** (`const TIQUIZ_COMMISSION_RATE = 0.4`)
+dans le fichier qui PAIE, pendant que `lib/affiliate/commission.ts`
+existait pour être le seul endroit qui dit combien on paie. Le montant
+ANNONCÉ sortait d'un module, le montant VERSÉ d'une constante à côté. Et
+`affiliate_rate_overrides` (créée le 19 août) n'était lue nulle part :
+un partenariat négocié à 60 % aurait été payé 40 %, en silence.
+
+**La base n'était pas la même selon l'appelant**, dans un champ qui
+s'appelle pareil :
+
+| Appelant | Ce qu'il envoyait |
+|---|---|
+| notre bon de commande | HT |
+| la route SIO de l'Atelier | HT |
+| **le webhook Systeme.io** | **TTC** |
+
+40 % de 17,00 € font 6,80 € au lieu de 5,67 € : **1,13 € de trop par
+vente**, invisible. `base` est donc un PARAMÈTRE OBLIGATOIRE de
+`attributeSale`, et le compilateur refuse un appelant qui se tait.
+
+**Un appelant muet est lu comme TTC, et ça crie.** Le repli est
+CONSERVATEUR : lire un HT comme du TTC sous-paie de 17 %, ce qui se
+rattrape au lot suivant ; lire un TTC comme du HT surpaie de 20 %, et un
+virement parti ne revient pas.
+
+**Le montant lui même se lisait au pari.** Le webhook Systeme.io d'ICI
+faisait encore `extractNumber(rawBody, ["order.total_price"])`, donc
+`"17.00"` valait 17 CENTIMES. `readSioAmountCents` avait retiré ce pari
+côté Tiquiz le 22 août ; il vit maintenant ici sous le nom
+`montantSioCents`. Un garde-fou qui ne protège qu'un des deux jumeaux ne
+protège personne.
+
+### Ce que l'audit a laissé ouvert, et qui n'est pas du code
+
+**Les commissions de l'Atelier ne sont dans AUCUN lot.** Elles vivent
+dans SA base (`profiles.sio_affiliate_id` y tient lieu de registre), et
+`preparerLot` ne lit que celle d'ici. L'admin les AFFICHE en interrogeant
+les deux bases, ce qui rend la dette visible sans la solder. Détaillé
+dans `ROADMAP_SORTIE_SIO.md`, chantier 3.
+
+Test : `tests/logic/audit-26-aout.test.mts`, ici et dans les deux autres
+dépôts.

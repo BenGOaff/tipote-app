@@ -6,6 +6,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { timingSafeEqual } from "crypto";
 import { getSignatureMode, verifySioSignature } from "@/lib/sioWebhookSig";
 import { attributeSale } from "@/lib/affiliate/attribution";
+import { montantSioCents } from "@/lib/affiliate/montantSio";
 import { resolveAppUrl } from "@/lib/authLinks";
 import { affiliateDashboardUrl } from "@/lib/affiliate/urls";
 
@@ -1016,17 +1017,28 @@ export async function POST(req: NextRequest) {
       // Cherche dans affiliate_conversions un email matching récent → insert
       // dans affiliate_commissions. Cf. lib/affiliate/attribution.ts.
       try {
-        const totalPriceRaw = extractNumber(rawBody, [
+        // ON NE PARIE PLUS SUR LA FORME DU MONTANT.
+        //
+        // `extractNumber` rendait `17` pour `"17.00"`, donc 17 CENTIMES :
+        // la commission valait 6 centimes au lieu de 6,80 EUR, en
+        // silence. La protection existait cote Tiquiz depuis le 22 aout
+        // et n'avait jamais ete portee ici.
+        const totalPriceRaw = extractString(rawBody, [
           "order.total_price",
           "data.order.total_price",
           "amount",
           "data.amount",
         ]);
-        const saleAmountCents = totalPriceRaw ?? 0;
+        const saleAmountCents = montantSioCents(totalPriceRaw) ?? 0;
         if (saleAmountCents > 0 && orderId) {
           const attribResult = await attributeSale({
             customer_email: resolvedEmail,
             sale_amount_cents: saleAmountCents,
+            // `order.total_price` est ce que l'acheteur a PAYE, donc du
+            // TTC. La conversion en base de commission (le HT, decision
+            // Bene du 19 aout) se fait dans `attributeSale`, une seule
+            // fois, pour tous les appelants.
+            base: "ttc",
             currency:
               typeof rawBody?.data?.price_plan?.currency === "string"
                 ? rawBody.data.price_plan.currency.toUpperCase()

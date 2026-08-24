@@ -362,3 +362,114 @@ test("une destination ajoutee en code n'exige plus de migration", () => {
   );
   assert.ok(!/\.delete\(\)/.test(admin), "l'admin supprime des lignes : le seed les ferait revenir");
 });
+
+// ── LES LIENS ATTERRISSENT SUR NOS DOMAINES (25 août 2026) ──────────
+//
+// Béné : "toutes, d'un bloc". Jusqu'ici 7 destinations sur 8 menaient à
+// des tunnels Systeme.io, dont les pages ne nous transmettent RIEN de ce
+// qu'on ajoute à l'URL : un `?ref=` posé dessus n'atteignait jamais
+// notre bon de commande, donc ni notre commissionnement ni le mois
+// offert.
+//
+// Ces tests portent sur le SEED, pas sur la base : c'est lui qui décide
+// pour toute destination qu'une ligne n'a pas encore surchargée, et
+// c'est lui qu'on lit quand on se demande où mène un lien.
+
+/** Le seed, lu dans la source : il n'est pas exporté, et c'est voulu. */
+function seedDestinations(): { slug: string; path: string }[] {
+  const src = fs.readFileSync(
+    path.join(process.cwd(), "lib/affiliate/linkDestinations.ts"),
+    "utf8",
+  );
+  const bloc = src.slice(src.indexOf("const FALLBACK"), src.indexOf("];", src.indexOf("const FALLBACK")));
+  const lignes = [...bloc.matchAll(/slug:\s*"([a-z_]+)",\s*path:\s*"([^"]*)"/g)];
+  return lignes.map((m) => ({ slug: m[1], path: m[2] }));
+}
+
+/** Les hôtes qui sont à NOUS, et sur lesquels un `?ref=` nous revient. */
+const NOS_DOMAINES = ["tiquiz.fr", "quiz.tipote.com", "atelierduquiz.fr", "app.tipote.com"];
+
+test("les 8 destinations du seed sont toujours la", () => {
+  // Une destination qui disparait du seed est un lien mort dans des
+  // videos deja publiees. Le test le dit avant la mise en ligne.
+  const slugs = seedDestinations().map((d) => d.slug).sort();
+  assert.deepEqual(slugs, [
+    "atelier", "tiquiz_direct", "tiquiz_free", "tiquiz_main",
+    "tiquiz_monthly", "tiquiz_monthly_plus", "tiquiz_yearly", "tiquiz_yearly_plus",
+  ]);
+});
+
+/**
+ * LES DEUX EXCEPTIONS, ET ELLES SONT NOMMÉES.
+ *
+ * - `tiquiz_free` : un optin, dont le formulaire cree le contact et pose
+ *   le tag chez Systeme.io.
+ * - `atelier` : l'Atelier a son PROPRE registre d'affiliés
+ *   (`profiles.sio_affiliate_id` dans SA base, pas la table `affiliates`
+ *   d'ici) et ne lit que `?sa=`. Repointer changerait QUI est payé.
+ */
+const RESTENT_CHEZ_SYSTEME_IO = ["tiquiz_free", "atelier"];
+
+test("TOUTES les destinations menent chez nous, sauf deux exceptions nommees", () => {
+  for (const d of seedDestinations()) {
+    if (RESTENT_CHEZ_SYSTEME_IO.includes(d.slug)) continue;
+    assert.ok(
+      /^https?:\/\//i.test(d.path),
+      `${d.slug} : un chemin relatif part sur le domaine de vente Systeme.io (${d.path})`,
+    );
+    const hote = new URL(d.path).hostname;
+    assert.ok(
+      NOS_DOMAINES.includes(hote),
+      `${d.slug} pointe sur ${hote}, qui ne nous transmet pas le ?ref=`,
+    );
+  }
+});
+
+test("L'OPTIN GRATUIT RESTE chez Systeme.io, et c'est deliberé", () => {
+  // Son formulaire cree le contact et pose le tag chez eux, et c'est le
+  // seul evenement qui porte une URL de tunnel, donc le seul qui sait
+  // d'ou vient l'inscrit. Le remplacer ferait disparaitre ces inscrits
+  // de ses sequences email.
+  const gratuit = seedDestinations().find((d) => d.slug === "tiquiz_free");
+  assert.equal(gratuit?.path, "/part-tiquiz-gratuit");
+  // Et l'Atelier, pour la raison ecrite juste au dessus.
+  assert.equal(seedDestinations().find((d) => d.slug === "atelier")?.path, "/atelier-du-quiz");
+  const src = fs.readFileSync(
+    path.join(process.cwd(), "lib/affiliate/linkDestinations.ts"),
+    "utf8",
+  );
+  // Et la RAISON est ecrite a cote : sans elle, le prochain qui passe
+  // "finit le travail" et casse le tunnel gratuit.
+  assert.match(src, /RESTE chez Systeme\.io, et c'est deliberé/);
+  assert.match(src, /son PROPRE registre d'affiliés/);
+});
+
+test("les paliers menent a NOTRE bon de commande, pas a une page morte", () => {
+  // Les pages `-mensuel` de Systeme.io ne sont PAS des pages de vente :
+  // ce sont leurs BONS DE COMMANDE, avec un `<form id="form-checkout">`
+  // sans action, pilote par leur JavaScript. Les repliquer donnerait un
+  // formulaire de paiement mort.
+  const attendus: Record<string, string> = {
+    tiquiz_monthly: "https://tiquiz.fr/commande/mensuel",
+    tiquiz_monthly_plus: "https://tiquiz.fr/commande/mensuel-plus",
+    tiquiz_yearly: "https://tiquiz.fr/commande/annuel",
+    tiquiz_yearly_plus: "https://tiquiz.fr/commande/annuel-plus",
+  };
+  const seed = Object.fromEntries(seedDestinations().map((d) => [d.slug, d.path]));
+  for (const [slug, path] of Object.entries(attendus)) {
+    assert.equal(seed[slug], path, `${slug} ne mene plus a notre bon de commande`);
+  }
+});
+
+test("le lien construit porte bien le ?ref= sur ces destinations", () => {
+  // Le bout de chaine qui compte : une URL absolue est laissee telle
+  // quelle, et le code public s'y ajoute quand meme.
+  for (const d of seedDestinations()) {
+    const lien = buildAffiliateLink("fr", d.path, "jocelyne");
+    assert.match(
+      lien,
+      new RegExp(`[?&]${AFFILIATE_LINK_PARAM}=jocelyne$`),
+      `${d.slug} : le lien ne porte pas le code public`,
+    );
+  }
+});

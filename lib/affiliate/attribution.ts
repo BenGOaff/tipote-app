@@ -14,19 +14,54 @@
 
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { REF_MIN_LENGTH, sanitizeRef } from "@/lib/affiliate/ref";
+import { memePersonne } from "@/lib/affiliate/memeAdresse";
+import {
+  COMMISSION_RATES,
+  htFromTtcCents,
+  resolveCommissionRate,
+  type CommissionBase,
+} from "@/lib/affiliate/commission";
 
 const ATTRIBUTION_WINDOW_DAYS = 90;
 
-// Taux de commission Tiquiz : 40% FIXE (Béné 17 juil 2026 : pas de palier,
-// nulle part). Les anciens paliers 45%/50% avaient été inventés et sont
-// supprimés. Override per-affilié possible plus tard via une colonne
-// `affiliates.commission_rate` si besoin.
-// NB : l'Atelier du Quiz (Quizing, 70%) est attribué côté formaquiz, pas ici.
-const TIQUIZ_COMMISSION_RATE = 0.4;
+// LE TAUX VIENT DE `commission.ts`, ET DE NULLE PART AILLEURS.
+//
+// Il était écrit en dur ici (`0.4`) pendant que `lib/affiliate/
+// commission.ts` existait précisément pour être LE seul endroit qui dit
+// combien on paie, avec ses trois étages (override négocié, palier,
+// taux du produit). Ce fichier là est celui qui PAIE : le taux affiché
+// à l'affiliée venait donc d'un module, et le taux versé d'une
+// constante à côté. Deux chiffres qui disent la même chose sans passer
+// par le même code finissent toujours par se contredire, et
+// `affiliate_rate_overrides` (créée le 19 août) n'était lue nulle part :
+// un partenariat négocié à 60% aurait été payé 40% en silence.
+//
+// L'Atelier (70%) est attribué côté formaquiz, dans SA base.
+const PRODUIT: keyof typeof COMMISSION_RATES = "tiquiz";
 
 export type AttributeSaleInput = {
   customer_email: string;
   sale_amount_cents: number;
+  /**
+   * SUR QUOI LE POURCENTAGE S'APPLIQUE. JAMAIS DEVINÉ.
+   *
+   * Trouvé en auditant le 26 août : les trois appelants ne parlaient pas
+   * de la même chose dans ce champ.
+   *
+   *   notre bon de commande (Tiquiz)   -> HT  (`commissionBaseCents`)
+   *   la route SIO de l'Atelier        -> HT  (`extractAmountHtCents`)
+   *   le webhook Systeme.io de Tiquiz  -> TTC (`order.total_price`)
+   *
+   * Le troisième payait donc ~20 % de trop, en silence : 40 % de 17,00 €
+   * font 6,80 € au lieu de 40 % de 14,17 € qui font 5,67 €. Un écart de
+   * 1,13 € par vente, invisible parce que le champ s'appelle pareil.
+   *
+   * Décision Béné du 19 août : la base est le HT. Elle est donc APPLIQUÉE
+   * ici, sur la valeur reçue, à partir de ce que l'appelant DIT avoir
+   * envoyé. On ne devine pas à la valeur : 1700 centimes est un TTC
+   * plausible et un HT plausible.
+   */
+  base: CommissionBase;
   currency?: string;
   source_app: "tipote" | "tiquiz";
   sio_order_id: string;
@@ -153,18 +188,38 @@ export async function attributeSale(input: AttributeSaleInput): Promise<Attribut
       return { status: "affiliate_not_registered", sa };
     }
 
-    // Anti-auto-affiliation : on refuse si l'affilié est le client lui-même
-    // (même email). Évite de toucher des commissions sur ses propres achats.
-    if (aff.email.toLowerCase() === email) {
+    // ANTI-AUTO-AFFILIATION, ALIAS COMPRIS.
+    //
+    // La comparaison était brute (`aff.email.toLowerCase() === email`) :
+    // acheter avec `moi+1@gmail.com` suffisait à se payer 40 % de son
+    // propre abonnement. La règle qui voit ces alias existait déjà côté
+    // Tiquiz, mais elle ne gardait que le MOIS OFFERT. On protégeait le
+    // cadeau mieux que le versement.
+    if (memePersonne(aff.email, email)) {
       console.log(
         `[affiliate/attribution] self-attribution refused: sa=${aff.sa} email=${email}`,
       );
       return { status: "no_affiliate_match" };
     }
 
-    // Commission Tiquiz : 40% fixe.
-    const rate = TIQUIZ_COMMISSION_RATE;
-    const commissionCents = Math.round(input.sale_amount_cents * rate);
+    // LE TAUX, avec ses trois étages, et le montant sur la base décidée.
+    const { data: overrideRow } = await supabaseAdmin
+      .from("affiliate_rate_overrides")
+      .select("rate")
+      .eq("sa", sa)
+      .eq("product", PRODUIT)
+      .maybeSingle();
+    const rate = resolveCommissionRate({
+      product: PRODUIT,
+      override: Number((overrideRow as { rate?: number } | null)?.rate ?? NaN),
+    });
+
+    // Le montant de la VENTE reste celui qui a été encaissé : c'est lui
+    // qu'on garde en base, c'est lui qu'on affiche. Seule la BASE DE
+    // CALCUL passe au HT quand l'appelant a envoyé du TTC.
+    const baseCents =
+      input.base === "ttc" ? htFromTtcCents(input.sale_amount_cents) : input.sale_amount_cents;
+    const commissionCents = Math.round(baseCents * rate);
 
     const { data: inserted, error: insertErr } = await supabaseAdmin
       .from("affiliate_commissions")

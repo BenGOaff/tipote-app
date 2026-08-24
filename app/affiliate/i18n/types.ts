@@ -338,6 +338,71 @@ export type AffiliateDict = {
   // ─── Paiement (info-only : tout passe par Systeme.io) ────────────
   paiement: {
     page_title: string;
+    // Les coordonnées de versement (25 août 2026) : PayPal ou virement,
+    // au choix de l'affiliée.
+    choose_title: string;
+    choose_body: string;
+    method_paypal: string;
+    method_paypal_hint: string;
+    method_virement: string;
+    method_virement_hint: string;
+    label_paypal_email: string;
+    label_titulaire: string;
+    label_iban: string;
+    label_bic: string;
+    bic_optional: string;
+    iban_stored_note: string;
+    iban_current: string;
+    iban_replace: string;
+    save: string;
+    saving: string;
+    saved: string;
+    err_save: string;
+    err_methode_inconnue: string;
+    err_paypal_email: string;
+    err_titulaire: string;
+    err_iban: string;
+    err_iban_invalide: string;
+    err_bic_invalide: string;
+    incomplete_banner: string;
+    complete_banner: string;
+    minimum_note: string;
+    // Le profil fiscal et le mandat de facturation (25 août 2026) :
+    // on émet la facture à sa place, il faut son accord et ses infos.
+    fiscal_title: string;
+    fiscal_body: string;
+    statut_entreprise: string;
+    statut_entreprise_hint: string;
+    statut_particulier: string;
+    statut_particulier_hint: string;
+    label_denomination: string;
+    label_adresse: string;
+    label_adresse2: string;
+    label_code_postal: string;
+    label_ville: string;
+    label_pays: string;
+    label_siren: string;
+    label_tva_numero: string;
+    assujetti_label: string;
+    assujetti_hint: string;
+    mandat_title: string;
+    mandat_accept: string;
+    mandat_accepted_on: string;
+    mandat_required: string;
+    factures_title: string;
+    factures_empty: string;
+    factures_open: string;
+    factures_note: string;
+    err_statut: string;
+    err_denomination: string;
+    err_adresse: string;
+    err_ville: string;
+    err_pays: string;
+    err_siren: string;
+    err_siren_invalide: string;
+    err_tva_numero: string;
+    err_tva_numero_invalide: string;
+    err_mandat: string;
     page_subtitle_sio: string;
     sio_config_title: string;
     sio_config_body: string;

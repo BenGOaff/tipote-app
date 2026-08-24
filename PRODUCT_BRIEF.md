@@ -212,10 +212,15 @@ Variations selon le canal :
 ### 7.12. Dashboard d'affiliation (affiliate.tipote.com)
 - Espace dédié aux affiliés qui promeuvent Tiquiz et Tipote, opérationnel en quelques minutes.
 - Vue d'ensemble : lien d'affiliation, gains, progression.
-- Promouvoir : liens trackés éditables (le paramètre de suivi est ajouté automatiquement).
+- Promouvoir : liens trackés éditables (le code de suivi est ajouté automatiquement).
+- **Mes liens** : un lien par canal, chacun avec ses clics, ses inscrits et ses commissions. En un coup d'oeil, l'affilié sait lequel de ses canaux travaille.
 - Contenus prêts à copier-coller : emails, posts réseaux, articles, visuels, tous personnalisables (lien et prénom injectés).
 - Studio visuels IA : depuis chaque post, l'affilié génère un visuel pro qui s'accroche au post.
 - Essai gratuit : accès Tipote Elite offert pour créer du contenu de promo authentique.
+- **Il choisit comment il est payé** : PayPal ou virement bancaire. L'IBAN est chiffré et ne ressort jamais en clair, pas même à son propriétaire (un écran se photographie) : il en voit un masque, et le ressaisit pour le changer.
+- **On écrit sa facture à sa place**, chaque mois, avec son accord (mandat d'autofacturation). Il la télécharge pour sa comptabilité et n'a rien à nous envoyer.
+- **Ce qu'on promet, on le tient dans les deux sens** : une commission tombe si la vente est remboursée ou impayée, comme le disent les conditions du programme. Un affilié qui découvrirait l'inverse cesserait de nous croire sur le reste.
+- Ne jamais annoncer un délai de versement inférieur à 21 jours après la vente : c'est le délai de rétractation plus une marge, et une commission virée ne se reprend pas.
 
 ## 8. Plans et tarification
 
