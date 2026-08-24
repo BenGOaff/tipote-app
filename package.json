@@ -23,6 +23,7 @@
     "check:schema": "node scripts/check-schema.mjs",
     "check:migrations-pending": "node scripts/check-pending-migrations.mjs",
     "check:storage": "node scripts/storage-audit.mjs",
+    "storage:archive": "node scripts/storage-archive.mjs",
     "affiliate:login-as": "node scripts/affiliate-login-as.mjs",
     "test:e2e": "playwright test",
     "test:e2e:install": "playwright install --with-deps chromium"
