@@ -291,6 +291,25 @@ export async function approuverCommissionsMures(
     .from(TABLE_COMM)
     .select("id, sa, status, commission_cents, sale_at, cancelled_at, payout_id")
     .eq("status", "pending")
+    // CE QUE SYSTEME.IO VERSE NE MURIT PAS CHEZ NOUS.
+    //
+    // Ces lignes existent pour que le tableau de bord de l'affilie soit
+    // complet, pas pour entrer dans un lot. Les faire passer `approved`
+    // les rendrait indiscernables des notres au premier coup d'oeil.
+    .eq("regle_par", "nous")
+    // LA PLUS ANCIENNE D'ABORD, ET CE N'EST PAS DÉCORATIF.
+    //
+    // La commission est RÉCURRENTE depuis le 26 août : une ligne par
+    // abonné et par mois. Le nombre de lignes en attente grandit donc
+    // avec la base, et le jour où il dépasse la limite, une requête
+    // sans tri laisse Postgres choisir lesquelles il rend. Ce sont
+    // alors toujours les mêmes qui restent dehors, sans que rien ne le
+    // signale : quelqu'un ne serait jamais payé.
+    //
+    // Avec le tri, la limite ne fait que RETARDER : ce qui déborde
+    // passe au tour suivant, en commençant par ce qui attend depuis le
+    // plus longtemps.
+    .order("sale_at", { ascending: true })
     .limit(2000);
   if (error) {
     console.error(`[versement] lecture des commissions refusee : ${error.message}`);
@@ -319,7 +338,27 @@ export async function preparerLot(): Promise<Lot | null> {
       .from(TABLE_COMM)
       .select("id, sa, status, commission_cents, currency, sale_at, cancelled_at, payout_id")
       .eq("status", "approved")
+      // ── LE FILTRE QUI EMPECHE DE PAYER DEUX FOIS ──
+      //
+      // Bene, 26 aout : "ce qui est vendu dans systeme io est payé sur
+      // systeme io mais doit être tracké pour un dashboard affilié
+      // fiable pour l'affilié et pour moi, et ce qui passe sur nos
+      // nouvelles pages bah c'est ok on peut tout tracker proprement ?"
+      //
+      // Les deux populations vivent dans la MEME table, et c'est voulu :
+      // l'affilie doit voir TOUT ce qu'il a gagne. Sans ce filtre, le
+      // premier lot aurait vire une deuxieme fois ce que Systeme.io a
+      // deja verse. Aucun lot n'avait encore tourne : c'est pris avant
+      // le premier virement.
+      //
+      // La colonne est ECRITE a la creation, jamais deduite du prefixe
+      // de `sio_order_id` : le jour ou un troisieme encaisseur arrive,
+      // une deduction se tait et l'argent part.
+      .eq("regle_par", "nous")
       .is("payout_id", null)
+      // La plus ancienne d'abord : même raison que ci dessus. Ce qui
+      // déborde part au lot suivant, jamais aux oubliettes.
+      .order("sale_at", { ascending: true })
       .limit(5000);
     const commissions = (comms ?? []) as CommissionAVerser[];
     if (commissions.length === 0) {

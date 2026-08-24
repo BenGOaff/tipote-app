@@ -279,6 +279,7 @@ export const EN: AffiliateDict = {
   },
   revenus: {
     page_title: "Earnings",
+    paye_par_sio: "Paid by Systeme.io",
     page_subtitle: "Tracking your commissions on Tiquiz and L'Atelier du Quiz.",
     total_gains: "Total earnings",
     pending: "Pending",
@@ -375,7 +376,7 @@ export const EN: AffiliateDict = {
     err_bic_invalide: "This BIC has the wrong shape (8 or 11 characters).",
     incomplete_banner: "Your commissions are adding up, but we cannot pay them out yet: your payout details are missing.",
     complete_banner: "All set. Your commissions go out at the next payout.",
-    minimum_note: "Payouts run between the 10th and the 13th of each month, for commissions earned more than 21 days ago. Below 20 EUR the amount stays yours and rolls over to the next payout.",
+    minimum_note: "Payouts run between the 10th and the 13th of each month, for commissions earned more than 30 days ago. Below 20 EUR the amount stays yours and rolls over to the next payout.",
     page_title: "Payment",
     page_subtitle_sio: "Payments are handled by Systeme.io. Set up your payment method on their side, we handle the rest.",
     sio_config_title: "Set up your payment (PayPal or bank transfer)",

@@ -279,6 +279,7 @@ export const PT: AffiliateDict = {
   },
   revenus: {
     page_title: "Ganhos",
+    paye_par_sio: "Pago pela Systeme.io",
     page_subtitle: "Acompanhamento das tuas comissões no Tiquiz e em L'Atelier du Quiz.",
     total_gains: "Ganhos totais",
     pending: "Pendente",
@@ -375,7 +376,7 @@ export const PT: AffiliateDict = {
     err_bic_invalide: "Este BIC não tem a forma certa (8 ou 11 caracteres).",
     incomplete_banner: "As tuas comissões acumulam-se, mas ainda não te podemos pagar: faltam os teus dados de pagamento.",
     complete_banner: "Está tudo pronto. As tuas comissões saem no próximo pagamento.",
-    minimum_note: "Os pagamentos saem entre o dia 10 e o dia 13 de cada mês, para as comissões ganhas há mais de 21 dias. Abaixo de 20 EUR o valor continua a ser teu e passa para o pagamento seguinte.",
+    minimum_note: "Os pagamentos saem entre o dia 10 e o dia 13 de cada mês, para as comissões ganhas há mais de 30 dias. Abaixo de 20 EUR o valor continua a ser teu e passa para o pagamento seguinte.",
     page_title: "Pagamento",
     page_subtitle_sio: "Os pagamentos são geridos pelo Systeme.io. Configura o teu método de pagamento lá, nós tratamos do resto.",
     sio_config_title: "Configura o teu pagamento (PayPal ou transferência)",

@@ -279,6 +279,7 @@ export const IT: AffiliateDict = {
   },
   revenus: {
     page_title: "Guadagni",
+    paye_par_sio: "Pagato da Systeme.io",
     page_subtitle: "Monitoraggio delle tue commissioni su Tiquiz e L'Atelier du Quiz.",
     total_gains: "Guadagni totali",
     pending: "In attesa",
@@ -375,7 +376,7 @@ export const IT: AffiliateDict = {
     err_bic_invalide: "Questo BIC non ha la forma giusta (8 o 11 caratteri).",
     incomplete_banner: "Le tue commissioni si accumulano, ma non possiamo ancora versartele: mancano i tuoi dati di pagamento.",
     complete_banner: "Tutto pronto. Le tue commissioni partono al prossimo versamento.",
-    minimum_note: "I versamenti partono tra il 10 e il 13 di ogni mese, per le commissioni maturate da più di 21 giorni. Sotto i 20 EUR l'importo resta tuo e passa al versamento successivo.",
+    minimum_note: "I versamenti partono tra il 10 e il 13 di ogni mese, per le commissioni maturate da più di 30 giorni. Sotto i 20 EUR l'importo resta tuo e passa al versamento successivo.",
     page_title: "Pagamento",
     page_subtitle_sio: "I pagamenti sono gestiti da Systeme.io. Configura il tuo metodo di pagamento da loro, pensiamo noi al resto.",
     sio_config_title: "Configura il pagamento (PayPal o bonifico)",

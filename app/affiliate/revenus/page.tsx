@@ -34,6 +34,8 @@ type Commission = {
   commission_cents: number;
   currency: string;
   status: "pending" | "approved" | "paid" | "cancelled" | "rejected";
+  /** Qui verse : nous, ou Systeme.io (les ventes de leurs tunnels). */
+  regle_par: "nous" | "systeme_io" | null;
   sale_at: string;
   paid_at: string | null;
 };
@@ -50,7 +52,7 @@ async function fetchCommissions(sa: string): Promise<Commission[]> {
   const { data } = await supabaseAdmin
     .from("affiliate_commissions")
     .select(
-      "id, source_app, customer_email, product_name, sale_amount_cents, commission_rate, commission_cents, currency, status, sale_at, paid_at",
+      "id, source_app, customer_email, product_name, sale_amount_cents, commission_rate, commission_cents, currency, status, regle_par, sale_at, paid_at",
     )
     .eq("sa", sa)
     .order("sale_at", { ascending: false })
@@ -199,6 +201,18 @@ export default async function RevenusPage() {
                             <Badge variant="outline" className="text-[10px] mt-1">
                               {c.source_app}
                             </Badge>
+                            {/* QUI VERSE CETTE LIGNE.
+                                Deux systemes paient en parallele pendant
+                                la transition. Une affiliee qui ne sait
+                                pas lequel regarde son argent, c'est un
+                                ticket de support par mois et par
+                                personne (meme raison que la page
+                                Paiement). */}
+                            {c.regle_par === "systeme_io" && (
+                              <Badge variant="outline" className="text-[10px] mt-1 ml-1">
+                                {t.revenus.paye_par_sio}
+                              </Badge>
+                            )}
                           </TableCell>
                           <TableCell className="text-sm font-mono">
                             {maskEmail(c.customer_email)}

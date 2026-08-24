@@ -2242,3 +2242,76 @@ dans `ROADMAP_SORTIE_SIO.md`, chantier 3.
 
 Test : `tests/logic/audit-26-aout.test.mts`, ici et dans les deux autres
 dépôts.
+
+## Les 7 règles du programme d'affiliation (Béné, 26 août 2026)
+
+Elle a listé le fonctionnement de Systeme.io, règle par règle, après
+avoir vu que mes audits successifs trouvaient toujours autre chose :
+"Je dois être sûre que tu as bien tout compris et pris en compte avant
+d'envoyer le moindre code."
+
+**Chacune de ces règles est un comportement que Systeme.io donnait
+gratuitement depuis des années.** En reprenant la vente, chacune doit
+être réécrite explicitement, et aucune ne se signale toute seule quand
+elle manque : rien ne casse, l'argent tombe juste au mauvais endroit.
+C'est pour ça que sa liste vaut plus que n'importe quel audit.
+
+| Sa règle | Où elle vit |
+|---|---|
+| le cookie dure **1 an** | `REF_MAX_AGE_SECONDS` / `SA_MAX_AGE_SECONDS` (Tiquiz) |
+| commission versable à **J+30 du paiement** | `DELAI_RETRACTATION_JOURS` |
+| inscription gratuite sur son lien -> **affilié à vie** | `fenetreAttribution.ts` + `/api/affiliate/rattacher` |
+| annulation -> on arrête à la fin de l'abonnement | plus d'échéance, donc plus de commission |
+| remboursement -> pas de commission | `annulation.ts`, la seule échéance remboursée |
+| **40 % HT** Tiquiz, **70 %** Atelier | `COMMISSION_RATES` |
+| on touche, l'affilié touche | une commission par ENCAISSEMENT |
+
+### Ce que j'avais faux, et que sa liste a révélé
+
+1. **Le cookie durait 90 jours.** Un prospect qui clique en janvier et
+   achète en juin ne payait plus personne.
+2. **Le délai était J+21**, par un raisonnement sur la rétractation
+   légale (14 jours + marge). Le raisonnement se tenait et ne comptait
+   pas : ses affiliés connaissent J+30, et un délai maison qui diffère
+   du délai annoncé se remarque au premier virement.
+3. **Le rattachement expirait à 90 jours**, alors qu'il est à VIE.
+4. **Et surtout : notre propre inscription gratuite ne rattachait
+   RIEN.** Ni le cookie, ni le `?ref=`. La règle "inscrit en free sur
+   son lien = son affilié à vie" ne marchait que via Systeme.io, dont
+   l'optin appelle `sio-conversion`. Sur nos pages, l'affilié perdait
+   son prospect à l'expiration du cookie, et le problème grossissait à
+   chaque inscription prise chez nous.
+
+### LE PREMIER RATTACHEMENT GAGNE, pas le dernier
+
+Un contact appartient à celui qui l'a AMENÉ. `findRecentConversion` lit
+donc la conversion la plus ANCIENNE (`ascending: true`), et ce
+rattachement passe devant un cookie plus récent. Trier du plus récent
+donnerait le contact au dernier affilié dont il a croisé un lien, ce qui
+viderait de son sens la promesse "à vie". Le cookie ne sert qu'aux gens
+qu'on ne connaît pas encore. C'est le comportement de Systeme.io, et
+Béné l'a confirmé nommément.
+
+### Ce que l'anticipation a trouvé en plus
+
+Elle a demandé : "identifie tout ce qui pourrait poser problème à
+l'avenir et qu'on veut qui fonctionne comme systeme io."
+
+- **Une commission en DEVISE ÉTRANGÈRE serait virée en euros.** Le
+  fichier SEPA porte `Ccy="EUR"` et le lot additionnait tout. Trois
+  plans Tiquiz en dollars existent chez Systeme.io depuis avril : le cas
+  n'est pas théorique. On ne convertit PAS (un taux de change inventé
+  produirait un versement faux qui a l'air juste) : la ligne est ÉCARTÉE
+  avec la raison `devise`, et l'écran la montre.
+- **La file de commissions n'était pas triée.** La commission est
+  récurrente : une ligne par abonné et par mois, donc la file grandit
+  avec la base. Le jour où elle dépasse la limite de la requête,
+  Postgres choisit lesquelles il rend, et ce sont toujours les mêmes qui
+  restent dehors. `order by sale_at asc` : la limite ne fait plus que
+  RETARDER, en commençant par ce qui attend depuis le plus longtemps.
+- **La décision "à vie" vivait dans `attribution.ts`**, qui importe
+  `supabaseAdmin` : aucun test ne pouvait l'importer. Sortie dans
+  `fenetreAttribution.ts`. C'est le test qui l'a attrapé, et c'est
+  exactement le piège qui avait caché le verrou des webhooks le 24 août.
+
+Test : `tests/logic/audit-26-aout.test.mts` (les deux dépôts).

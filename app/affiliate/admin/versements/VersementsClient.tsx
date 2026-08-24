@@ -21,7 +21,7 @@ interface Ligne {
 }
 interface Ecartee {
   sa: string;
-  raison: "coordonnees" | "profil-fiscal" | "sous-le-minimum" | "affiliee-inconnue";
+  raison: "coordonnees" | "devise" | "profil-fiscal" | "sous-le-minimum" | "affiliee-inconnue";
   montantCents: number;
 }
 interface Piece {
@@ -53,6 +53,9 @@ interface Reponse {
 
 const RAISONS: Record<Ecartee["raison"], string> = {
   coordonnees: "n'a pas encore dit comment être payée",
+  // On ne convertit pas : un taux de change inventé produirait un
+  // versement faux qui a l'air juste.
+  devise: "commission dans une autre devise, à régler à la main",
   // DISTINCT des coordonnées, et il le faut : dire "coordonnées
   // manquantes" à quelqu'un qui a très bien rempli son IBAN et qui a
   // juste oublié de cocher le mandat l'envoie chercher au mauvais
@@ -163,7 +166,7 @@ export default function VersementsClient() {
           <div>
             <h2 className="text-base font-semibold">1. Faire mûrir les commissions</h2>
             <p className="text-muted-foreground">
-              Une commission devient versable 21 jours après la vente, si elle n&apos;a pas été
+              Une commission devient versable 30 jours après le paiement du client, si elle n&apos;a pas été
               remboursée. Le délai de rétractation légal est de 14 jours : une commission déjà
               virée ne se reprend pas.
             </p>

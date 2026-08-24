@@ -44,6 +44,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     sale_amount_cents?: number;
     /** "ht" ou "ttc" : sur quoi le pourcentage s'applique. Voir plus bas. */
     base?: string;
+    /** "nous" ou "systeme_io" : qui verse cette commission. Voir plus bas. */
+    regle_par?: string;
     currency?: string;
     source_app?: "tipote" | "tiquiz";
     sio_order_id?: string;
@@ -94,10 +96,30 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
   }
 
+  // QUI VERSE, DIT PAR L'APPELANT.
+  //
+  // Une vente passée par un tunnel Systeme.io est versée par EUX : on
+  // l'enregistre pour que le tableau de bord de l'affilié soit complet,
+  // jamais pour la virer nous mêmes. Une vente prise sur notre bon de
+  // commande, c'est l'inverse.
+  //
+  // **Le repli est `systeme_io`, et il est CONSERVATEUR** : une ligne
+  // dont on ignore le payeur ne partira PAS dans un lot. Elle
+  // s'affichera comme versée par eux, ce qui se corrige d'un UPDATE ;
+  // l'inverse partirait en virement, et un virement ne se reprend pas.
+  const reglePar = body.regle_par === "nous" || body.regle_par === "systeme_io" ? body.regle_par : null;
+  if (!reglePar) {
+    console.error(
+      `[affiliate/attribute-sale] appelant sans \`regle_par\` sur ${body.source_app}:${body.sio_order_id} : ` +
+        `comptee comme versee par Systeme.io, donc EXCLUE des lots. A corriger cote appelant.`,
+    );
+  }
+
   const result = await attributeSale({
     customer_email: body.customer_email,
     sale_amount_cents: body.sale_amount_cents,
     base: base ?? "ttc",
+    reglePar: reglePar ?? "systeme_io",
     currency: body.currency,
     source_app: body.source_app,
     sio_order_id: body.sio_order_id,

@@ -15,6 +15,10 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { REF_MIN_LENGTH, sanitizeRef } from "@/lib/affiliate/ref";
 import { memePersonne } from "@/lib/affiliate/memeAdresse";
+// LE RATTACHEMENT EST À VIE, et la décision vit dans un module PUR :
+// ce fichier importe `supabaseAdmin`, donc aucun test ne peut
+// l'importer. Voir `fenetreAttribution.ts`.
+import { planchierRattachement } from "@/lib/affiliate/fenetreAttribution";
 import {
   COMMISSION_RATES,
   htFromTtcCents,
@@ -22,7 +26,6 @@ import {
   type CommissionBase,
 } from "@/lib/affiliate/commission";
 
-const ATTRIBUTION_WINDOW_DAYS = 90;
 
 // LE TAUX VIENT DE `commission.ts`, ET DE NULLE PART AILLEURS.
 //
@@ -62,6 +65,26 @@ export type AttributeSaleInput = {
    * plausible et un HT plausible.
    */
   base: CommissionBase;
+  /**
+   * QUI VERSE CETTE COMMISSION. JAMAIS DEVINÉ.
+   *
+   * Béné, 26 août : "ce qui est vendu dans systeme io est payé sur
+   * systeme io mais doit être tracké pour un dashboard affilié fiable
+   * pour l'affilié et pour moi, et ce qui passe sur nos nouvelles pages
+   * bah c'est ok on peut tout tracker proprement ?"
+   *
+   * Les deux populations vivent dans la MÊME table, et c'est voulu :
+   * l'affilié doit voir TOUT ce qu'il a gagné, quel que soit le tunnel.
+   * Mais `preparerLot` ne doit virer que les nôtres, sinon le premier
+   * lot paie une deuxième fois ce que Systeme.io a déjà versé.
+   *
+   * On POURRAIT le déduire du préfixe de `sio_order_id`. On ne le fait
+   * pas : deviner la mécanique au lieu de la porter est le défaut qui a
+   * produit la fausse alerte de Véronique et les deux bases de
+   * commission divergentes. Le jour où un troisième encaisseur arrive,
+   * la déduction se tait et l'argent part.
+   */
+  reglePar: "nous" | "systeme_io";
   currency?: string;
   source_app: "tipote" | "tiquiz";
   sio_order_id: string;
@@ -143,14 +166,23 @@ async function saDepuisRef(brut: string | null | undefined): Promise<string | nu
   return alias ? (alias as { sa: string }).sa : null;
 }
 
+/**
+ * L'AFFILIÉ À QUI CE CONTACT EST RATTACHÉ, s'il y en a un.
+ *
+ * Le PREMIER rattachement, pas le dernier : c'est celui qui a amené la
+ * personne qui la garde. Trier du plus récent donnerait le contact au
+ * dernier affilié dont il a croisé un lien, ce qui viderait de son sens
+ * la promesse "il reste son affilié à vie".
+ */
 async function findRecentConversion(email: string): Promise<{ id: string; sa: string } | null> {
-  const since = new Date(Date.now() - ATTRIBUTION_WINDOW_DAYS * 24 * 3600 * 1000).toISOString();
-  const { data, error } = await supabaseAdmin
+  let requete = supabaseAdmin
     .from("affiliate_conversions")
     .select("id, sa")
-    .eq("email", email.toLowerCase())
-    .gte("created_at", since)
-    .order("created_at", { ascending: false })
+    .eq("email", email.toLowerCase());
+  const plancher = planchierRattachement();
+  if (plancher) requete = requete.gte("created_at", plancher);
+  const { data, error } = await requete
+    .order("created_at", { ascending: true })
     .limit(1)
     .maybeSingle();
   if (error) {
@@ -236,6 +268,7 @@ export async function attributeSale(input: AttributeSaleInput): Promise<Attribut
         commission_rate: rate,
         commission_cents: commissionCents,
         currency: input.currency ?? "EUR",
+        regle_par: input.reglePar,
         status: "pending",
         sale_at: input.sale_at.toISOString(),
         raw_payload: input.raw_payload ?? null,
