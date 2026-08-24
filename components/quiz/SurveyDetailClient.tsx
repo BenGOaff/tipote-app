@@ -93,6 +93,7 @@ import {
   type ShareNetwork,
 } from "@/lib/quizBranding";
 import { projectBackHref } from "@/lib/nav/projectBack";
+import { televerserAsset } from "@/lib/storage/televerser";
 
 // Types
 // Surveys reuse the QuizDetailClient shell but specialise: questions carry a
@@ -1211,9 +1212,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       const ext = prepared.ext;
       // Horodaté comme tous les autres uploads : cf. QuizDetailClient.
       const path = `logos/${user.id}/logo-${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("public-assets").upload(path, prepared.blob, { upsert: true });
-      if (error) throw error;
-      const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
+      const publicUrlTeleversee = await televerserAsset(supabase, path, prepared.blob);
+      const urlData = { publicUrl: publicUrlTeleversee };
       const publicUrl = urlData.publicUrl;
       // Persist at the profile level (single source of truth) + optimistic UI
       await fetch("/api/profile", {
@@ -1245,9 +1245,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       const prepared = await prepareUpload(file, "og");
       const ext = prepared.ext;
       const path = `og/${user.id}/${quizId}-${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("public-assets").upload(path, prepared.blob, { upsert: true });
-      if (error) throw error;
-      const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
+      const publicUrlTeleversee = await televerserAsset(supabase, path, prepared.blob);
+      const urlData = { publicUrl: publicUrlTeleversee };
       setOgImageUrl(urlData.publicUrl);
       toast.success(t("toastOgSaved"));
     } catch (err) {
@@ -1273,9 +1272,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       const prepared = await prepareUpload(file, "rich-content");
       const ext = prepared.ext;
       const path = `rich-content/${user.id}/${quizId}-${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("public-assets").upload(path, prepared.blob, { upsert: true });
-      if (error) throw error;
-      const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
+      const publicUrlTeleversee = await televerserAsset(supabase, path, prepared.blob);
+      const urlData = { publicUrl: publicUrlTeleversee };
       return urlData.publicUrl;
     } catch (err) {
       console.error("Rich text image upload failed:", err);
@@ -1335,9 +1333,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       const prepared = await prepareUpload(file, "quiz-options");
       const ext = prepared.ext;
       const path = `quiz-options/${user.id}/${quizId}-q${qi}-o${oi}-${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("public-assets").upload(path, prepared.blob, { upsert: true });
-      if (error) throw error;
-      const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
+      const publicUrlTeleversee = await televerserAsset(supabase, path, prepared.blob);
+      const urlData = { publicUrl: publicUrlTeleversee };
       setEditQuestions((p) => p.map((q, i) => i !== qi ? q : {
         ...q,
         options: q.options.map((o, j) => j === oi ? { ...o, image_url: urlData.publicUrl } : o),
@@ -1375,9 +1372,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       const prepared = await prepareUpload(file, "quiz-questions");
       const ext = prepared.ext;
       const path = `quiz-questions/${user.id}/${quizId}-q${qi}-${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("public-assets").upload(path, prepared.blob, { upsert: true });
-      if (error) throw error;
-      const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
+      const publicUrlTeleversee = await televerserAsset(supabase, path, prepared.blob);
+      const urlData = { publicUrl: publicUrlTeleversee };
       setQuestionImage(qi, urlData.publicUrl);
     } catch (err) {
       console.error("Question image upload failed:", err);

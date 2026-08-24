@@ -29,6 +29,7 @@ import type { RegistrarInfo } from "@/lib/registrarDetect";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { prepareFaviconForUpload } from "@/lib/clientFaviconUpload";
 import { RegistrarInstructions } from "./RegistrarInstructions";
+import { televerserAsset } from "@/lib/storage/televerser";
 
 type Props = {
   domain: CustomDomainRow;
@@ -160,14 +161,8 @@ export function CustomDomainCard({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("not_signed_in");
       const path = `favicons/${user.id}/${domain.id}-${Date.now()}.${prepared.ext}`;
-      const { error } = await supabase.storage
-        .from("public-assets")
-        .upload(path, prepared.blob, {
-          upsert: true,
-          contentType: prepared.contentType,
-        });
-      if (error) throw error;
-      const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
+      const publicUrlTeleversee = await televerserAsset(supabase, path, prepared.blob);
+      const urlData = { publicUrl: publicUrlTeleversee };
       await persistFaviconUrl(urlData.publicUrl);
       toast.success(t("faviconUploaded"));
     } catch (err) {

@@ -1,6 +1,6 @@
 // scripts/storage-archive.mjs
 //
-// COPIE LES FICHIERS DU BUCKET SUR CE SERVEUR. NE SUPPRIME RIEN.
+// COPIE LES FICHIERS DE TOUS LES BUCKETS SUR CE SERVEUR. NE SUPPRIME RIEN.
 //
 // Béné, 26 août 2026 : "on ne supprime rien des clients à ce stade. On
 // peut archiver l'existant quelque part pour le retrouver en cas de
@@ -13,7 +13,8 @@
 // -- CE QUE ÇA FAIT ----------------------------------------------------
 //
 // Télécharge chaque fichier du bucket dans un dossier local, en gardant
-// EXACTEMENT l'arborescence du bucket, et écrit un manifeste JSON à
+// EXACTEMENT l'arborescence de chaque bucket (rangée sous son nom), et
+// écrit un manifeste JSON à
 // côté. Le manifeste est ce qui rend l'archive utile : sans lui on a un
 // tas de fichiers dont personne ne sait à quel quiz ils appartenaient.
 //
@@ -43,7 +44,24 @@ import { mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 
-const BUCKET = "public-assets";
+/**
+ * TOUS les buckets, demandes a Supabase.
+ *
+ * `public-assets` etait ecrit en dur, et Tipote en a un SECOND
+ * (`content-images`). Une archive qui oublie un bucket est pire qu'une
+ * absence d'archive : on lui fait confiance le jour ou on en a besoin.
+ */
+async function lireBuckets() {
+  const res = await fetch(`${URL_BASE}/storage/v1/bucket`, {
+    headers: { apikey: CLE, Authorization: `Bearer ${CLE}` },
+  });
+  if (!res.ok) {
+    console.error(`La liste des buckets n'a pas pu etre lue (${res.status}).`);
+    process.exit(2);
+  }
+  const liste = await res.json();
+  return (Array.isArray(liste) ? liste : []).map((b) => String(b?.name ?? "")).filter(Boolean).sort();
+}
 
 function readVar(name) {
   const fromEnv = (process.env[name] ?? "").trim();
@@ -80,10 +98,10 @@ const REPRENDRE = args.includes("--reprendre");
 const entetes = { apikey: CLE, Authorization: `Bearer ${CLE}`, "Content-Type": "application/json" };
 const mo = (o) => `${(o / 1024 / 1024).toFixed(1)} Mo`;
 
-async function lister(prefixe) {
+async function lister(bucket, prefixe) {
   const tout = [];
   for (let offset = 0; ; offset += 1000) {
-    const res = await fetch(`${URL_BASE}/storage/v1/object/list/${BUCKET}`, {
+    const res = await fetch(`${URL_BASE}/storage/v1/object/list/${bucket}`, {
       method: "POST",
       headers: entetes,
       body: JSON.stringify({ prefix: prefixe, limit: 1000, offset, sortBy: { column: "name", order: "asc" } }),
@@ -101,22 +119,24 @@ async function lister(prefixe) {
   }
 }
 
-async function listerRecursif(prefixe, profondeur = 0) {
+async function listerRecursif(bucket, prefixe, profondeur = 0) {
   const fichiers = [];
-  for (const e of await lister(prefixe)) {
+  for (const e of await lister(bucket, prefixe)) {
     const chemin = prefixe ? `${prefixe}/${e.name}` : e.name;
     if (!e.metadata) {
-      if (profondeur < 4) fichiers.push(...(await listerRecursif(chemin, profondeur + 1)));
+      if (profondeur < 4) fichiers.push(...(await listerRecursif(bucket, chemin, profondeur + 1)));
       continue;
     }
-    fichiers.push({ chemin, taille: Number(e.metadata.size ?? 0), type: e.metadata.mimetype ?? null, cree: e.created_at ?? null });
+    fichiers.push({ bucket, chemin, taille: Number(e.metadata.size ?? 0), type: e.metadata.mimetype ?? null, cree: e.created_at ?? null });
   }
   return fichiers;
 }
 
-console.log(`\nArchivage de "${BUCKET}" (projet ${PROJET})\n  vers ${DEST}\n`);
+const BUCKETS = await lireBuckets();
+console.log(`\nArchivage de ${BUCKETS.length} bucket(s) du projet ${PROJET}\n  ${BUCKETS.join(", ")}\n  vers ${DEST}\n`);
 
-const fichiers = await listerRecursif("");
+const fichiers = [];
+for (const b of BUCKETS) fichiers.push(...(await listerRecursif(b, "")));
 const total = fichiers.reduce((s, f) => s + f.taille, 0);
 console.log(`${fichiers.length} fichiers, ${mo(total)} a copier.\n`);
 if (fichiers.length === 0) process.exit(0);
@@ -130,7 +150,7 @@ let rates = 0;
 let octets = 0;
 
 for (const [i, f] of fichiers.entries()) {
-  const cible = join(DEST, f.chemin);
+  const cible = join(DEST, f.bucket, f.chemin);
   mkdirSync(dirname(cible), { recursive: true });
 
   if (REPRENDRE) {
@@ -147,7 +167,7 @@ for (const [i, f] of fichiers.entries()) {
 
   try {
     const res = await fetch(
-      `${URL_BASE}/storage/v1/object/${BUCKET}/${f.chemin.split("/").map(encodeURIComponent).join("/")}`,
+      `${URL_BASE}/storage/v1/object/${f.bucket}/${f.chemin.split("/").map(encodeURIComponent).join("/")}`,
       { headers: { apikey: CLE, Authorization: `Bearer ${CLE}` } },
     );
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -172,7 +192,7 @@ for (const [i, f] of fichiers.entries()) {
   } catch (e) {
     rates += 1;
     manifeste.push({ ...f, archive: false, erreur: String(e.message ?? e) });
-    console.error(`  RATE  ${f.chemin} : ${e.message ?? e}`);
+    console.error(`  RATE  ${f.bucket}/${f.chemin} : ${e.message ?? e}`);
   }
 
   if ((i + 1) % 50 === 0 || i + 1 === fichiers.length) {
@@ -186,7 +206,7 @@ writeFileSync(
   JSON.stringify(
     {
       projet: PROJET,
-      bucket: BUCKET,
+      buckets: BUCKETS,
       // Aucune date generee ici : la commande qui archive doit pouvoir
       // se relancer et produire le meme manifeste. L'horodatage du
       // fichier suffit a dater l'archive.
