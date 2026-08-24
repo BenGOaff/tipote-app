@@ -1,20 +1,31 @@
 // app/affiliate/paiement/page.tsx
 //
-// Page Paiement (drame Bene 8 juin 2026) : info-only.
+// COMMENT ELLE VEUT ÊTRE PAYÉE, ET QUAND ÇA PART.
 //
-// Le paiement de l'affiliation est gere DIRECTEMENT par Systeme.io
-// (pas par Tipote). L'affilie configure PayPal ou virement (RIB) dans
-// son profil SIO -> systeme.io/dashboard/profile/affiliate-settings.
-// Bene effectue les virements entre le 10 et le 13 de chaque mois,
-// apres validation des commissions au terme du delai de retractation
-// legal. L'historique des factures se consulte aussi cote SIO.
+// Béné, 25 août 2026 : "on doit proposer le choix aux affiliés : Paypal
+// ou virement bancaire. Ils doivent pouvoir indiquer leur mail paypal OU
+// leur rib pour un virement."
 //
-// Avant ce fix, cette page contenait un formulaire PayPal/IBAN qui
-// faisait croire a tort que la config etait cote Tipote -> les
-// affilies remplissaient mais n'etaient pas payes (drame Bene :
-// "arrete d'inventer n'importe quoi"). Les colonnes paypal_email /
-// iban_holder / iban_number restent en DB pour ne pas casser l'API
-// existante mais ne sont plus exposees ni consultees.
+// -- CE QUE CETTE PAGE ÉTAIT, ET POURQUOI ------------------------------
+//
+// Purement informative depuis le 8 juin, et à raison : elle portait un
+// formulaire PayPal/IBAN qui faisait croire que la configuration était
+// chez nous, alors que tout se passait chez Systeme.io. Les affiliées
+// remplissaient et n'étaient pas payées (drame Béné : "arrête d'inventer
+// n'importe quoi"). On l'avait donc débranchée en disant la vérité.
+//
+// **Le formulaire revient parce que le cycle existe enfin** : les
+// coordonnées sont lues par `preparerLot`, le lot fige les montants, et
+// le fichier SEPA ou la liste PayPal en sortent. Ce qu'elle saisit ici
+// sert vraiment à la payer.
+//
+// -- CE QUI RESTE CHEZ SYSTEME.IO --------------------------------------
+//
+// Les commissions des ANCIENNES ventes, celles arrivées par leurs
+// tunnels. Elles continuent d'être versées là-bas, et la page le dit :
+// deux systèmes qui paient en parallèle pendant la transition, et une
+// affiliée qui ne saurait pas lequel regarde son argent, c'est un ticket
+// de support par mois et par personne.
 
 import { redirect } from "next/navigation";
 import { ExternalLink, Info, Calendar, FileText } from "lucide-react";
@@ -23,6 +34,7 @@ import { Button } from "@/components/ui/button";
 
 import { getAffiliateSession } from "@/lib/affiliate/session";
 import { getDict, normaliseLocale } from "../i18n";
+import CoordonneesVersement from "../components/CoordonneesVersement";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +54,13 @@ export default async function PaiementPage() {
         <p className="text-muted-foreground mt-1">{t.paiement.page_subtitle_sio}</p>
       </div>
 
+      {/* LE CHOIX ET LES COORDONNÉES, chez nous. */}
+      <CoordonneesVersement t={t} />
+
+      {/* ET CE QUI RESTE CHEZ EUX, dit clairement : les commissions des
+          ventes arrivées par leurs anciens tunnels s'y versent encore.
+          Une affiliée qui ne sait pas lequel des deux regarde son
+          argent, c'est un ticket de support par mois et par personne. */}
       <Card className="border-primary/30 bg-primary/5">
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
@@ -51,7 +70,7 @@ export default async function PaiementPage() {
           <CardDescription>{t.paiement.sio_config_body}</CardDescription>
         </CardHeader>
         <CardContent>
-          <Button asChild>
+          <Button asChild variant="outline">
             <a
               href={SIO_AFFILIATE_SETTINGS_URL}
               target="_blank"

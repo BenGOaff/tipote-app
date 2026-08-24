@@ -1877,3 +1877,118 @@ Garde-fou : `tests/logic/affiliate-link.test.mts` exige que chaque
 destination sauf l'optin gratuit atterrisse sur un de nos hôtes, et que
 la RAISON de l'exception reste écrite à côté. Sans elle, le prochain qui
 passe "finit le travail" et casse le tunnel gratuit.
+
+## Payer les affiliés : PayPal ou virement, au choix (Béné, 25 août 2026)
+
+"Pour l'affiliation on doit proposer le choix aux affiliés : Paypal ou
+virement bancaire. Ils doivent pouvoir indiquer leur mail paypal OU leur
+rib pour un virement." Et la veille, sur la façon de payer : **export
+SEPA et virement à la main.**
+
+**CE QUI N'EXISTAIT PAS.** `affiliate_commissions` porte les statuts
+`pending / approved / paid / cancelled / rejected` et une colonne
+`payout_id` depuis mai. Aucun code ne faisait passer une commission d'un
+statut à l'autre, et aucune table de versement n'existait : **les statuts
+étaient décoratifs.**
+
+### AUCUN ARGENT NE PART D'UN ÉCRAN
+
+On produit un FICHIER : `pain.001.001.03` pour les virements, une liste
+à tabulations pour PayPal. Béné le dépose dans sa banque ou dans PayPal,
+et c'est sa banque qui exécute. Un bouton qui virerait vraiment de
+l'argent depuis un écran d'admin est exactement ce qu'on ne construit
+pas, et le test l'interdit.
+
+### La méthode est un CHOIX, jamais une déduction
+
+Deviner "il a rempli un IBAN donc virement" marche jusqu'au jour où
+quelqu'un remplit les deux, et c'est alors le code qui décide où part son
+argent. `payout_method` est une colonne. `resoudreMethode` ne devine que
+pour les lignes HISTORIQUES sans choix enregistré, et rend `explicite:
+false` pour que l'écran redemande.
+
+### L'IBAN est chiffré, et il ne ressort JAMAIS en clair
+
+Même mécanisme que les leads (`lib/piiCrypto.ts`, une clé par affiliée
+protégée par `PII_MASTER_KEY`) : un accès direct à la base ne montre que
+du chiffré. Les écrans n'affichent qu'un masque (`FR14••••2606`), **y
+compris à sa propriétaire** : un écran se photographie, se partage, se
+laisse ouvert. Elle a besoin de RECONNAÎTRE le sien, pas de le relire ;
+pour le changer, elle le ressaisit.
+
+La clé de l'affiliée est RÉUTILISÉE d'une écriture à l'autre. En
+regénérer une à chaque fois rendrait l'ancien chiffré illisible.
+
+### Un lot est une PIÈCE, pas un calcul
+
+Il fige les montants ET les coordonnées. Recalculer le total à
+l'affichage donnerait un chiffre qui bouge quand une commission est
+annulée après coup, alors qu'un virement parti ne bouge pas. Et si
+l'affiliée change d'IBAN le lendemain, le fichier déjà déposé ne doit pas
+changer. C'est la règle de la facture émise (24 août), transposée à
+l'argent qui SORT.
+
+**L'ordre compte** : on crée le lot D'ABORD, puis on marque les
+commissions. L'inverse laisserait des commissions `paid` pointant vers un
+lot inexistant, c'est à dire de l'argent qu'on croit versé sans trace de
+virement. Et un lot par mois (`periode` unique) : construire deux fois le
+lot d'août paierait deux fois.
+
+### Les trois seuils, et pourquoi
+
+| | Valeur | Pourquoi |
+|---|---|---|
+| rétractation | 21 jours | 14 jours légaux + marge : une commission virée ne se reprend pas |
+| minimum | 20 € | un virement de 1,20 € coûte plus cher en temps qu'il ne rapporte. **L'argent reste acquis** et part au lot suivant |
+| BIC | facultatif | depuis 2016 un virement SEPA se fait avec le seul IBAN ; l'exiger bloquerait des affiliées pour un champ que leur banque n'imprime plus |
+
+### Ce qui fait refuser un fichier par la banque
+
+Écrit dans `lib/affiliate/sepa.ts`, et testé : identifiants uniques
+(`MsgId` = le lot, donc non rejouable, ce qui est une protection),
+montants à deux décimales avec un POINT, somme des lignes = `CtrlSum` au
+centime, XML échappé (un nom avec `&` casse le fichier entier, et le nom
+vient d'un formulaire), date d'exécution un jour OUVRÉ.
+
+Les accents sont TRANSLITTÉRÉS, pas supprimés : "Bénédicte" doit rester
+lisible sur le relevé, pas devenir "Bndicte".
+
+### Ce qui est écarté du lot est DIT, jamais avalé
+
+Coordonnées manquantes, sous le minimum, affiliée inconnue : chaque cas
+sort dans `ecartees` avec son montant, et l'écran les affiche. Elle a
+gagné cet argent : quelqu'un doit lui écrire. C'est la règle du
+`ok: false` du 3 août.
+
+### NORMALISER N'EST PAS VALIDER
+
+Premier jet : `normaliserBic` rendait `null` dès que la longueur n'était
+pas 8 ou 11. Un BIC tapé de travers devenait donc `null`,
+`manquesVersement` ne voyait plus rien à signaler, et le champ était
+silencieusement vidé : l'affiliée voyait sa saisie disparaître sans un
+mot. Ces fonctions NETTOIENT et rendent ce qui a été saisi ; ce sont
+`ibanValide` / `bicValide` qui jugent.
+
+La clé de contrôle IBAN (modulo 97) attrape la faute de frappe, qui est
+le cas fréquent : un chiffre inversé donne un IBAN plausible et un
+virement rejeté trois jours plus tard. Le reste se calcule par morceaux :
+le nombre entier fait jusqu'à 38 chiffres, bien au delà de ce qu'un
+`number` porte sans perdre en précision.
+
+### À poser sur le serveur
+
+`SEPA_DEBTOR_IBAN` (et `SEPA_DEBTOR_BIC` si la banque l'exige,
+`SEPA_DEBTOR_NAME` sinon "ETHILIFE"). Sans elle, le fichier SEPA n'est
+pas produit et l'écran le DIT au lieu de rendre un fichier que la banque
+refuserait. La liste PayPal, elle, se télécharge sans ça.
+
+### La page Paiement revient de loin
+
+Elle portait un formulaire PayPal/IBAN jusqu'au 8 juin, débranché parce
+qu'il faisait croire que la configuration était chez nous alors que tout
+se passait chez Systeme.io : les affiliées remplissaient et n'étaient pas
+payées ("arrête d'inventer n'importe quoi"). **Le formulaire revient
+parce que le cycle existe enfin.** La page continue de dire ce qui reste
+chez eux : les commissions des ventes arrivées par leurs anciens tunnels.
+
+Test : `tests/logic/versement-affilies.test.mts`.

@@ -338,6 +338,35 @@ export type AffiliateDict = {
   // ─── Paiement (info-only : tout passe par Systeme.io) ────────────
   paiement: {
     page_title: string;
+    // Les coordonnées de versement (25 août 2026) : PayPal ou virement,
+    // au choix de l'affiliée.
+    choose_title: string;
+    choose_body: string;
+    method_paypal: string;
+    method_paypal_hint: string;
+    method_virement: string;
+    method_virement_hint: string;
+    label_paypal_email: string;
+    label_titulaire: string;
+    label_iban: string;
+    label_bic: string;
+    bic_optional: string;
+    iban_stored_note: string;
+    iban_current: string;
+    iban_replace: string;
+    save: string;
+    saving: string;
+    saved: string;
+    err_save: string;
+    err_methode_inconnue: string;
+    err_paypal_email: string;
+    err_titulaire: string;
+    err_iban: string;
+    err_iban_invalide: string;
+    err_bic_invalide: string;
+    incomplete_banner: string;
+    complete_banner: string;
+    minimum_note: string;
     page_subtitle_sio: string;
     sio_config_title: string;
     sio_config_body: string;
