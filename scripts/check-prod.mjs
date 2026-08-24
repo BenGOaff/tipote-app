@@ -58,7 +58,13 @@ const lire = (cle) => (env.get(cle) ?? process.env[cle] ?? "").trim();
 
 /** Une clé qu'on ne montre jamais. */
 function estSecret(cle) {
-  return /(_KEY|_SECRET|_TOKEN|PASSWORD|SERVICE_ROLE|IBAN)/i.test(cle);
+  // CLIENT_ID en fait partie : dans NOTRE integration PayPal, il ne
+  // quitte jamais le serveur (le bon de commande poste sur
+  // /api/commande/paypal, il n'y a pas de SDK dans la page). Le
+  // rapport n'a donc aucune raison de l'imprimer. WEBHOOK_ID reste
+  // visible : c'est un identifiant qu'on recopie depuis PayPal, et
+  // le voir est exactement ce qui rend un diagnostic evident.
+  return /(_KEY|_SECRET|_TOKEN|PASSWORD|CLIENT_ID|SERVICE_ROLE|IBAN)/i.test(cle);
 }
 
 const lignes = [];
