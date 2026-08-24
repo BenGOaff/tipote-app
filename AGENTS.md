@@ -1818,3 +1818,50 @@ décrits, et le deuxième est le plus dur.
    query : un `?ref=` posé dessus n'atteint jamais notre bon de commande,
    donc ni notre commissionnement ni le mois offert. Seule
    `tiquiz_direct` arrive chez nous.
+
+## Les liens affiliés atterrissent sur NOS domaines (Béné, 25 août 2026)
+
+"Toutes, d'un bloc." Jusqu'ici 7 destinations sur 8 menaient à des
+tunnels Systeme.io, et leurs pages ne nous transmettent RIEN de ce qu'on
+ajoute à l'URL : un `?ref=` posé dessus n'atteignait jamais notre bon de
+commande, donc ni notre commissionnement ni le mois offert.
+
+**CE QU'ON N'A PAS PU REPRENDRE, ET C'EST LA TROUVAILLE DU JOUR.** Les
+pages `tiquiz-mensuel`, `tiquiz-annuel` et compagnie ne sont PAS des
+pages de vente : ce sont les BONS DE COMMANDE de Systeme.io. Vérifié en
+les capturant le 25 août, elles portent un `<form id="form-checkout">`
+sans action, piloté par leur JavaScript. Les répliquer chez nous aurait
+donné un formulaire de paiement mort, et on ne l'aurait vu qu'à la
+première vente perdue.
+
+Les paliers mènent donc à **NOTRE bon de commande**
+(`https://tiquiz.fr/commande/<produit>`), qui vend le même palier,
+affiche le même prix (il vient du catalogue) et propose les trois autres
+en bas. Le hub et l'Atelier mènent à leurs pages sur nos domaines.
+
+| Destination | Où elle mène |
+|---|---|
+| `tiquiz_direct`, `tiquiz_main` | `https://tiquiz.fr/` |
+| `atelier` | `https://atelierduquiz.fr/` |
+| les 4 paliers | `https://tiquiz.fr/commande/<produit>` |
+| `tiquiz_free` | **reste chez Systeme.io** |
+
+**`tiquiz_free` reste là-bas, et c'est délibéré.** C'est un optin, pas
+une vente : son formulaire crée le contact et pose le tag chez eux, et
+c'est le seul événement qui porte une URL de tunnel, donc le seul qui
+sait d'où vient l'inscrit. Le remplacer par notre `/signup` ferait
+disparaître ces inscrits de ses séquences email. À refaire le jour où
+notre inscription gratuite créera elle aussi le contact chez Systeme.io
+(le chemin d'ACHAT le fait depuis le 25 août, pas encore l'inscription).
+
+La chaîne est complète et elle a été vérifiée bout en bout : le `?ref=`
+arrive dans l'URL, le middleware le range dans `tq_ref`, le bon de
+commande le relit (l'URL gagne sur le cookie), et il part dans les
+metadata Stripe ou le `custom_id` PayPal. Sur `tiquiz.fr` le bon de
+commande est OUVERT sans clé (`isSalesOpen` connaît le domaine public) :
+sans ça, tous ces liens répondraient 404.
+
+Garde-fou : `tests/logic/affiliate-link.test.mts` exige que chaque
+destination sauf l'optin gratuit atterrisse sur un de nos hôtes, et que
+la RAISON de l'exception reste écrite à côté. Sans elle, le prochain qui
+passe "finit le travail" et casse le tunnel gratuit.
