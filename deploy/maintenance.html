@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>On revient tout de suite</title>
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    background: #faf9fb; color: #1c1a20;
+  }
+  .carte {
+    max-width: 30rem; width: 100%;
+    background: #fff; border: 1px solid #ece9f0; border-radius: 18px;
+    padding: 40px 32px; text-align: center;
+    box-shadow: 0 12px 40px rgba(28,26,32,.06);
+  }
+  .emoji { font-size: 44px; line-height: 1; }
+  h1 { font-size: 22px; line-height: 1.3; margin: 18px 0 0; }
+  p { font-size: 16px; line-height: 1.6; margin: 12px 0 0; color: #5b5566; }
+  .en { font-size: 14px; margin-top: 20px; color: #8b8496; }
+  button {
+    margin-top: 24px; font: inherit; font-weight: 600; font-size: 15px;
+    padding: 12px 22px; border-radius: 999px; border: 0; cursor: pointer;
+    background: #6c4cf1; color: #fff;
+  }
+  button:hover { background: #5a3ddb; }
+  @media (prefers-color-scheme: dark) {
+    body { background: #131118; color: #f2eff7; }
+    .carte { background: #1c1922; border-color: #2b2635; box-shadow: none; }
+    p { color: #a9a2b8; }
+    .en { color: #7d7690; }
+  }
+</style>
+</head>
+<body>
+  <main class="carte">
+    <div class="emoji">😅</div>
+    <h1>On est en train de bosser sur un petit quelque chose</h1>
+    <p>Actualise la page d'ici cinq minutes et ça devrait être bon. Rien n'est perdu de ton côté.</p>
+    <button type="button" id="reessayer">Réessayer maintenant</button>
+    <p class="en">We are shipping a small update. Please refresh in a few minutes.</p>
+  </main>
+<script>
+  // On retente TOUT SEUL trois fois, puis on s'arrete et on laisse le
+  // bouton. Une page qui se recharge a l'infini sur une vraie panne
+  // tourne en boucle chez le visiteur sans jamais rien lui dire.
+  (function () {
+    var cle = "tipote_maintenance_essais";
+    var essais = 0;
+    try { essais = parseInt(sessionStorage.getItem(cle) || "0", 10) || 0; } catch (e) {}
+    document.getElementById("reessayer").addEventListener("click", function () {
+      try { sessionStorage.removeItem(cle); } catch (e) {}
+      location.reload();
+    });
+    if (essais < 3) {
+      try { sessionStorage.setItem(cle, String(essais + 1)); } catch (e) {}
+      setTimeout(function () { location.reload(); }, 45000);
+    }
+  })();
+</script>
+</body>
+</html>

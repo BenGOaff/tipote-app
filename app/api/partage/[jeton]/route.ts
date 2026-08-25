@@ -127,6 +127,10 @@ export async function GET(_req: NextRequest, context: RouteContext) {
       titre: quiz.title ?? "",
       sous_titre: quiz.intro_text ?? quiz.subtitle ?? null,
       mode: quiz.mode ?? "quiz",
+      // La langue DU QUIZ : c'est elle qui habille la page du
+      // destinataire. Le contenu ne change jamais de langue, c'est
+      // notre emballage autour qui suit (lib/quiz/partageTextes.ts).
+      langue: quiz.locale ?? null,
       image: quiz.cover_image_url ?? quiz.intro_image_url ?? null,
       couleur: quiz.primary_color ?? null,
       nb_questions: nbQuestions ?? 0,

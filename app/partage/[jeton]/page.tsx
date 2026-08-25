@@ -12,23 +12,37 @@
 //
 // -- LA LANGUE ---------------------------------------------------------
 //
-// En français, comme `/depart/`, et pour la même raison : c'est une page
-// qu'on envoie à la main, à quelqu'un à qui on vient d'écrire. Le jour
-// où un lien part vers un client anglophone, c'est un namespace
-// `messages/` à ajouter, pas une page à réécrire.
+// Celle DU QUIZ PARTAGÉ, pas celle du navigateur : celui qui reçoit un
+// quiz anglais lit l'anglais, sinon on ne le lui aurait pas envoyé. Le
+// contenu du quiz, lui, ne change jamais de langue. La décision et les
+// textes vivent dans lib/quiz/partageTextes.ts, et le composant client
+// les lit une fois l'aperçu chargé.
+//
+// L'onglet, lui, se rend AVANT cet appel : il ne connaît donc que le
+// `?lang=` de l'URL, et retombe sur l'anglais. Un titre d'onglet dans la
+// mauvaise langue coûte moins qu'une requête de plus sur chaque
+// ouverture de lien.
 
 import type { Metadata } from "next";
 
+import { languePartage, textesPartage } from "@/lib/quiz/partageTextes";
 import { InstallerQuiz } from "./InstallerQuiz";
 
 export const dynamic = "force-dynamic";
 
 // Cette adresse ne doit jamais remonter dans un moteur de recherche :
 // un lien de partage se donne, il ne se trouve pas.
-export const metadata: Metadata = {
-  title: "Un quiz vous a été partagé",
-  robots: { index: false, follow: false },
-};
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ lang?: string }>;
+}): Promise<Metadata> {
+  const { lang } = await searchParams;
+  return {
+    title: textesPartage(languePartage(lang, null)).surtitre,
+    robots: { index: false, follow: false },
+  };
+}
 
 export default async function PagePartage({
   params,
