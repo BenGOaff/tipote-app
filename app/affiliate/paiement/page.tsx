@@ -35,6 +35,7 @@ import { Button } from "@/components/ui/button";
 import { getAffiliateSession } from "@/lib/affiliate/session";
 import { getDict, normaliseLocale } from "../i18n";
 import CoordonneesVersement from "../components/CoordonneesVersement";
+import ChoixRecompense from "../components/ChoixRecompense";
 
 export const dynamic = "force-dynamic";
 
@@ -53,6 +54,12 @@ export default async function PaiementPage() {
         <h1 className="text-3xl font-bold tracking-tight">{t.paiement.page_title}</h1>
         <p className="text-muted-foreground mt-1">{t.paiement.page_subtitle_sio}</p>
       </div>
+
+      {/* SA RÉCOMPENSE, et le choix qui va avec (Béné, 25 août 2026 :
+          "c'est lui qui choisit quand il remplit son profil"). Elle est
+          au dessus des coordonnées parce que c'est la bonne nouvelle :
+          la page commence par ce qu'il gagne, pas par un formulaire. */}
+      <ChoixRecompense />
 
       {/* LE CHOIX ET LES COORDONNÉES, chez nous. */}
       <CoordonneesVersement t={t} />

@@ -95,14 +95,43 @@ export default async function PromouvoirPage({
     displayName: session.display_name,
     refConnu: session.ref,
   });
-  const baseLink = refCode ? buildAffiliateLink(market, mainPath, refCode) : null;
+  // ── SON CODE DE RÉDUCTION, QUAND BÉNÉ LUI EN A ATTRIBUÉ UN ───────
+  //
+  // Il voyage DANS le lien, et c'est ce qui le rend utilisable : un code
+  // qui ne marche que sur ce lien (Béné, 25 août 2026) n'a aucune valeur
+  // s'il voyage séparément. L'affiliée copie UN lien, la remise suit.
+  //
+  // Lecture best-effort : la table peut ne pas encore exister en prod, et
+  // la page Promouvoir doit s'ouvrir de toute façon. Sans code, les liens
+  // sont exactement ceux d'hier.
+  let codePromo: string | null = null;
+  try {
+    const { data: codeRow } = await supabaseAdmin
+      .from("affiliate_discount_codes")
+      .select("code, percent_off, expires_at")
+      .eq("sa", session.sa)
+      .eq("enabled", true)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const c = codeRow as { code: string; percent_off: number; expires_at: string | null } | null;
+    // Un code expiré ne se met PAS dans un lien : il ferait afficher une
+    // remise que le bon de commande refuserait, et c'est l'affiliée qui
+    // passerait pour une menteuse devant son audience.
+    const expire = c?.expires_at ? new Date(c.expires_at).getTime() <= Date.now() : false;
+    codePromo = c && !expire ? c.code : null;
+  } catch {
+    codePromo = null;
+  }
+
+  const baseLink = refCode ? buildAffiliateLink(market, mainPath, refCode, codePromo) : null;
   // Lien Atelier du Quiz (70%) mis au meme niveau que le lien Tiquiz en tete
   // de page (Bene 31 juillet 2026). Hors marche FR, le slug a ete retire
   // plus haut : on n'affiche alors que le lien Tiquiz.
   const atelierAvailable = pathBySlug.has("atelier");
   const atelierLink =
     atelierAvailable && refCode
-      ? buildAffiliateLink(market, pathBySlug.get("atelier") as string, refCode)
+      ? buildAffiliateLink(market, pathBySlug.get("atelier") as string, refCode, codePromo)
       : null;
   // Articles de blog du marché courant — 20 derniers, antéchrono. Best-effort :
   // si le feed est down, on retourne tableau vide et la section n'affiche rien.
