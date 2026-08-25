@@ -156,3 +156,138 @@ test("la porte interne ne rend QUE ce qu'il faut pour décider", () => {
   // quelqu'un qui a un code valide.
   assert.match(src, /reason: "read_failed"/);
 });
+
+// ── LES CINQ AVANTAGES DEMANDÉS LE 25 AOÛT 2026 ──────────────────────
+//
+// Béné : "sur Tiquiz je veux pouvoir proposer : un pourcentage sur le
+// premier mois après le mois gratuit ; un pourcentage à vie ; un
+// pourcentage ponctuel sur une durée précise (genre décembre à -40%) ;
+// un pourcentage selon l'abonnement (mensuel, plus, annuel) ; deux mois
+// gratis au lieu d'un."
+//
+// Cinq demandes, DEUX natures : une remise (avec une durée, et
+// éventuellement un taux par palier) ou des jours offerts. La nature est
+// une COLONNE, jamais une déduction sur les champs remplis.
+
+test("un code écrit avant le 25 août vaut exactement ce qu'il valait", () => {
+  // C'est la garantie de toujours : aucune ligne existante ne bouge.
+  // Sans `kind` ni `duration`, c'est une remise sur la première échéance.
+  const v = valider();
+  assert.equal(v.ok, true);
+  assert.deepEqual(v.ok === true && v.avantage, {
+    type: "percent",
+    percentOff: 20,
+    duree: "once",
+    mois: null,
+  });
+});
+
+test("une remise À VIE et une remise sur N MOIS sortent telles quelles", () => {
+  const aVie = valider({ code: code({ duration: "forever" }) });
+  assert.equal(aVie.ok === true && aVie.avantage.type === "percent" && aVie.avantage.duree, "forever");
+
+  // "Décembre à -40%" : une campagne, donc une remise sur une durée.
+  const troisMois = valider({
+    code: code({ percent_off: 40, duration: "months", duration_months: 3 }),
+  });
+  assert.deepEqual(troisMois.ok === true && troisMois.avantage, {
+    type: "percent",
+    percentOff: 40,
+    duree: "months",
+    mois: 3,
+  });
+});
+
+test("une remise sur N mois SANS N n'est pas applicable", () => {
+  // On ne choisit pas un N à la place de Béné : le code sort refusé,
+  // avec sa raison, plutôt que d'inventer une durée.
+  const v = valider({ code: code({ duration: "months", duration_months: null }) });
+  assert.equal(v.ok === false && v.raison, "remise-illisible");
+});
+
+test("la remise peut dépendre du palier acheté", () => {
+  const parPalier = code({
+    percent_off: 10,
+    percent_by_product: { monthly: 20, yearly: 30 },
+  });
+  // Le palier nommé gagne...
+  const m = valider({ code: parPalier, produit: "monthly" });
+  assert.equal(m.ok === true && m.avantage.type === "percent" && m.avantage.percentOff, 20);
+  const y = valider({ code: parPalier, produit: "yearly" });
+  assert.equal(y.ok === true && y.avantage.type === "percent" && y.avantage.percentOff, 30);
+  // ...et un palier ABSENT de la table retombe sur la remise commune.
+  // Sinon un nouveau produit au catalogue viderait le code de son effet
+  // en silence, ce que personne ne verrait avant une réclamation.
+  const p = valider({ code: parPalier, produit: "monthly_plus" });
+  assert.equal(p.ok === true && p.avantage.type === "percent" && p.avantage.percentOff, 10);
+});
+
+test("des jours offerts ne sont PAS une remise", () => {
+  // "Deux mois gratis au lieu d'un." Le verdict porte des jours, aucun
+  // pourcentage : les deux ne s'appliquent pas au même endroit chez
+  // Stripe comme chez PayPal, et un objet qui porterait les deux
+  // laisserait un appelant lire le mauvais champ.
+  const v = valider({ code: code({ kind: "free_days", free_days: 60 }) });
+  assert.deepEqual(v.ok === true && v.avantage, { type: "free_days", jours: 60 });
+});
+
+test("la NATURE vient de la colonne, jamais des champs remplis", () => {
+  // Une ligne qui porte les deux (parce que `percent_off` a un défaut en
+  // base) doit rendre CE QUE LA COLONNE ANNONCE. Deviner marcherait tant
+  // que personne ne saisit les deux, et casserait le jour où quelqu'un
+  // le fait, sur un objet qui décide de ce qu'un client paie.
+  const ambigu = code({ kind: "free_days", free_days: 60, percent_off: 20 });
+  assert.equal(valider({ code: ambigu }).ok === true, true);
+  const v = valider({ code: ambigu });
+  assert.equal(v.ok === true && v.avantage.type, "free_days");
+
+  const inverse = code({ kind: "percent", free_days: 60, percent_off: 20 });
+  const w = valider({ code: inverse });
+  assert.equal(w.ok === true && w.avantage.type, "percent");
+});
+
+test("des jours hors bornes ne s'appliquent pas", () => {
+  // 365 est la borne de PayPal sur un cycle d'essai : au delà, c'est
+  // leur API qui refuserait, avec un message que personne ne lit.
+  for (const j of [0, -5, 366, 12.5, null]) {
+    const v = valider({ code: code({ kind: "free_days", free_days: j as number }) });
+    assert.equal(v.ok, false, `jours ${j} accepté`);
+  }
+});
+
+test("une campagne n'ouvre pas avant sa date", () => {
+  // "Décembre à -40%" : un code posé à l'avance ne doit pas s'ouvrir en
+  // novembre à qui l'a vu passer trop tôt.
+  const decembre = code({ starts_at: "2026-12-01T00:00:00Z" });
+  const avant = valider({ code: decembre });
+  assert.equal(avant.ok === false && avant.raison, "pas-encore");
+
+  const pendant = validerCodeReduction({
+    code: decembre,
+    saDuLien: SA,
+    produit: "monthly",
+    maintenant: new Date("2026-12-10T12:00:00Z"),
+  });
+  assert.equal(pendant.ok, true);
+});
+
+test("une date de début illisible ferme le code", () => {
+  const v = valider({ code: code({ starts_at: "bientot" }) });
+  assert.equal(v.ok === false && v.raison, "pas-encore");
+});
+
+test("la migration des avantages tient ses garde-fous en base", () => {
+  const sql = readFileSync(
+    "supabase/migrations/20260825_avantages_affilies.sql",
+    "utf8",
+  );
+  // Tout est ADDITIF et porte un défaut qui reproduit le comportement
+  // d'avant.
+  assert.match(sql, /add column if not exists kind text not null default 'percent'/i);
+  assert.match(sql, /add column if not exists duration text not null default 'once'/i);
+  // Une remise "sur N mois" sans N, ou des jours offerts sans jours, sont
+  // refusés PAR LA BASE : le code n'est pas le seul rempart.
+  assert.match(sql, /duration <> 'months' or \(duration_months is not null/i);
+  assert.match(sql, /kind <> 'free_days' or \(free_days is not null/i);
+  assert.match(sql, /notify pgrst/i);
+});

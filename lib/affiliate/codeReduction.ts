@@ -53,6 +53,12 @@ export const REMISE_MAX_PCT = 90;
 /** En dessous, le code ne change rien de visible pour l'acheteur. */
 export const REMISE_MIN_PCT = 1;
 
+/** Ce qu'un code donne. Deux natures, jamais mélangées. */
+export type AvantageKind = "percent" | "free_days";
+
+/** Sur combien d'échéances porte une remise. */
+export type RemiseDuree = "once" | "forever" | "months";
+
 export type CodeReductionRow = {
   code: string;
   /** L'affiliée propriétaire. C'est SON lien qui ouvre le code. */
@@ -62,18 +68,43 @@ export type CodeReductionRow = {
   produits?: string[] | null;
   expires_at?: string | null;
   enabled?: boolean | null;
+  /** Défaut `percent` : un code écrit avant le 25 août est une remise. */
+  kind?: AvantageKind | string | null;
+  /** Défaut `once` : la première échéance PAYÉE. */
+  duration?: RemiseDuree | string | null;
+  duration_months?: number | null;
+  /** Les jours d'essai en plus, quand `kind` vaut `free_days`. */
+  free_days?: number | null;
+  /** Une remise par palier : `{ "monthly": 20, "yearly": 30 }`. */
+  percent_by_product?: Record<string, unknown> | null;
+  /** Le début d'une campagne. `null` = ouvert tout de suite. */
+  starts_at?: string | null;
 };
 
 export type RaisonRefus =
   | "inconnu"
   | "desactive"
   | "expire"
+  | "pas-encore"
   | "mauvais-lien"
   | "produit-exclu"
   | "remise-illisible";
 
+/**
+ * Ce que le code donne, une fois toutes les vérifications passées.
+ *
+ * C'est une UNION, pas un objet à champs optionnels : une remise et des
+ * jours offerts ne se calculent pas de la même façon, ne se cumulent pas,
+ * et ne s'appliquent pas au même endroit chez Stripe comme chez PayPal.
+ * Un objet qui porterait les deux laisserait un appelant lire le mauvais
+ * champ, et ce serait un client qui paie ce qu'il ne devait pas payer.
+ */
+export type Avantage =
+  | { type: "percent"; percentOff: number; duree: RemiseDuree; mois: number | null }
+  | { type: "free_days"; jours: number };
+
 export type VerdictCode =
-  | { ok: true; code: string; percentOff: number; sa: string }
+  | { ok: true; code: string; sa: string; avantage: Avantage }
   | { ok: false; raison: RaisonRefus };
 
 /**
@@ -134,6 +165,15 @@ export function validerCodeReduction(args: {
   if (!c || !normaliserCode(c.code)) return { ok: false, raison: "inconnu" };
   if (c.enabled === false) return { ok: false, raison: "desactive" };
 
+  // UNE CAMPAGNE A UN DÉBUT ("décembre à -40%"). Un code posé à l'avance
+  // ne doit pas s'ouvrir avant sa date, sinon on offre 40 % en novembre à
+  // qui a vu passer le code trop tôt.
+  if (c.starts_at) {
+    const debut = new Date(c.starts_at);
+    if (Number.isNaN(debut.getTime())) return { ok: false, raison: "pas-encore" };
+    if (debut.getTime() > args.maintenant.getTime()) return { ok: false, raison: "pas-encore" };
+  }
+
   if (c.expires_at) {
     const fin = new Date(c.expires_at);
     // Une date illisible n'ouvre PAS le code : une valeur qu'on ne sait
@@ -155,14 +195,60 @@ export function validerCodeReduction(args: {
     return { ok: false, raison: "produit-exclu" };
   }
 
-  if (!remiseValide(c.percent_off)) return { ok: false, raison: "remise-illisible" };
+  const avantage = lireAvantage(c, args.produit);
+  if (!avantage) return { ok: false, raison: "remise-illisible" };
 
-  return {
-    ok: true,
-    code: normaliserCode(c.code),
-    percentOff: Number(c.percent_off),
-    sa: c.sa,
-  };
+  return { ok: true, code: normaliserCode(c.code), sa: c.sa, avantage };
+}
+
+/**
+ * Ce que la ligne donne, ou `null` si elle n'est pas exploitable.
+ *
+ * LA NATURE EST LUE DANS `kind`, JAMAIS DEVINÉE des champs remplis. Une
+ * ligne qui porte `free_days: 60` ET `percent_off: 20` (parce que
+ * `percent_off` a un défaut en base) doit rendre UN avantage, celui que
+ * la colonne annonce. Deviner marcherait tant que personne ne saisit les
+ * deux, et casserait le jour où quelqu'un le fait, sur un objet qui
+ * décide de ce qu'un client paie.
+ *
+ * Le défaut de `kind` est `percent` et celui de `duration` est `once` :
+ * un code écrit avant le 25 août 2026 vaut exactement ce qu'il valait.
+ */
+export function lireAvantage(
+  c: CodeReductionRow,
+  produit: string,
+): Avantage | null {
+  const kind = c.kind === "free_days" ? "free_days" : "percent";
+
+  if (kind === "free_days") {
+    const jours = Number(c.free_days);
+    // 365 est la borne de PayPal sur un cycle d'essai : au delà, c'est
+    // leur API qui refuserait, avec un message que personne ne lit.
+    if (!Number.isInteger(jours) || jours < 1 || jours > 365) return null;
+    return { type: "free_days", jours };
+  }
+
+  // UNE REMISE PAR PALIER, quand le créateur en a défini une. Un palier
+  // absent de la table retombe sur la remise commune : sinon un nouveau
+  // produit au catalogue viderait le code de son effet en silence.
+  const parProduit = c.percent_by_product;
+  const brut =
+    parProduit && typeof parProduit === "object" && produit in parProduit
+      ? (parProduit as Record<string, unknown>)[produit]
+      : c.percent_off;
+  const pct = Number(brut);
+  if (!remiseValide(pct)) return null;
+
+  const duree: RemiseDuree =
+    c.duration === "forever" ? "forever" : c.duration === "months" ? "months" : "once";
+  if (duree === "months") {
+    const mois = Number(c.duration_months);
+    // Une remise "sur N mois" sans N n'est pas applicable. On refuse
+    // plutôt que de choisir un N à sa place.
+    if (!Number.isInteger(mois) || mois < 1 || mois > 36) return null;
+    return { type: "percent", percentOff: pct, duree, mois };
+  }
+  return { type: "percent", percentOff: pct, duree, mois: null };
 }
 
 /**

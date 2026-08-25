@@ -28,6 +28,24 @@ import { normaliserCode, remiseValide } from "@/lib/affiliate/codeReduction";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+/**
+ * La remise par palier, nettoyée.
+ *
+ * Ce qui arrive du formulaire finit dans une colonne JSONB relue au
+ * moment de facturer : une valeur hors bornes y produirait un prix
+ * absurde. On garde ce qui est exploitable, on jette le reste, et un
+ * objet vide vaut `null` (= la remise commune s'applique partout).
+ */
+function lireParPalier(brut: unknown): Record<string, number> | null {
+  if (!brut || typeof brut !== "object") return null;
+  const out: Record<string, number> = {};
+  for (const [produit, v] of Object.entries(brut as Record<string, unknown>)) {
+    const n = Number(v);
+    if (produit.trim() && remiseValide(n)) out[produit.trim()] = n;
+  }
+  return Object.keys(out).length > 0 ? out : null;
+}
+
 function forbidden() {
   return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
 }
@@ -73,10 +91,30 @@ export async function POST(req: NextRequest) {
       { status: 400 },
     );
   }
+  // LA NATURE DE L'AVANTAGE EST DITE, jamais devinée des champs remplis.
+  const kind = body.kind === "free_days" ? "free_days" : "percent";
   const pct = Number(body.percent_off);
-  if (!remiseValide(pct)) {
+  const jours = Number(body.free_days);
+  if (kind === "percent" && !remiseValide(pct)) {
     return NextResponse.json(
       { ok: false, error: "La remise est un entier entre 1 et 90. Un accès offert se pose depuis la fiche client, pas ici." },
+      { status: 400 },
+    );
+  }
+  if (kind === "free_days" && (!Number.isInteger(jours) || jours < 1 || jours > 365)) {
+    return NextResponse.json(
+      { ok: false, error: "Les jours offerts vont de 1 à 365 (60 = deux mois). C'est la borne de PayPal sur un essai." },
+      { status: 400 },
+    );
+  }
+
+  const duration = ["once", "forever", "months"].includes(String(body.duration))
+    ? String(body.duration)
+    : "once";
+  const mois = Number(body.duration_months);
+  if (kind === "percent" && duration === "months" && (!Number.isInteger(mois) || mois < 1 || mois > 36)) {
+    return NextResponse.json(
+      { ok: false, error: "Une remise sur plusieurs mois a besoin de son nombre de mois (1 à 36)." },
       { status: 400 },
     );
   }
@@ -98,7 +136,16 @@ export async function POST(req: NextRequest) {
     {
       code,
       sa,
-      percent_off: pct,
+      kind,
+      // `percent_off` reste rempli même sur un code en jours : la
+      // colonne est NOT NULL en base depuis sa création, et c'est
+      // `kind` qui dit ce qu'on lit.
+      percent_off: kind === "percent" ? pct : 1,
+      duration: kind === "percent" ? duration : "once",
+      duration_months: kind === "percent" && duration === "months" ? mois : null,
+      free_days: kind === "free_days" ? jours : null,
+      percent_by_product: lireParPalier(body.percent_by_product),
+      starts_at: String(body.starts_at ?? "").trim() || null,
       produits: produits.length > 0 ? produits : null,
       expires_at: expires || null,
       note: String(body.note ?? "").trim().slice(0, 200) || null,

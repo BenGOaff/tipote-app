@@ -45,6 +45,9 @@ import {
   type CodeReductionRow,
 } from "@/lib/affiliate/codeReduction";
 
+const COLS = "code, sa, percent_off, produits, expires_at, enabled";
+const COLS_NEW = `${COLS}, kind, duration, duration_months, free_days, percent_by_product, starts_at`;
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -99,11 +102,25 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const { data: ligne, error: errCode } = await supabaseAdmin
     .from("affiliate_discount_codes")
-    .select("code, sa, percent_off, produits, expires_at, enabled")
+    // DEUX LISTES DE COLONNES, obligatoire : PostgREST rejette la
+    // requête ENTIÈRE sur une colonne inconnue. Sans le repli, un
+    // déploiement en avance sur la migration ferait payer le prix plein
+    // à tout le monde, en silence.
+    .select(COLS_NEW)
     .ilike("code", code)
     .maybeSingle();
 
-  if (errCode) {
+  const ligneFinale = errCode
+    ? (
+        await supabaseAdmin
+          .from("affiliate_discount_codes")
+          .select(COLS)
+          .ilike("code", code)
+          .maybeSingle()
+      )
+    : { data: ligne, error: null };
+
+  if (errCode && ligneFinale.error) {
     // La table peut ne pas encore exister en prod. Le bon de commande
     // doit alors se comporter comme si le code n'existait pas, jamais
     // tomber. Mais ça CRIE, parce qu'un code annoncé qui ne s'applique
@@ -115,7 +132,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   const verdict = validerCodeReduction({
-    code: (ligne as CodeReductionRow | null) ?? null,
+    code: (ligneFinale.data as unknown as CodeReductionRow | null) ?? null,
     saDuLien,
     produit,
     maintenant: new Date(),
@@ -124,10 +141,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   if (!verdict.ok) {
     return NextResponse.json({ ok: true, valide: false, raison: verdict.raison });
   }
+  // On rend l'AVANTAGE tel quel : c'est Tiquiz qui sait le traduire en
+  // coupon Stripe ou en cycle PayPal, et lui seul. Aplatir en un
+  // pourcentage ferait perdre la durée et les jours offerts.
   return NextResponse.json({
     ok: true,
     valide: true,
     code: verdict.code,
-    percentOff: verdict.percentOff,
+    avantage: verdict.avantage,
   });
 }

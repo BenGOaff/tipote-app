@@ -98,6 +98,20 @@ export function AffiliateSidebar({ displayName, isAdmin = false }: { displayName
             <ShieldCheck className="w-5 h-5 shrink-0" />
             <span>Admin - Contenus</span>
           </Link>
+          {/* Un ecran sans porte n'existe pas : la liste des affilies est
+              la ou Bene attribue les codes, elle doit etre dans le menu. */}
+          <Link
+            href="/admin/affilies"
+            onClick={() => setOpen(false)}
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              isActive("/admin/affilies")
+                ? "bg-primary/10 text-primary"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            }`}
+          >
+            <ShieldCheck className="w-5 h-5 shrink-0" />
+            <span>Admin - Affiliés</span>
+          </Link>
           <Link
             href="/admin/links"
             onClick={() => setOpen(false)}
