@@ -8,6 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Loader2, ArrowLeft, ArrowRight, Gift, CheckCircle2, Copy, Check, ChevronDown, Mail, Share2 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  accueilFusionne,
+  resolveIntroStart,
+  startSurPremiereReponse,
+} from "@/lib/quiz/introStart";
 import ToastNotificationOverlay from "@/components/widgets/ToastNotificationOverlay";
 import SocialShareOverlay from "@/components/widgets/SocialShareOverlay";
 import {
@@ -177,6 +182,10 @@ type PublicQuizData = {
   cta_text: string | null;
   cta_url: string | null;
   start_button_text?: string | null;
+  // Par quoi le visiteur commence, sous le titre et la description :
+  // le bouton (defaut), le prenom, ou la premiere question. Toute
+  // valeur inconnue retombe sur le bouton (lib/quiz/introStart.ts).
+  intro_start_mode?: string | null;
   privacy_url: string | null;
   consent_text: string | null;
   virality_enabled: boolean;
@@ -1097,6 +1106,23 @@ export default function PublicQuizClient({
   // Capture AVANT les questions (sondage only). Off par defaut -> flux
   // historique (capture APRES les questions), inchange pour l'existant.
   const captureBefore = quiz?.mode === "survey" && Boolean(quiz?.capture_before_questions);
+  // PAR QUOI LE VISITEUR COMMENCE (Bene, 25 aout 2026).
+  //
+  // La decision vit dans lib/quiz/introStart.ts et PERSONNE ne la
+  // recalcule : l'apercu de l'editeur appelle la meme fonction. Un
+  // apercu qui recalcule une decision du viewer finit toujours par
+  // mentir, et c'est le defaut le plus repete de ce module.
+  const introStart = useMemo(
+    () =>
+      resolveIntroStart(quiz?.intro_start_mode, {
+        captureAvant: captureBefore,
+        nbQuestions: quiz?.questions?.length ?? 0,
+        demandePrenom: Boolean(quiz?.ask_first_name),
+        demandeGenre: Boolean(quiz?.ask_gender),
+      }),
+    [quiz, captureBefore],
+  );
+  const accueilEstQuestion1 = accueilFusionne(introStart.mode);
   const [currentQ, setCurrentQ] = useState(0);
   // Sens de navigation pour la transition directionnelle (facon Typeform) :
   // "forward" -> la question glisse depuis la droite, "back" -> depuis la
@@ -1552,6 +1578,17 @@ export default function PublicQuizClient({
 
   // Fire one "question_view" event each time the visitor lands on a
   // new question. Idempotent inside a session via the ref.
+  // ACCUEIL FUSIONNE AVEC LA QUESTION 1 (Bene, 25 aout 2026).
+  //
+  // On ne convertit QUE "intro" -> "quiz", jamais autre chose : la reprise
+  // de brouillon pose deja "quiz" avec sa propre question courante, et les
+  // etapes email / result / bonus ne doivent pas etre ramenees en arriere.
+  // Un setStep inconditionnel ferait exactement ca.
+  useEffect(() => {
+    if (!quiz || !accueilEstQuestion1) return;
+    setStep((st) => (st === "intro" ? "quiz" : st));
+  }, [quiz, accueilEstQuestion1]);
+
   useEffect(() => {
     if (step !== "quiz") return;
     trackQuestionEvent("question_view", currentQ);
@@ -1941,6 +1978,15 @@ export default function PublicQuizClient({
     setNavDir("forward");
 
     const advance = () => {
+      // LE DEMARRAGE, QUAND IL N'Y A PLUS DE BOUTON A CLIQUER.
+      //
+      // En mode "question", l'ecran d'accueil EST la question 1 : le clic
+      // qui portait `start` n'existe plus. On le compte donc sur la
+      // PREMIERE REPONSE, le seul geste qui prouve un engagement. Le
+      // poser au rendu donnerait 100% de demarrages sur tous les quiz :
+      // la fuite d'entree disparaitrait de l'ecran sans avoir disparu de
+      // la realite. `trackEvent` dedupe deja par session.
+      if (startSurPremiereReponse(introStart.mode)) trackEvent("start");
       // Funnel: record the answer for the question the visitor just
       // committed, so drop-off analytics can compare views vs answers
       // per question. Tracké au moment de l'avance (pas du tap) pour ne
@@ -2592,27 +2638,177 @@ export default function PublicQuizClient({
     );
   };
 
+  // ── L'EN-TÊTE D'ACCUEIL, CALCULÉ UNE SEULE FOIS ──────────────────
+  //
+  // Ces valeurs vivaient dans la branche `step === "intro"`. Depuis que
+  // l'accueil peut FUSIONNER avec la question 1 (Béné, 25 août 2026),
+  // l'écran de question en a besoin aussi. Déplacement pur : aucune de
+  // ces lignes n'a changé, elles sont juste calculées plus haut.
+  const introRich = isHtml(quiz.introduction);
+  // Split introduction into lines — lines starting with ✓/✔/- become checkmarks
+  // (legacy plain-text rendering kept for quizzes created before the rich-text editor)
+  const introLines = introRich ? [] : (quiz.introduction ?? "").split("\n").filter((l) => l.trim());
+  const bulletLines: string[] = [];
+  const descLines: string[] = [];
+  introLines.forEach((line) => {
+    const trimmed = line.trim();
+    if (/^[\u2713\u2714\u2022\-\*]\s*/.test(trimmed)) {
+      bulletLines.push(trimmed.replace(/^[\u2713\u2714\u2022\-\*]\s*/, ""));
+    } else {
+      descLines.push(trimmed);
+    }
+  });
+
+  // Le titre, l'intro et le CTA partagent le MÊME bord. La règle vit dans
+  // lib/quiz/textAlign.ts, et c'est tout l'enjeu : elle était réécrite en
+  // ternaires ici ET dans l'éditeur, donc corriger un côté laissait l'autre
+  // décalé. "On a déjà parlé de ça mille fois" (Béné, 3 août 2026).
+  const introAlign = resolveBlockAlign(quiz.title, quiz.title, qLayout);
+  const introTextClass = alignTextClass(introAlign);
+  const introBlockMargin = alignBlockMarginClass(introAlign);
+  const introJustify = alignJustifyClass(introAlign);
+  // Le sous-titre peut avoir SON propre alignement : dans ce cas il gagne,
+  // pour lui seul (elle l'a posé exprès).
+  const introBodyAlign = resolveBlockAlign(quiz.introduction, quiz.title, qLayout);
+  const introBodyTextClass = alignTextClass(introBodyAlign);
+  // LE LOGO A SA PROPRE VIE (retour Béné 3 août 2026 : "si je centre
+  // mon titre à gauche, il centre aussi le logo"). Sans réglage il suit
+  // le titre, donc aucun quiz existant ne bouge.
+  const logo = logoRender(
+    resolveLogoAlign(quiz.brand_logo_align, introAlign),
+    logoWidthPct(quiz.brand_logo_width),
+  );
+  // LARGEUR DU BLOC TITRE + SOUS-TITRE, portée par le CONTENEUR COMMUN :
+  // c'est ce qui rend impossible le retour du décalage ("la case du sous
+  // titre est plus courte que celle du titre").
+  const introTextStyle = introTextWidthStyle(introTextWidthPct(quiz.intro_text_width));
+  // Le bloc est positionné par le TITRE pour les DEUX champs. L'alignement
+  // propre du sous-titre pilote SON TEXTE, pas la position de sa boîte.
+  const introFieldClass = introTextStyle ? introBlockMargin : "";
+
+  // L'EN-TÊTE : logo, image d'intro, titre, sous-titre.
+  //
+  // UNE seule écriture, rendue par l'écran d'accueil ET par l'écran de
+  // question quand les deux fusionnent. Deux copies de ce JSX
+  // divergeraient au premier emplacement d'image ajouté d'un seul côté.
+  const introHeader = (
+    <>
+      {branding.logoUrl && (
+        <div className={logo.wrapperClass}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={branding.logoUrl} alt="" className={logo.imgClass} style={logo.imgStyle} />
+        </div>
+      )}
+      {/* Image d'intro — slot TOP (entre logo et titre). w-full h-auto
+          pour préserver le ratio (CLAUDE_PITFALLS B). */}
+      {quiz.intro_image_url && (quiz.intro_image_position ?? "top") === "top" && (
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img src={quiz.intro_image_url} alt="" className={`h-auto rounded-xl ${quiz.intro_image_width ? "mx-auto block" : "w-full"}`} style={quiz.intro_image_width ? { width: `${quiz.intro_image_width}%` } : undefined} />
+      )}
+      {/* Le titre supporte le rich-text (RichTextEdit dans l'éditeur)
+         , on rend en HTML sanitisé pour que les `<span style="color:…">`
+          appliqués par le créateur apparaissent réellement. */}
+      <h1
+        className={`tipote-quiz-rich tipote-quiz-rich-inline tipote-quiz-title font-bold leading-tight ${introFieldClass}`}
+        style={introTextStyle}
+        dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(quiz.title)) }}
+      />
+
+      {/* Image d'intro — slot AFTER_TITLE */}
+      {quiz.intro_image_url && quiz.intro_image_position === "after_title" && (
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img src={quiz.intro_image_url} alt="" className={`h-auto rounded-xl ${quiz.intro_image_width ? "mx-auto block" : "w-full"}`} style={quiz.intro_image_width ? { width: `${quiz.intro_image_width}%` } : undefined} />
+      )}
+
+      {introRich ? (
+        <div
+          className={`tipote-quiz-rich text-muted-foreground text-lg leading-relaxed ${introFieldClass} ${introBodyTextClass}`}
+          style={introTextStyle}
+          dangerouslySetInnerHTML={{ __html: sanitizeRichText(quiz.introduction) }}
+        />
+      ) : (
+        <>
+          {descLines.length > 0 && (
+            <p className={`text-muted-foreground text-lg leading-relaxed whitespace-pre-line ${introFieldClass} ${introBodyTextClass}`} style={introTextStyle}>
+              {descLines.join("\n")}
+            </p>
+          )}
+
+          {bulletLines.length > 0 && (
+            <ul className={`space-y-3 text-left max-w-md ${introBlockMargin}`}>
+              {bulletLines.map((line, i) => (
+                <li key={i} className="flex items-start gap-3">
+                  <CheckCircle2 className="w-5 h-5 text-primary mt-0.5 shrink-0" />
+                  <span className="text-muted-foreground">{line}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
+    </>
+  );
+
+  // LE PRÉNOM (ET LE GENRE) : UNE seule écriture des champs.
+  //
+  // Rendus par l'écran de personnalisation ET, quand la créatrice l'a
+  // choisi, directement sous le titre de l'accueil à la place du bouton.
+  // Deux copies divergeraient au premier champ ajouté d'un seul côté.
+  const genderLabels = getGenderLabels(quiz.locale);
+  const personalizeFields = (
+    <>
+      {quiz.ask_first_name && (
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium">{t.personalizeFirstName}</label>
+          <Input
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value.slice(0, 100))}
+            placeholder={t.personalizeFirstNamePlaceholder}
+            className="h-12"
+            autoFocus
+          />
+        </div>
+      )}
+      {quiz.ask_gender && (
+        <div className="space-y-2">
+          <label className="text-sm font-medium">{t.personalizeGender}</label>
+          <div className="grid grid-cols-3 gap-2">
+            {(["m", "f", "x"] as QuizGender[]).map((g) => (
+              <button
+                key={g}
+                type="button"
+                onClick={() => setGender(g)}
+                className={`h-12 rounded-lg border-2 text-sm font-medium transition-colors ${
+                  gender === g
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-input hover:border-primary/40"
+                }`}
+                style={gender === g ? { borderColor: branding.primaryColor, color: branding.primaryColor, backgroundColor: `${branding.primaryColor}15` } : undefined}
+              >
+                {genderLabels[g]}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </>
+  );
+  // Ce qui bloque le passage à la suite, calculé une fois pour les deux
+  // écrans : un bouton actif d'un côté et bloqué de l'autre serait
+  // indéfendable.
+  const personalizeComplet =
+    (!quiz.ask_first_name || firstName.trim().length > 0) &&
+    (!quiz.ask_gender || gender !== null);
+
   // STEP: Intro
   if (step === "intro") {
-    const introRich = isHtml(quiz.introduction);
-    // Split introduction into lines — lines starting with ✓/✔/- become checkmarks
-    // (legacy plain-text rendering kept for quizzes created before the rich-text editor)
-    const introLines = introRich ? [] : (quiz.introduction ?? "").split("\n").filter((l) => l.trim());
-    const bulletLines: string[] = [];
-    const descLines: string[] = [];
-    introLines.forEach((line) => {
-      const trimmed = line.trim();
-      if (/^[\u2713\u2714\u2022\-\*]\s*/.test(trimmed)) {
-        bulletLines.push(trimmed.replace(/^[\u2713\u2714\u2022\-\*]\s*/, ""));
-      } else {
-        descLines.push(trimmed);
-      }
-    });
-
     // Fonction de démarrage partagée entre l'accueil "carte" et "cover".
     const onStart = () => {
       trackEvent("start");
-      const skipPersonalize = isPreviewMode && firstName.trim().length > 0;
+      // En mode "prenom", les champs ont ete remplis SUR l'accueil : y
+      // renvoyer le visiteur lui redemanderait ce qu'il vient de saisir.
+      const dejaPersonnalise = introStart.mode === "personalize";
+      const skipPersonalize = dejaPersonnalise || (isPreviewMode && firstName.trim().length > 0);
       setStep(!skipPersonalize && (quiz.ask_first_name || quiz.ask_gender) ? "personalize" : (captureBefore ? "email" : "quiz"));
     };
 
@@ -2668,32 +2864,6 @@ export default function PublicQuizClient({
       );
     }
 
-    // Le titre, l'intro et le CTA partagent le MÊME bord. La règle vit dans
-    // lib/quiz/textAlign.ts, et c'est tout l'enjeu : elle était réécrite en
-    // ternaires ici ET dans l'éditeur, donc corriger un côté laissait l'autre
-    // décalé. "On a déjà parlé de ça mille fois" (Béné, 3 août 2026).
-    const introAlign = resolveBlockAlign(quiz.title, quiz.title, qLayout);
-    const introTextClass = alignTextClass(introAlign);
-    const introBlockMargin = alignBlockMarginClass(introAlign);
-    const introJustify = alignJustifyClass(introAlign);
-    // Le sous-titre peut avoir SON propre alignement : dans ce cas il gagne,
-    // pour lui seul (elle l'a posé exprès).
-    const introBodyAlign = resolveBlockAlign(quiz.introduction, quiz.title, qLayout);
-    const introBodyTextClass = alignTextClass(introBodyAlign);
-    // LE LOGO A SA PROPRE VIE (retour Béné 3 août 2026 : "si je centre
-    // mon titre à gauche, il centre aussi le logo"). Sans réglage il suit
-    // le titre, donc aucun quiz existant ne bouge.
-    const logo = logoRender(
-      resolveLogoAlign(quiz.brand_logo_align, introAlign),
-      logoWidthPct(quiz.brand_logo_width),
-    );
-    // LARGEUR DU BLOC TITRE + SOUS-TITRE, portée par le CONTENEUR COMMUN :
-    // c'est ce qui rend impossible le retour du décalage ("la case du sous
-    // titre est plus courte que celle du titre").
-    const introTextStyle = introTextWidthStyle(introTextWidthPct(quiz.intro_text_width));
-    // Le bloc est positionné par le TITRE pour les DEUX champs. L'alignement
-    // propre du sous-titre pilote SON TEXTE, pas la position de sa boîte.
-    const introFieldClass = introTextStyle ? introBlockMargin : "";
 
     return (
       <div
@@ -2713,59 +2883,7 @@ export default function PublicQuizClient({
         {/* Un seul conteneur pour titre + intro + bouton : memes bornes et
             meme alignement, donc l'intro est TOUJOURS calee sur le titre. */}
         <div className={`max-w-2xl w-full space-y-8 ${introTextClass}`} style={readerSurfaceStyle}>
-            {branding.logoUrl && (
-              <div className={logo.wrapperClass}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={branding.logoUrl} alt="" className={logo.imgClass} style={logo.imgStyle} />
-              </div>
-            )}
-            {/* Image d'intro — slot TOP (entre logo et titre). w-full h-auto
-                pour préserver le ratio (CLAUDE_PITFALLS B). */}
-            {quiz.intro_image_url && (quiz.intro_image_position ?? "top") === "top" && (
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img src={quiz.intro_image_url} alt="" className={`h-auto rounded-xl ${quiz.intro_image_width ? "mx-auto block" : "w-full"}`} style={quiz.intro_image_width ? { width: `${quiz.intro_image_width}%` } : undefined} />
-            )}
-            {/* Le titre supporte le rich-text (RichTextEdit dans l'éditeur)
-               , on rend en HTML sanitisé pour que les `<span style="color:…">`
-                appliqués par le créateur apparaissent réellement. */}
-            <h1
-              className={`tipote-quiz-rich tipote-quiz-rich-inline tipote-quiz-title font-bold leading-tight ${introFieldClass}`}
-              style={introTextStyle}
-              dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(quiz.title)) }}
-            />
-
-            {/* Image d'intro — slot AFTER_TITLE */}
-            {quiz.intro_image_url && quiz.intro_image_position === "after_title" && (
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img src={quiz.intro_image_url} alt="" className={`h-auto rounded-xl ${quiz.intro_image_width ? "mx-auto block" : "w-full"}`} style={quiz.intro_image_width ? { width: `${quiz.intro_image_width}%` } : undefined} />
-            )}
-
-            {introRich ? (
-              <div
-                className={`tipote-quiz-rich text-muted-foreground text-lg leading-relaxed ${introFieldClass} ${introBodyTextClass}`}
-                style={introTextStyle}
-                dangerouslySetInnerHTML={{ __html: sanitizeRichText(quiz.introduction) }}
-              />
-            ) : (
-              <>
-                {descLines.length > 0 && (
-                  <p className={`text-muted-foreground text-lg leading-relaxed whitespace-pre-line ${introFieldClass} ${introBodyTextClass}`} style={introTextStyle}>
-                    {descLines.join("\n")}
-                  </p>
-                )}
-
-                {bulletLines.length > 0 && (
-                  <ul className={`space-y-3 text-left max-w-md ${introBlockMargin}`}>
-                    {bulletLines.map((line, i) => (
-                      <li key={i} className="flex items-start gap-3">
-                        <CheckCircle2 className="w-5 h-5 text-primary mt-0.5 shrink-0" />
-                        <span className="text-muted-foreground">{line}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </>
-            )}
+            {introHeader}
 
             {/* Image d'intro — slot AFTER_INTRO */}
             {quiz.intro_image_url && quiz.intro_image_position === "after_intro" && (
@@ -2773,9 +2891,27 @@ export default function PublicQuizClient({
               <img src={quiz.intro_image_url} alt="" className={`h-auto rounded-xl ${quiz.intro_image_width ? "mx-auto block" : "w-full"}`} style={quiz.intro_image_width ? { width: `${quiz.intro_image_width}%` } : undefined} />
             )}
 
-            <Button size="lg" className={`h-14 px-12 text-lg rounded-full shadow-lg ${btnShapeClass}`} onClick={onStart}>
-              {quiz.start_button_text?.trim() || t.start}
-            </Button>
+            {/* CE QUI ENGAGE, SOUS LE TITRE ET LA DESCRIPTION.
+                `introStart.mode` decide, et personne d'autre : l'apercu de
+                l'editeur appelle la MEME fonction. Le defaut reste le
+                bouton, donc aucun quiz existant ne bouge. */}
+            {introStart.mode === "personalize" ? (
+              <div className={`space-y-4 text-left ${introFieldClass}`} style={introTextStyle}>
+                {personalizeFields}
+                <Button
+                  size="lg"
+                  className={`w-full h-12 rounded-full ${btnShapeClass}`}
+                  disabled={!personalizeComplet}
+                  onClick={onStart}
+                >
+                  {quiz.start_button_text?.trim() || t.start}
+                </Button>
+              </div>
+            ) : (
+              <Button size="lg" className={`h-14 px-12 text-lg rounded-full shadow-lg ${btnShapeClass}`} onClick={onStart}>
+                {quiz.start_button_text?.trim() || t.start}
+              </Button>
+            )}
 
             {/* Image d'intro — slot BOTTOM */}
             {quiz.intro_image_url && quiz.intro_image_position === "bottom" && (
@@ -2792,9 +2928,7 @@ export default function PublicQuizClient({
 
   // STEP: Personalize (first name + gender) — shown before quiz questions when enabled
   if (step === "personalize") {
-    const genderLabels = getGenderLabels(quiz.locale);
-    const canContinue = (!quiz.ask_first_name || firstName.trim().length > 0)
-                     && (!quiz.ask_gender || gender !== null);
+    const canContinue = personalizeComplet;
     return (
       <div className={`public-surface min-h-screen flex flex-col${layoutOuterClass}`} style={rootStyle}>
         {renderMediaPanel("capture")}
@@ -2805,40 +2939,7 @@ export default function PublicQuizClient({
               de rootStyle. Tout est personnalisable. */}
           <h2 className={`text-2xl sm:text-3xl font-bold ${qLayout === "centered" ? "text-center" : "text-left"}`} style={{ color: branding.primaryColor }}>{t.personalizeTitle}</h2>
           <p className={`text-muted-foreground ${qLayout === "centered" ? "text-center" : "text-left"}`}>{t.personalizeSubtitle}</p>
-          {quiz.ask_first_name && (
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">{t.personalizeFirstName}</label>
-              <Input
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value.slice(0, 100))}
-                placeholder={t.personalizeFirstNamePlaceholder}
-                className="h-12"
-                autoFocus
-              />
-            </div>
-          )}
-          {quiz.ask_gender && (
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{t.personalizeGender}</label>
-              <div className="grid grid-cols-3 gap-2">
-                {(["m", "f", "x"] as QuizGender[]).map((g) => (
-                  <button
-                    key={g}
-                    type="button"
-                    onClick={() => setGender(g)}
-                    className={`h-12 rounded-lg border-2 text-sm font-medium transition-colors ${
-                      gender === g
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-input hover:border-primary/40"
-                    }`}
-                    style={gender === g ? { borderColor: branding.primaryColor, color: branding.primaryColor, backgroundColor: `${branding.primaryColor}15` } : undefined}
-                  >
-                    {genderLabels[g]}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+          {personalizeFields}
           <Button
             size="lg"
             className={`w-full h-12 rounded-full ${btnShapeClass}`}
@@ -3213,6 +3314,20 @@ export default function PublicQuizClient({
                 depuis la droite en avancant, depuis la gauche en revenant),
                 facon Typeform. */}
             <div key={currentQ} className={`max-w-2xl w-full space-y-8 ${qAlignText} ${navDir === "back" ? "animate-quiz-slide-in-left" : "animate-quiz-slide-in-right"}`} style={readerSurfaceStyle}>
+              {/* L'ACCUEIL ET LA QUESTION 1 NE FONT QU'UN (Béné, 25 août
+                  2026 : "commencer le quiz direct par une question, au lieu
+                  du CTA, en dessous du titre et de la description").
+
+                  L'en-tête est rendu ICI, dans la colonne de contenu de
+                  l'écran de question : elle est déjà mise en page pour
+                  TOUTES les dispositions, donc la fusion n'en casse aucune
+                  et n'ajoute aucun cas.
+
+                  Uniquement sur la question 1 : aux suivantes, le visiteur
+                  a déjà lu la promesse et la relire pousserait la question
+                  hors de l'écran. */}
+              {accueilEstQuestion1 && currentQ === 0 && introHeader}
+
               <p className="text-xs font-bold uppercase tracking-widest text-primary">
                 {t.questions.charAt(0).toUpperCase() + t.questions.slice(1)} {currentQ + 1}/{totalQ}
               </p>

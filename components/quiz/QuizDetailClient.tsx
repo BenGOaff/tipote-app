@@ -114,6 +114,7 @@ import { EditorPreviewDeviceProvider } from "@/components/editor/EditorPreviewDe
 import { RestoreDraftDialog } from "@/components/editor/RestoreDraftDialog";
 import { useAutosave } from "@/hooks/use-autosave";
 import { buildQuizEditorSnapshot, diffEditorSnapshot } from "@/lib/quiz/editorSnapshot";
+import { resolveIntroStart } from "@/lib/quiz/introStart";
 import { SessionLostBanner } from "@/components/editor/SessionLostBanner";
 import { answerImageRender } from "@/lib/quiz/answerImage";
 import {
@@ -203,6 +204,7 @@ type QuizData = {
   id: string; title: string; slug: string | null;
   introduction: string | null; cta_text: string | null; cta_url: string | null;
   start_button_text: string | null;
+  intro_start_mode?: string | null;
   privacy_url: string | null; consent_text: string | null;
   capture_heading: string | null; capture_subtitle: string | null; capture_submit_text: string | null;
   result_insight_heading: string | null; result_projection_heading: string | null;
@@ -613,6 +615,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const [ctaText, setCtaText] = useState("");
   const [ctaUrl, setCtaUrl] = useState("");
   const [startButtonText, setStartButtonText] = useState("");
+  // Par quoi le visiteur commence : bouton (defaut) | prenom | question.
+  const [introStartMode, setIntroStartMode] = useState("button");
   const [privacyUrl, setPrivacyUrl] = useState("");
   const [consentText, setConsentText] = useState("");
   const [captureHeading, setCaptureHeading] = useState("");
@@ -723,6 +727,24 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const [sioShareTagName, setSioShareTagName] = useState("");
   const [status, setStatus] = useState("draft");
   const [editQuestions, setEditQuestions] = useState<QuizQuestion[]>([]);
+  // L'APERCU APPELLE LA MEME FONCTION QUE LE VIEWER.
+  //
+  // Un apercu qui RECALCULE une decision du viewer finit toujours par
+  // mentir : c'est le defaut le plus repete de ce module (partage,
+  // score, alignement du sous-titre, disposition des reponses, images).
+  //
+  // `captureAvant` est false ici : cet editeur est celui du QUIZ, et la
+  // capture avant les questions est un reglage de SONDAGE.
+  const introStart = useMemo(
+    () =>
+      resolveIntroStart(introStartMode, {
+        captureAvant: false,
+        nbQuestions: editQuestions.length,
+        demandePrenom: askFirstName,
+        demandeGenre: askGender,
+      }),
+    [introStartMode, editQuestions.length, askFirstName, askGender],
+  );
   const [editResults, setEditResults] = useState<QuizResult[]>([]);
 
   // Editor state
@@ -1015,6 +1037,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     cta_text: ctaText,
     cta_url: ctaUrl,
     start_button_text: startButtonText,
+    intro_start_mode: introStartMode,
     privacy_url: privacyUrl,
     consent_text: consentText,
     capture_heading: captureHeading,
@@ -1109,7 +1132,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     questions: editQuestions,
     results: editResults,
   }), [
-    title, introduction, ctaText, ctaUrl, startButtonText, privacyUrl, consentText,
+    title, introduction, ctaText, ctaUrl, startButtonText, introStartMode, privacyUrl, consentText,
     captureHeading, captureSubtitle, captureSubmitText, resultInsightHeading, resultProjectionHeading,
     captureEnabled, captureFirstName, captureLastName, capturePhone, captureCountry,
     firstNameRequired, lastNameRequired, phoneRequired, countryRequired,
@@ -1147,6 +1170,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     if (typeof s.cta_text === "string") setCtaText(s.cta_text);
     if (typeof s.cta_url === "string") setCtaUrl(s.cta_url);
     if (typeof s.start_button_text === "string") setStartButtonText(s.start_button_text);
+    if (typeof s.intro_start_mode === "string") setIntroStartMode(s.intro_start_mode);
     if (typeof s.privacy_url === "string") setPrivacyUrl(s.privacy_url);
     if (typeof s.consent_text === "string") setConsentText(s.consent_text);
     if (typeof s.capture_heading === "string") setCaptureHeading(s.capture_heading);
@@ -1489,6 +1513,9 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       setTitle(q.title); setIntroduction(q.introduction ?? "");
       setCtaText(q.cta_text ?? ""); setCtaUrl(q.cta_url ?? "");
       setStartButtonText(q.start_button_text ?? "");
+      // Colonne absente (migration pas encore passee) -> "button", donc
+      // exactement le comportement d'aujourd'hui.
+      setIntroStartMode(q.intro_start_mode ?? "button");
       setPrivacyUrl(q.privacy_url ?? ""); setConsentText(q.consent_text ?? "");
       setCaptureHeading(q.capture_heading ?? ""); setCaptureSubtitle(q.capture_subtitle ?? "");
       setCaptureSubmitText(q.capture_submit_text ?? "");
@@ -1627,6 +1654,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           cta_text: q.cta_text ?? "",
           cta_url: q.cta_url ?? "",
           start_button_text: q.start_button_text ?? "",
+          intro_start_mode: q.intro_start_mode ?? "button",
           privacy_url: q.privacy_url ?? "",
           consent_text: q.consent_text ?? "",
           capture_heading: q.capture_heading ?? "",
@@ -2291,6 +2319,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
         body: JSON.stringify({
           title, introduction, cta_text: ctaText, cta_url: ctaUrl,
           start_button_text: startButtonText || null,
+          intro_start_mode: introStartMode,
           privacy_url: privacyUrl || null, consent_text: consentText,
           show_consent_checkbox: showConsentCheckbox,
           show_results_breakdown: showResultsBreakdown,
@@ -4317,16 +4346,73 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                       onDrop={() => { setIntroImagePosition("after_intro"); setDraggingIntroImage(false); }} />
                   )}
 
-                  <div className={`flex ${introJustifyClass}`}>
-                    <div className="px-10 py-4 rounded-full text-white font-semibold text-lg shadow-lg transition-opacity hover:opacity-90" style={{ backgroundColor: pc }}>
-                      <InlineEdit
-                        value={startButtonText}
-                        onChange={setStartButtonText}
-                        className="text-white font-semibold text-center"
-                        placeholder={t("previewStartBtnPh")}
-                      />
+                  {/* PAR QUOI LE VISITEUR COMMENCE (Béné, 25 août 2026).
+                      Le sélecteur vit DANS l'aperçu, à l'endroit exact que
+                      le réglage gouverne : c'est là qu'on se pose la
+                      question, pas dans une colonne de quinze réglages où
+                      personne ne la trouve. */}
+                  <div className="rt-chrome not-prose my-4 rounded-lg border border-dashed border-muted-foreground/30 bg-background/80 p-3 text-left">
+                    <div className="text-xs font-medium text-muted-foreground mb-2">{t("introStartLabel")}</div>
+                    <div className="flex flex-wrap gap-2">
+                      {([
+                        ["button", t("introStartButton")],
+                        ["personalize", t("introStartPersonalize")],
+                        ["question", t("introStartQuestion")],
+                      ] as const).map(([val, label]) => (
+                        <button
+                          key={val}
+                          type="button"
+                          onClick={() => setIntroStartMode(val)}
+                          className={`h-8 px-3 rounded-full border text-xs font-medium transition-colors ${
+                            introStartMode === val
+                              ? "border-primary bg-primary/10 text-primary"
+                              : "border-input hover:border-primary/40"
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
                     </div>
+                    <p className="mt-2 text-xs text-muted-foreground">{t("introStartHelp")}</p>
+                    {/* UN REFUS SE DIT. Cocher un réglage sans effet fait
+                        conclure que le bouton ne marche pas, et chercher
+                        ailleurs (règle du ok:false, 3 août). */}
+                    {introStart.refus && (
+                      <p className="mt-2 text-xs font-medium text-amber-600 dark:text-amber-500">
+                        {t(`introStartRefus_${introStart.refus}`)}
+                      </p>
+                    )}
                   </div>
+
+                  {introStart.mode === "question" ? (
+                    <div className="rounded-lg border border-dashed border-primary/40 bg-primary/5 p-4 text-left">
+                      <p className="text-xs text-muted-foreground">{t("introStartQuestionPreview")}</p>
+                      {editQuestions[0] && (
+                        <p className="mt-2 font-semibold" style={{ color: pc }}>
+                          {stripHtml(editQuestions[0].question_text)}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <>
+                      {introStart.mode === "personalize" && (
+                        <div className="rounded-lg border border-input bg-background/60 p-3 text-left">
+                          <div className="text-xs font-medium text-muted-foreground">{t("introStartPersonalize")}</div>
+                          <div className="mt-1 h-10 rounded-md border border-input bg-background" />
+                        </div>
+                      )}
+                      <div className={`flex ${introJustifyClass}`}>
+                        <div className="px-10 py-4 rounded-full text-white font-semibold text-lg shadow-lg transition-opacity hover:opacity-90" style={{ backgroundColor: pc }}>
+                          <InlineEdit
+                            value={startButtonText}
+                            onChange={setStartButtonText}
+                            className="text-white font-semibold text-center"
+                            placeholder={t("previewStartBtnPh")}
+                          />
+                        </div>
+                      </div>
+                    </>
+                  )}
 
                   {/* slot BOTTOM — sous le bouton */}
                   {introLayout !== "cover" && introImageUrl && introImagePosition === "bottom" && (

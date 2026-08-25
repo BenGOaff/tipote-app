@@ -4759,7 +4759,17 @@
     "otherResultsPositionHint": "Colocado antes do botão, dá ao visitante outra coisa para fazer bem no momento da sua proposta.",
     "optionSurveyShare": "Permitir o compartilhamento da pesquisa",
     "optionSurveyShareHint": "Os botões de compartilhamento na tela de agradecimento. Desmarque para que ninguém possa divulgar sua pesquisa a partir dessa página.",
-    "optionSurveyShareOffHint": "O compartilhamento está desativado: nenhum botão aparece na tela de agradecimento."
+    "optionSurveyShareOffHint": "O compartilhamento está desativado: nenhum botão aparece na tela de agradecimento.",
+    "introStartLabel": "Por onde o visitante começa",
+    "introStartButton": "Um botão",
+    "introStartPersonalize": "O primeiro nome",
+    "introStartQuestion": "A primeira pergunta",
+    "introStartHelp": "Um campo ou uma pergunta abaixo do título engaja mais do que um botão. O botão continua sendo o padrão.",
+    "introStartQuestionPreview": "A primeira pergunta aparece aqui, abaixo do título e da descrição. Você a edita na aba Perguntas.",
+    "introStartRefus_capture-avant": "Aqui não dá: sua pesquisa pede o email antes das perguntas, então a primeira pergunta não pode vir na frente. O botão continua.",
+    "introStartRefus_aucune-question": "Ainda não dá: este quiz não tem nenhuma pergunta. O botão continua.",
+    "introStartRefus_rien-a-demander": "Aqui não dá: você não pede nem o primeiro nome nem o gênero. Ative um dos dois, ou mantenha o botão.",
+    "introStartStatsNotice": "Este quiz começa em uma pergunta: a tela inicial E a pergunta 1 são a mesma. Os inícios contam então quem RESPONDEU à primeira pergunta. Antes contavam os cliques no botão: os dois períodos não se comparam."
   },
   "contentStrategy": {
     "title": "Estratégia de conteúdo",

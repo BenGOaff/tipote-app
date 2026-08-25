@@ -399,12 +399,36 @@ export async function GET(
     console.warn("[quiz/analytics] funnel build failed:", e);
   }
 
-  return NextResponse.json({
+    // PAR QUOI LE QUIZ COMMENCE, pour que l'ecran DISE ce que "demarrages"
+  // veut dire. En mode "question", l'ecran d'accueil EST la question 1 :
+  // un demarrage n'est plus un clic sur un bouton mais une REPONSE. Deux
+  // periodes du meme quiz ne se comparent donc plus, et sans cette phrase
+  // le jour du changement se lit comme un bond de performance (le piege
+  // d'Adeline : un chiffre qui change de sens sous l'historique).
+  //
+  // Requete SEPAREE et fail-open : PostgREST refuse le select ENTIER sur
+  // une colonne inconnue, donc l'ajouter a la requete principale ferait
+  // echouer TOUT l'ecran de stats tant que la migration n'est pas passee.
+  let introStartMode: string | null = null;
+  try {
+    const { data: modeRow } = await supabase
+      .from("quizzes")
+      .select("intro_start_mode")
+      .eq("id", quizId)
+      .maybeSingle();
+    const brut = (modeRow as { intro_start_mode?: unknown } | null)?.intro_start_mode;
+    if (typeof brut === "string") introStartMode = brut;
+  } catch {
+    /* colonne absente : on n'affiche simplement pas la note */
+  }
+
+return NextResponse.json({
     ok: true,
     quiz: {
       id: quiz.id,
       title: quiz.title,
       created_at: quiz.created_at,
+      intro_start_mode: introStartMode,
     },
     period: period.key,
     metrics: {

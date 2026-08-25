@@ -4759,7 +4759,17 @@
     "otherResultsPositionHint": "Placed before the button, it gives the visitor something else to do at the exact moment of your offer.",
     "optionSurveyShare": "Allow sharing the survey",
     "optionSurveyShareHint": "The share buttons on the thank-you screen. Uncheck so nobody can pass your survey on from that page.",
-    "optionSurveyShareOffHint": "Sharing is off: no button appears on the thank-you screen."
+    "optionSurveyShareOffHint": "Sharing is off: no button appears on the thank-you screen.",
+    "introStartLabel": "How visitors begin",
+    "introStartButton": "A button",
+    "introStartPersonalize": "Their first name",
+    "introStartQuestion": "The first question",
+    "introStartHelp": "A field or a question under the title engages more than a button. The button stays the default.",
+    "introStartQuestionPreview": "The first question appears here, under the title and the description. Edit it in the Questions tab.",
+    "introStartRefus_capture-avant": "Not possible here: your survey asks for the email before the questions, so the first question cannot come first. The button stays.",
+    "introStartRefus_aucune-question": "Not possible yet: this quiz has no question. The button stays.",
+    "introStartRefus_rien-a-demander": "Not possible here: you ask for neither first name nor gender. Turn one on, or keep the button.",
+    "introStartStatsNotice": "This quiz starts on a question: the welcome screen AND question 1 are one screen. Starts therefore count visitors who ANSWERED the first question. Before this setting, they counted button clicks: the two periods are not comparable."
   },
   "contentStrategy": {
     "title": "Content strategy",

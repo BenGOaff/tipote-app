@@ -4759,7 +4759,17 @@
     "otherResultsPositionHint": "Colocado antes do botão, dá ao visitante outra coisa para fazer mesmo no momento da tua proposta.",
     "optionSurveyShare": "Permitir a partilha do questionário",
     "optionSurveyShareHint": "Os botões de partilha no ecrã de agradecimento. Desmarca para que ninguém possa divulgar o teu questionário a partir dessa página.",
-    "optionSurveyShareOffHint": "A partilha está desativada: nenhum botão aparece no ecrã de agradecimento."
+    "optionSurveyShareOffHint": "A partilha está desativada: nenhum botão aparece no ecrã de agradecimento.",
+    "introStartLabel": "Por onde o visitante começa",
+    "introStartButton": "Um botão",
+    "introStartPersonalize": "O primeiro nome",
+    "introStartQuestion": "A primeira pergunta",
+    "introStartHelp": "Um campo ou uma pergunta sob o título envolve mais do que um botão. O botão continua a ser a opção por omissão.",
+    "introStartQuestionPreview": "A primeira pergunta aparece aqui, sob o título e a descrição. Edita-se no separador Perguntas.",
+    "introStartRefus_capture-avant": "Aqui não é possível: o teu inquérito pede o email antes das perguntas, por isso a primeira pergunta não pode vir à frente. O botão fica.",
+    "introStartRefus_aucune-question": "Ainda não é possível: este quiz não tem nenhuma pergunta. O botão fica.",
+    "introStartRefus_rien-a-demander": "Aqui não é possível: não pedes nem o primeiro nome nem o género. Ativa um dos dois, ou mantém o botão.",
+    "introStartStatsNotice": "Este quiz começa numa pergunta: o ecrã inicial E a pergunta 1 são um só. Os inícios contam então quem RESPONDEU à primeira pergunta. Antes contavam os cliques no botão: os dois períodos não se comparam."
   },
   "contentStrategy": {
     "title": "Estratégia de conteúdo",

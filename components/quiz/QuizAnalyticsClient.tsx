@@ -18,6 +18,10 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import {
+  introStartAvertissementStats,
+  resolveIntroStart,
+} from "@/lib/quiz/introStart";
 import { readFunnelSignal, stepLoss } from "@/lib/quiz/funnelSignal";
 import type { FunnelCohort } from "@/lib/quiz/funnelCohort";
 import { biggestLeak, buildFullFunnel } from "@/lib/quiz/fullFunnel";
@@ -70,7 +74,7 @@ interface FunnelStep {
 
 interface AnalyticsResponse {
   ok: boolean;
-  quiz: { id: string; title: string; created_at: string };
+  quiz: { id: string; title: string; created_at: string; intro_start_mode?: string | null };
   period: Period;
   metrics: {
     viewsCount: number;
@@ -389,6 +393,27 @@ export function QuizAnalyticsClient({ quizId, initial, hideCounts = false }: Pro
       </div>
 
       <TrafficSection traffic={data.traffic} />
+
+      {/* CE QUE "DEMARRAGES" VEUT DIRE SUR CE QUIZ (Bene, 25 aout 2026).
+          En mode "question", l'ecran d'accueil EST la question 1 : un
+          demarrage n'est plus un clic sur un bouton mais une REPONSE.
+          Deux periodes du meme quiz ne se comparent donc plus, et sans
+          cette phrase le jour du changement se lit comme un bond de
+          performance. C'est le piege d'Adeline dans une autre famille.
+          La decision vient de lib/quiz/introStart.ts, jamais d'un
+          ternaire recopie ici. */}
+      {introStartAvertissementStats(
+        resolveIntroStart(data.quiz.intro_start_mode, {
+          captureAvant: false,
+          nbQuestions: (data.funnel ?? []).length || 1,
+          demandePrenom: false,
+          demandeGenre: false,
+        }).mode,
+      ) && (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-sm text-muted-foreground">
+          {t("introStartStatsNotice")}
+        </div>
+      )}
 
       <FunnelSection
         funnel={data.funnel ?? []}
