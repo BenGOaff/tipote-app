@@ -2697,6 +2697,68 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     setEditQuestions((p) => p.map((q, qi) => (qi === i ? { ...q, config: { ...(q.config ?? {}), ...patch } } : q)));
   const updateR = (i: number, field: string, v: unknown) => setEditResults(p => p.map((r, ri) => ri === i ? { ...r, [field]: v } : r));
 
+  // ── Le pont manquant des quiz d'avant (porte de Tiquiz, 25 aout 2026) ──
+  //
+  // "On ne modifie pas les quiz existants MAIS on leur propose toujours de
+  // beneficier des ameliorations." Le pont est ne le 3 aout : sur un quiz
+  // plus ancien, et sur tout quiz importe, il est vide pour tous les
+  // profils. Laisser la creatrice devant quatre champs blancs, c'est lui
+  // refiler le travail au lieu de l'aider, et c'est exactement ce que Bene
+  // a vu ("il manque la derniere partie").
+  //
+  // On ne touche QUE les ponts vides : un texte deja ecrit n'est jamais
+  // reecrit, et rien n'est enregistre tant qu'elle n'a pas sauvegarde.
+  const missingBridges = editResults.filter(
+    (r) => !stripHtml(r.bridge ?? "").trim(),
+  ).length;
+  const [bridgeGenerating, setBridgeGenerating] = useState(false);
+
+  /**
+   * Ecrit le pont manquant de chaque profil, un par un.
+   *
+   * On reutilise /rewrite (deja limite en debit, deja branche sur la langue
+   * et le ton du quiz) plutot que d'ajouter une route : le pont se deduit
+   * de ce que le profil dit deja. On envoie le CHEMIN comme matiere, parce
+   * que le pont doit le PROLONGER, pas repartir de zero.
+   */
+  const generateMissingBridges = useCallback(async () => {
+    if (bridgeGenerating) return;
+    setBridgeGenerating(true);
+    let written = 0;
+    try {
+      for (let i = 0; i < editResults.length; i += 1) {
+        const r = editResults[i];
+        if (stripHtml(r.bridge ?? "").trim()) continue;
+        const matter = [
+          stripHtml(r.title ?? ""),
+          stripHtml(r.projection ?? "") || stripHtml(r.description ?? ""),
+          stripHtml(r.cta_text ?? ctaText ?? ""),
+        ].filter(Boolean).join(" . ");
+        if (!matter.trim()) continue;
+        const proposals = await aiRewrite(matter, "result_bridge");
+        const first = proposals?.[0]?.trim();
+        if (first) {
+          updateR(i, "bridge", first);
+          written += 1;
+        }
+      }
+      // Un `ok: false` produit TOUJOURS quelque chose a l'ecran.
+      if (written > 0) {
+        toast.success(
+          written > 1
+            ? `${written} ponts ecrits. Relis-les avant d'enregistrer.`
+            : "Pont ecrit. Relis-le avant d'enregistrer.",
+        );
+      } else {
+        // Un echec silencieux envoie chercher au mauvais endroit.
+        toast.error("Aucun pont n'a pu être écrit. Réessaie dans un instant.");
+      }
+    } finally {
+      setBridgeGenerating(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bridgeGenerating, editResults, ctaText, aiRewrite]);
+
   /**
    * Remet TOUTES les questions sous le reglage global.
    *
@@ -3894,6 +3956,24 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                         checked={showResultBridge}
                         onChange={(v) => setShowResultBridge(v)}
                       />
+                    )}
+                    {/* Le pont manque sur les quiz d'avant et sur les quiz
+                        importés : on propose de le faire écrire, profil par
+                        profil, plutôt que de laisser la créatrice devant un
+                        champ vide. Rien n'est enregistré avant sa sauvegarde. */}
+                    {resultLayout === "beats" && missingBridges > 0 && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => void generateMissingBridges()}
+                        disabled={bridgeGenerating}
+                      >
+                        {bridgeGenerating
+                          ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Rédaction en cours...</>
+                          : <><Sparkles className="w-3.5 h-3.5 mr-1.5" />{missingBridges > 1 ? `Écrire les ${missingBridges} ponts manquants` : "Écrire le pont manquant"}</>}
+                      </Button>
                     )}
                   </div>
                   <SettingsToggle
