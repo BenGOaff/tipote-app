@@ -286,6 +286,41 @@ export function mirrorMedia(rawBeatMedia: unknown): BeatMediaItem | null {
  * Tout est dérivé de `primary`, donc n'importe quel branding marche sans
  * réglage.
  */
+/**
+ * LA TAILLE DU CORPS DE TEXTE DE LA PAGE DE RÉSULTAT, PARTOUT.
+ *
+ * Béné, 25 août 2026 : "je veux la police à 16px sur le pitch post titre
+ * et toutes les parties en dessous. Là c'est déséquilibré et je dois
+ * tout reprendre manuellement."
+ *
+ * Elle avait raison, et c'était pire que déséquilibré : le viewer et
+ * l'aperçu ne disaient pas la même chose.
+ *
+ *   bloc          viewer avant   aperçu avant
+ *   le pitch      16px           18px
+ *   la cause      14px           14px
+ *   le chemin     14px           14px
+ *   le pont       16px           14px
+ *
+ * Une créatrice réglait donc sa page sur un aperçu qui mentait, puis
+ * reprenait tout à la main en découvrant le résultat réel. Huitième fois
+ * que ce défaut sort (les réseaux de partage, le score, l'alignement du
+ * sous-titre, liste ou colonnes, l'alignement des questions, l'image
+ * d'une réponse, la disposition des réponses) : quand l'aperçu recalcule
+ * une décision au lieu d'appeler la même fonction que le viewer, il
+ * finit toujours par mentir.
+ *
+ * Donc UNE constante, lue par les deux. `text-base` = 16px.
+ *
+ * CE QU'ELLE NE TOUCHE PAS : un champ où la créatrice a choisi une
+ * taille garde la sienne. L'enveloppe `.rt-field-fs` porte
+ * `font-size: ... !important` (globals.css), elle passe devant cette
+ * classe. Ce défaut ne concerne donc que les champs jamais réglés,
+ * c'est à dire l'immense majorité, et c'est exactement ce qui était
+ * demandé.
+ */
+export const RESULT_BODY_CLASS = "text-base leading-relaxed";
+
 export type BeatShell = {
   containerClass: string;
   containerStyle: Record<string, string>;

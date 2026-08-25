@@ -113,6 +113,7 @@ import { UserPalettePicker, type PaletteList } from "@/components/editor/UserPal
 import { ColorSwatchPicker } from "@/components/ui/ColorSwatchPicker";
 import { UserPalettesProvider } from "@/components/editor/PalettesContext";
 import { EditorPreviewDeviceProvider } from "@/components/editor/EditorPreviewDeviceContext";
+import { RESULT_BODY_CLASS } from "@/lib/quiz/resultBeats";
 import { RestoreDraftDialog } from "@/components/editor/RestoreDraftDialog";
 import { useAutosave } from "@/hooks/use-autosave";
 import { buildQuizEditorSnapshot, diffEditorSnapshot } from "@/lib/quiz/editorSnapshot";
@@ -5685,7 +5686,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                       <ResultPositionDropZone label={t("resultImagePos_after_title")}
                         onDrop={() => { updateResultImagePosition(ri, "after_title"); setDraggingResultImageRi(null); }} />
                     )}
-                    <RichTextEdit value={r.description ?? ""} onChange={(v) => updateR(ri, "description", v || null)} onGenderize={genderize} onAIRewrite={aiRewriteResultDesc} availableVars={resultVars} previewTransform={previewInterpolate} onImageUpload={handleRichTextImageUpload} className="text-muted-foreground text-lg leading-relaxed" placeholder="Description…" />
+                    <RichTextEdit value={r.description ?? ""} onChange={(v) => updateR(ri, "description", v || null)} onGenderize={genderize} onAIRewrite={aiRewriteResultDesc} availableVars={resultVars} previewTransform={previewInterpolate} onImageUpload={handleRichTextImageUpload} className={`text-muted-foreground ${RESULT_BODY_CLASS}`} placeholder="Description…" />
                     {r.image_url && r.image_position === "after_description" && (
                       <ResultDraggableImage url={r.image_url} ri={ri}
                         onDragStart={() => setDraggingResultImageRi(ri)}
@@ -5720,7 +5721,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                           {insightPersonalized ? "Revenir au titre commun" : "Titre différent pour ce profil"}
                         </button>
                       </div>
-                      <RichTextEdit value={r.insight ?? ""} onChange={(v) => updateR(ri, "insight", v || null)} onGenderize={genderize} onAIRewrite={aiRewriteResultInsight} availableVars={resultVars} previewTransform={previewInterpolate} onImageUpload={handleRichTextImageUpload} className="text-sm leading-relaxed" placeholder="Insight…" />
+                      <RichTextEdit value={r.insight ?? ""} onChange={(v) => updateR(ri, "insight", v || null)} onGenderize={genderize} onAIRewrite={aiRewriteResultInsight} availableVars={resultVars} previewTransform={previewInterpolate} onImageUpload={handleRichTextImageUpload} className={`${RESULT_BODY_CLASS} ${shellCause.bodyToneClass}`} placeholder="Insight…" />
                     </div>
                     )}
                     {r.image_url && r.image_position === "after_insight" && (
@@ -5758,7 +5759,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                           {projectionPersonalized ? "Revenir au titre commun" : "Titre différent pour ce profil"}
                         </button>
                       </div>
-                      <RichTextEdit value={r.projection ?? ""} onChange={(v) => updateR(ri, "projection", v || null)} onGenderize={genderize} onAIRewrite={aiRewriteResultProjection} availableVars={resultVars} previewTransform={previewInterpolate} onImageUpload={handleRichTextImageUpload} className="text-sm leading-relaxed" placeholder="Projection…" />
+                      <RichTextEdit value={r.projection ?? ""} onChange={(v) => updateR(ri, "projection", v || null)} onGenderize={genderize} onAIRewrite={aiRewriteResultProjection} availableVars={resultVars} previewTransform={previewInterpolate} onImageUpload={handleRichTextImageUpload} className={`${RESULT_BODY_CLASS} ${shellPath.bodyToneClass}`} placeholder="Projection…" />
                     </div>
                     )}
 
@@ -5792,7 +5793,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                           availableVars={resultVars}
                           previewTransform={previewInterpolate}
                           onImageUpload={handleRichTextImageUpload}
-                          className="text-sm leading-relaxed"
+                          className={`${RESULT_BODY_CLASS} ${shellBridge.bodyToneClass}`}
                           placeholder="Ce que ça change pour lui, concrètement, s'il passe à la suite."
                         />
                       </div>
