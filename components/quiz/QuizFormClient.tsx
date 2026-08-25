@@ -48,6 +48,22 @@ type QuizResult = {
   description: string;
   insight: string;
   projection: string;
+  // LES 4 TEMPS (Béné, 25 août 2026 : "on ne devait PAS le supprimer").
+  //
+  // Ces quatre champs MANQUAIENT à ce type, et donc aux trois endroits
+  // qui recopient un résultat. Le pont était détruit dès la sortie de
+  // l'IA, avant d'arriver dans l'état du formulaire : la route ne voyait
+  // jamais de pont, et le quiz naissait en page CLASSIQUE.
+  //
+  // Depuis le 3 août, AUCUN quiz créé par ce formulaire n'a jamais pu
+  // naître en 4 temps. Le prompt le demandait, la base avait les
+  // colonnes, la route les acceptait. C'est ce fichier, au milieu, qui
+  // les jetait. Le module quiz de Tiquiz est jumeau : il portait
+  // exactement le même trou.
+  insight_heading: string;
+  projection_heading: string;
+  bridge: string;
+  bridge_heading: string;
   cta_text: string;
   cta_url: string;
   sio_tag_name: string;
@@ -78,6 +94,10 @@ function emptyResult(): QuizResult {
     description: "",
     insight: "",
     projection: "",
+    insight_heading: "",
+    projection_heading: "",
+    bridge: "",
+    bridge_heading: "",
     cta_text: "",
     cta_url: "",
     sio_tag_name: "",
@@ -257,6 +277,10 @@ export default function QuizFormClient() {
             description: r.description || null,
             insight: r.insight || null,
             projection: r.projection || null,
+            insight_heading: r.insight_heading || null,
+            projection_heading: r.projection_heading || null,
+            bridge: r.bridge || null,
+            bridge_heading: r.bridge_heading || null,
             cta_text: r.cta_text || null,
             cta_url: r.cta_url || null,
             sio_tag_name: r.sio_tag_name || null,
@@ -576,6 +600,10 @@ export default function QuizFormClient() {
           description: r.description || null,
           insight: r.insight || null,
           projection: r.projection || null,
+          insight_heading: r.insight_heading || null,
+          projection_heading: r.projection_heading || null,
+          bridge: r.bridge || null,
+          bridge_heading: r.bridge_heading || null,
           cta_text: r.cta_text || null,
           cta_url: r.cta_url || null,
           sio_tag_name: r.sio_tag_name || null,
@@ -663,6 +691,10 @@ export default function QuizFormClient() {
             description: r.description ?? "",
             insight: r.insight ?? "",
             projection: r.projection ?? "",
+            insight_heading: r.insight_heading ?? "",
+            projection_heading: r.projection_heading ?? "",
+            bridge: r.bridge ?? "",
+            bridge_heading: r.bridge_heading ?? "",
             cta_text: r.cta_text ?? "",
             cta_url: r.cta_url ?? "",
             sio_tag_name: r.sio_tag_name ?? "",

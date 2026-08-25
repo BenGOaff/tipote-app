@@ -47,21 +47,6 @@ export async function GET() {
 }
 
 // POST — create a quiz with questions and results
-/**
- * Le contenu recu porte-t-il un PONT redige ?
- *
- * C'est ce qui decide si le quiz nait en page "4 temps" ou en page
- * classique. On ne se fie pas a "ca vient de l'IA" : un import ou une
- * creation manuelle passent par la meme route, et une mise en page batie
- * sur un bloc absent donnerait une page bancale au visiteur.
- */
-function hasBridgeContent(results: unknown): boolean {
-  if (!Array.isArray(results)) return false;
-  return results.some((r) => {
-    const bridge = (r as Record<string, unknown> | null)?.bridge;
-    return typeof bridge === "string" && bridge.replace(/<[^>]*>/g, "").trim().length > 0;
-  });
-}
 
 export async function POST(req: NextRequest) {
   try {
@@ -180,11 +165,19 @@ export async function POST(req: NextRequest) {
         ...(mode === "scoring" && Array.isArray(body.scoring_axes) && normalizeScoringAxes(body.scoring_axes).length > 0
           ? { scoring_axes: normalizeScoringAxes(body.scoring_axes) }
           : {}),
-        // Page de resultat en 4 temps : uniquement quand le contenu recu
-        // porte VRAIMENT un pont. Un quiz cree a la main ou importe n'en a
-        // pas ; le defaut de la colonne ('classic') couvre tout le reste,
-        // y compris les quiz existants.
-        ...(hasBridgeContent(body.results) ? { result_layout: "beats" } : {}),
+        // LES 4 TEMPS SONT LA NORME POUR UN QUIZ NEUF (Bene, 25 aout 2026).
+        //
+        // "On devait l'appliquer par defaut, comme nouvelle norme."
+        //
+        // La condition d'avant (`hasBridgeContent`) etait inutile ET
+        // inatteignable : `buildResultBeats()` saute deja tout bloc vide,
+        // et `QuizFormClient` ne transmettait pas `bridge`, donc elle
+        // repondait toujours non.
+        //
+        // AUCUN QUIZ EXISTANT NE BOUGE : cette route ne CREE que des
+        // nouveaux quiz, et la colonne garde son defaut 'classic' pour
+        // tout le reste.
+        result_layout: "beats",
         title,
         introduction: body.introduction ?? null,
         cta_text: body.cta_text ?? null,
