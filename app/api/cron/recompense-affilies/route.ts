@@ -46,7 +46,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { recompenseDuMois } from "@/lib/affiliate/recompense";
+import { changementRecompense, recompenseDuMois } from "@/lib/affiliate/recompense";
+import { emailRecompense } from "@/lib/affiliate/recompenseEmail";
+import { sendEmail } from "@/lib/email";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -117,7 +119,7 @@ export async function GET(req: NextRequest) {
 
   const { data: affs, error: errAffs } = await supabaseAdmin
     .from("affiliates")
-    .select("sa, recompense_choix, recompense_remise_pct, recompense_commission_pct")
+    .select("sa, email, display_name, locale, recompense_choix, recompense_remise_pct, recompense_commission_pct, recompense_filleuls")
     .limit(10_000);
 
   if (errAffs) {
@@ -129,13 +131,18 @@ export async function GET(req: NextRequest) {
 
   type Aff = {
     sa: string;
+    email?: string | null;
+    display_name?: string | null;
+    locale?: string | null;
     recompense_choix?: string | null;
     recompense_remise_pct?: number | null;
     recompense_commission_pct?: number | null;
+    recompense_filleuls?: number | null;
   };
 
   const maintenant = new Date().toISOString();
   let ecrits = 0;
+  let previenus = 0;
   const changements: string[] = [];
 
   for (const a of (affs ?? []) as Aff[]) {
@@ -167,6 +174,57 @@ export async function GET(req: NextRequest) {
       continue;
     }
     ecrits += 1;
+
+    // -- ON PREVIENT AVANT QUE LE PRIX BOUGE ---------------------------
+    //
+    // C'est la seule raison d'etre du recalcul mensuel : annoncer avant
+    // d'appliquer. Une remise qui BAISSE est un prelevement qui MONTE,
+    // et sans un mot il le decouvre sur son releve.
+    //
+    // L'envoi vient APRES l'ecriture, et pas l'inverse : un email qui
+    // annoncerait un changement que la base n'a pas enregistre est pire
+    // que pas d'email du tout. Et il ne bloque JAMAIS le calcul : une
+    // recompense doit s'appliquer meme si Resend ne repond pas. Un envoi
+    // rate CRIE dans le journal avec les deux pourcentages, pour qu'un
+    // humain puisse ecrire.
+    const chgt = changementRecompense(r.choix, {
+      remisePct: a.recompense_remise_pct,
+      commissionPct: a.recompense_commission_pct,
+      filleuls: a.recompense_filleuls,
+    }, r);
+    const message = emailRecompense(chgt, { nom: a.display_name, locale: a.locale });
+    const destinataire = String(a.email ?? "").trim();
+    if (message && destinataire) {
+      try {
+        const envoi = await sendEmail({
+          to: destinataire,
+          subject: message.subject,
+          greeting: message.greeting,
+          body: message.body,
+          ctaLabel: message.ctaLabel,
+          ctaUrl: message.ctaUrl,
+          locale: String(a.locale ?? "fr"),
+          category: "affiliate_reward_change",
+        });
+        if (envoi.ok) previenus += 1;
+        else {
+          console.error(
+            `[cron/recompense] NON PREVENU ${a.sa} (${destinataire}) : ${chgt.quoi} ${chgt.avantPct}% -> ${chgt.apresPct}% : ${envoi.error}`,
+          );
+        }
+      } catch (e) {
+        console.error(
+          `[cron/recompense] NON PREVENU ${a.sa} (${destinataire}) : ${chgt.quoi} ${chgt.avantPct}% -> ${chgt.apresPct}% : ${e instanceof Error ? e.message : e}`,
+        );
+      }
+    } else if (message && !destinataire) {
+      // Une baisse a annoncer et aucune adresse : ca ne doit pas
+      // disparaitre en silence.
+      console.error(
+        `[cron/recompense] NON PREVENU ${a.sa} (aucune adresse) : ${chgt.quoi} ${chgt.avantPct}% -> ${chgt.apresPct}%`,
+      );
+    }
+
     changements.push(
       `${a.sa} : ${r.filleulsActifs} filleuls -> ${r.choix === "abonnement" ? `-${r.remiseAboPct}% abo` : `${r.commissionPct}% com`}`,
     );
@@ -183,6 +241,7 @@ export async function GET(req: NextRequest) {
     ok: true,
     affilies: (affs ?? []).length,
     misAJour: ecrits,
+    previenus,
     fenetreJours: FENETRE_JOURS,
   });
 }

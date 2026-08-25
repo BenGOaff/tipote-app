@@ -180,3 +180,73 @@ export function effetDuChangement(
   const b = choixVoulu === "abonnement" ? "abonnement" : "commissions";
   return a === b ? "aucun-changement" : "le-mois-prochain";
 }
+
+// ── CE QUI A CHANGÉ D'UN MOIS SUR L'AUTRE ────────────────────────────
+//
+// Béné, 26 août 2026, sur le seul trou qui restait : rien ne prévenait
+// un affilié quand sa récompense BAISSE.
+//
+// C'est le cas qui coûte, et il est silencieux par construction. Un
+// filleul arrête de payer, la remise passe de 20 % à 10 %, et le
+// prélèvement du mois suivant AUGMENTE sans que personne ne l'ait dit.
+// Il le découvre sur son relevé, et de son point de vue c'est nous qui
+// avons changé son prix sans prévenir.
+//
+// Le recalcul mensuel n'existe QUE pour ça : annoncer avant d'appliquer
+// (cf. l'en-tête du cron). Sans l'annonce, il ne sert plus à rien.
+
+export type SensRecompense = "hausse" | "baisse" | "stable";
+
+export type ChangementRecompense = {
+  sens: SensRecompense;
+  /** Ce dont on parle. C'est un PARAMÈTRE, jamais deviné du montant. */
+  quoi: ChoixRecompense;
+  avantPct: number;
+  apresPct: number;
+  filleulsAvant: number;
+  filleulsApres: number;
+};
+
+/**
+ * Ce qui a changé pour CE choix, et dans quel sens.
+ *
+ * `choix` est obligatoire : les deux récompenses se lisent dans des
+ * colonnes différentes et ne veulent pas dire la même chose. Une baisse
+ * de remise fait MONTER une facture ; une baisse de taux fait BAISSER un
+ * revenu. Deviner laquelle regarder marcherait tant que personne ne
+ * change d'avis, c'est à dire jusqu'au premier qui bascule.
+ *
+ * Les valeurs illisibles (colonne absente, NULL d'une ligne jamais
+ * calculée) sont lues comme le socle, pas comme zéro : quelqu'un qui n'a
+ * jamais été calculé ne "baisse" pas, il démarre.
+ */
+export function changementRecompense(
+  choix: ChoixRecompense,
+  avant: { remisePct?: unknown; commissionPct?: unknown; filleuls?: unknown },
+  apres: Recompense,
+): ChangementRecompense {
+  // `Number(null)` vaut 0, et c'est le piege : une colonne JAMAIS
+  // calculee serait lue comme "0 %" au lieu de "je ne sais pas", donc
+  // quelqu'un qui vient d'arriver aurait l'air d'avoir chute depuis un
+  // taux qu'il n'a jamais eu. On distingue donc l'ABSENCE de la valeur.
+  const nombre = (v: unknown, socle: number) => {
+    if (v === null || v === undefined || v === "") return socle;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : socle;
+  };
+
+  const avantPct =
+    choix === "abonnement"
+      ? nombre(avant.remisePct, 0)
+      : nombre(avant.commissionPct, COMMISSION_BASE_PCT);
+  const apresPct = choix === "abonnement" ? apres.remiseAboPct : apres.commissionPct;
+
+  return {
+    sens: apresPct > avantPct ? "hausse" : apresPct < avantPct ? "baisse" : "stable",
+    quoi: choix,
+    avantPct,
+    apresPct,
+    filleulsAvant: nombre(avant.filleuls, 0),
+    filleulsApres: apres.filleulsActifs,
+  };
+}

@@ -585,7 +585,7 @@ Trois scénarios possibles :
 #### 4. Votre positionnement
 - Ce qui vous différencie de la concurrence
 - Vos preuves (témoignages, résultats, certifications)
-- Votre « formule de niche »
+- Votre "formule de niche"
 
 #### 5. Votre audience cible
 - Qui est votre client idéal
@@ -3857,7 +3857,7 @@ Rendez-vous sur **Créer un quiz** dans la sidebar. Tu as 3 options :
 - Choisis un **objectif** parmi 16 objectifs stratégiques
 - Décris ton **public cible** et le **ton** souhaité
 - Choisis le **format** (court : 3-5 questions, long : 6-10)
-- Choisis le type de quiz : **par profil** (qui es-tu ?) ou **avec un score** (où en es-tu ?). C'est la seule décision difficile : si tu hésites, lis « Profil ou score : lequel choisir ? » avant de continuer
+- Choisis le type de quiz : **par profil** (qui es-tu ?) ou **avec un score** (où en es-tu ?). C'est la seule décision difficile : si tu hésites, lis "Profil ou score : lequel choisir ?" avant de continuer
 - Clique sur **Générer** - l'IA crée tout en temps réel !
 
 ### Option 3 : Importer depuis un fichier
@@ -4422,19 +4422,19 @@ Tiquiz sait faire deux quiz différents. Le choix se fait à la création, et c'
 
 La question à te poser n'est pas technique, c'est : **de quoi parle mon quiz ?**
 
-### Quiz par profil : « qui es-tu ? »
+### Quiz par profil : "qui es-tu ?"
 
 Chaque réponse mène vers un profil, et le profil le plus choisi gagne.
 
-C'est le plus courant. Tu l'utilises quand tes résultats sont des **types**, des personnalités, des façons de faire : « Quel entrepreneur es-tu ? », « Quel est ton style de communication ? », « Quel format de contenu te correspond ? ».
+C'est le plus courant. Tu l'utilises quand tes résultats sont des **types**, des personnalités, des façons de faire : "Quel entrepreneur es-tu ?", "Quel est ton style de communication ?", "Quel format de contenu te correspond ?".
 
 Aucun profil n'est meilleur qu'un autre. Ils sont différents.
 
-### Quiz avec un score : « où en es-tu ? »
+### Quiz avec un score : "où en es-tu ?"
 
 Chaque réponse rapporte des points, et c'est le **total** qui décide du résultat.
 
-Tu l'utilises quand tes résultats sont des **niveaux** : un bilan, un diagnostic, une maturité. « Où en est ton offre ? », « Ton tunnel est-il prêt ? ». Il y a un ordre : un score bas et un score haut ne disent pas la même chose.
+Tu l'utilises quand tes résultats sont des **niveaux** : un bilan, un diagnostic, une maturité. "Où en est ton offre ?", "Ton tunnel est-il prêt ?". Il y a un ordre : un score bas et un score haut ne disent pas la même chose.
 
 Tu peux aussi découper le score en **axes** (sommeil, alimentation, stress…) : chacun s'affiche avec sa propre barre.
 
@@ -4444,13 +4444,13 @@ Tu peux aussi découper le score en **axes** (sommeil, alimentation, stress…) 
 
 ### Et si je me suis trompée ?
 
-Ça arrive, et ça se voit à des signes précis : en mode score, les réglages qui parlent de profils (« quelles questions mènent à ce résultat », les ex aequo) ne s'affichent pas, parce qu'ils ne veulent rien dire là. À l'inverse, en mode profil, tu ne verras jamais de tranches de points.
+Ça arrive, et ça se voit à des signes précis : en mode score, les réglages qui parlent de profils ("quelles questions mènent à ce résultat", les ex aequo) ne s'affichent pas, parce qu'ils ne veulent rien dire là. À l'inverse, en mode profil, tu ne verras jamais de tranches de points.
 
 Tout le reste de ton travail est réutilisable : le plus simple est de recréer le quiz dans le bon mode et de recopier tes textes. Si tu hésites encore, écris-nous avant de tout refaire.
 
 ### Les réponses en mode profil
 
-En mode profil, une réponse ne peut voter que pour **un** profil. Donc s'il te faut 4 profils, il faut au moins 4 réponses par question de choix, sinon un profil ne peut pas gagner à cette question. L'éditeur te prévient quand un profil ne peut jamais être attribué, et le bouton « Rééquilibrer avec l'IA » peut te rédiger les réponses qui manquent.`,
+En mode profil, une réponse ne peut voter que pour **un** profil. Donc s'il te faut 4 profils, il faut au moins 4 réponses par question de choix, sinon un profil ne peut pas gagner à cette question. L'éditeur te prévient quand un profil ne peut jamais être attribué, et le bouton "Rééquilibrer avec l'IA" peut te rédiger les réponses qui manquent.`,
       en: `## The one decision that matters up front
 
 Tiquiz builds two different kinds of quiz. You pick at creation time, and it is the one setting nobody guesses right on their own. Spend thirty seconds here and you save yourself a rebuild later.
@@ -4553,7 +4553,7 @@ Ces mots (reconnaissance, blocage, chemin, suite) sont là pour **toi**. Ils ne 
 
 Le dernier bloc est le seul qui a le droit de vendre, et il vend en bénéfices : ce que la personne obtient, ce qu'elle n'a plus à faire elle-même, ce que ça change dans sa semaine. **C'est là que se disent le nom de ton offre, son format et son prix**, pas sur le bouton.
 
-Le bouton, lui, fait 3 à 6 mots : un verbe et un bénéfice. "Réserver mon audit gratuit", "Découvrir la méthode". Ni prix, ni garantie, ni « accès immédiat » : un bouton chargé se lit comme une bannière publicitaire, et il fait baisser le clic.
+Le bouton, lui, fait 3 à 6 mots : un verbe et un bénéfice. "Réserver mon audit gratuit", "Découvrir la méthode". Ni prix, ni garantie, ni "accès immédiat" : un bouton chargé se lit comme une bannière publicitaire, et il fait baisser le clic.
 
 Pour que l'IA annonce ton prix, écris-le dans **"Pourquoi tu crées ce quiz ?"** au moment de la génération : ton offre, son format, son prix. Sans prix donné, elle n'en invente aucun, et c'est voulu.
 
@@ -4579,7 +4579,7 @@ En bas du résultat, un bouton propose au visiteur de partager. Tu choisis les r
 
 Le lien partagé est celui du **profil obtenu**, pas celui du quiz : la personne qui clique voit le résultat de son amie, ce qui donne beaucoup plus envie de le passer à son tour.
 
-Tu peux masquer complètement ce bouton avec « Afficher le bouton de partage ».
+Tu peux masquer complètement ce bouton avec "Afficher le bouton de partage".
 
 ### Afficher ou cacher le score
 
@@ -4722,7 +4722,7 @@ Un quiz ne vise pas 100 % de complétion, et ne le doit pas. Les premiers à par
 
 Si tu lis chaque départ comme une faute, tu vas réécrire un quiz qui va très bien.
 
-### « Où décrochent tes répondants ? »
+### "Où décrochent tes répondants ?"
 
 Le graphique montre, question par question, combien de personnes l'ont **vue**. La barre rétrécit à chaque abandon.
 
@@ -4862,7 +4862,7 @@ Tiquiz te laisse **supprimer cette étape**. Trois choix, dans les réglages du 
 
 ### Ce que ça change vraiment
 
-Une question posée tout de suite, surtout une question simple à deux réponses, engage beaucoup plus qu'un bouton. La personne ne décide pas « est-ce que je fais ce quiz » : elle répond à une question, et elle est dedans.
+Une question posée tout de suite, surtout une question simple à deux réponses, engage beaucoup plus qu'un bouton. La personne ne décide pas "est-ce que je fais ce quiz" : elle répond à une question, et elle est dedans.
 
 Le prénom, lui, sert deux choses d'un coup : il engage, et il te donne la variable **{name}** pour personnaliser tes questions et tes résultats.
 
@@ -4983,9 +4983,9 @@ Par défaut, la question et le champ ne se prononcent pas : tout suit le réglag
 
 ### Tout remettre d'équerre
 
-C'est ce qui fait croire que « le réglage général ne marche pas » : il marche, mais toutes les exceptions posées à la main passent devant.
+C'est ce qui fait croire que "le réglage général ne marche pas" : il marche, mais toutes les exceptions posées à la main passent devant.
 
-Le bouton **« Tout réaligner sur ce réglage »** efface les exceptions, sur les questions **et** dans les textes. Tes gras, tes couleurs et tes tailles sont conservés, seul l'alignement est effacé.
+Le bouton **"Tout réaligner sur ce réglage"** efface les exceptions, sur les questions **et** dans les textes. Tes gras, tes couleurs et tes tailles sont conservés, seul l'alignement est effacé.
 
 C'est ce qui te permet d'appliquer un nouveau réglage à un quiz **déjà en ligne** sans le refaire.
 
@@ -5127,7 +5127,7 @@ Trois façons, comme pour un quiz :
 - **Avec l'IA** : tu décris ta cible et ce que tu veux apprendre, elle rédige les questions.
 - **En important** un fichier .txt que tu as déjà écrit.
 
-Plus ta cible est précise (« mes clientes qui ont acheté la formation X ces 6 derniers mois » plutôt que « mon audience »), meilleures sont les questions.
+Plus ta cible est précise ("mes clientes qui ont acheté la formation X ces 6 derniers mois" plutôt que "mon audience"), meilleures sont les questions.
 
 ### Les types de questions
 
