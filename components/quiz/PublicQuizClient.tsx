@@ -46,6 +46,7 @@ import { nativeShareResolveIsProof, readShareCredit } from "@/lib/quiz/shareCred
 import { firstNameRequiredOnCapture, showFirstNameOnCapture } from "@/lib/quiz/firstNameAsk";
 import {
   beatShell,
+  RESULT_BODY_CLASS,
   beatShown,
   bridgeTextColor,
   buildResultBeats,
@@ -4206,11 +4207,11 @@ export default function PublicQuizClient({
               const desc = interp(resultProfile.description);
               return isHtml(desc) ? (
                 <div
-                  className="tipote-quiz-rich text-muted-foreground text-base leading-relaxed"
+                  className={`tipote-quiz-rich text-muted-foreground ${RESULT_BODY_CLASS}`}
                   dangerouslySetInnerHTML={{ __html: sanitizeRichText(desc) }}
                 />
               ) : (
-                <p className="text-muted-foreground text-base leading-relaxed whitespace-pre-line">{desc}</p>
+                <p className={`text-muted-foreground ${RESULT_BODY_CLASS} whitespace-pre-line`}>{desc}</p>
               );
             })()}
 
@@ -4236,11 +4237,11 @@ export default function PublicQuizClient({
                   />
                   {isHtml(ins) ? (
                     <div
-                      className="tipote-quiz-rich text-sm leading-relaxed"
+                      className={`tipote-quiz-rich ${RESULT_BODY_CLASS}`}
                       dangerouslySetInnerHTML={{ __html: sanitizeRichText(ins) }}
                     />
                   ) : (
-                    <p className="text-sm leading-relaxed whitespace-pre-line">{ins}</p>
+                    <p className={`${RESULT_BODY_CLASS} whitespace-pre-line`}>{ins}</p>
                   )}
                 </div>
               );
@@ -4264,11 +4265,11 @@ export default function PublicQuizClient({
                   />
                   {isHtml(proj) ? (
                     <div
-                      className="tipote-quiz-rich text-sm leading-relaxed"
+                      className={`tipote-quiz-rich ${RESULT_BODY_CLASS}`}
                       dangerouslySetInnerHTML={{ __html: sanitizeRichText(proj) }}
                     />
                   ) : (
-                    <p className="text-sm leading-relaxed whitespace-pre-line">{proj}</p>
+                    <p className={`${RESULT_BODY_CLASS} whitespace-pre-line`}>{proj}</p>
                   )}
                 </div>
               );
@@ -4297,11 +4298,11 @@ export default function PublicQuizClient({
                       {beat.media && <BeatImage item={beat.media} />}
                       {beat.showText && (isHtml(body) ? (
                         <div
-                          className={`tipote-quiz-rich text-base leading-relaxed ${shell.bodyToneClass}`}
+                          className={`tipote-quiz-rich ${RESULT_BODY_CLASS} ${shell.bodyToneClass}`}
                           dangerouslySetInnerHTML={{ __html: sanitizeRichText(body) }}
                         />
                       ) : (
-                        <p className={`text-base leading-relaxed whitespace-pre-line ${shell.bodyToneClass}`}>
+                        <p className={`${RESULT_BODY_CLASS} whitespace-pre-line ${shell.bodyToneClass}`}>
                           {body}
                         </p>
                       ))}
