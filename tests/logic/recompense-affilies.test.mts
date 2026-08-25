@@ -147,3 +147,25 @@ test("la migration borne les deux nombres qui décident de l'argent", () => {
   assert.match(sql, /recompense_commission_pct between 0 and 70/i);
   assert.match(sql, /notify pgrst/i);
 });
+
+test("le cron de recalcul suit la convention de Tipote", () => {
+  // Tipote authentifie ses crons par `X-Cron-Secret`, Tiquiz par
+  // `Authorization: Bearer`. Les deux conventions coexistent, et ce
+  // n'est pas un probleme tant que chaque app garde la sienne : ce qui
+  // coute, c'est une route qui s'ecarte de la maison, parce que la
+  // commande recopiee d'un cron voisin repond alors 401 sans dire
+  // pourquoi. C'est arrive sur celui-ci.
+  const src = readFileSync("app/api/cron/recompense-affilies/route.ts", "utf8");
+  assert.match(src, /headers\.get\("x-cron-secret"\)/);
+  assert.match(src, /timingSafeEqual/);
+  // Pas de secret dans une URL : ca finit dans l'historique du shell et
+  // dans les journaux d'acces.
+  assert.ok(
+    !/searchParams\.get\("secret"\)/.test(src),
+    "un secret transite par l'URL",
+  );
+  // Et la commande donnee a Bene lit le .env DANS une parenthese : une
+  // variable exportee dans un terminal survit a tout ce qu'on y tapera
+  // ensuite (panne du 22 aout).
+  assert.match(src, /\( set -a; \. \.env; set \+a;/);
+});

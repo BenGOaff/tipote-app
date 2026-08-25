@@ -7649,5 +7649,29 @@
     "pdf_password": "This PDF is password protected. Remove the protection, then try again.",
     "pdf_damaged": "This PDF could not be opened: the file looks damaged or incomplete. Export it again, or use a .docx.",
     "extract_failed": "Reading the file failed. Try again, or export your document as .docx or .txt."
+  },
+  "partageQuiz": {
+    "title": "Share this quiz",
+    "intro": "One link, one click, and the quiz is installed in their account, with its texts, images and points.",
+    "whatTravels": "The content travels: titles, questions, answers, points, profiles, images, colours and layout. What identifies you stays with you: your Systeme.io tags, your tracking pixels and your button URLs. They see this written out at install time, and the quiz arrives as a draft.",
+    "labelField": "Who is it for? (optional)",
+    "labelPlaceholder": "Sophie, prospective client",
+    "onceOnly": "This link works only once",
+    "create": "Create the link and copy it",
+    "creating": "Creating...",
+    "loading": "Loading links...",
+    "empty": "No share link for this quiz yet.",
+    "unnamed": "Unnamed link",
+    "installs": "{n} install(s)",
+    "revoked": "disabled",
+    "copy": "Copy the link",
+    "copied": "Link copied.",
+    "copyError": "Could not copy. The link is: {url}",
+    "revoke": "Disable",
+    "reactivate": "Re-enable",
+    "loadError": "Could not load the share links.",
+    "createError": "The link could not be created.",
+    "updateError": "The change could not be saved.",
+    "button": "Share this quiz"
   }
 }

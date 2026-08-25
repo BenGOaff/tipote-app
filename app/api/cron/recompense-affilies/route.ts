@@ -19,6 +19,17 @@
 // date d'effet : le recalcul lit le choix DU MOMENT, donc changer d'avis
 // le 12 ne touche rien avant le passage suivant.
 //
+// -- LA COMMANDE À POSER SUR LE SERVEUR --------------------------------
+//
+// Une fois par mois, le 2 à 3 h, AVANT celle de Tiquiz qui applique :
+//
+//   0 3 2 * * cd /home/tipote/tipote-app && ( set -a; . .env; set +a; curl -fsS -H "X-Cron-Secret: $CRON_SECRET" https://app.tipote.com/api/cron/recompense-affilies ) >> /tmp/recompense-affilies.log 2>&1
+//
+// Les parenthèses ne sont pas cosmétiques : elles font un sous-shell, et
+// tout ce que `.env` exporte meurt avec lui. Sans elles, les variables
+// survivent dans le terminal et se retrouvent dans le prochain build
+// (panne du 22 août, les deux apps ont servi la base de l'autre).
+//
 // -- CE QU'EST UN FILLEUL ACTIF ----------------------------------------
 //
 // Quelqu'un qui a généré une commission dans les 35 derniers jours,
@@ -32,6 +43,7 @@
 // décompte parce que le mois faisait 31 jours.
 
 import { NextRequest, NextResponse } from "next/server";
+import { timingSafeEqual } from "node:crypto";
 
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { recompenseDuMois } from "@/lib/affiliate/recompense";
@@ -40,7 +52,28 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-const INTERNAL_KEY = process.env.CRON_SECRET ?? process.env.INTERNAL_API_KEY ?? "";
+// LA MÊME PORTE QUE LES AUTRES CRONS DE TIPOTE, et c'est important.
+//
+// Tipote authentifie ses crons par le header `X-Cron-Secret` ; Tiquiz,
+// lui, par `Authorization: Bearer` et un `?secret=`. Les deux
+// conventions coexistent depuis longtemps, et ce n'est pas un problème
+// tant que chaque app garde la sienne : ce qui coûte, c'est une route
+// qui s'écarte de la maison, parce que la commande recopiée d'un cron
+// voisin répond alors 401 sans dire pourquoi.
+//
+// Et pas de `?secret=` ici : un secret dans une URL finit dans
+// l'historique du shell et dans les journaux d'accès.
+const CRON_SECRET = (process.env.CRON_SECRET ?? "").trim();
+
+function autorise(req: NextRequest): boolean {
+  if (!CRON_SECRET) return false;
+  const recu = req.headers.get("x-cron-secret")?.trim() || "";
+  // Comparaison à durée constante : une comparaison naïve s'arrête au
+  // premier caractère différent, et son TEMPS raconte combien de
+  // caractères sont justes (règle du 24 août).
+  if (recu.length !== CRON_SECRET.length) return false;
+  return timingSafeEqual(Buffer.from(recu), Buffer.from(CRON_SECRET));
+}
 
 /** La fenêtre qui définit "il paie encore". */
 const FENETRE_JOURS = 35;
@@ -49,10 +82,7 @@ const FENETRE_JOURS = 35;
 const NON_COMPTES = new Set(["cancelled", "rejected"]);
 
 export async function GET(req: NextRequest) {
-  const authHeader = req.headers.get("authorization") ?? "";
-  const token = authHeader.replace(/^Bearer\s+/i, "");
-  const secret = new URL(req.url).searchParams.get("secret") ?? "";
-  if (!INTERNAL_KEY || (token !== INTERNAL_KEY && secret !== INTERNAL_KEY)) {
+  if (!autorise(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

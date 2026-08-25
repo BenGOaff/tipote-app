@@ -7649,5 +7649,29 @@
     "pdf_password": "Este PDF está protegido por palavra-passe. Remova a proteção e tente novamente.",
     "pdf_damaged": "Não foi possível abrir este PDF: o ficheiro parece danificado ou incompleto. Exporte-o novamente ou use um .docx.",
     "extract_failed": "A leitura do ficheiro falhou. Tente novamente ou exporte o seu documento como .docx ou .txt."
+  },
+  "partageQuiz": {
+    "title": "Partilhar este quiz",
+    "intro": "Um link, um clique, e o quiz fica instalado na conta da pessoa, com os textos, as imagens e os pontos.",
+    "whatTravels": "O conteúdo viaja: títulos, perguntas, respostas, pontos, perfis, imagens, cores e disposição. O que o identifica fica consigo: as suas tags Systeme.io, os seus pixels de seguimento e os endereços dos seus botões. A pessoa vê isto escrito na instalação, e o quiz chega como rascunho.",
+    "labelField": "Para quem? (opcional)",
+    "labelPlaceholder": "Sofia, cliente potencial",
+    "onceOnly": "Este link serve apenas uma vez",
+    "create": "Criar o link e copiar",
+    "creating": "A criar...",
+    "loading": "A carregar os links...",
+    "empty": "Ainda não há nenhum link para este quiz.",
+    "unnamed": "Link sem nome",
+    "installs": "{n} instalação(ões)",
+    "revoked": "desativado",
+    "copy": "Copiar o link",
+    "copied": "Link copiado.",
+    "copyError": "Não foi possível copiar. O link é: {url}",
+    "revoke": "Desativar",
+    "reactivate": "Reativar",
+    "loadError": "Não foi possível ler os links de partilha.",
+    "createError": "Não foi possível criar o link.",
+    "updateError": "Não foi possível guardar a alteração.",
+    "button": "Partilhar este quiz"
   }
 }
