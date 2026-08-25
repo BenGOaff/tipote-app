@@ -2246,14 +2246,14 @@
         "description": "Publica 'Comenta PDF para recibir tu guía'. Cuando alguien comenta 'PDF', recibe automáticamente tu enlace por DM.",
         "example": "Post: 'Comenta PDF 👇' → Comentario 'PDF genial' → DM automático con el enlace",
         "badge": "Instagram + Facebook",
-        "defaultMessage": "¡Hola {{nombre}}! Gracias por tu comentario 🙌 Aquí está tu guía gratuita: [TU_ENLACE]\n\nResponde STOP para cancelar."
+        "defaultMessage": "¡Hola '{{nombre}}'! Gracias por tu comentario 🙌 Aquí está tu guía gratuita: [TU_ENLACE]\n\nResponde STOP para cancelar."
       },
       "email": {
         "title": "Auto Email en Comentario",
         "description": "El usuario comenta una palabra clave, recibe un DM pidiendo su email, luego recibe la guía en su bandeja de entrada vía systeme.io.",
         "example": "Comentario 'GUÍA' → DM 'Envíame tu email' → Email enviado → Añadido a systeme.io",
         "badge": "Instagram + Facebook + systeme.io",
-        "defaultMessage": "¡Hola {{nombre}}! Para recibir tu guía gratuita, responde a este mensaje con tu email 👇\n\nResponde STOP para cancelar.",
+        "defaultMessage": "¡Hola '{{nombre}}'! Para recibir tu guía gratuita, responde a este mensaje con tu email 👇\n\nResponde STOP para cancelar.",
         "defaultEmailDm": "¡Perfecto! Te envío la guía a {{email}} en los próximos minutos. Revisa tu carpeta de spam si no lo ves 📬"
       }
     },
@@ -2273,8 +2273,8 @@
       "keywordHint": "Sin distinción de mayúsculas - cualquier comentario que contenga esta palabra activará la automatización.",
       "dmMessage": "Mensaje DM",
       "firstDmMessage": "Primer mensaje DM",
-      "dmMessagePlaceholder": "¡Hola {{nombre}}! Aquí está tu guía: [enlace]\n\nResponde STOP para cancelar.",
-      "dmMessageHint": "Usa {{nombre}} para personalizar. STOP se añadirá automáticamente si lo olvidas.",
+      "dmMessagePlaceholder": "¡Hola '{{nombre}}'! Aquí está tu guía: [enlace]\n\nResponde STOP para cancelar.",
+      "dmMessageHint": "Usa '{{nombre}}' para personalizar. STOP se añadirá automáticamente si lo olvidas.",
       "emailCapture": "Captura de email",
       "emailCaptureHint": "Después del primer DM, el bot espera una respuesta con el email y lo envía a systeme.io",
       "emailDmMessage": "Mensaje DM para solicitar el email",
@@ -4668,7 +4668,7 @@
     "bonusShareTitle": "Bonus ofrecido por compartir",
     "bonusShareDesc": "Describe lo que recibe el visitante al compartir.",
     "bonusDescriptionPh": "P. ej.: mi miniformación exclusiva",
-    "shareMessageHint": "Se rellena al compartir en X, WhatsApp, Threads o desde el móvil. Facebook y LinkedIn nunca rellenan el texto: muestran la vista previa del enlace, cuya descripción usa este mensaje (salvo que definas una descripción OG personalizada). En la pantalla de resultado, la publicación nombra automáticamente el perfil obtenido. Escribe {resultat} en tu mensaje para colocar ese nombre tú misma.",
+    "shareMessageHint": "Se rellena al compartir en X, WhatsApp, Threads o desde el móvil. Facebook y LinkedIn nunca rellenan el texto: muestran la vista previa del enlace, cuya descripción usa este mensaje (salvo que definas una descripción OG personalizada). En la pantalla de resultado, la publicación nombra automáticamente el perfil obtenido. Escribe '{resultat}' en tu mensaje para colocar ese nombre tú misma.",
     "shareMessagePh": "¡Acabo de hacer el quiz \"{title}\"!",
     "sioShareTagLabel": "Etiqueta Systeme.io tras compartir",
     "sioShareTagHint": "Añadido al contacto cuando comparte realmente. Activa tu automatización.",
@@ -5923,7 +5923,7 @@
     "relatedSlugsLabel": "Artículos relacionados (slugs, separados por comas)"
   },
   "quizVars": {
-    "insertNameTitle": "Insertar el nombre del visitante ({name})",
+    "insertNameTitle": "Insertar el nombre del visitante ('{name}')",
     "insertScoreTitle": "Insertar esta variable de puntuación",
     "insertGenderTitle": "Insertar una variante según el género - masculino | femenino | no binario (ej.: querido | querida | queride)"
   },

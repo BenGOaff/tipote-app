@@ -43,8 +43,10 @@ import {
   resolveQuestionAnswerLayout,
 } from "@/lib/quiz/questionLayout";
 import { nativeShareResolveIsProof, readShareCredit } from "@/lib/quiz/shareCredit";
+import { firstNameRequiredOnCapture, showFirstNameOnCapture } from "@/lib/quiz/firstNameAsk";
 import {
   beatShell,
+  beatShown,
   bridgeTextColor,
   buildResultBeats,
   mirrorMedia,
@@ -2144,7 +2146,7 @@ export default function PublicQuizClient({
   // double tag SIO / double event Meta).
   const handleCaptureContinue = () => {
     if (!email.trim()) return;
-    if (quiz?.capture_first_name && quiz?.first_name_required && !firstName.trim()) { setSubmitError(t.firstNameRequiredError); return; }
+    if (quiz && firstNameRequiredOnCapture(quiz, quiz.first_name_required) && !firstName.trim()) { setSubmitError(t.firstNameRequiredError); return; }
     if (quiz?.capture_last_name && quiz?.last_name_required && !lastName.trim()) { setSubmitError(t.lastNameRequiredError); return; }
     if (quiz?.capture_phone && quiz?.phone_required && !phone.trim()) { setSubmitError(t.phoneRequiredError); return; }
     if (quiz?.capture_country && quiz?.country_required && !country.trim()) { setSubmitError(t.countryRequiredError); return; }
@@ -2157,7 +2159,7 @@ export default function PublicQuizClient({
     // Validation des champs obligatoires (sauf email, déjà checké au
     // dessus). Adeline + Hugo, 18 mai 2026 — chaque toggle activé
     // dans l'éditeur devient une barrière à la soumission ici.
-    if (quiz?.capture_first_name && quiz?.first_name_required && !firstName.trim()) {
+    if (quiz && firstNameRequiredOnCapture(quiz, quiz.first_name_required) && !firstName.trim()) {
       setSubmitError(t.firstNameRequiredError);
       return;
     }
@@ -3469,20 +3471,28 @@ export default function PublicQuizClient({
                   sont obligatoires ssi le créateur a flippé le toggle
                   correspondant dans l'éditeur (cf. Adeline + Hugo,
                   18 mai 2026). */}
-              {(quiz.capture_first_name || quiz.capture_last_name) && (
+              {/* LE PRÉNOM SE DEMANDE À UN SEUL MOMENT (Béné, 25 août
+                  2026). Quand il a été demandé sur l'écran de
+                  personnalisation, cette case ne réapparaît pas ici :
+                  c'était un champ pré-rempli de plus à franchir juste
+                  avant l'email, c'est à dire à l'endroit exact où on
+                  perd le visiteur. La décision vient de
+                  lib/quiz/firstNameAsk.ts, la MÊME fonction que
+                  l'aperçu de l'éditeur. */}
+              {(showFirstNameOnCapture(quiz, firstName.trim().length > 0) || quiz.capture_last_name) && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {quiz.capture_first_name && (
+                  {showFirstNameOnCapture(quiz, firstName.trim().length > 0) && (
                     <div className="space-y-1.5">
                       <label className="text-sm font-medium">
                         {t.firstNamePlaceholder}
-                        {quiz.first_name_required && <span className="text-destructive ml-0.5">*</span>}
+                        {firstNameRequiredOnCapture(quiz, quiz.first_name_required) && <span className="text-destructive ml-0.5">*</span>}
                       </label>
                       <Input
                         type="text"
                         value={firstName}
                         onChange={(e) => setFirstName(e.target.value)}
                         className="h-11 bg-white text-slate-900 border-slate-300 placeholder:text-slate-400 dark:bg-white dark:text-slate-900 dark:border-slate-300"
-                        required={!!quiz.first_name_required}
+                        required={firstNameRequiredOnCapture(quiz, quiz.first_name_required)}
                       />
                     </div>
                   )}
@@ -4216,7 +4226,7 @@ export default function PublicQuizClient({
 
             {resultLayout === "classic" ? (
               <>
-            {quiz.show_result_insight !== false && resultProfile?.insight && stripHtml(resultProfile.insight).trim() && (() => {
+            {beatShown("cause", resultLayout, quiz) && resultProfile?.insight && stripHtml(resultProfile.insight).trim() && (() => {
               const ins = interp(resultProfile.insight);
               return (
                 <div className="p-4 rounded-xl bg-muted/50 border">
@@ -4244,7 +4254,7 @@ export default function PublicQuizClient({
               ) : null;
             })()}
 
-            {quiz.show_result_projection !== false && resultProfile?.projection && stripHtml(resultProfile.projection).trim() && (() => {
+            {beatShown("path", resultLayout, quiz) && resultProfile?.projection && stripHtml(resultProfile.projection).trim() && (() => {
               const proj = interp(resultProfile.projection);
               return (
                 <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">

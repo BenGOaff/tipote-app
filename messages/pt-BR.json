@@ -2246,14 +2246,14 @@
         "description": "Publique «Comente PDF para receber seu guia». Assim que um usuário comentar «PDF», recebe seu link em DM.",
         "example": "Post: «Comente PDF 👇» → Comentário «PDF tal e tal» → DM automático com o link",
         "badge": "Instagram + Facebook",
-        "defaultMessage": "Oi {{prenom}}! Obrigado pelo seu comentário 🙌 Aqui está seu guia gratuito: [SEU_LINK]\n\nResponda STOP para parar de receber mensagens."
+        "defaultMessage": "Oi '{{prenom}}'! Obrigado pelo seu comentário 🙌 Aqui está seu guia gratuito: [SEU_LINK]\n\nResponda STOP para parar de receber mensagens."
       },
       "email": {
         "title": "Email automático em comentário",
         "description": "O usuário comenta uma palavra-chave, recebe um DM pedindo o email, e o guia chega na caixa de entrada via systeme.io.",
         "example": "Comentário «GUIA» → DM «Envie seu email aqui» → Email enviado → Adicionado ao systeme.io",
         "badge": "Instagram + Facebook + systeme.io",
-        "defaultMessage": "Oi {{prenom}}! Para receber seu guia gratuito, me envie seu email em resposta a esta mensagem 👇\n\nResponda STOP para parar de receber mensagens.",
+        "defaultMessage": "Oi '{{prenom}}'! Para receber seu guia gratuito, me envie seu email em resposta a esta mensagem 👇\n\nResponda STOP para parar de receber mensagens.",
         "defaultEmailDm": "Show! Vou te enviar seu guia para {{email}} nos próximos minutos. Verifique o spam se não encontrar 📬"
       }
     },
@@ -2273,8 +2273,8 @@
       "keywordHint": "Insensível a maiúsculas/minúsculas - qualquer comentário com essa palavra dispara a automação.",
       "dmMessage": "Mensagem DM",
       "firstDmMessage": "Primeira mensagem DM",
-      "dmMessagePlaceholder": "Oi {{prenom}}! Aqui está seu guia: [link]\n\nResponda STOP para parar de receber mensagens.",
-      "dmMessageHint": "Use {{prenom}} para personalizar. O STOP é adicionado automaticamente se você esquecer.",
+      "dmMessagePlaceholder": "Oi '{{prenom}}'! Aqui está seu guia: [link]\n\nResponda STOP para parar de receber mensagens.",
+      "dmMessageHint": "Use '{{prenom}}' para personalizar. O STOP é adicionado automaticamente se você esquecer.",
       "emailCapture": "Captura de email",
       "emailCaptureHint": "Depois do primeiro DM, o bot espera uma resposta com o email e envia para o systeme.io",
       "emailDmMessage": "Mensagem DM para pedir o email",
@@ -4668,7 +4668,7 @@
     "bonusShareTitle": "Bônus oferecido por compartilhar",
     "bonusShareDesc": "Descreva o que o visitante recebe ao compartilhar.",
     "bonusDescriptionPh": "Ex.: meu mini-curso exclusivo",
-    "shareMessageHint": "Preenchido quando o visitante compartilha no X, WhatsApp, Threads ou pelo celular. O Facebook e o LinkedIn nunca preenchem o texto: eles mostram a prévia do link, cuja descrição usa esta mensagem (a menos que você defina uma descrição OG personalizada). Na tela de resultado, o compartilhamento nomeia automaticamente o perfil obtido. Escreva {resultat} na sua mensagem para colocar esse nome você mesma.",
+    "shareMessageHint": "Preenchido quando o visitante compartilha no X, WhatsApp, Threads ou pelo celular. O Facebook e o LinkedIn nunca preenchem o texto: eles mostram a prévia do link, cuja descrição usa esta mensagem (a menos que você defina uma descrição OG personalizada). Na tela de resultado, o compartilhamento nomeia automaticamente o perfil obtido. Escreva '{resultat}' na sua mensagem para colocar esse nome você mesma.",
     "shareMessagePh": "Acabei de fazer o quiz \"{title}\"!",
     "sioShareTagLabel": "Tag Systeme.io após compartilhamento",
     "sioShareTagHint": "Adicionado ao contato quando ele realmente compartilha. Aciona sua automação.",
@@ -5923,7 +5923,7 @@
     "relatedSlugsLabel": "Artigos relacionados (slugs, separados por vírgulas)"
   },
   "quizVars": {
-    "insertNameTitle": "Inserir o nome do visitante ({name})",
+    "insertNameTitle": "Inserir o nome do visitante ('{name}')",
     "insertScoreTitle": "Inserir esta variável de pontuação",
     "insertGenderTitle": "Inserir uma variante conforme o gênero - masculino | feminino | não binário (ex.: querido | querida | querid*)"
   },

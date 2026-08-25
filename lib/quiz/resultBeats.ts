@@ -124,6 +124,56 @@ export type BeatSource = {
   fallbackHeadings: { cause: string; path: string; bridge: string };
 };
 
+/**
+ * "Ce temps est-il montré ?", et c'est la SEULE réponse.
+ *
+ * Béné, 25 août 2026 : "pourquoi ces parties activables ou pas ? On met
+ * tout [...] et une option pour supprimer un bloc directement dans
+ * l'éditeur, on n'a pas besoin de ça dans la barre de paramètres."
+ *
+ * En allant déplacer ces trois interrupteurs, on a trouvé pire que leur
+ * emplacement : l'APERÇU DE L'ÉDITEUR NE LES LISAIT PAS. Décocher
+ * "Afficher la carte insight" retirait le bloc chez le visiteur et le
+ * laissait dans l'aperçu. C'est la septième fois que ce défaut sort
+ * (les réseaux de partage, le score, l'alignement du sous-titre, liste
+ * ou colonnes, l'image d'une réponse, l'alignement par question) :
+ * quand l'aperçu recalcule une décision au lieu d'appeler la fonction du
+ * viewer, il finit toujours par mentir.
+ *
+ * La décision vit donc ici, et les TROIS chemins l'appellent : la page
+ * en 4 temps (`buildResultBeats` juste en dessous), la page classique du
+ * viewer, et l'aperçu de l'éditeur.
+ *
+ * `!== false` et pas `=== true` : colonne absente en prod ou valeur
+ * nulle veut dire "montré", jamais "masqué". Une migration en retard ne
+ * doit pas effacer un bloc de la page d'une cliente.
+ *
+ * Le PONT est le seul à dépendre de la MISE EN PAGE : il n'existe pas
+ * sur une page classique, donc `layout` est un paramètre obligatoire.
+ */
+export type BeatVisibility = {
+  show_result_insight?: boolean | null;
+  show_result_projection?: boolean | null;
+  show_result_bridge?: boolean | null;
+};
+
+export function beatShown(
+  key: BeatKey,
+  layout: ResultLayout,
+  quiz: BeatVisibility,
+): boolean {
+  switch (key) {
+    case "mirror":
+      return true;
+    case "cause":
+      return quiz.show_result_insight !== false;
+    case "path":
+      return quiz.show_result_projection !== false;
+    case "bridge":
+      return layout === "beats" && quiz.show_result_bridge !== false;
+  }
+}
+
 export type ResultBeat = {
   key: BeatKey;
   /** Titre du bloc. Vide pour le miroir : son titre est le nom du profil. */
@@ -175,19 +225,21 @@ export function buildResultBeats(
       key: "cause",
       body: txt(result.insight),
       heading: txt(result.insight_heading) || txt(quiz.result_insight_heading) || fallbackHeadings.cause,
-      shown: quiz.show_result_insight !== false,
+      shown: beatShown("cause", "beats", quiz),
     },
     {
       key: "path",
       body: txt(result.projection),
       heading: txt(result.projection_heading) || txt(quiz.result_projection_heading) || fallbackHeadings.path,
-      shown: quiz.show_result_projection !== false,
+      shown: beatShown("path", "beats", quiz),
     },
     {
       key: "bridge",
       body: txt(result.bridge),
       heading: txt(result.bridge_heading) || txt(quiz.result_bridge_heading) || fallbackHeadings.bridge,
-      shown: quiz.show_result_bridge !== false,
+      // "beats" en dur : cette fonction n'est appelée QUE sur une page en
+      // 4 temps, et le gate de mise en page est déjà passé par l'appelant.
+      shown: beatShown("bridge", "beats", quiz),
     },
   ];
 
