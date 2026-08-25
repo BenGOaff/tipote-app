@@ -191,6 +191,10 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       "show_results_breakdown",
       "hide_response_counts",
       "notify_responses",
+      // Par quoi le visiteur commence : button (defaut) | personalize |
+      // question. Toute autre valeur degrade vers button dans
+      // lib/quiz/introStart.ts, donc aucune sauvegarde ne peut echouer.
+      "intro_start_mode",
       "start_button_text", "result_insight_heading", "result_projection_heading", "result_bridge_heading",
       "result_layout",
       // Logo independant du titre + largeur du bloc d'accueil (3 aout 2026).

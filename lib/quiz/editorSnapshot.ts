@@ -53,6 +53,7 @@ export const QUIZ_SNAPSHOT_KEYS = [
   "cta_text",
   "cta_url",
   "start_button_text",
+  "intro_start_mode",
   "privacy_url",
   "consent_text",
   "capture_heading",

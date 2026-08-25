@@ -4759,7 +4759,17 @@
     "otherResultsPositionHint": "Messo prima del pulsante, dà al visitatore qualcos'altro da fare proprio nel momento della tua proposta.",
     "optionSurveyShare": "Consenti la condivisione del sondaggio",
     "optionSurveyShareHint": "I pulsanti di condivisione nella schermata di ringraziamento. Togli la spunta perché nessuno possa diffondere il tuo sondaggio da quella pagina.",
-    "optionSurveyShareOffHint": "La condivisione è disattivata: nessun pulsante appare nella schermata di ringraziamento."
+    "optionSurveyShareOffHint": "La condivisione è disattivata: nessun pulsante appare nella schermata di ringraziamento.",
+    "introStartLabel": "Da cosa parte il visitatore",
+    "introStartButton": "Un pulsante",
+    "introStartPersonalize": "Il suo nome",
+    "introStartQuestion": "La prima domanda",
+    "introStartHelp": "Un campo o una domanda sotto il titolo coinvolge più di un pulsante. Il pulsante resta l'impostazione predefinita.",
+    "introStartQuestionPreview": "La prima domanda compare qui, sotto il titolo e la descrizione. Si modifica nella scheda Domande.",
+    "introStartRefus_capture-avant": "Qui non si può: il tuo sondaggio chiede l'email prima delle domande, quindi la prima domanda non può passare davanti. Il pulsante resta.",
+    "introStartRefus_aucune-question": "Per ora non si può: questo quiz non ha nessuna domanda. Il pulsante resta.",
+    "introStartRefus_rien-a-demander": "Qui non si può: non chiedi né il nome né il genere. Attivane uno, oppure tieni il pulsante.",
+    "introStartStatsNotice": "Questo quiz parte da una domanda: la schermata iniziale E la domanda 1 sono la stessa. Gli avvii contano quindi chi ha RISPOSTO alla prima domanda. Prima contavano i clic sul pulsante: i due periodi non si confrontano."
   },
   "contentStrategy": {
     "title": "Strategia di contenuto",

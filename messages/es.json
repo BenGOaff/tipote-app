@@ -4759,7 +4759,17 @@
     "otherResultsPositionHint": "Colocado antes del botón, le da al visitante otra cosa que hacer justo en el momento de tu propuesta.",
     "optionSurveyShare": "Permitir compartir la encuesta",
     "optionSurveyShareHint": "Los botones de compartir en la pantalla de agradecimiento. Desmarca para que nadie pueda difundir tu encuesta desde esa página.",
-    "optionSurveyShareOffHint": "Compartir está desactivado: no aparece ningún botón en la pantalla de agradecimiento."
+    "optionSurveyShareOffHint": "Compartir está desactivado: no aparece ningún botón en la pantalla de agradecimiento.",
+    "introStartLabel": "Con qué empieza el visitante",
+    "introStartButton": "Un botón",
+    "introStartPersonalize": "Su nombre",
+    "introStartQuestion": "La primera pregunta",
+    "introStartHelp": "Un campo o una pregunta bajo el título implica más que un botón. El botón sigue siendo la opción por defecto.",
+    "introStartQuestionPreview": "La primera pregunta aparece aquí, bajo el título y la descripción. Se edita en la pestaña Preguntas.",
+    "introStartRefus_capture-avant": "Aquí no se puede: tu encuesta pide el email antes de las preguntas, así que la primera pregunta no puede ir delante. El botón se mantiene.",
+    "introStartRefus_aucune-question": "Todavía no se puede: este quiz no tiene ninguna pregunta. El botón se mantiene.",
+    "introStartRefus_rien-a-demander": "Aquí no se puede: no pides ni el nombre ni el género. Activa uno de los dos, o deja el botón.",
+    "introStartStatsNotice": "Este quiz empieza con una pregunta: la pantalla de bienvenida Y la pregunta 1 son la misma. Los inicios cuentan por tanto a quienes RESPONDIERON la primera pregunta. Antes contaban los clics en el botón: los dos periodos no se comparan."
   },
   "contentStrategy": {
     "title": "Estrategia de contenido",

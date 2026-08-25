@@ -4759,7 +4759,17 @@
     "otherResultsPositionHint": "Placé avant le bouton, il donne au visiteur autre chose à faire juste au moment de ta proposition.",
     "optionSurveyShare": "Autoriser le partage du sondage",
     "optionSurveyShareHint": "Les boutons de partage sur l'écran de remerciement. Décoche pour que personne ne puisse relayer ton sondage depuis cette page.",
-    "optionSurveyShareOffHint": "Le partage est désactivé : aucun bouton n'apparaît sur l'écran de remerciement."
+    "optionSurveyShareOffHint": "Le partage est désactivé : aucun bouton n'apparaît sur l'écran de remerciement.",
+    "introStartLabel": "Par quoi le visiteur commence",
+    "introStartButton": "Un bouton",
+    "introStartPersonalize": "Son prénom",
+    "introStartQuestion": "La première question",
+    "introStartHelp": "Un champ ou une question sous le titre engage plus qu'un bouton. Le bouton reste le réglage par défaut.",
+    "introStartQuestionPreview": "La première question s'affiche ici, sous le titre et la description. Elle se modifie dans l'onglet Questions.",
+    "introStartRefus_capture-avant": "Impossible ici : ton sondage demande l'email avant les questions, donc la première question ne peut pas passer devant. Le bouton reste affiché.",
+    "introStartRefus_aucune-question": "Impossible pour l'instant : ce quiz n'a aucune question. Le bouton reste affiché.",
+    "introStartRefus_rien-a-demander": "Impossible ici : tu ne demandes ni le prénom ni le genre. Active l'un des deux, ou garde le bouton.",
+    "introStartStatsNotice": "Ce quiz démarre sur une question : l'écran d'accueil ET la question 1 ne font qu'un. Le nombre de démarrages compte donc les visiteurs qui ont RÉPONDU à la première question. Avant ce réglage, il comptait les clics sur le bouton : les deux périodes ne se comparent pas."
   },
   "contentStrategy": {
     "title": "Stratégie de contenu",
