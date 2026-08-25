@@ -23,7 +23,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { sendEmail } from "@/lib/email";
-import { ADMIN_EMAILS } from "@/lib/adminEmails";
+import { ADMIN_ALERT_EMAILS } from "@/lib/adminEmails";
 import { resolveAppUrl } from "@/lib/authLinks";
 
 export const dynamic = "force-dynamic";
@@ -242,7 +242,11 @@ export async function GET(req: NextRequest) {
     </p>`;
 
   let emailsSent = 0;
-  for (const adminEmail of ADMIN_EMAILS) {
+  // ON PREVIENT, ON NE SPAMME PAS (Bene, 25 aout 2026 : "je recois
+  // toujours ce genre de mails en double"). Cette boucle portait sur
+  // ADMIN_EMAILS, qui compte QUATRE adresses arrivant dans la meme
+  // boite : quatre messages distincts pour une seule alerte.
+  for (const adminEmail of ADMIN_ALERT_EMAILS) {
     const result = await sendEmail({
       to: adminEmail,
       subject: `⚠️ Seuils fiscaux Tipote — ${issues.length} valeur(s) à vérifier`,

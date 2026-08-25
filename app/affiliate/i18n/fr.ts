@@ -100,7 +100,7 @@ export const FR: AffiliateDict = {
     info_bottom:
       "Tu reçois déjà un email à chaque commission. Cet espace te donne en plus : ressources promos, stats, suivi de tes commissions, et accès démo à Tiquiz.",
     err_invalid_sa:
-      "L'identifiant affilié n'a pas le bon format. Vérifie qu'il commence par « sa » suivi d'une suite de caractères.",
+      "L'identifiant affilié n'a pas le bon format. Vérifie qu'il commence par \"sa\" suivi d'une suite de caractères.",
     err_email_not_in_systeme:
       "Cet email n'est pas reconnu dans Systeme.io. Inscris-toi d'abord au programme d'affiliation, puis reviens ici.",
     err_invalid_email: "Email invalide.",
@@ -389,7 +389,7 @@ export const FR: AffiliateDict = {
     schedule_when:
       "Les commissions sont virées entre le 10 et le 13 de chaque mois, directement sur la méthode que tu as configurée dans Systeme.io.",
     schedule_cooloff:
-      "Une commission est validée à la fin du délai de rétractation légal du client (généralement 14 jours après la vente). Une commission encore en attente apparaît dans la colonne « En attente » de ton tableau de bord.",
+      "Une commission est validée à la fin du délai de rétractation légal du client (généralement 14 jours après la vente). Une commission encore en attente apparaît dans la colonne \"En attente\" de ton tableau de bord.",
     invoices_title: "Tes factures mensuelles",
     invoices_body:
       "Le détail de tes commissions et l'historique des paiements se consultent depuis l'onglet Affiliations de ton dashboard Systeme.io.",
@@ -470,7 +470,7 @@ export const FR: AffiliateDict = {
     err_network: "Impossible de contacter le serveur.",
     why_offered_title: "Pourquoi on t'offre ça ?",
     why_offered_body_1:
-      "Tu seras un meilleur ambassadeur en ayant vu Tiquiz Plus tourner avec tes propres données. Tu pourras montrer des screenshots authentiques à ton audience, faire une vidéo « voilà ce que j'ai créé avec Tiquiz en 10 min », et répondre aux questions de tes leads avec précision.",
+      "Tu seras un meilleur ambassadeur en ayant vu Tiquiz Plus tourner avec tes propres données. Tu pourras montrer des screenshots authentiques à ton audience, faire une vidéo \"voilà ce que j'ai créé avec Tiquiz en 10 min\", et répondre aux questions de tes leads avec précision.",
     why_offered_body_2:
       "C'est gagnant-gagnant : on te facilite la vente, tu touches tes commissions plus facilement.",
     active_title: "Mois Tiquiz Plus actif",
@@ -486,7 +486,7 @@ export const FR: AffiliateDict = {
     idea_screenshots:
       "📸 Screenshots avant/après : ton dashboard vide vs. après 30 leads captés et analysés par l'IA. Avant/après c'est ce qui convertit le mieux.",
     idea_niche:
-      "🧪 Test sur ta propre niche : crée un quiz adapté à ton audience (ex: « Quel type de [ton métier] es-tu ? »), partage-le sur ta liste, raconte les résultats.",
+      "🧪 Test sur ta propre niche : crée un quiz adapté à ton audience (ex: \"Quel type de [ton métier] es-tu ?\"), partage-le sur ta liste, raconte les résultats.",
     idea_bonus:
       "🎁 Bonus exclusif : promets à tes affiliés d'envoyer ton quiz template gratuit en bonus s'ils s'inscrivent via ton lien. Effet d'urgence + valeur ajoutée.",
     expired_title: "Ton mois Tiquiz Plus s'est terminé",
@@ -520,7 +520,7 @@ export const FR: AffiliateDict = {
     step3_bullet_posts: "Posts réseaux (LinkedIn / Instagram / X)",
     step3_bullet_visuals: "Articles long format + visuels téléchargeables",
     step3_body_outro:
-      "Ton lien tracké est automatiquement injecté dans tous les emails et posts. Tu cliques « Copier », tu colles. C'est tout.",
+      "Ton lien tracké est automatiquement injecté dans tous les emails et posts. Tu cliques \"Copier\", tu colles. C'est tout.",
     step4_title: "🎁 1 mois Tiquiz Plus offert",
     step4_subtitle: "Pour tester l'outil et créer du contenu authentique.",
     step4_body_1:
@@ -606,7 +606,7 @@ export const FR: AffiliateDict = {
     empty_posts: "Aucun post publié pour ce produit dans cette langue.",
     empty_generate_hint: "Tu peux en écrire un tout de suite depuis le rayon Générer du contenu.",
     reseaux_subtitle: "Les posts {product}, chacun avec son visuel prêt à publier.",
-    reseaux_atelier_help: "Chaque post se comprend seul : personne ne suit une série sur les réseaux. Le lien ne va PAS dans le post (LinkedIn étouffe les publications sortantes) : garde la ligne « Lien en commentaire » et colle ton lien juste après la publication. Sur Instagram et Facebook, mets-le en bio.",
+    reseaux_atelier_help: "Chaque post se comprend seul : personne ne suit une série sur les réseaux. Le lien ne va PAS dans le post (LinkedIn étouffe les publications sortantes) : garde la ligne \"Lien en commentaire\" et colle ton lien juste après la publication. Sur Instagram et Facebook, mets-le en bio.",
     articles_subtitle: "Les articles longs pour parler de {product} sur ton site.",
     articles_empty_title: "Pas encore d'article publié ici",
     articles_empty_body: "Les articles arrivent au fil de l'eau. En attendant, tu peux en générer un adapté à ton audience et le publier sous ta signature.",
@@ -634,7 +634,7 @@ export const FR: AffiliateDict = {
     gen_ph_audience: "Ex : des coachs sportifs indépendants qui ont entre 500 et 2000 abonnés Instagram, qui vendent des programmes en ligne et qui galèrent à sortir de la vente en direct.",
     gen_help_audience: "Plus tu es précis sur leur métier, leur niveau et ce qui les bloque, plus le texte sonnera juste.",
     gen_label_angle: "Angle, si tu en as un",
-    gen_ph_angle: "Ex : partir de l'objection « je n'ai pas d'audience »",
+    gen_ph_angle: "Ex : partir de l'objection \"je n'ai pas d'audience\"",
     gen_label_tone: "Ton, si tu veux le préciser",
     gen_ph_tone: "Ex : direct, un peu cash, avec de l'humour",
     gen_loading: "Écriture en cours…",
@@ -729,7 +729,7 @@ export const FR: AffiliateDict = {
     label_preheader: "Pré-en-tête (aperçu boîte mail)",
     placeholder_preheader: "Petit texte d'aperçu",
     label_content: "Contenu",
-    empty_content: "Aucun contenu - clique sur « Éditer le contenu » pour rédiger l'article.",
+    empty_content: "Aucun contenu - clique sur \"Éditer le contenu\" pour rédiger l'article.",
     edit_content_button: "Éditer le contenu (mise en forme)",
     placeholder_email_body: "Corps de l'email. {AFFILIATE_LINK} et {NAME} sont remplacés automatiquement.",
     placeholder_article_body: "Le corps du contenu (l'affilié pourra le copier-coller).",

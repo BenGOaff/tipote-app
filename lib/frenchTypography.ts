@@ -1,7 +1,7 @@
 // lib/frenchTypography.ts
 //
-// TYPOGRAPHIE FRANÇAISE : l'espace insécable avant `: ; ! ?` et `»`, après
-// `«`.
+// TYPOGRAPHIE FRANÇAISE : l'espace insécable avant `: ; ! ?`, et les
+// chevrons `« »` convertis en guillemets droits `"`.
 //
 // POURQUOI CE FICHIER A ÉTÉ RÉÉCRIT (retour Béné, 3 août 2026).
 // "Un problème qu'on avait corrigé et qui revient. Ce genre de petits
@@ -57,8 +57,26 @@ const MISSING_BEFORE_SEMI = /([\p{L}\p{N}])(;)(?=[\s)\]}»"']|$)/gu;
 const MISSING_BEFORE_COLON = /(\p{L})(:)(?=[\s)\]}»"']|$)/gu;
 // `»` et `«` : aucun risque, ces signes n'existent ni dans une URL ni
 // dans du CSS.
-const MISSING_BEFORE_RAQUO = /([\p{L}\p{N}])(»)/gu;
-const MISSING_AFTER_LAQUO = /(«)([\p{L}\p{N}])/gu;
+// -- LES CHEVRONS DEVIENNENT DES GUILLEMETS DROITS (Béné, 25 août 2026)
+//
+// "Le générateur de quiz de tiquiz et tipote et partout en fait ne doit
+// jamais utiliser ce type de guillemet en français : « mais \""
+//
+// Cette page faisait EXACTEMENT l'inverse : elle posait une espace
+// insécable autour de `«` et `»` pour les rendre typographiquement
+// justes. C'était juste, et ce n'est pas ce qu'elle veut.
+//
+// La règle est appliquée au SEUL point d'entrée, comme le reste de ce
+// fichier, et pas seulement demandée au prompt : une consigne de prompt
+// est une demande, pas une garantie. Un modèle qui écrit du français
+// sort des chevrons tôt ou tard, et personne ne le verrait avant une
+// cliente.
+//
+// L'espace intérieure part AVEC le chevron : `« mot »` donne `"mot"`,
+// pas `" mot "`. Une insécable orpheline collée à un guillemet droit
+// serait pire que le chevron d'origine.
+const CHEVRON_OUVRANT = /«[\s\u00A0\u202F]*/gu;
+const CHEVRON_FERMANT = /[\s\u00A0\u202F]*»/gu;
 
 export function isFrenchLocale(locale: string | null | undefined): boolean {
   if (!locale) return false;
@@ -73,8 +91,11 @@ function fixFragment(text: string): string {
     .replace(MISSING_BEFORE_BANG, `$1${NBSP}$2`)
     .replace(MISSING_BEFORE_SEMI, `$1${NBSP}$2`)
     .replace(MISSING_BEFORE_COLON, `$1${NBSP}$2`)
-    .replace(MISSING_BEFORE_RAQUO, `$1${NBSP}$2`)
-    .replace(MISSING_AFTER_LAQUO, `$1${NBSP}$2`);
+    // Les chevrons EN DERNIER : les motifs ci-dessus s'en servent comme
+    // repère de fin de phrase (`mot ?»`), donc les convertir avant les
+    // priverait de ce repère.
+    .replace(CHEVRON_OUVRANT, '"')
+    .replace(CHEVRON_FERMANT, '"');
 }
 
 /**
