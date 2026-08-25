@@ -42,6 +42,9 @@ import {
 // L'Atelier (70%) est attribué côté formaquiz, dans SA base.
 const PRODUIT: keyof typeof COMMISSION_RATES = "tiquiz";
 
+const AFF_COLS = "sa, email, status";
+const AFF_COLS_NEW = `${AFF_COLS}, recompense_commission_pct`;
+
 export type AttributeSaleInput = {
   customer_email: string;
   sale_amount_cents: number;
@@ -212,10 +215,27 @@ export async function attributeSale(input: AttributeSaleInput): Promise<Attribut
     // — un sa valide format mais inconnu = lien forgé ou ex-affilié banni).
     const { data: affRow } = await supabaseAdmin
       .from("affiliates")
-      .select("sa, email, status")
+      // DEUX LISTES DE COLONNES : PostgREST rejette la requête ENTIÈRE
+      // sur une colonne inconnue, et ici l'échec ne serait pas un écran
+      // vide, ce serait une commission jamais créée.
+      .select(AFF_COLS_NEW)
       .eq("sa", sa)
       .maybeSingle();
-    const aff = affRow as { sa: string; email: string; status: string } | null;
+    const affLu = affRow
+      ? affRow
+      : (
+          await supabaseAdmin
+            .from("affiliates")
+            .select(AFF_COLS)
+            .eq("sa", sa)
+            .maybeSingle()
+        ).data;
+    const aff = affLu as unknown as {
+      sa: string;
+      email: string;
+      status: string;
+      recompense_commission_pct?: number | null;
+    } | null;
     if (!aff || aff.status !== "active") {
       return { status: "affiliate_not_registered", sa };
     }
@@ -241,9 +261,22 @@ export async function attributeSale(input: AttributeSaleInput): Promise<Attribut
       .eq("sa", sa)
       .eq("product", PRODUIT)
       .maybeSingle();
+    // LE PALIER DE FIDÉLITÉ (Béné, 25 août 2026 : "il a 10 affiliés
+    // abonnés [...] il gagne 20 %"). Il s'insère à l'étage prévu pour
+    // lui depuis le 19 août ("le taux de son PALIER, quand les paliers
+    // existeront") : un taux négocié à la main passe toujours devant, et
+    // un affilié sans palier retombe sur le taux de base du produit.
+    //
+    // La valeur est un INSTANTANÉ, écrit par le recalcul mensuel. On ne
+    // recompte pas ses filleuls ici : une commission créée pendant le
+    // webhook d'un paiement n'a pas à aller compter des lignes, et le
+    // taux doit être celui ANNONCÉ à l'affilié ce mois-ci, pas celui
+    // qu'un décompte fait à la seconde près donnerait.
+    const palierPct = Number(aff.recompense_commission_pct ?? NaN);
     const rate = resolveCommissionRate({
       product: PRODUIT,
       override: Number((overrideRow as { rate?: number } | null)?.rate ?? NaN),
+      tierRate: Number.isFinite(palierPct) ? palierPct / 100 : null,
     });
 
     // Le montant de la VENTE reste celui qui a été encaissé : c'est lui
