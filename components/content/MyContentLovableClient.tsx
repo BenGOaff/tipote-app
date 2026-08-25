@@ -87,6 +87,7 @@ import { fr } from "date-fns/locale";
 import type { ContentListItem } from "@/lib/types/content";
 import { ContentCalendarView } from "@/components/content/ContentCalendarView";
 import { toast } from "@/components/ui/use-toast";
+import { PartagerQuizDialog } from "@/components/quiz/PartagerQuizDialog";
 
 type QuizListItem = {
   id: string;
@@ -328,6 +329,7 @@ export default function MyContentLovableClient({
   const t = useTranslations("myContent");
   const locale = useLocale();
   const tc = useTranslations("common");
+  const tPartage = useTranslations("partageQuiz");
   // Build share URLs honouring the creator's chosen domain. Falls
   // back to the current window origin until the hook resolves.
   const { buildPublicUrl } = useShareDomain();
@@ -359,6 +361,10 @@ export default function MyContentLovableClient({
   // Duplicate is quiz/survey only. We POST to the deep-copy route and jump
   // straight into the new draft's editor on success ("clone then tweak").
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+  // Le quiz dont on gere les liens de partage. Une adresse par
+  // destinataire : la personne installe une COPIE, l'original ne bouge
+  // jamais.
+  const [partageQuizId, setPartageQuizId] = useState<string | null>(null);
 
   async function handleDuplicateQuiz(quizId: string) {
     if (duplicatingId) return;
@@ -1031,6 +1037,18 @@ export default function MyContentLovableClient({
                                   >
                                     <CopyPlus className="w-4 h-4 mr-2" /> {t("ui.duplicate")}
                                   </DropdownMenuItem>
+                                  {/* Partager le quiz a quelqu'un d'AUTRE :
+                                      un lien, un clic, et il l'installe
+                                      chez lui. Le module quiz de Tiquiz
+                                      est jumeau, la meme entree y vit. */}
+                                  <DropdownMenuItem
+                                    onSelect={(e) => {
+                                      e.preventDefault();
+                                      setPartageQuizId(qz.id);
+                                    }}
+                                  >
+                                    <Share2 className="w-4 h-4 mr-2" /> {tPartage("button")}
+                                  </DropdownMenuItem>
                                   {isActive && (() => {
                                     // Gwenn (19 mai 2026) : URL respecte
                                     // maintenant le slug + custom domain.
@@ -1633,6 +1651,14 @@ export default function MyContentLovableClient({
                 </DialogFooter>
               </DialogContent>
             </Dialog>
+
+            <PartagerQuizDialog
+              quizId={partageQuizId ?? ""}
+              open={partageQuizId !== null}
+              onOpenChange={(o) => {
+                if (!o) setPartageQuizId(null);
+              }}
+            />
 
             {/* Footer info (email) */}
             <div className="text-xs text-muted-foreground">

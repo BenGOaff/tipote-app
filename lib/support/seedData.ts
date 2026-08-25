@@ -5806,8 +5806,219 @@ Le variabili di punteggio funzionano **anche nell'URL del pulsante d'azione**, e
   },
   {
     category_slug: "tiquiz",
-    slug: "tiquiz-depannage",
+    slug: "tiquiz-partager-un-quiz",
     sort_order: 16,
+    title: {
+      fr: "Envoyer un quiz complet à quelqu'un",
+      en: "Sending a whole quiz to someone",
+      es: "Enviar un quiz completo a alguien",
+      it: "Inviare un quiz completo a qualcuno",
+      ar: "إرسال اختبار كامل إلى شخص آخر",
+    },
+    content: {
+      fr: `## Un lien, un clic, le quiz est chez l'autre
+
+Tu as construit un quiz pour un client, pour une élève, ou comme modèle à réutiliser. Tu peux le lui **envoyer entier** : il ouvre le lien, il clique, et le quiz est installé dans son compte Tiquiz. Avec les textes, les images, les questions, les réponses, les points et les profils de résultat.
+
+Le tien ne bouge pas. Il n'est ni déplacé, ni publié, ni modifié : l'autre reçoit une COPIE.
+
+### Comment faire
+
+Dans **Mes projets**, sur la carte du quiz, le bouton **Partager ce quiz**. Tu donnes un nom au lien pour t'y retrouver ("Sophie, cliente potentielle") : ce nom ne s'affiche jamais chez la personne, c'est une note pour toi.
+
+Par défaut le lien **ne sert qu'une fois**. Décoche la case si tu veux le donner à plusieurs personnes, par exemple pour un modèle que tu distribues à tout un groupe.
+
+Le lien est copié tout de suite : tu n'as plus qu'à le coller dans ton message.
+
+### Ce qui voyage, et ce qui reste chez toi
+
+Voyage : les titres, les questions, les réponses, les points, les profils de résultat, les images, les couleurs et la mise en page. Tout ce que tu as écrit.
+
+Reste chez toi, et ce n'est pas un oubli :
+
+- **tes tags Systeme.io.** S'ils partaient, les leads de l'autre personne déclencheraient TES automatisations, et arriveraient dans TES séquences email ;
+- **tes pixels de suivi** (Meta, Google Analytics, Google Ads). Sinon son quiz enverrait ses conversions dans ton compte publicitaire ;
+- **les adresses de tes boutons**, ton lien de politique de confidentialité, ton pied de page. Sinon ses visiteurs atterriraient sur ton site, et un lien légal qui pointe chez quelqu'un d'autre n'est pas seulement gênant, il est faux.
+
+La personne voit cette liste écrite à l'installation, avec ce qu'il lui reste à remplir. Elle n'a pas à le deviner.
+
+### Le quiz arrive en brouillon
+
+Toujours. Il ne se publie que quand elle le décide, une fois qu'elle a mis ses propres tags et ses propres liens. C'est la seule façon d'éviter un quiz en ligne dont le bouton ne mène nulle part.
+
+### Couper un lien
+
+Sur la même fenêtre, chaque lien affiche combien de fois il a servi, et un bouton **Désactiver**. Un lien coupé ne peut plus installer le quiz, et il se réactive d'un clic. Tu peux en créer autant que tu veux, un par personne.
+
+### Il faut un compte Tiquiz
+
+La personne peut voir l'aperçu du quiz sans compte : c'est justement l'intérêt quand tu montres ton travail à un prospect. Pour l'installer, il lui faut un compte. Si elle n'est pas connectée, on l'emmène se connecter et on la ramène sur le lien.
+
+Et le plan gratuit reste limité à 1 quiz : installer un quiz partagé compte comme une création.`,
+      en: `## One link, one click, and the quiz is theirs
+
+You built a quiz for a client, for a student, or as a template to reuse. You can **send the whole thing**: they open the link, they click, and the quiz is installed in their Tiquiz account. Texts, images, questions, answers, points and result profiles included.
+
+Yours does not move. It is not transferred, published or changed: they get a COPY.
+
+### How to do it
+
+In **My projects**, on the quiz card, the **Share this quiz** button. Give the link a name so you can find it again ("Sophie, prospective client"): that name is never shown to them, it is a note for you.
+
+By default the link **works only once**. Untick the box to hand it to several people, for instance a template you give to a whole group.
+
+The link is copied straight away: all you have to do is paste it into your message.
+
+### What travels, and what stays with you
+
+Travels: titles, questions, answers, points, result profiles, images, colours and layout. Everything you wrote.
+
+Stays with you, and that is not an oversight:
+
+- **your Systeme.io tags.** If they travelled, their leads would fire YOUR automations and land in YOUR email sequences;
+- **your tracking pixels** (Meta, Google Analytics, Google Ads). Otherwise their quiz would send conversions into your ad account;
+- **your button URLs**, your privacy policy link, your footer. Otherwise their visitors would land on your site, and a legal link pointing somewhere else is not merely awkward, it is wrong.
+
+They see that list written out at install time, with what is left for them to fill in. They do not have to guess.
+
+### The quiz arrives as a draft
+
+Always. It only goes live when they decide, once they have set their own tags and links. It is the only way to avoid a published quiz whose button leads nowhere.
+
+### Cutting a link
+
+In the same window, each link shows how many times it has been used, and a **Disable** button. A disabled link can no longer install the quiz, and one click re-enables it. Create as many as you like, one per person.
+
+### They need a Tiquiz account
+
+They can see the quiz preview without an account: that is exactly the point when you are showing your work to a prospect. Installing it needs an account. If they are not logged in, we take them to log in and bring them back to the link.
+
+And the free plan is still limited to 1 quiz: installing a shared quiz counts as a creation.`,
+      es: `## Un enlace, un clic, y el quiz está en su cuenta
+
+Has creado un quiz para un cliente, para una alumna, o como plantilla reutilizable. Puedes **enviarlo entero**: abre el enlace, hace clic, y el quiz queda instalado en su cuenta de Tiquiz. Con los textos, las imágenes, las preguntas, las respuestas, los puntos y los perfiles de resultado.
+
+El tuyo no se mueve. No se transfiere, no se publica, no se modifica: la otra persona recibe una COPIA.
+
+### Cómo hacerlo
+
+En **Mis proyectos**, en la tarjeta del quiz, el botón **Compartir este quiz**. Dale un nombre al enlace para reconocerlo ("Sofía, cliente potencial"): ese nombre nunca se muestra a la otra persona, es una nota para ti.
+
+Por defecto el enlace **sirve una sola vez**. Desmarca la casilla si quieres dárselo a varias personas, por ejemplo una plantilla para todo un grupo.
+
+El enlace se copia enseguida: solo tienes que pegarlo en tu mensaje.
+
+### Lo que viaja y lo que se queda contigo
+
+Viaja: los títulos, las preguntas, las respuestas, los puntos, los perfiles de resultado, las imágenes, los colores y el diseño. Todo lo que has escrito.
+
+Se queda contigo, y no es un olvido:
+
+- **tus etiquetas de Systeme.io.** Si viajaran, los leads de la otra persona dispararían TUS automatizaciones y entrarían en TUS secuencias de email;
+- **tus píxeles de seguimiento** (Meta, Google Analytics, Google Ads). Si no, su quiz enviaría conversiones a tu cuenta publicitaria;
+- **las direcciones de tus botones**, tu enlace de política de privacidad, tu pie de página. Si no, sus visitantes acabarían en tu sitio, y un enlace legal que apunta a otra persona no solo molesta: es falso.
+
+La persona ve esta lista escrita al instalar, con lo que le queda por rellenar. No tiene que adivinarlo.
+
+### El quiz llega como borrador
+
+Siempre. Solo se publica cuando ella lo decide, una vez puestas sus propias etiquetas y sus propios enlaces. Es la única forma de evitar un quiz publicado cuyo botón no lleva a ninguna parte.
+
+### Cortar un enlace
+
+En la misma ventana, cada enlace muestra cuántas veces se ha usado y un botón **Desactivar**. Un enlace desactivado ya no instala el quiz, y se reactiva con un clic. Crea tantos como quieras, uno por persona.
+
+### Hace falta una cuenta Tiquiz
+
+Puede ver la vista previa sin cuenta: es justamente lo interesante cuando enseñas tu trabajo a un posible cliente. Para instalarlo hace falta una cuenta. Si no ha iniciado sesión, la llevamos a conectarse y la traemos de vuelta al enlace.
+
+Y el plan gratuito sigue limitado a 1 quiz: instalar un quiz compartido cuenta como una creación.`,
+      it: `## Un link, un clic, e il quiz è dall'altra parte
+
+Hai costruito un quiz per un cliente, per un'allieva, o come modello da riutilizzare. Puoi **inviarlo per intero**: apre il link, fa clic, e il quiz viene installato nel suo account Tiquiz. Con i testi, le immagini, le domande, le risposte, i punti e i profili di risultato.
+
+Il tuo non si muove. Non viene trasferito, né pubblicato, né modificato: l'altra persona riceve una COPIA.
+
+### Come si fa
+
+In **I miei progetti**, sulla scheda del quiz, il pulsante **Condividi questo quiz**. Dai un nome al link per ritrovarlo ("Sofia, potenziale cliente"): quel nome non viene mai mostrato alla persona, è una nota per te.
+
+Per impostazione predefinita il link **vale una sola volta**. Togli la spunta se vuoi darlo a più persone, per esempio un modello destinato a un intero gruppo.
+
+Il link viene copiato subito: ti basta incollarlo nel messaggio.
+
+### Cosa viaggia e cosa resta da te
+
+Viaggia: titoli, domande, risposte, punti, profili di risultato, immagini, colori e impaginazione. Tutto ciò che hai scritto.
+
+Resta da te, e non è una dimenticanza:
+
+- **i tuoi tag Systeme.io.** Se viaggiassero, i lead dell'altra persona farebbero scattare LE TUE automazioni e finirebbero nelle TUE sequenze email;
+- **i tuoi pixel di tracciamento** (Meta, Google Analytics, Google Ads). Altrimenti il suo quiz manderebbe conversioni nel tuo account pubblicitario;
+- **gli indirizzi dei tuoi pulsanti**, il link alla tua privacy policy, il tuo piè di pagina. Altrimenti i suoi visitatori finirebbero sul tuo sito, e un link legale che punta altrove non è solo fastidioso: è falso.
+
+La persona legge questo elenco al momento dell'installazione, con ciò che le resta da compilare. Non deve indovinarlo.
+
+### Il quiz arriva come bozza
+
+Sempre. Viene pubblicato solo quando lo decide lei, dopo aver messo i propri tag e i propri link. È l'unico modo per evitare un quiz online il cui pulsante non porta da nessuna parte.
+
+### Chiudere un link
+
+Nella stessa finestra, ogni link mostra quante volte è stato usato e un pulsante **Disattiva**. Un link disattivato non installa più il quiz, e si riattiva con un clic. Puoi crearne quanti vuoi, uno per persona.
+
+### Serve un account Tiquiz
+
+Può vedere l'anteprima senza account: è proprio il punto quando mostri il tuo lavoro a un potenziale cliente. Per installarlo serve un account. Se non ha effettuato l'accesso, la portiamo ad accedere e la riportiamo sul link.
+
+E il piano gratuito resta limitato a 1 quiz: installare un quiz condiviso conta come una creazione.`,
+      ar: `## رابط واحد، نقرة واحدة، والاختبار عند الطرف الآخر
+
+بنيتَ اختبارًا لعميل، أو لمتدربة، أو كنموذج لإعادة الاستخدام. يمكنك **إرساله كاملًا**: يفتح الرابط، ينقر، فيُثبَّت الاختبار في حسابه على Tiquiz. بالنصوص والصور والأسئلة والأجوبة والنقاط وملفات النتائج.
+
+اختبارك أنت لا يتحرك. لا يُنقل ولا يُنشر ولا يُعدَّل: الطرف الآخر يحصل على نسخة.
+
+### كيف تفعل ذلك
+
+في **مشاريعي**، على بطاقة الاختبار، زر **مشاركة هذا الاختبار**. أعطِ الرابط اسمًا لتتعرف عليه لاحقًا ("صوفي، عميلة محتملة"): هذا الاسم لا يظهر للطرف الآخر أبدًا، إنه ملاحظة لك.
+
+افتراضيًا الرابط **يصلح مرة واحدة فقط**. أزل علامة الاختيار إذا أردت إعطاءه لعدة أشخاص، مثل نموذج توزعه على مجموعة كاملة.
+
+يُنسخ الرابط فورًا: لا يبقى إلا لصقه في رسالتك.
+
+### ما ينتقل وما يبقى عندك
+
+ينتقل: العناوين والأسئلة والأجوبة والنقاط وملفات النتائج والصور والألوان والتنسيق. كل ما كتبته.
+
+ويبقى عندك، وهذا ليس سهوًا:
+
+- **وسوم Systeme.io الخاصة بك.** لو انتقلت، لأطلقت عملاءُ الطرف الآخر أتمتاتِك أنت، ودخلوا في سلاسل بريدك أنت؛
+- **بكسلات التتبع** (Meta وGoogle Analytics وGoogle Ads). وإلا لأرسل اختباره تحويلاته إلى حسابك الإعلاني؛
+- **عناوين أزرارك** ورابط سياسة الخصوصية وتذييل صفحتك. وإلا لوصل زواره إلى موقعك أنت، ورابط قانوني يشير إلى شخص آخر ليس مزعجًا فحسب، بل خاطئ.
+
+يرى الشخص هذه القائمة مكتوبة عند التثبيت، مع ما تبقى عليه ملؤه. لا يحتاج إلى تخمينها.
+
+### يصل الاختبار كمسودة
+
+دائمًا. ولا يُنشر إلا حين يقرر هو، بعد أن يضع وسومه وروابطه. هذه هي الطريقة الوحيدة لتفادي اختبار منشور زره لا يؤدي إلى شيء.
+
+### قطع رابط
+
+في النافذة نفسها يعرض كل رابط عدد مرات استعماله وزر **تعطيل**. الرابط المعطَّل لا يثبّت الاختبار بعد الآن، ويُعاد تفعيله بنقرة. أنشئ منها ما شئت، واحدًا لكل شخص.
+
+### يلزم حساب Tiquiz
+
+يمكنه رؤية معاينة الاختبار بلا حساب: وهذا بالضبط المطلوب حين تعرض عملك على عميل محتمل. أما التثبيت فيتطلب حسابًا. وإن لم يكن متصلًا، نأخذه لتسجيل الدخول ثم نعيده إلى الرابط.
+
+وتبقى الخطة المجانية محدودة باختبار واحد: تثبيت اختبار مشترَك يُحتسب إنشاءً.`,
+    },
+    related_slugs: ["tiquiz-page-resultat", "tiquiz-leads"],
+    tags: ["tiquiz", "partage", "partager", "modele", "template", "installer", "copie", "client"],
+  },
+  {
+    category_slug: "tiquiz",
+    slug: "tiquiz-depannage",
+    sort_order: 17,
     title: {
       fr: "Ça ne marche pas : le symptôme, la cause, la solution",
       en: "It's not working: symptom, cause, fix",
