@@ -3482,6 +3482,131 @@ Widget di condivisione con pulsanti per 8 piattaforme. 4 modalità di visualizza
   },
   {
     category_slug: "billing-credits",
+    slug: "programme-affiliation",
+    sort_order: 6,
+    title: {
+      fr: "Devenir affilié, et les codes de réduction",
+      en: "Becoming an affiliate, and discount codes",
+      es: "Ser afiliado y los códigos de descuento",
+      it: "Diventare affiliato e i codici sconto",
+      ar: "أن تصبح مسوّقًا، وأكواد الخصم",
+    },
+    content: {
+      fr: `## Recommander Tiquiz, et être payé pour ça
+
+Le programme d'affiliation paie **40 % HT de chaque mois** où la personne que tu as amenée reste abonnée. Pas une fois : tous les mois. Elle arrête, on arrête. Elle reste trois ans, tu es payé trois ans.
+
+### S'inscrire, avec ou sans compte Systeme.io
+
+Il fallait un compte Systeme.io pour rejoindre le programme. **Ce n'est plus le cas.** Sur l'écran de connexion de l'espace affilié, le lien "M'inscrire directement" ouvre le formulaire : ton email, ton prénom, et c'est tout.
+
+Le champ "identifiant affilié Systeme.io" est **facultatif**. Deux cas :
+
+- **Tu as un compte Systeme.io** et tu as déjà envoyé du monde par leurs anciens tunnels : colle ton identifiant. C'est la seule façon que ces ventes te soient rattachées.
+- **Tu n'en as pas** : laisse le champ vide, on fabrique le tien.
+
+Une adresse déjà inscrite sous un autre identifiant est refusée, et on te le dit : tes commissions sont accrochées à cet identifiant, on ne fusionne pas deux comptes tout seuls. Écris-nous, on le fait à la main.
+
+### Ton lien
+
+Il vit dans **Promouvoir**. Il porte ton code public, du genre \`?ref=jocelyne\`. C'est lui qui pose le cookie chez ton prospect, et ce cookie dure **un an** : quelqu'un qui clique en janvier et achète en juin te paie quand même.
+
+Et si cette personne s'inscrit en gratuit par ton lien, elle reste **ton** filleul à vie, même si elle passe payante trois mois plus tard.
+
+### Les codes de réduction
+
+Si on t'attribue un code, il apparaît **dans ton lien**, dans Promouvoir. Tu copies un lien, la réduction voyage avec.
+
+Trois choses à savoir, et la première est la plus importante :
+
+1. **Ton code ne marche QUE sur ton lien.** Quelqu'un qui le trouve ailleurs et arrive sans passer par toi paiera le prix plein. C'est ce qui te protège : ton code ne peut pas se retrouver sur un site de bons plans et servir à tout le monde.
+2. **La réduction porte sur la première échéance**, pas sur toutes.
+3. **Ta commission suit.** Elle se calcule sur ce qui est encaissé, donc tu touches ton pourcentage du montant remisé. Une remise que tu consens te coûte un peu, et c'est normal : c'est toi qui l'as offerte.
+
+Le code ne se cumule pas avec le mois offert. Quand les deux se présentent, c'est le mois offert qui gagne, et l'écran le dit clairement à ton prospect.
+
+### Être payé
+
+Les commissions deviennent versables **30 jours après le paiement**, le temps du délai de rétractation. Les versements partent entre le **10 et le 13 du mois**, à partir de **20 €** cumulés (en dessous, l'argent reste acquis et part au versement suivant).
+
+Tu choisis **PayPal ou virement** dans ton espace, et tu remplis tes informations de facturation : on émet la facture **à ta place**, tous les mois, pour ta comptabilité. Sans ton mandat coché et tes informations complètes, on ne peut pas te payer : l'écran te dit exactement ce qui manque.`,
+      en: `## Recommending Tiquiz, and getting paid for it
+
+The affiliate programme pays **40% (excl. VAT) of every month** the person you brought stays subscribed. Not once: every month. They stop, we stop. They stay three years, you get paid three years.
+
+### Signing up, with or without a Systeme.io account
+
+A Systeme.io account used to be required. **Not any more.** On the affiliate login screen, the "Sign up directly" link opens the form: your email, your first name, done.
+
+The "Systeme.io affiliate ID" field is **optional**. Two cases:
+
+- **You have a Systeme.io account** and already sent people through their older funnels: paste your ID. It is the only way those sales get tied back to you.
+- **You don't**: leave it empty, we create yours.
+
+An address already registered under another ID is refused, and we say so: your commissions hang on that ID, and we do not merge two accounts on our own. Write to us and we'll do it by hand.
+
+### Your link
+
+It lives in **Promote**. It carries your public code, like \`?ref=jocelyne\`. That is what drops the cookie on your prospect, and the cookie lasts **one year**: someone clicking in January and buying in June still pays you.
+
+And if that person signs up on the free plan through your link, they stay **your** referral for life, even if they go paid three months later.
+
+### Discount codes
+
+If you are given a code, it appears **inside your link**, in Promote. You copy one link, the discount travels with it.
+
+Three things to know, and the first matters most:
+
+1. **Your code only works on YOUR link.** Someone who finds it elsewhere and arrives without going through you pays full price. That is what protects you: your code cannot end up on a deals site and serve everyone.
+2. **The discount applies to the first payment**, not to every one.
+3. **Your commission follows.** It is computed on what is actually collected, so you earn your percentage of the discounted amount. A discount you grant costs you a little, and that is fair: you are the one who offered it.
+
+The code does not stack with the free month. When both show up, the free month wins, and the screen says so clearly to your prospect.
+
+### Getting paid
+
+Commissions become payable **30 days after payment**, covering the withdrawal period. Payouts go out between the **10th and the 13th of the month**, from **20 €** accumulated (below that, the money stays yours and rolls into the next payout).
+
+You choose **PayPal or bank transfer** in your space, and you fill in your billing details: we issue the invoice **on your behalf**, every month, for your accounting. Without your mandate ticked and your details complete, we cannot pay you: the screen tells you exactly what is missing.`,
+      es: `## Recomendar Tiquiz y cobrar por ello
+
+El programa paga el **40 % (sin IVA) de cada mes** que la persona que trajiste siga suscrita. No una vez: todos los meses.
+
+**Inscribirse sin Systeme.io.** Ya no hace falta cuenta de Systeme.io. En la pantalla de acceso del espacio de afiliados, el enlace «Inscribirme directamente» abre el formulario. El campo del identificador Systeme.io es **opcional**: si tienes cuenta, pégalo (es la única forma de que te asignen las ventas de sus embudos antiguos); si no, déjalo vacío y creamos el tuyo.
+
+**Tu enlace** está en Promocionar y lleva tu código público. El cookie dura **un año**. Y quien se registre gratis por tu enlace queda vinculado a ti de por vida.
+
+**Códigos de descuento.** Si te asignan uno, aparece **dentro de tu enlace**. Tres reglas: solo funciona con TU enlace (quien lo use sin pasar por ti paga precio completo, y eso te protege), el descuento es sobre la primera cuota, y tu comisión se calcula sobre lo cobrado. No se acumula con el mes gratis: gana el mes gratis, y la pantalla lo dice.
+
+**Cobro:** 30 días después del pago, entre el 10 y el 13 del mes, desde 20 € acumulados. Eliges PayPal o transferencia y rellenas tus datos de facturación: emitimos la factura en tu nombre.`,
+      it: `## Consigliare Tiquiz ed essere pagato
+
+Il programma paga il **40 % (IVA esclusa) di ogni mese** in cui la persona che hai portato resta abbonata. Non una volta: ogni mese.
+
+**Iscriversi senza Systeme.io.** Non serve più un account Systeme.io. Nella schermata di accesso dello spazio affiliati, il link «Iscrivermi direttamente» apre il modulo. Il campo dell'identificativo Systeme.io è **facoltativo**: se hai un account, incollalo (è l'unico modo perché ti vengano attribuite le vendite dai loro vecchi funnel); altrimenti lascialo vuoto e lo creiamo noi.
+
+**Il tuo link** è in Promuovi e porta il tuo codice pubblico. Il cookie dura **un anno**. E chi si iscrive gratis dal tuo link resta collegato a te a vita.
+
+**Codici sconto.** Se te ne assegnano uno, compare **dentro il tuo link**. Tre regole: funziona solo con IL TUO link (chi lo usa senza passare da te paga prezzo pieno, ed è ciò che ti protegge), lo sconto vale sulla prima scadenza, e la tua commissione si calcola sull'incassato. Non si cumula con il mese offerto: vince il mese offerto, e lo schermo lo dice.
+
+**Pagamento:** 30 giorni dopo l'incasso, tra il 10 e il 13 del mese, da 20 € accumulati. Scegli PayPal o bonifico e compili i dati di fatturazione: emettiamo la fattura per tuo conto.`,
+      ar: `## أن توصي بـ Tiquiz وتتقاضى مقابل ذلك
+
+يدفع البرنامج **40 % (بدون ضريبة) عن كل شهر** يظل فيه من جلبته مشتركًا. ليس مرة واحدة: كل شهر.
+
+**التسجيل بلا Systeme.io.** لم يعد حساب Systeme.io ضروريًا. في شاشة الدخول إلى مساحة المسوّقين، يفتح رابط «التسجيل مباشرة» النموذج. حقل معرّف Systeme.io **اختياري**: إن كان لديك حساب فالصقه (هذه الطريقة الوحيدة لنسب مبيعات قنواتهم القديمة إليك)، وإلا اتركه فارغًا وننشئ لك معرّفًا.
+
+**رابطك** موجود في «الترويج» ويحمل رمزك العام. ويدوم الكوكي **سنة كاملة**. ومن يسجّل مجانًا عبر رابطك يبقى مرتبطًا بك مدى الحياة.
+
+**أكواد الخصم.** إن مُنحت كودًا، يظهر **داخل رابطك**. ثلاث قواعد: لا يعمل إلا مع رابطك أنت (ومن يستعمله دون المرور بك يدفع السعر الكامل، وهذا ما يحميك)، والخصم على أول استحقاق، وعمولتك تُحسب على المبلغ المحصّل. ولا يُجمع مع الشهر المجاني: يفوز الشهر المجاني، والشاشة تقول ذلك.
+
+**الدفع:** بعد 30 يومًا من السداد، بين 10 و13 من الشهر، ابتداءً من 20 يورو متراكمة. تختار PayPal أو التحويل البنكي وتملأ بيانات الفوترة: ونصدر الفاتورة نيابة عنك.`,
+    },
+    related_slugs: ["plans-overview", "manage-subscription"],
+    tags: ["affiliation", "affiliate", "commission", "code", "reduction", "discount", "parrainage"],
+  },
+  {
+    category_slug: "billing-credits",
     slug: "multi-projects",
     sort_order: 5,
     title: {
@@ -4422,9 +4547,25 @@ Tiquiz peut présenter chaque résultat en quatre blocs qui s'enchaînent. Chacu
 
 Ces mots (reconnaissance, blocage, chemin, suite) sont là pour **toi**. Ils ne doivent jamais apparaître dans le texte que lit le visiteur : sinon il lit la structure au lieu du message.
 
+**C'est maintenant la présentation par défaut** de tout nouveau quiz, qu'il soit généré par l'IA ou importé depuis un document.
+
+### Annoncer ton offre, et son prix
+
+Le dernier bloc est le seul qui a le droit de vendre, et il vend en bénéfices : ce que la personne obtient, ce qu'elle n'a plus à faire elle-même, ce que ça change dans sa semaine. **C'est là que se disent le nom de ton offre, son format et son prix**, pas sur le bouton.
+
+Le bouton, lui, fait 3 à 6 mots : un verbe et un bénéfice. "Réserver mon audit gratuit", "Découvrir la méthode". Ni prix, ni garantie, ni « accès immédiat » : un bouton chargé se lit comme une bannière publicitaire, et il fait baisser le clic.
+
+Pour que l'IA annonce ton prix, écris-le dans **"Pourquoi tu crées ce quiz ?"** au moment de la génération : ton offre, son format, son prix. Sans prix donné, elle n'en invente aucun, et c'est voulu.
+
+### Retirer un bloc
+
+Chaque bloc porte une petite croix dans l'aperçu du résultat. Un clic, il disparaît **sur tous les profils**, et une ligne pointillée prend sa place pour le ramener quand tu veux. **Ton texte n'est jamais effacé** : il reste en base et revient intact.
+
 ### L'activer sur un quiz existant
 
 Un quiz créé avant cette présentation garde son affichage d'origine, exprès : on ne change jamais une page déjà en ligne sans te demander. Pour passer aux quatre temps, ouvre ton quiz et cherche le bandeau au-dessus de tes profils de résultat. C'est **réversible**, et ça ne touche aucun de tes autres quiz.
+
+Sur un quiz plus ancien, ou importé, le dernier bloc est vide pour tous tes profils. Un bouton **"Écrire le pont manquant"** te le rédige, profil par profil, à partir de ce que ton résultat dit déjà. Relis avant d'enregistrer : rien n'est écrit tant que tu n'as pas sauvegardé.
 
 Dupliquer un quiz ne suffit pas : la copie est fidèle à l'original, donc elle reproduit aussi son ancienne présentation.
 
@@ -4458,9 +4599,25 @@ Tiquiz can lay each result out in four blocks that build on each other. Each has
 
 Those words (recognition, blocker, path, next) are for **you**. They must never appear in the text the visitor reads, or they read the skeleton instead of the message.
 
+**This is now the default layout** for every new quiz, whether generated by AI or imported from a document.
+
+### Naming your offer, and its price
+
+The last block is the only one allowed to sell, and it sells in benefits: what they get, what they no longer have to do themselves, what changes in their week. **That is where your offer's name, format and price belong**, not on the button.
+
+The button is 3 to 6 words: a verb and a benefit. "Book my free audit", "Discover the method". No price, no guarantee, no "instant access": a loaded button reads like an ad banner, and it lowers clicks.
+
+For the AI to announce your price, write it in **"Why are you creating this quiz?"** when you generate: your offer, its format, its price. With no price given, it invents none, and that is deliberate.
+
+### Removing a block
+
+Each block carries a small cross in the result preview. One click and it disappears **on every profile**, with a dashed line taking its place to bring it back whenever you want. **Your text is never deleted**: it stays in the database and comes back intact.
+
 ### Turning it on for an existing quiz
 
 A quiz created before this layout keeps its original display on purpose: we never change a live page without asking. To switch, open your quiz and look for the banner above your result profiles. It is **reversible** and affects no other quiz.
+
+On an older or imported quiz, the last block is empty on every profile. A **"Write the missing bridge"** button drafts it for you, profile by profile, from what your result already says. Read it before saving: nothing is written until you save.
 
 Duplicating a quiz will not do it: the copy is faithful to the original, so it reproduces the old layout too.
 
@@ -4485,7 +4642,13 @@ Ha respondido y ha dejado su email: su atención está al máximo.
 
 **Los cuatro tiempos.** Tiquiz puede presentar cada resultado en cuatro bloques encadenados: se reconoce, entiende qué le bloquea, ve el camino, ve lo que sigue (tu oferta como consecuencia lógica). Ese vocabulario es para ti, nunca debe aparecer en el texto que lee el visitante.
 
-Un quiz creado antes conserva su presentación original a propósito. Para cambiar, abre el quiz y busca el aviso encima de tus perfiles de resultado. Es reversible y no afecta a tus otros quiz. Duplicar no basta: la copia es fiel al original.
+Es ahora la presentación por defecto de todo quiz nuevo, generado por IA o importado.
+
+**Tu oferta y su precio van en el último bloque**, nunca en el botón. El botón son 3 a 6 palabras: un verbo y un beneficio. Para que la IA anuncie tu precio, escríbelo en «¿Por qué creas este quiz?» al generar. Sin precio dado, no inventa ninguno.
+
+**Quitar un bloque:** una cruz en la vista previa del resultado. Desaparece en todos los perfiles y una línea de puntos lo devuelve. Tu texto nunca se borra.
+
+Un quiz creado antes conserva su presentación original a propósito. Para cambiar, abre el quiz y busca el aviso encima de tus perfiles de resultado. Es reversible y no afecta a tus otros quiz. En un quiz antiguo o importado, el último bloque está vacío: el botón «Escribir el puente que falta» lo redacta. Duplicar no basta: la copia es fiel al original.
 
 **Compartir.** Eliges las redes en los ajustes. Si no marcas ninguna, se muestran todas. El enlace compartido es el del **perfil obtenido**, no el del quiz.
 
@@ -4496,7 +4659,13 @@ Ha risposto e ha lasciato la sua email: la sua attenzione è al massimo.
 
 **I quattro tempi.** Tiquiz può presentare ogni risultato in quattro blocchi concatenati: si riconosce, capisce cosa lo blocca, vede il percorso, vede il seguito (la tua offerta come conseguenza logica). Quel vocabolario è per te, non deve mai comparire nel testo che legge il visitatore.
 
-Un quiz creato prima mantiene la presentazione originale di proposito. Per cambiare, apri il quiz e cerca il banner sopra i profili di risultato. È reversibile e non tocca gli altri quiz. Duplicare non basta: la copia è fedele all'originale.
+È ora la presentazione predefinita di ogni nuovo quiz, generato dall'IA o importato.
+
+**La tua offerta e il suo prezzo stanno nell'ultimo blocco**, mai sul pulsante. Il pulsante sono 3-6 parole: un verbo e un beneficio. Perché l'IA annunci il tuo prezzo, scrivilo in «Perché crei questo quiz?» al momento della generazione. Senza prezzo indicato, non ne inventa nessuno.
+
+**Togliere un blocco:** una crocetta nell'anteprima del risultato. Sparisce su tutti i profili e una linea tratteggiata lo riporta. Il tuo testo non viene mai cancellato.
+
+Un quiz creato prima mantiene la presentazione originale di proposito. Per cambiare, apri il quiz e cerca il banner sopra i profili di risultato. È reversibile e non tocca gli altri quiz. Su un quiz più vecchio o importato, l'ultimo blocco è vuoto: il pulsante «Scrivere il ponte mancante» lo redige. Duplicare non basta: la copia è fedele all'originale.
 
 **Condivisione.** Scegli i social nelle impostazioni. Se non ne spunti nessuno, si mostrano tutti. Il link condiviso è quello del **profilo ottenuto**, non del quiz.
 
@@ -4507,7 +4676,13 @@ Un quiz creato prima mantiene la presentazione originale di proposito. Per cambi
 
 **الأزمنة الأربعة.** يمكن لـ Tiquiz عرض كل نتيجة في أربع كتل متتابعة: يتعرّف على نفسه، يفهم ما يعيقه، يرى الطريق، يرى ما يليه (عرضك كنتيجة منطقية). هذه المصطلحات لك أنت، ويجب ألا تظهر أبدًا في النص الذي يقرأه الزائر.
 
-الاختبار المنشأ سابقًا يحتفظ بعرضه الأصلي عمدًا. للتغيير، افتح اختبارك وابحث عن الشريط فوق ملفات النتائج. القرار قابل للتراجع ولا يمس اختباراتك الأخرى. النسخ لا يكفي: النسخة مطابقة للأصل.
+هذه هي الآن الطريقة الافتراضية لكل اختبار جديد، سواء أنشأه الذكاء الاصطناعي أو استُورد من مستند.
+
+**عرضك وسعره يُذكران في الكتلة الأخيرة**، لا على الزر أبدًا. الزر من 3 إلى 6 كلمات: فعل ومنفعة. ولكي يعلن الذكاء الاصطناعي سعرك، اكتبه في «لماذا تنشئ هذا الاختبار؟» عند التوليد. وبدون سعر، لا يخترع أي سعر.
+
+**إزالة كتلة:** علامة صغيرة في معاينة النتيجة. تختفي في جميع الملفات، ويظهر خط متقطع لإعادتها. نصك لا يُحذف أبدًا.
+
+الاختبار المنشأ سابقًا يحتفظ بعرضه الأصلي عمدًا. للتغيير، افتح اختبارك وابحث عن الشريط فوق ملفات النتائج. القرار قابل للتراجع ولا يمس اختباراتك الأخرى. في اختبار قديم أو مستورد تكون الكتلة الأخيرة فارغة: زر «اكتب الجسر الناقص» يحرّرها. النسخ لا يكفي: النسخة مطابقة للأصل.
 
 **المشاركة.** تختار الشبكات من الإعدادات. إذا لم تحدد أيًا منها، تظهر كلها. الرابط المشارك هو رابط **الملف الذي حصل عليه**، لا رابط الاختبار.
 
@@ -4662,6 +4837,127 @@ Una percentuale di condivisione bassa non è sempre un difetto: su temi intimi (
     },
     related_slugs: ["tiquiz-leads", "tiquiz-page-resultat"],
     tags: ["tiquiz", "stats", "statistiques", "funnel", "analytics", "completion", "abandon"],
+  },
+  {
+    category_slug: "tiquiz",
+    slug: "tiquiz-demarrer-sur-question",
+    sort_order: 8,
+    title: {
+      fr: "Démarrer le quiz sans bouton",
+      en: "Starting the quiz without a button",
+      es: "Empezar el quiz sin botón",
+      it: "Iniziare il quiz senza pulsante",
+      ar: "بدء الاختبار بلا زر",
+    },
+    content: {
+      fr: `## Le premier clic est le plus cher
+
+Entre ton titre et ta première question, il y a un bouton "Commencer". C'est une étape de plus, et c'est là qu'on perd le plus de monde : la personne est intéressée, elle lit, et elle doit quand même faire un geste avant de savoir de quoi on parle.
+
+Tiquiz te laisse **supprimer cette étape**. Trois choix, dans les réglages du quiz :
+
+- **Le bouton** (par défaut). Ton écran d'accueil, puis un bouton. C'est ce que font tous tes quiz aujourd'hui, rien ne change.
+- **Demander le prénom.** Le champ prénom s'affiche directement sous ton titre. La personne tape son prénom et elle est dans le quiz.
+- **La première question.** Ton titre, ton sous-titre, et immédiatement la question 1 avec ses réponses. Cliquer une réponse, c'est commencer.
+
+### Ce que ça change vraiment
+
+Une question posée tout de suite, surtout une question simple à deux réponses, engage beaucoup plus qu'un bouton. La personne ne décide pas « est-ce que je fais ce quiz » : elle répond à une question, et elle est dedans.
+
+Le prénom, lui, sert deux choses d'un coup : il engage, et il te donne la variable **{name}** pour personnaliser tes questions et tes résultats.
+
+### Ce que Tiquiz refuse, et pourquoi
+
+Certaines combinaisons n'ont pas de sens, et l'éditeur te le dit plutôt que de te laisser publier un quiz cassé :
+
+- Si tu **captures l'email avant les questions**, on ne peut pas démarrer sur la question 1 : le visiteur verrait le formulaire d'abord.
+- Si ton quiz n'a **aucune question**, il n'y a rien sur quoi démarrer.
+- Si tu choisis "demander le prénom" sans avoir activé le prénom ni le genre, il n'y a rien à demander.
+
+### Le prénom ne se demande qu'UNE fois
+
+C'était flou, ça ne l'est plus. Si tu demandes le prénom au début, **le formulaire de capture ne le redemande pas** : la personne l'a déjà donné, une case pré-remplie de plus juste avant son email ne sert qu'à la ralentir au pire moment.
+
+Le prénom arrive quand même sur ta fiche de lead, comme avant. Tu le vois dans les réglages de capture : la pastille "Prénom (demandé au début)" est allumée et non décochable, parce qu'elle décrirait un champ que ton visiteur ne voit pas.
+
+### Et tes statistiques ?
+
+Un quiz qui démarre sur la question 1 n'a plus d'écran d'accueil séparé : **une vue devient un démarrage**. Ton taux de démarrage va donc monter d'un coup, et ce n'est pas ton quiz qui s'est amélioré, c'est l'étape qui a disparu. Compare ce qui vient après, pas ce chiffre-là.`,
+      en: `## The first click is the most expensive
+
+Between your title and your first question sits a "Start" button. That is one more step, and it is where you lose the most people: they are interested, they read, and they still have to act before knowing what this is about.
+
+Tiquiz lets you **remove that step**. Three choices, in the quiz settings:
+
+- **The button** (default). Your intro screen, then a button. That is what all your quizzes do today, nothing changes.
+- **Ask for the first name.** The first-name field shows right under your title. They type it and they are in.
+- **The first question.** Your title, your subtitle, and question 1 with its answers straight away. Clicking an answer is starting.
+
+### What it actually changes
+
+A question asked immediately, especially a simple two-answer one, engages far more than a button. They are not deciding "do I take this quiz": they are answering a question, and they are in.
+
+The first name does two jobs at once: it engages, and it gives you the **{name}** variable to personalise your questions and results.
+
+### What Tiquiz refuses, and why
+
+Some combinations make no sense, and the editor tells you rather than letting you publish a broken quiz:
+
+- If you **capture the email before the questions**, you cannot start on question 1: the visitor would see the form first.
+- If your quiz has **no questions**, there is nothing to start on.
+- If you pick "ask for the first name" without enabling first name or gender, there is nothing to ask.
+
+### The first name is asked ONCE
+
+This used to be confusing. If you ask for it up front, **the capture form does not ask again**: they already gave it, and one more pre-filled box right before their email only slows them down at the worst moment.
+
+The first name still lands on your lead record, as before. In the capture settings the "First name (asked upfront)" chip is on and cannot be unticked, because it would describe a field your visitor never sees.
+
+### What about your stats?
+
+A quiz that starts on question 1 has no separate intro screen: **a view becomes a start**. Your start rate will jump, and that is not your quiz improving, it is a step disappearing. Compare what comes after, not that number.`,
+      es: `## El primer clic es el más caro
+
+Entre tu título y tu primera pregunta hay un botón «Empezar»: un paso más, y ahí se pierde más gente.
+
+Tiquiz te deja quitarlo. Tres opciones en los ajustes: **el botón** (por defecto, nada cambia), **pedir el nombre** (el campo aparece bajo tu título) o **la primera pregunta** (hacer clic en una respuesta es empezar).
+
+Una pregunta planteada de inmediato engancha mucho más que un botón. El nombre hace dos cosas a la vez: engancha y te da la variable {name}.
+
+**Lo que Tiquiz rechaza:** empezar en la pregunta 1 si capturas el email antes de las preguntas, o si el quiz no tiene ninguna pregunta; y «pedir el nombre» si no has activado ni nombre ni género.
+
+**El nombre se pide UNA vez.** Si lo pides al principio, el formulario de captura ya no lo vuelve a pedir. Sigue llegando a tu ficha de lead como antes.
+
+**Tus estadísticas:** sin pantalla de bienvenida, una vista se convierte en un inicio. Tu tasa de inicio subirá de golpe: no es tu quiz que mejora, es un paso que desaparece.`,
+      it: `## Il primo clic è il più caro
+
+Tra il titolo e la prima domanda c'è un pulsante «Inizia»: un passaggio in più, ed è lì che si perde più gente.
+
+Tiquiz ti lascia toglierlo. Tre scelte nelle impostazioni: **il pulsante** (predefinito, non cambia nulla), **chiedere il nome** (il campo appare sotto il titolo) o **la prima domanda** (cliccare una risposta è iniziare).
+
+Una domanda posta subito coinvolge molto più di un pulsante. Il nome fa due cose insieme: coinvolge e ti dà la variabile {name}.
+
+**Cosa Tiquiz rifiuta:** iniziare dalla domanda 1 se raccogli l'email prima delle domande, o se il quiz non ha domande; e «chiedere il nome» se non hai attivato né nome né genere.
+
+**Il nome si chiede UNA volta.** Se lo chiedi all'inizio, il modulo di raccolta non lo richiede. Arriva comunque nella scheda del lead come prima.
+
+**Le tue statistiche:** senza schermata iniziale, una visualizzazione diventa un avvio. Il tasso di avvio salirà di colpo: non è il quiz che migliora, è un passaggio sparito.`,
+      ar: `## النقرة الأولى هي الأغلى
+
+بين عنوانك وسؤالك الأول يوجد زر «ابدأ»: خطوة إضافية، وعندها يُفقد أكبر عدد من الناس.
+
+يتيح لك Tiquiz حذفها. ثلاثة خيارات في الإعدادات: **الزر** (الافتراضي، لا شيء يتغير)، **طلب الاسم الأول** (يظهر الحقل تحت العنوان)، أو **السؤال الأول** (النقر على إجابة يعني البدء).
+
+سؤال يُطرح فورًا يشدّ الانتباه أكثر بكثير من زر. والاسم الأول يؤدي مهمتين معًا: يشدّ الانتباه ويمنحك المتغير {name}.
+
+**ما يرفضه Tiquiz:** البدء بالسؤال 1 إذا كنت تجمع البريد قبل الأسئلة، أو إذا لم يكن للاختبار أي سؤال؛ و«طلب الاسم» إذا لم تفعّل الاسم ولا الجنس.
+
+**الاسم يُطلب مرة واحدة.** إذا طلبته في البداية، فلن يطلبه نموذج الالتقاط مجددًا. ويظل يصل إلى بطاقة العميل المحتمل كما كان.
+
+**إحصاءاتك:** بلا شاشة ترحيب، تتحول المشاهدة إلى بداية. سترتفع نسبة البدء دفعة واحدة: ليس اختبارك هو الذي تحسّن، بل خطوة اختفت.`,
+    },
+    related_slugs: ["tiquiz-create-quiz", "tiquiz-leads", "tiquiz-stats"],
+    tags: ["tiquiz", "demarrage", "start", "prenom", "first name", "accueil", "engagement"],
   },
   {
     category_slug: "tiquiz",
