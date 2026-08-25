@@ -70,11 +70,19 @@ export function affiliateOrigin(locale?: string | null): string {
  *
  * `ref` est le CODE PUBLIC de l'affiliée, jamais son `sa` : cf. le bloc
  * en tête de fichier.
+ *
+ * `codeReduction`, quand Béné en a attribué un à cette affiliée, part
+ * DANS le même lien. C'est ce qui rend le code utilisable : il n'a de
+ * valeur que sur ce lien (Béné, 25 août 2026), donc le faire voyager
+ * séparément condamnerait la moitié des acheteurs à ne pas l'avoir. Le
+ * champ du bon de commande reste là pour celui qui l'a lu dans une
+ * vidéo et cliqué un lien plus ancien.
  */
 export function buildAffiliateLink(
   locale: string | null | undefined,
   path: string,
   ref: string,
+  codeReduction?: string | null,
 ): string {
   const p = (path ?? "").trim();
   let abs: string;
@@ -84,5 +92,7 @@ export function buildAffiliateLink(
     const origin = affiliateOrigin(locale);
     abs = p ? `${origin}${p.startsWith("/") ? "" : "/"}${p}` : `${origin}/`;
   }
-  return `${abs}${abs.includes("?") ? "&" : "?"}${AFFILIATE_LINK_PARAM}=${encodeURIComponent(ref)}`;
+  const avecRef = `${abs}${abs.includes("?") ? "&" : "?"}${AFFILIATE_LINK_PARAM}=${encodeURIComponent(ref)}`;
+  const code = String(codeReduction ?? "").trim();
+  return code ? `${avecRef}&code=${encodeURIComponent(code)}` : avecRef;
 }
