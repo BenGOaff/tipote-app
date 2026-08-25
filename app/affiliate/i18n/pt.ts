@@ -62,6 +62,7 @@ export const PT: AffiliateDict = {
     magic_link_sent: "Link enviado para {email}. Verifica a tua caixa (e o spam).",
     no_account: "Ainda não és afiliado?",
     discover_program: "Descobrir o programa de afiliados",
+    signup_direct: "Inscrever-me diretamente",
     err_fill_credentials: "Indica o teu email e a tua palavra-passe.",
     err_invalid_credentials: "Email ou palavra-passe incorretos.",
     err_fill_email: "Indica o teu email.",
@@ -82,13 +83,13 @@ export const PT: AffiliateDict = {
       "Enviámos um link de acesso para {email}. Clica no link do email para aceder ao teu painel. Não te esqueças de verificar o spam.",
     go_to_login: "Ir para o início de sessão",
     label_email: "Email",
-    label_email_hint: "O da tua conta Systeme.io.",
+    label_email_hint: "Vai servir para entrares no teu espaço.",
     label_display_name: "Nome a mostrar",
     label_display_name_hint: "",
     placeholder_display_name: "Como te chamamos?",
-    label_sa: "Identificador de afiliado Systeme.io",
+    label_sa: "Identificador de afiliado Systeme.io (facultativo)",
     label_sa_hint:
-      "Encontra-lo em Systeme.io → painel de afiliação → o teu link (a parte após ?sa=).",
+      "Tens conta na Systeme.io? Cola o teu identificador: é o que permite atribuir-te as vendas que chegam pelos funis antigos deles. Encontra-lo na Systeme.io, painel de afiliação, o teu link (a parte depois de ?sa=). Caso contrário deixa vazio, criamos o teu.",
     label_locale: "Idioma",
     label_locale_hint: "Vamos enviar os recursos promo neste idioma.",
     label_password: "Palavra-passe",
@@ -100,6 +101,8 @@ export const PT: AffiliateDict = {
       "Já recebes um email por cada comissão. Este espaço dá-te ainda: recursos promo, estatísticas, acompanhamento das tuas comissões, e acesso demo ao Tiquiz.",
     err_invalid_sa:
       "O identificador de afiliado não tem o formato correto. Deve começar por « sa » seguido de uma série de caracteres.",
+    err_email_deja_affiliee:
+      "Este endereço já está ligado a outro identificador de afiliado. Escreve ao suporte: não juntamos duas contas sozinhos, as tuas comissões estão presas a ele.",
     err_email_not_in_systeme:
       "Este email não é reconhecido no Systeme.io. Inscreve-te primeiro no programa de afiliados e depois volta.",
     err_invalid_email: "Email inválido.",

@@ -309,6 +309,25 @@ export default function LoginAffiliateForm() {
                   {t.login.discover_program}
                 </a>
               </Button>
+              {/* LA PORTE D'ENTRÉE DIRECTE (Béné, 25 août 2026 :
+                  "pourquoi un type sans systeme io ne pourrait pas
+                  devenir affilié chez nous ??").
+
+                  Elle l'avait déjà demandée le 6 août ("le lien
+                  d'inscription pour ceux qui veulent voir l'espace
+                  affilié, comme ça ils peuvent s'inscrire directement").
+                  Le bouton au dessus mène à la page qui EXPLIQUE le
+                  programme, et son parcours passe par Systeme.io : tant
+                  que l'inscription exigeait un identifiant Systeme.io,
+                  c'était la seule route possible. Elle ne l'est plus.
+
+                  Lien interne, donc <Link> : on ne fait pas quitter
+                  l'espace pour une page de l'espace. */}
+              <p className="mt-3 text-center text-sm">
+                <Link href="/signup" className="text-primary underline underline-offset-4 hover:opacity-80">
+                  {t.login.signup_direct}
+                </Link>
+              </p>
             </div>
           </CardContent>
         </Card>

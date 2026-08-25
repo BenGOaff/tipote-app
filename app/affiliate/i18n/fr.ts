@@ -63,6 +63,7 @@ export const FR: AffiliateDict = {
     magic_link_sent: "Lien envoyé à {email}. Vérifie ta boîte (et tes spams).",
     no_account: "Pas encore affilié ?",
     discover_program: "Découvrir le programme d'affiliation",
+    signup_direct: "M'inscrire directement",
     err_fill_credentials: "Renseigne ton email et ton mot de passe.",
     err_invalid_credentials: "Email ou mot de passe incorrect.",
     err_fill_email: "Renseigne ton email.",
@@ -83,13 +84,13 @@ export const FR: AffiliateDict = {
       "On t'a envoyé un lien de connexion à {email}. Clique sur le lien dans l'email pour accéder à ton dashboard. Pense à vérifier tes spams.",
     go_to_login: "Aller à la connexion",
     label_email: "Email",
-    label_email_hint: "Celui de ton compte Systeme.io.",
+    label_email_hint: "Il servira à te connecter à ton espace.",
     label_display_name: "Prénom ou nom à afficher",
     label_display_name_hint: "",
     placeholder_display_name: "Comment on t'appelle ?",
-    label_sa: "Identifiant affilié Systeme.io",
+    label_sa: "Identifiant affilié Systeme.io (facultatif)",
     label_sa_hint:
-      "Tu le trouves dans Systeme.io → dashboard affiliation → ton lien (la partie après ?sa=).",
+      "Tu as un compte Systeme.io ? Colle ton identifiant : c'est ce qui permet de te rattacher les ventes arrivées par leurs anciens tunnels. Tu le trouves dans Systeme.io, dashboard affiliation, ton lien (la partie après ?sa=). Sinon laisse vide, on fabrique le tien.",
     label_locale: "Langue",
     label_locale_hint: "On t'enverra les ressources promo dans cette langue.",
     label_password: "Mot de passe",
@@ -101,6 +102,8 @@ export const FR: AffiliateDict = {
       "Tu reçois déjà un email à chaque commission. Cet espace te donne en plus : ressources promos, stats, suivi de tes commissions, et accès démo à Tiquiz.",
     err_invalid_sa:
       "L'identifiant affilié n'a pas le bon format. Vérifie qu'il commence par \"sa\" suivi d'une suite de caractères.",
+    err_email_deja_affiliee:
+      "Cette adresse est déjà rattachée à un autre identifiant affilié. Écris au support, on ne fusionne pas deux comptes tout seuls : tes commissions y sont accrochées.",
     err_email_not_in_systeme:
       "Cet email n'est pas reconnu dans Systeme.io. Inscris-toi d'abord au programme d'affiliation, puis reviens ici.",
     err_invalid_email: "Email invalide.",
