@@ -73,6 +73,7 @@ export type AffiliateDict = {
     magic_link_sent: string;
     no_account: string;
     discover_program: string;
+    signup_direct: string;
     err_fill_credentials: string;
     err_invalid_credentials: string;
     err_fill_email: string;
@@ -107,6 +108,7 @@ export type AffiliateDict = {
     activating: string;
     info_bottom: string;
     err_invalid_sa: string;
+    err_email_deja_affiliee: string;
     err_email_not_in_systeme: string;
     err_invalid_email: string;
     err_weak_password: string;

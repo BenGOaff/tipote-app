@@ -23,6 +23,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { lireSa } from "@/lib/affiliate/saFormat";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -68,10 +69,11 @@ function getClientIp(req: NextRequest): string | null {
   return req.headers.get("x-real-ip");
 }
 
-// Format `sa` Systeme.io : "sa" suivi de chiffres/hex sur ~30-60 chars.
-// On filtre tout ce qui ne ressemble pas, pour éviter les faux clicks.
+// On filtre tout ce qui n'a pas la forme d'un identifiant d'affiliée,
+// pour éviter les faux clics. La forme vit dans
+// lib/affiliate/saFormat.ts, et nulle part ailleurs.
 function isValidSa(sa: unknown): sa is string {
-  return typeof sa === "string" && /^sa[a-f0-9]{20,80}$/i.test(sa);
+  return lireSa(sa) !== null;
 }
 
 function isValidEmail(email: unknown): email is string {

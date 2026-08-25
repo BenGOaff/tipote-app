@@ -62,6 +62,7 @@ export const IT: AffiliateDict = {
     magic_link_sent: "Link inviato a {email}. Controlla la posta (e lo spam).",
     no_account: "Non sei ancora affiliato?",
     discover_program: "Scopri il programma di affiliazione",
+    signup_direct: "Iscrivermi direttamente",
     err_fill_credentials: "Inserisci email e password.",
     err_invalid_credentials: "Email o password errati.",
     err_fill_email: "Inserisci la tua email.",
@@ -82,13 +83,13 @@ export const IT: AffiliateDict = {
       "Ti abbiamo inviato un link di accesso a {email}. Clicca sul link nell'email per entrare nella dashboard. Ricordati di controllare lo spam.",
     go_to_login: "Vai all'accesso",
     label_email: "Email",
-    label_email_hint: "Quella del tuo account Systeme.io.",
+    label_email_hint: "Ti servirà per accedere al tuo spazio.",
     label_display_name: "Nome da mostrare",
     label_display_name_hint: "",
     placeholder_display_name: "Come ti chiamiamo?",
-    label_sa: "Identificativo affiliato Systeme.io",
+    label_sa: "Identificativo affiliato Systeme.io (facoltativo)",
     label_sa_hint:
-      "Lo trovi in Systeme.io → dashboard affiliazione → il tuo link (la parte dopo ?sa=).",
+      "Hai un account Systeme.io? Incolla il tuo identificativo: è ciò che permette di attribuirti le vendite arrivate dai loro vecchi funnel. Lo trovi in Systeme.io, dashboard affiliazione, il tuo link (la parte dopo ?sa=). Altrimenti lascia vuoto, lo creiamo noi.",
     label_locale: "Lingua",
     label_locale_hint: "Ti invieremo le risorse promo in questa lingua.",
     label_password: "Password",
@@ -100,6 +101,8 @@ export const IT: AffiliateDict = {
       "Ricevi già un'email per ogni commissione. Questo spazio ti dà in più: risorse promo, statistiche, monitoraggio delle tue commissioni, e accesso demo a Tiquiz.",
     err_invalid_sa:
       "L'identificativo affiliato non ha il formato corretto. Deve iniziare con « sa » seguito da una serie di caratteri.",
+    err_email_deja_affiliee:
+      "Questo indirizzo è già collegato a un altro identificativo affiliato. Scrivi al supporto: non uniamo due account da soli, le tue commissioni sono agganciate a quello.",
     err_email_not_in_systeme:
       "Questa email non è riconosciuta in Systeme.io. Iscriviti prima al programma di affiliazione, poi torna qui.",
     err_invalid_email: "Email non valida.",

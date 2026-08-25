@@ -112,6 +112,10 @@ export default function SignupClient() {
         const reason = data.reason as string | undefined;
         if (reason === "invalid_sa") {
           setErrorMsg(t.signup.err_invalid_sa);
+        } else if (reason === "email_deja_affiliee") {
+          // Le serveur renvoie la RAISON, l'écran la met en mots :
+          // l'espace affilié existe en 6 langues.
+          setErrorMsg(t.signup.err_email_deja_affiliee);
         } else if (reason === "email_not_in_systeme") {
           setErrorMsg(t.signup.err_email_not_in_systeme);
         } else if (reason === "invalid_email") {
@@ -228,13 +232,19 @@ export default function SignupClient() {
               </div>
 
               <div className="space-y-2">
+                {/* L'IDENTIFIANT SYSTEME.IO EST FACULTATIF (Béné, 25 août
+                    2026 : "pourquoi un type sans systeme io ne pourrait
+                    pas devenir affilié chez nous ??"). Champ vide = on
+                    fabrique l'identifiant. Il reste proposé parce qu'un
+                    affilié qui EN A un doit le donner : c'est la seule
+                    façon que ses ventes arrivées par un ancien tunnel
+                    Systeme.io lui soient attribuées. */}
                 <Label htmlFor="sa">{t.signup.label_sa}</Label>
                 <div className="relative">
                   <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="sa"
                     type="text"
-                    required
                     value={sa}
                     onChange={(e) => setSa(e.target.value)}
                     placeholder="sa0016..."
@@ -305,7 +315,7 @@ export default function SignupClient() {
               <Button
                 type="submit"
                 className="w-full"
-                disabled={status === "loading" || !email || !sa}
+                disabled={status === "loading" || !email}
               >
                 {status === "loading" ? (
                   t.signup.activating

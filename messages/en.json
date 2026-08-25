@@ -2246,14 +2246,14 @@
         "description": "Post 'Comment PDF to get your free guide'. When someone comments 'PDF', they automatically receive your link via DM.",
         "example": "Post: 'Comment PDF 👇' → Comment 'PDF awesome' → Auto DM with the link",
         "badge": "Instagram + Facebook",
-        "defaultMessage": "Hey {{firstname}}! Thanks for your comment 🙌 Here's your free guide: [YOUR_LINK]\n\nReply STOP to unsubscribe."
+        "defaultMessage": "Hey '{{firstname}}'! Thanks for your comment 🙌 Here's your free guide: [YOUR_LINK]\n\nReply STOP to unsubscribe."
       },
       "email": {
         "title": "Auto Email on Comment",
         "description": "The user comments a keyword, receives a DM asking for their email, then gets the guide delivered to their inbox via systeme.io.",
         "example": "Comment 'GUIDE' → DM 'Send me your email' → Email sent → Added to systeme.io",
         "badge": "Instagram + Facebook + systeme.io",
-        "defaultMessage": "Hey {{firstname}}! To receive your free guide, reply to this message with your email 👇\n\nReply STOP to unsubscribe.",
+        "defaultMessage": "Hey '{{firstname}}'! To receive your free guide, reply to this message with your email 👇\n\nReply STOP to unsubscribe.",
         "defaultEmailDm": "Got it! I'm sending your guide to {{email}} within the next few minutes. Check your spam folder if you don't see it 📬"
       }
     },
@@ -2273,8 +2273,8 @@
       "keywordHint": "Case-insensitive - any comment containing this word will trigger the automation.",
       "dmMessage": "DM message",
       "firstDmMessage": "First DM message",
-      "dmMessagePlaceholder": "Hey {{firstname}}! Here's your guide: [link]\n\nReply STOP to unsubscribe.",
-      "dmMessageHint": "Use {{firstname}} to personalize. STOP will be added automatically if you forget.",
+      "dmMessagePlaceholder": "Hey '{{firstname}}'! Here's your guide: [link]\n\nReply STOP to unsubscribe.",
+      "dmMessageHint": "Use '{{firstname}}' to personalize. STOP will be added automatically if you forget.",
       "emailCapture": "Email capture",
       "emailCaptureHint": "After the first DM, the bot waits for a reply with the email and sends it to systeme.io",
       "emailDmMessage": "DM message to request the email",
@@ -4668,7 +4668,7 @@
     "bonusShareTitle": "Bonus offered for sharing",
     "bonusShareDesc": "Describe what the visitor receives when sharing.",
     "bonusDescriptionPh": "E.g. my exclusive mini-course",
-    "shareMessageHint": "Pre-filled when the visitor shares on X, WhatsApp, Threads or from their phone. Facebook and LinkedIn never pre-fill text: they show the link preview, whose description uses this message (unless you set a custom OG description). On the result screen, the share automatically names the profile the visitor got. Write {resultat} in your message to place that name yourself.",
+    "shareMessageHint": "Pre-filled when the visitor shares on X, WhatsApp, Threads or from their phone. Facebook and LinkedIn never pre-fill text: they show the link preview, whose description uses this message (unless you set a custom OG description). On the result screen, the share automatically names the profile the visitor got. Write '{resultat}' in your message to place that name yourself.",
     "shareMessagePh": "I just took the \"{title}\" quiz!",
     "sioShareTagLabel": "Systeme.io tag after share",
     "sioShareTagHint": "Added to the contact when they actually share. Triggers your automation.",
@@ -5923,7 +5923,7 @@
     "relatedSlugsLabel": "Related articles (slugs, comma-separated)"
   },
   "quizVars": {
-    "insertNameTitle": "Insert visitor's first name ({name})",
+    "insertNameTitle": "Insert visitor's first name ('{name}')",
     "insertScoreTitle": "Insert this score variable",
     "insertGenderTitle": "Insert a gender-aware variant - masculine | feminine | non-binary (e.g. dear | dear | dear)"
   },

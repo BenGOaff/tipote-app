@@ -14,6 +14,7 @@ import assert from "node:assert/strict";
 
 import {
   BEAT_ORDER,
+  beatShown,
   buildResultBeats,
   mirrorMedia,
   resultLayoutMode,
@@ -174,4 +175,68 @@ test("une entrée illisible ne fait pas tomber les autres", () => {
   });
   assert.equal(out?.cause, undefined);
   assert.equal(out?.path?.url, "https://a.test/ok.png");
+});
+
+// ── L'aperçu ne lisait pas les interrupteurs (25 août 2026) ──────────
+//
+// Béné : "pourquoi ces parties activables ou pas ? On met tout [...] et
+// une option pour supprimer un bloc directement dans l'éditeur, on n'a
+// pas besoin de ça dans la barre de paramètres."
+//
+// En allant déplacer ces interrupteurs sur les blocs, on a trouvé pire
+// que leur emplacement : l'aperçu de l'éditeur ne les lisait PAS.
+// Décocher "Afficher la carte insight" retirait le bloc chez le visiteur
+// et le laissait dans l'aperçu. Septième fois que ce défaut sort.
+// `beatShown` est maintenant la seule réponse, pour les trois écrans.
+
+test("un réglage absent ou nul montre le bloc, jamais l'inverse", () => {
+  // Colonne pas encore migrée en prod : le bloc reste à l'écran. Une
+  // migration en retard ne doit pas effacer la page d'une cliente.
+  for (const quiz of [{}, { show_result_insight: null }, { show_result_insight: undefined }]) {
+    assert.equal(beatShown("cause", "beats", quiz), true);
+    assert.equal(beatShown("path", "beats", quiz), true);
+  }
+});
+
+test("seul un false explicite retire un temps", () => {
+  assert.equal(beatShown("cause", "beats", { show_result_insight: false }), false);
+  assert.equal(beatShown("path", "beats", { show_result_projection: false }), false);
+  assert.equal(beatShown("bridge", "beats", { show_result_bridge: false }), false);
+  // ...et il ne retire que le sien.
+  assert.equal(beatShown("path", "beats", { show_result_insight: false }), true);
+});
+
+test("le MIROIR ne se retire pas : c'est le nom du profil", () => {
+  assert.equal(beatShown("mirror", "beats", { show_result_insight: false }), true);
+  assert.equal(beatShown("mirror", "classic", {}), true);
+});
+
+test("le PONT n'existe pas sur une page classique", () => {
+  // Sinon l'éditeur proposerait de réafficher un bloc que le visiteur
+  // ne verra jamais.
+  assert.equal(beatShown("bridge", "classic", {}), false);
+  assert.equal(beatShown("bridge", "beats", {}), true);
+});
+
+test("buildResultBeats passe par beatShown, il ne relit pas les colonnes", () => {
+  const result = { title: "P", insight: "cause", projection: "chemin", bridge: "pont" };
+  assert.deepEqual(
+    beatsOf(result, { show_result_projection: false }).map((b) => b.key),
+    ["cause", "bridge"],
+  );
+  assert.deepEqual(
+    beatsOf(result, { show_result_insight: false, show_result_bridge: false }).map((b) => b.key),
+    ["path"],
+  );
+});
+
+test("retirer un temps n'efface AUCUN texte", () => {
+  // La garantie de Béné : "on ne doit JAMAIS supprimer ou abimer les
+  // contenus créés par les users". Le bouton de l'éditeur pose ce
+  // réglage, donc remettre le réglage doit rendre le bloc INTACT.
+  const result = { title: "P", insight: "<p>la cause</p>", projection: "chemin" };
+  assert.deepEqual(beatsOf(result, { show_result_insight: false }).map((b) => b.key), ["path"]);
+  const [cause] = beatsOf(result, { show_result_insight: true });
+  assert.equal(cause.key, "cause");
+  assert.equal(cause.body, "<p>la cause</p>");
 });

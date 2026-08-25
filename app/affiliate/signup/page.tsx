@@ -1,18 +1,27 @@
 // app/affiliate/signup/page.tsx
 //
-// Page d'inscription/activation pour les affiliés. Conçue pour être
-// linkée depuis Systeme.io via merge tags :
+// Page d'inscription pour les affiliés, avec OU SANS compte Systeme.io.
+//
+// Elle peut être linkée depuis Systeme.io via merge tags :
 //
 //   https://affiliate.tipote.com/signup?sa={affiliate_id}&email={contact_email}&first_name={first_name}
 //
-// L'user arrive avec ses infos pré-remplies (mais éditables au cas où
-// quelque chose serait à corriger). Il confirme → on l'ajoute en
-// status='active' dans la table affiliates + on lui envoie un magic
-// link pour accéder à son dashboard.
+// L'user arrive alors avec ses infos pré-remplies (mais éditables au cas
+// où quelque chose serait à corriger). Elle est AUSSI accessible en
+// direct depuis l'écran de connexion, depuis le 25 août 2026 : Béné,
+// "pourquoi un type sans systeme io ne pourrait pas devenir affilié chez
+// nous ??". Le champ identifiant y est facultatif.
 //
-// Sécurité : on vérifie côté serveur que l'email existe bien comme
-// contact Systeme.io avant d'activer. Empêche un visiteur d'inscrire
-// n'importe quel sa avec un email random.
+// Il confirme -> on l'ajoute en status='active' dans la table affiliates
+// + on lui envoie un magic link pour accéder à son dashboard.
+//
+// CE COMMENTAIRE A DIT LE CONTRAIRE DU CODE PENDANT DES MOIS : il
+// annonçait qu'on vérifiait l'email auprès de Systeme.io avant
+// d'activer. La route ne l'a jamais fait, et c'est assumé depuis le 14
+// juillet 2026 (Béné : "on s'en fout de l'email Systeme.io, c'est l'ID
+// qui est important"). Une règle écrite en commentaire n'est pas une
+// règle, et un commentaire qui décrit une sécurité inexistante est pire
+// qu'une absence de commentaire.
 
 import { Suspense } from "react";
 import { redirect } from "next/navigation";

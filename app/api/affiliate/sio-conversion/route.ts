@@ -25,13 +25,13 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+// La forme du `sa` vit dans lib/affiliate/saFormat.ts, et nulle part
+// ailleurs. Elle etait recopiee ici : c'est ainsi que commence une
+// divergence, et une commission se perd la ou personne ne regarde.
+import { SA_RE } from "@/lib/affiliate/saFormat";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-// Format `sa` Systeme.io : "sa" suivi de 20-80 caractères hex.
-// Mirror du regex de /api/affiliate/track pour cohérence.
-const SA_RE = /^sa[a-f0-9]{20,80}$/i;
 
 function extractEmail(body: any): string | null {
   const candidates = [

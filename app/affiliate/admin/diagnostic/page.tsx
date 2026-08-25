@@ -19,10 +19,11 @@ import Link from "next/link";
 import { ShieldCheck, ExternalLink } from "lucide-react";
 import { getAffiliateAdmin } from "@/lib/affiliate/admin";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+// La forme vit dans lib/affiliate/saFormat.ts, et nulle part ailleurs.
+// Elle etait recopiee ici : c'est ainsi que commence une divergence.
+import { SA_RE } from "@/lib/affiliate/saFormat";
 
 export const dynamic = "force-dynamic";
-
-const SA_RE = /^sa[a-f0-9]{20,80}$/i;
 
 type AffiliateRow = {
   sa: string;
@@ -30,7 +31,30 @@ type AffiliateRow = {
   display_name: string | null;
   status: string;
   created_at: string;
+  /** Absent tant que la migration du 25 août n'est pas appliquée. */
+  origin?: string | null;
 };
+
+// DEUX LISTES DE COLONNES, ET C'EST OBLIGATOIRE. PostgREST rejette la
+// requête ENTIÈRE quand une colonne nommée n'existe pas : sans le repli,
+// un déploiement en avance sur la migration casserait tout l'écran de
+// diagnostic au lieu de masquer une ligne (drame `quiz_events.meta`).
+const COLS = "sa, email, display_name, status, created_at";
+const COLS_NEW = `${COLS}, origin`;
+
+async function lireAffiliee(
+  par: "sa" | "email",
+  valeur: string,
+): Promise<AffiliateRow | null> {
+  const requete = (cols: string) => {
+    const q = supabaseAdmin.from("affiliates").select(cols);
+    return par === "sa" ? q.eq("sa", valeur) : q.ilike("email", valeur);
+  };
+  const { data, error } = await requete(COLS_NEW).maybeSingle();
+  if (!error) return (data as unknown as AffiliateRow | null) ?? null;
+  const repli = await requete(COLS).maybeSingle();
+  return (repli.data as unknown as AffiliateRow | null) ?? null;
+}
 
 type ClickRow = {
   id: number;
@@ -147,19 +171,9 @@ export default async function AffiliateDiagnosticPage({
         </Wrap>
       );
     }
-    const { data } = await supabaseAdmin
-      .from("affiliates")
-      .select("sa, email, display_name, status, created_at")
-      .eq("sa", saInput)
-      .maybeSingle();
-    affiliate = (data as AffiliateRow | null) ?? null;
+    affiliate = await lireAffiliee("sa", saInput);
   } else if (emailInput) {
-    const { data } = await supabaseAdmin
-      .from("affiliates")
-      .select("sa, email, display_name, status, created_at")
-      .ilike("email", emailInput)
-      .maybeSingle();
-    affiliate = (data as AffiliateRow | null) ?? null;
+    affiliate = await lireAffiliee("email", emailInput);
   }
 
   if (!affiliate) {
@@ -231,6 +245,27 @@ export default async function AffiliateDiagnosticPage({
             {affiliate.status}
           </span>
         </div>
+        {/* D'OÙ VIENT SON IDENTIFIANT, et ce que ça change (25 août 2026).
+            Un affilié inscrit chez nous n'existe pas chez Systeme.io :
+            une vente arrivée par un de leurs anciens tunnels ne lui sera
+            JAMAIS attribuée, et l'Atelier, qui tient son propre registre,
+            ne le connaît pas non plus. Quand il écrit "je ne vois pas ma
+            commission", c'est la première chose à regarder.
+            La ligne se tait tant que la migration n'est pas appliquée :
+            afficher "Systeme.io" par défaut mentirait sur la moitié des
+            lignes. */}
+        {affiliate.origin === "tipote" && (
+          <div className="text-xs text-amber-700 dark:text-amber-400">
+            Inscrit directement chez nous, sans compte Systeme.io. Les ventes
+            arrivées par leurs anciens tunnels et les ventes de l&apos;Atelier ne
+            peuvent pas lui être attribuées.
+          </div>
+        )}
+        {affiliate.origin === "systeme_io" && (
+          <div className="text-xs text-muted-foreground">
+            Identifiant Systeme.io.
+          </div>
+        )}
       </header>
 
       <section className="grid grid-cols-2 md:grid-cols-4 gap-3">

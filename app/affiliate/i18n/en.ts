@@ -62,6 +62,7 @@ export const EN: AffiliateDict = {
     magic_link_sent: "Link sent to {email}. Check your inbox (and spam folder).",
     no_account: "Not an affiliate yet?",
     discover_program: "Discover the affiliate program",
+    signup_direct: "Sign up directly",
     err_fill_credentials: "Enter your email and password.",
     err_invalid_credentials: "Incorrect email or password.",
     err_fill_email: "Enter your email.",
@@ -82,13 +83,13 @@ export const EN: AffiliateDict = {
       "We sent a sign-in link to {email}. Click the link in the email to access your dashboard. Don't forget to check spam.",
     go_to_login: "Go to sign-in",
     label_email: "Email",
-    label_email_hint: "The one from your Systeme.io account.",
+    label_email_hint: "You will use it to sign in to your space.",
     label_display_name: "Display name",
     label_display_name_hint: "",
     placeholder_display_name: "What should we call you?",
-    label_sa: "Systeme.io affiliate ID",
+    label_sa: "Systeme.io affiliate ID (optional)",
     label_sa_hint:
-      "Find it in Systeme.io → affiliate dashboard → your link (the part after ?sa=).",
+      "Got a Systeme.io account? Paste your ID: it is what links sales coming through their older funnels back to you. You will find it in Systeme.io, affiliate dashboard, your link (the part after ?sa=). Otherwise leave it empty, we create yours.",
     label_locale: "Language",
     label_locale_hint: "We'll send promo resources in this language.",
     label_password: "Password",
@@ -100,6 +101,8 @@ export const EN: AffiliateDict = {
       "You already get an email for each commission. This space also gives you: promo resources, stats, commission tracking, and demo access to Tiquiz.",
     err_invalid_sa:
       "The affiliate ID format is invalid. It must start with « sa » followed by a string of characters.",
+    err_email_deja_affiliee:
+      "This address is already tied to another affiliate ID. Write to support: we do not merge two accounts on our own, your commissions hang on it.",
     err_email_not_in_systeme:
       "This email isn't recognized in Systeme.io. Sign up to the affiliate program first, then come back.",
     err_invalid_email: "Invalid email.",
