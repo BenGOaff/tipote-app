@@ -4,7 +4,13 @@
 
 import { buildLanguageDirective } from "@/lib/quizLanguages";
 import { slugifyAxisLabel } from "@/lib/quizScoring";
-import { HOOK_CRAFT_BLOCK, RESULT_BEATS_BLOCK, estimateQuizMinutes, introSubtitleBlock } from "@/lib/prompts/quiz/copywriting";
+import {
+  CTA_BUTTON_BLOCK,
+  HOOK_CRAFT_BLOCK,
+  estimateQuizMinutes,
+  introSubtitleBlock,
+  resultBeatsBlock,
+} from "@/lib/prompts/quiz/copywriting";
 
 // Bloc d'écriture NATURELLE 2026 — l'arme anti « ça fait IA ». Réutilisé par la
 // génération de quiz ET de sondage. Cible précisément les tics qui trahissent un
@@ -184,9 +190,11 @@ ${HOOK_CRAFT_BLOCK}
 
 ${introSubtitleBlock({ formality, minutes: estimateQuizMinutes(questionCount), bonus })}
 
-${RESULT_BEATS_BLOCK}
+${resultBeatsBlock({ source: "generation", offre: intention })}
+
+${CTA_BUTTON_BLOCK}
 ${brandVoice ? `\nVOIX DE LA MARQUE : écris DANS cette voix (ne recopie jamais ces éléments tels quels, inspire-t'en pour le ton et les angles) :\n${brandVoice}\n` : ""}${copyHint ? `\n${copyHint}\n` : ""}
-FORME D'ADRESSE : ${formality === "vous" ? "VOUVOYER le lecteur dans TOUT le contenu. Utiliser systématiquement « vous » et ses formes associées." : "TUTOYER le lecteur dans TOUT le contenu. Utiliser systématiquement « tu » et ses formes associées."}
+FORME D'ADRESSE : ${formality === "vous" ? "VOUVOYER le lecteur dans TOUT le contenu. Utiliser systématiquement \"vous\" et ses formes associées." : "TUTOYER le lecteur dans TOUT le contenu. Utiliser systématiquement \"tu\" et ses formes associées."}
 
 STRATÉGIE SELON LE FORMAT :
 ${isShort
@@ -238,9 +246,7 @@ Chaque option de type choix porte un champ "points" (entier de 1 à 3) qui pond�
 RÉSULTATS : RÈGLES :
 - Chaque résultat doit être TRANSFORMATIF : révéler un élément caché, bloquant ou valorisant.
 - Mettre en valeur l'expertise de l'auteur du quiz.
-- Le CTA de chaque résultat doit s'intégrer naturellement après le résultat, jamais plaqué artificiellement.
-- Chaque cta_text est UNIQUE au profil : il doit refléter la promesse adaptée à CE résultat (et servir l'intention business du créateur si elle est fournie). Jamais un CTA générique type "En savoir plus".
-- Format du cta_text : **3 à 6 mots maximum**, formulation verbe + bénéfice. Ex: "Réserver mon audit gratuit", "Découvrir la méthode". JAMAIS de phrase longue ou explicative : le CTA tient sur UNE ligne dans un bouton.
+- Le CTA de chaque résultat doit s'intégrer naturellement après le résultat, jamais plaqué artificiellement. Son libellé suit la règle LIBELLÉ DU BOUTON donnée plus haut, et sert l'intention business du créateur quand elle est fournie.
 ${isScoring
     ? `- Les résultats sont les TRANCHES, ordonnées du score le plus BAS au plus HAUT. Le PREMIER résultat s'adresse au participant en difficulté (bienveillant, jamais culpabilisant : il repart avec un premier pas concret), le DERNIER au participant avancé (valorisant, avec le défi d'après). Chaque tranche reste TRANSFORMATIVE : insight + projection + CTA propres.
 - N'écris PAS de champs "min_score" / "max_score" : les bornes sont calculées automatiquement.`
@@ -274,14 +280,14 @@ FORMAT DE SORTIE : JSON strict uniquement. Pas de markdown, pas de commentaires,
   "results": [
     {
       "title": "${isScoring ? "Nom de la tranche (du plus bas au plus haut)" : "Nom du profil ou niveau"}",
-      "description": "Description valorisante (2-3 phrases)",
+      "description": "LE MIROIR : 4-6 phrases où la personne se reconnaît. Aucun conseil ici.",
       "insight_heading": "Titre de LA CAUSE (3-7 mots)",
-      "insight": "LA CAUSE : 2-3 phrases, une seule cause nommée précisément.",
+      "insight": "LA CAUSE : 4-6 phrases, une seule cause nommée précisément puis expliquée.",
       "projection_heading": "Titre du CHEMIN (3-7 mots)",
+      "projection": "LE CHEMIN : 4-6 phrases, trois étapes dans l'ordre, faisables en moins d'une semaine.",
       "bridge_heading": "Titre du PONT (3-7 mots)",
-      "bridge": "LE PONT : 2-3 phrases orientées bénéfices, cohérentes avec cta_text.",
-      "projection": "${formality === "vous" ? "Et si vous..." : "Et si tu..."}  : projection motivante vers l'action",
-      "cta_text": "Texte du CTA personnalisé pour ce profil"
+      "bridge": "LE PONT : 3-5 phrases orientées bénéfices, qui nomment l'offre et son prix quand le créateur les a donnés.",
+      "cta_text": "Libellé du bouton pour ce profil (3-6 mots, ni prix ni garantie)"
     }
   ],
   "cta_text": "Texte du CTA principal",
@@ -319,8 +325,8 @@ FORMAT DE SORTIE : JSON strict uniquement. Pas de markdown, pas de commentaires,
       : `- Pour les questions de type choix, les ${resultCount} result_index (0 à ${resultCount - 1}) apparaissent CHACUN UNE FOIS par question, ET chaque option porte un "points" (1 à 3) pondéré pour éviter toute égalité entre profils (poids fort sur les 2-3 questions les plus déterminantes, poids 1 ailleurs, une signature distincte par profil).`,
     `- Ajoute "question_type" à chaque question (défaut "multiple_choice"). Échelle/étoiles/texte libre avec parcimonie (ne déterminent pas le profil).`,
     `- Tout le contenu DOIT être en ${langLabel}.`,
-    `- Les résultats doivent être TRANSFORMATIFS, pas génériques.`,
-    `- Le CTA doit s'intégrer naturellement, comme une suite logique du résultat.`,
+    `- Les résultats doivent être TRANSFORMATIFS, pas génériques : les QUATRE temps sont remplis pour CHAQUE résultat (description, insight_heading + insight, projection_heading + projection, bridge_heading + bridge), aux longueurs demandées.`,
+    `- Le CTA doit s'intégrer naturellement, comme une suite logique du résultat. Son libellé fait 3 à 6 mots et ne porte ni prix, ni garantie, ni délai : ces arguments vont dans le texte du pont.`,
     `- Réponds UNIQUEMENT en JSON valide, sans aucun texte autour.`,
   );
 
@@ -348,6 +354,7 @@ RÈGLES D'OR :
 - Détecte le type de chaque question et remplis "question_type" : "yes_no" si Oui/Non (2 options "Oui" puis "Non"), "rating_scale" si échelle numérique (ajoute "config": { "min": 0, "max": 10 }, "options": []), "star_rating" si notation en étoiles ("config": { "max": 5 }, "options": []), "free_text" si réponse ouverte ("options": []), sinon "multiple_choice".
 - Pour une question de type choix ("multiple_choice") qui a moins de 3 options dans le source, complète avec des options neutres/plausibles pour arriver à 3 ou 4 (et seulement dans ce cas). yes_no reste à 2 options.
 - Si le source n'a pas de résultats explicites, déduis 3 profils cohérents à partir du ton et des questions (ex: débutant / intermédiaire / expert).
+- LES RÉSULTATS SONT LA SEULE PARTIE QUE TU DÉVELOPPES. Un document de travail contient presque toujours des questions bien écrites et des résultats réduits à deux lignes. Tu ne changes RIEN aux questions ; tu RÉPARTIS ce que dit le source dans les quatre temps décrits plus bas, et tu développes chaque temps à la longueur demandée en restant dans le sujet, le vocabulaire et les faits du source.
 - Pondère les options avec un "points" (1 à 3) pour éviter les égalités entre profils : poids fort sur les réponses les plus caractéristiques d'un profil, poids 1 sur les réponses neutres. Une signature distincte par profil, jamais le même poids partout.
 - Si certains champs manquent (introduction, CTA, share_message), génère-les de façon brève et cohérente avec le contenu.
 - Le TITRE du source est reprenable tel quel s'il est bon. Le SOUS-TITRE ("introduction"), lui, est presque toujours absent d'un document de travail : rédige-le en suivant la règle ci-dessous.
@@ -356,6 +363,10 @@ RÈGLES D'OR :
 - Ton : ${tone}.
 
 ${introSubtitleBlock({ formality, minutes: null })}
+
+${resultBeatsBlock({ source: "import" })}
+
+${CTA_BUTTON_BLOCK}
 
 FORMAT DE SORTIE : JSON strict uniquement, sans markdown, sans commentaires.
 {
@@ -376,10 +387,14 @@ FORMAT DE SORTIE : JSON strict uniquement, sans markdown, sans commentaires.
   "results": [
     {
       "title": "Nom du profil ou niveau",
-      "description": "Description valorisante (2-3 phrases)",
-      "insight": "Prise de conscience forte et spécifique",
-      "projection": "${formality === "vous" ? "Et si vous..." : "Et si tu..."}",
-      "cta_text": "Texte du CTA personnalisé"
+      "description": "LE MIROIR : 4-6 phrases où la personne se reconnaît. Aucun conseil ici.",
+      "insight_heading": "Titre de LA CAUSE (3-7 mots)",
+      "insight": "LA CAUSE : 4-6 phrases, une seule cause nommée précisément puis expliquée.",
+      "projection_heading": "Titre du CHEMIN (3-7 mots)",
+      "projection": "LE CHEMIN : 4-6 phrases, trois étapes dans l'ordre, faisables en moins d'une semaine.",
+      "bridge_heading": "Titre du PONT (3-7 mots)",
+      "bridge": "LE PONT : 3-5 phrases orientées bénéfices, déduites de ce que le source annonce comme suite.",
+      "cta_text": "Libellé du bouton pour ce profil (3-6 mots, ni prix ni garantie)"
     }
   ],
   "cta_text": "Texte du CTA principal",
@@ -399,6 +414,7 @@ CONSIGNES :
 - Renseigne "question_type" pour chaque question. Les questions de type choix ont des options avec un result_index valide (0 à results.length - 1) ; yes_no a 2 options ; échelle/étoiles/texte libre ont "options": [].
 - Répartis les result_index de façon équilibrée si le source ne le fait pas.
 - Si aucun résultat n'est fourni, crée 3 profils cohérents à partir du thème du source.
+- CHAQUE résultat porte les QUATRE temps remplis : description, insight_heading + insight, projection_heading + projection, bridge_heading + bridge. Aucun ne reste vide, même si le source est avare : tu développes à partir de ce qu'il dit, tu n'inventes ni prix, ni durée, ni garantie.
 - Réponds UNIQUEMENT en JSON valide, rien autour.`;
 
   return { system, user };

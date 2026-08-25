@@ -114,3 +114,118 @@ test("le prompt n'annonce pas une fourchette de questions qui contredit le compt
   assert.ok(!user.includes("(3-5 questions)"), "fourchette contradictoire dans le user");
   assert.match(user, /NOMBRE DE QUESTIONS : 9/);
 });
+
+// ── La page de résultat : ce que Béné a vu le 25 août 2026 ───────────
+//
+// "Le CTA est éclaté, trop de texte, on n'annonce pas le prix. Le
+// résultat n'apporte rien, c'est pas assez concret, pas assez développé.
+// Il manque la dernière partie. Bref c'est éclaté au sol, il faut le
+// retravailler pour appliquer les conseils de l'atelier pour vendre ou
+// remplir l'objectif du quiz avec un quiz créé par IA MAIS AUSSI AVEC UN
+// QUIZ IMPORTÉ."
+//
+// Les deux moitiés du premier reproche disent la même chose : le prix,
+// la garantie et le délai avaient atterri DANS le bouton, donc le bouton
+// était illisible ET le seul endroit qui pouvait vraiment présenter
+// l'offre (le texte du pont) ne la présentait pas.
+
+test("le libellé du bouton ne porte NI prix NI garantie NI délai", () => {
+  const { system } = gen();
+  assert.match(system, /LIBELLÉ DU BOUTON/);
+  assert.match(system, /3 à 6 mots/);
+  assert.match(system, /INTERDIT dans le libellé : un prix/);
+  // Et le prix n'est pas perdu pour autant : il a une place nommée.
+  assert.match(system, /dans le TEXTE DU PONT/);
+});
+
+test("la règle du bouton vaut AUSSI à l'import", () => {
+  // Elle vivait à l'intérieur du prompt de génération : l'import ne
+  // l'avait pas. Une règle recopiée dans un seul des deux chemins n'est
+  // pas une règle.
+  const { system } = buildQuizImportPrompt({ content: "Q1 ...", locale: "fr" });
+  assert.match(system, /LIBELLÉ DU BOUTON/);
+  assert.match(system, /3 à 6 mots/);
+});
+
+test("l'import produit les 4 temps, headings et pont compris", () => {
+  // "il manque la dernière partie" : le gabarit de sortie de l'import
+  // n'avait ni bridge, ni aucun heading. Un quiz importé ne pouvait donc
+  // PAS naître avec une page de résultat complète.
+  const { system, user } = buildQuizImportPrompt({ content: "Q1 ...", locale: "fr" });
+  for (const champ of [
+    "insight_heading",
+    "projection_heading",
+    "bridge_heading",
+    '"bridge"',
+  ]) {
+    assert.ok(system.includes(champ), `${champ} absent du prompt d'import`);
+  }
+  assert.match(system, /LES QUATRE SONT OBLIGATOIRES/);
+  assert.match(user, /QUATRE temps remplis/);
+});
+
+test("le PONT nomme l'offre en génération, et n'invente rien à l'import", () => {
+  // La mécanique est un PARAMÈTRE : les deux chemins ne peuvent pas
+  // recevoir la même consigne. Demander à l'import de nommer une offre,
+  // c'est lui demander d'inventer un prix, et ce prix finirait sur une
+  // vraie page lue par de vrais acheteurs.
+  const avecOffre = gen({ intention: "vendre ma formation Structurer son offre à 27 euros" });
+  assert.match(avecOffre.system, /NOMME L'OFFRE/);
+  assert.match(avecOffre.system, /son PRIX s'il l'a donné/);
+
+  // Sans intention business, on ne remplit pas le trou à sa place.
+  const sansOffre = gen();
+  assert.ok(!sansOffre.system.includes("NOMME L'OFFRE"));
+  assert.match(sansOffre.system, /sans inventer de produit, de prix/);
+
+  const importe = buildQuizImportPrompt({ content: "Q1 ...", locale: "fr" });
+  assert.ok(!importe.system.includes("NOMME L'OFFRE"));
+  assert.match(importe.system, /Le pont se DÉDUIT du texte source/);
+
+  // Les trois cas interdisent l'invention, aucun n'y échappe.
+  for (const { system } of [avecOffre, sansOffre, importe]) {
+    assert.match(system, /INVENTE JAMAIS|sans inventer/);
+  }
+});
+
+test("les longueurs demandées sont celles d'un texte développé", () => {
+  // "pas assez développé" : chaque temps était plafonné à "2 à 3
+  // phrases", gabarit de sortie compris.
+  const { system } = gen();
+  assert.match(system, /"description" : 4 à 6 phrases/);
+  assert.match(system, /"insight" : 4 à 6 phrases/);
+  assert.match(system, /"projection" : 4 à 6 phrases/);
+  assert.match(system, /"bridge" : 3 à 5 phrases/);
+  // Et le gabarit de sortie ne redit PAS 2-3 phrases juste en dessous.
+  const shape = system.slice(system.indexOf("FORMAT DE SORTIE"));
+  assert.ok(!/LE MIROIR : 2-3 phrases/.test(shape), "le gabarit contredit la règle");
+});
+
+test("le prompt dit ce qui rend un texte CONCRET, il ne le demande pas", () => {
+  // "pas assez concret". Demander "sois concret" ne produit rien : il
+  // faut un test que le modèle puisse s'appliquer.
+  const { system } = gen();
+  assert.match(system, /recopiée telle quelle dans le quiz d'une AUTRE niche/);
+  assert.match(system, /libère ton potentiel/); // liste noire des phrases creuses
+});
+
+test("aucun guillemet à chevrons dans les prompts français", () => {
+  // Béné, 25 août 2026 : "le générateur de quiz ne doit jamais utiliser
+  // ce type de guillemet en français". Le prompt l'interdisait au modèle
+  // dix lignes avant de s'en servir lui-même, exactement comme le tiret
+  // cadratin du gabarit de sortie le 3 août.
+  const textes = [
+    gen().system,
+    gen({ addressForm: "vous" }).system,
+    buildQuizImportPrompt({ content: "Q1 ...", locale: "fr" }).system,
+  ];
+  for (const t of textes) {
+    // La SEULE occurrence tolérée est la ligne qui énonce la règle : on
+    // ne peut pas l'écrire sans montrer le caractère (même exception que
+    // "cher·e" dans le test genre-neutre).
+    const lignes = t.split("\n").filter((l) => l.includes("«") || l.includes("»"));
+    for (const l of lignes) {
+      assert.match(l, /jamais « comme cela »/, `chevrons hors de la règle : ${l.trim()}`);
+    }
+  }
+});

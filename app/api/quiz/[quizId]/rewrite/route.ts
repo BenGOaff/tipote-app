@@ -128,12 +128,16 @@ export async function POST(
     question: "Question directe et engageante (1 phrase courte).",
     option: "Option de réponse courte (3-8 mots), naturelle.",
     result_title: "Titre de profil de résultat, court (3-6 mots), évocateur.",
-    result_description: "Description du résultat : 1-3 phrases empathiques qui parlent à la personne.",
-    result_insight: "Insight clé sur ce profil : 1-2 phrases qui résonnent.",
-    result_projection: "Projection encourageante : 1-2 phrases positives sur le futur.",
+    // Longueurs alignées sur les 4 temps (lib/prompts/quiz/copywriting.ts) :
+    // une reformulation qui raccourcit un bloc à une phrase défait le
+    // travail de la génération, et Béné a demandé l'inverse ("pas assez
+    // développé", 25 août 2026).
+    result_description: "Le miroir : 4 à 6 phrases où la personne se reconnaît, avec au moins un détail concret de sa vie. Aucun conseil.",
+    result_insight: "La cause : 4 à 6 phrases. Une seule cause, nommée précisément puis expliquée.",
+    result_projection: "Le chemin : 4 à 6 phrases décrivant trois étapes dans l'ordre, faisables en moins d'une semaine.",
     // LE PONT : le seul champ du résultat qui a le droit de vendre, et
     // il vend en bénéfices, pas en pression.
-    result_bridge: "Le pont vers l'offre : 2-3 phrases orientées bénéfices concrets, qui donnent envie de cliquer le bouton juste en dessous. Jamais de pression ni de fausse urgence.",
+    result_bridge: "Le pont vers l'offre : 3 à 5 phrases orientées bénéfices concrets, qui donnent envie de cliquer le bouton juste en dessous. C'est ICI que se disent le format et le prix quand ils sont connus, jamais dans le libellé du bouton. N'invente ni prix, ni durée, ni garantie. Jamais de pression ni de fausse urgence.",
     intro: "Introduction du quiz : 1-2 phrases qui donnent envie de commencer.",
     title: "Titre du quiz : court et accrocheur.",
     generic: "Texte cohérent avec le ton du quiz.",
@@ -142,10 +146,10 @@ export async function POST(
     question: "Direct, engaging question (one short sentence).",
     option: "Short answer option (3-8 words), natural.",
     result_title: "Result profile title, short (3-6 words), evocative.",
-    result_description: "Result description: 1-3 empathetic sentences speaking to the person.",
-    result_insight: "Key insight on this profile: 1-2 resonant sentences.",
-    result_projection: "Encouraging projection: 1-2 positive sentences about the future.",
-    result_bridge: "The bridge to the offer: 2-3 benefit-driven sentences that make the reader want to click the button right below. Never pressure, never fake urgency.",
+    result_description: "The mirror: 4 to 6 empathetic sentences with at least one concrete detail from the reader's life. No advice here.",
+    result_insight: "The cause: 4 to 6 sentences. One single cause, named precisely then explained.",
+    result_projection: "The path: 4 to 6 sentences describing three ordered steps, each doable in under a week.",
+    result_bridge: "The bridge to the offer: 3 to 5 benefit-driven sentences that make the reader want to click the button right below. Format and price belong HERE when known, never in the button label. Never invent a price, a duration or a guarantee. Never pressure, never fake urgency.",
     intro: "Quiz introduction: 1-2 sentences that make people want to start.",
     title: "Quiz title: short and catchy.",
     generic: "Text consistent with the quiz tone.",
@@ -153,7 +157,7 @@ export async function POST(
   const kindHint = (isFr ? kindHintsFr : kindHintsEn)[fieldKind] ?? kindHintsFr.generic;
 
   const systemPrompt = isFr
-    ? `Tu es l'autrice du quiz « ${quizTitle} »${quizIntro ? `, dont l'intro est : « ${quizIntro} »` : ""}. Tu réécris un de ses champs en gardant SON ton (${addressForm === "vous" ? "vouvoiement" : "tutoiement"}, ${isSurvey ? "ton sondage neutre" : "ton chaleureux et personnel"}). ${kindHint} Tu ne changes pas la signification, tu reformules. Réponds STRICTEMENT en JSON valide sans texte autour, dans ce format : {"proposals":["v1","v2","v3"]}. Trois variantes différentes (longueur ou angle), pas de duplicat.
+    ? `Tu es l'autrice du quiz "${quizTitle}"${quizIntro ? `, dont l'intro est : "${quizIntro}"` : ""}. Tu réécris un de ses champs en gardant SON ton (${addressForm === "vous" ? "vouvoiement" : "tutoiement"}, ${isSurvey ? "ton sondage neutre" : "ton chaleureux et personnel"}). ${kindHint} Tu ne changes pas la signification, tu reformules. Réponds STRICTEMENT en JSON valide sans texte autour, dans ce format : {"proposals":["v1","v2","v3"]}. Trois variantes différentes (longueur ou angle), pas de duplicat.
 
 ${NATURAL_WRITING_BLOCK}`
     : `You are the author of the quiz "${quizTitle}"${quizIntro ? `, whose intro reads: "${quizIntro}"` : ""}. You're rewriting one of its fields while keeping THE author's tone (${addressForm === "vous" ? "formal/polite address" : "informal address"}, ${isSurvey ? "neutral survey tone" : "warm, personal tone"}). ${kindHint} Don't change the meaning, just reformulate. Respond STRICTLY with valid JSON, no surrounding text, in this exact shape: {"proposals":["v1","v2","v3"]}. Three different variants (length or angle), no duplicates.

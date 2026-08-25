@@ -52,6 +52,30 @@ RÈGLES DE FORME :
 - JAMAIS le patron "Ce n'est pas X, c'est Y" en boucle : une fois dans tout le quiz, au maximum.`;
 
 /**
+ * Le libellé du bouton, et rien d'autre.
+ *
+ * Béné, 25 août 2026, en lisant une page de résultat générée : "le CTA est
+ * éclaté, trop de texte, on n'annonce pas le prix".
+ *
+ * Les deux moitiés de la phrase disent la MÊME chose et elles se
+ * corrigent ensemble. Le prix, la garantie et le délai avaient atterri
+ * DANS le bouton, donc le bouton était illisible ET le seul endroit qui
+ * pouvait vraiment présenter l'offre (le texte du pont) ne la présentait
+ * pas. Déplacer ces arguments du bouton vers le pont règle les deux.
+ *
+ * La règle des 3 à 6 mots existait déjà, mais elle vivait à l'intérieur
+ * du prompt de GÉNÉRATION, donc l'import ne l'avait pas. Une règle
+ * recopiée dans un seul des deux chemins n'est pas une règle : elle vit
+ * ici, et les deux prompts l'importent.
+ */
+export const CTA_BUTTON_BLOCK = `LIBELLÉ DU BOUTON ("cta_text") : RÈGLE STRICTE :
+C'est le texte ÉCRIT SUR LE BOUTON, rien d'autre. 3 à 6 mots : un verbe, puis le bénéfice. Par exemple "Réserver mon audit gratuit", "Découvrir la méthode", "Recevoir mon plan".
+- Il doit tenir sur UNE ligne dans un bouton, sur un téléphone. Compte les mots avant de valider.
+- INTERDIT dans le libellé : un prix, une garantie ("remboursé", "satisfait ou remboursé"), un délai ("accès immédiat", "en 5 minutes"), une énumération séparée par des virgules ou des points, une phrase complète avec un point final.
+- Ces arguments sont bons, ils ne sont juste pas à leur place : ils vont dans le TEXTE DU PONT, juste au dessus du bouton. Un bouton chargé se lit comme une bannière publicitaire, et il fait BAISSER le clic.
+- UNIQUE à chaque profil : il reprend la promesse de CE résultat. Jamais "En savoir plus", jamais "Cliquez ici", jamais deux fois le même libellé sur deux profils.`;
+
+/**
  * Les 4 temps de la page de résultat.
  *
  * C'est ce qui est enseigné dans l'Atelier ("vendre avec un quiz"), et
@@ -63,32 +87,83 @@ RÈGLES DE FORME :
  * RÉDACTION, jamais un contenu : ces mots ne doivent apparaître nulle
  * part dans le texte produit, sinon le visiteur lit le squelette au lieu
  * de lire le message.
+ *
+ * POURQUOI C'EST UNE FONCTION, ET PAS UNE CONSTANTE (25 août 2026).
+ * Béné : "le résultat n'apporte rien, c'est pas assez concret, pas assez
+ * développé, il manque la dernière partie. Il faut le retravailler pour
+ * appliquer les conseils de l'atelier pour vendre ou remplir l'objectif
+ * du quiz avec un quiz créé par IA MAIS AUSSI AVEC UN QUIZ IMPORTÉ."
+ *
+ * Les deux chemins ne peuvent pas recevoir la même consigne sur le PONT,
+ * et c'est tout le sujet :
+ *  - en génération, le créateur a décrit son offre dans son intention
+ *    business : le pont doit la NOMMER, avec son format et son prix ;
+ *  - à l'import, il n'y a que le texte source. Lui demander de nommer
+ *    une offre reviendrait à lui demander d'INVENTER un prix, et ce prix
+ *    finirait sur une vraie page lue par de vrais acheteurs.
+ *
+ * D'où le paramètre OBLIGATOIRE `source` : on ne peut pas appeler la
+ * fonction sans avoir dit de quel chemin on parle. C'est la seule
+ * protection qui survit au prochain qui touchera au fichier (même règle
+ * que `analyzeResultCoverage(mode, ...)` et `getShareData(scope)`).
  */
-export const RESULT_BEATS_BLOCK = `PAGE DE RÉSULTAT : LES 4 TEMPS (structure obligatoire) :
-Le résultat n'est pas une fiche descriptive, c'est une progression. Le visiteur doit se reconnaître, comprendre, se projeter, puis avoir envie de la suite. Quatre temps, dans cet ordre, chacun avec un TITRE et un TEXTE COURT.
+export type BeatsSource = "generation" | "import";
+
+export function resultBeatsBlock(opts: {
+  source: BeatsSource;
+  /**
+   * Ce que le créateur a écrit de son offre (son intention business).
+   * Vide = il n'a rien décrit, et on ne remplit PAS le trou à sa place.
+   */
+  offre?: string;
+}): string {
+  const offre = String(opts.offre ?? "").trim();
+
+  const pont =
+    opts.source === "import"
+      ? `   - Le pont se DÉDUIT du texte source : ce que le créateur y annonce comme suite (une offre, un accompagnement, une ressource, un rendez-vous). S'il nomme un format ou un prix, reprends-les tels quels.
+   - Si le source ne dit rien d'une suite, écris un pont qui prolonge le chemin sans nommer de produit.
+   - N'INVENTE JAMAIS un prix, une durée, un nombre de places ni une garantie. Ce que le source ne dit pas n'existe pas : ces phrases finissent sur une vraie page lue par de vrais acheteurs.`
+      : offre
+        ? `   - NOMME L'OFFRE. Le créateur la décrit dans son intention business, plus bas : reprends son NOM, sa FORME (formation, appel, modèle, accompagnement, communauté...) et son PRIX s'il l'a donné. Un visiteur qui clique sans savoir ce qu'il y a derrière le bouton ne revient pas.
+   - Le prix, la garantie et le délai se disent ICI, dans le texte du pont, jamais dans le libellé du bouton.
+   - N'INVENTE JAMAIS un prix, une durée, un nombre de places ni une garantie. Ce que le créateur n'a pas écrit n'existe pas : ces phrases finissent sur une vraie page lue par de vrais acheteurs.`
+        : `   - Le créateur n'a pas décrit d'offre : le pont propose la suite logique de son chemin, sans inventer de produit, de prix, de délai ni de garantie.`;
+
+  return `PAGE DE RÉSULTAT : LES 4 TEMPS (structure obligatoire) :
+Le résultat n'est pas une fiche descriptive, c'est une progression. Le visiteur doit se reconnaître, comprendre, se projeter, puis avoir envie de la suite. Quatre temps, dans cet ordre, chacun avec un TITRE et un TEXTE.
+LES QUATRE SONT OBLIGATOIRES, pour CHAQUE résultat. Un résultat auquel il manque un temps s'arrête au milieu d'une phrase, du point de vue du visiteur : c'est la dernière chose qu'il lit avant de décider s'il clique.
+
+CE QUI REND UN TEMPS CONCRET (le point le plus important) :
+Chaque temps porte au moins un élément que le visiteur peut VÉRIFIER dans sa propre vie : un moment de sa journée, un chiffre, une phrase qu'il se dit à lui-même, un geste précis, un outil qu'il utilise.
+Test à t'appliquer avant de valider chaque paragraphe : si la phrase pouvait être recopiée telle quelle dans le quiz d'une AUTRE niche, elle ne dit rien. Réécris-la avec le vocabulaire et les situations de cette cible là.
+INTERDIT dans ces textes : "il est temps de", "tu mérites", "libère ton potentiel", "passe au niveau supérieur", "prends conscience que", et toute phrase qui n'apprend rien de plus que le titre du profil.
 
 1. LE MIROIR -> "title" + "description"
    Tu lui redis où il en est, avec SES mots. Il se reconnaît, donc il continue à lire.
    - "title" : le nom du profil. Court, incarné, valorisant même quand la situation ne l'est pas. Jamais un jugement ("Le Mauvais Vendeur"), jamais une étiquette froide ("Profil 2").
-   - "description" : 2 à 3 phrases qui décrivent sa situation de façon si juste qu'il se dit "c'est exactement ça". Du concret, des situations vécues. Aucune solution ici, aucun conseil : uniquement le miroir.
+   - "description" : 4 à 6 phrases. Sa situation décrite si précisément qu'il se dit "c'est exactement ça" : ce qu'il fait, ce qu'il évite, ce qu'il se répète. Aucune solution ici, aucun conseil : uniquement le miroir.
 
 2. LA CAUSE -> "insight_heading" + "insight"
    Tu nommes ce qui bloque vraiment. C'est souvent autre chose que ce qu'il croyait, et c'est ce décalage qui crée le déclic.
    - "insight_heading" : 3 à 7 mots qui annoncent la révélation, sans la donner.
-   - "insight" : 2 à 3 phrases. Une seule cause, nommée précisément. Si elle contredit une croyance courante de la cible, dis-le franchement.
+   - "insight" : 4 à 6 phrases. UNE seule cause, nommée précisément, puis EXPLIQUÉE : pourquoi elle produit ce qu'il vit, et ce qu'il a probablement déjà essayé qui n'a pas marché à cause d'elle. Si elle contredit une croyance courante de la cible, dis-le franchement.
 
 3. LE CHEMIN -> "projection_heading" + "projection"
    Tu montres les étapes pour s'en sortir. Il voit que c'est faisable, donc il se projette.
    - "projection_heading" : 3 à 7 mots qui annoncent une sortie concrète.
-   - "projection" : 2 à 3 phrases. Des étapes réelles, dans l'ordre, avec un effort crédible. Pas de méthode miracle. Il doit se dire "je peux faire ça".
+   - "projection" : 4 à 6 phrases qui décrivent TROIS étapes, dans l'ordre, chacune ouverte par un verbe d'action et faisable en moins d'une semaine. Du texte suivi, pas une liste à puces. Pas de méthode miracle : il doit se dire "je peux commencer ça demain".
 
 4. LE PONT -> "bridge_heading" + "bridge"
    Tu proposes la suite logique de ce qu'il vient de lire. PAS une pub.
    - "bridge_heading" : 3 à 7 mots qui font la jonction entre son chemin et ce que le créateur propose.
-   - "bridge" : 2 à 3 phrases, ORIENTÉES BÉNÉFICES : ce qu'il aura, ce qu'il n'aura plus à faire, ce que ça change concrètement dans sa semaine. Le texte doit donner envie de cliquer le bouton qui suit, et rester cohérent avec le libellé de ce bouton ("cta_text"). Jamais de pression, jamais de fausse urgence, jamais "ne rate pas cette occasion".
+   - "bridge" : 3 à 5 phrases, ORIENTÉES BÉNÉFICES : ce qu'il obtient, ce qu'il n'a plus à faire lui-même, ce que ça change concrètement dans sa semaine.
+${pont}
+   - Jamais de pression, jamais de fausse urgence, jamais "ne rate pas cette occasion".
 
 INTERDIT ABSOLU : n'écris NULLE PART les mots "miroir", "cause", "chemin", "pont", "étape 1", "temps 1", ni aucun mot qui révèle cette structure. Ce sont mes noms de travail. Le visiteur doit lire un message qui coule, pas un plan.
 Les quatre temps s'enchaînent : la cause répond à la description, le chemin répond à la cause, le pont prolonge le chemin. Relis-les à la suite : si on peut intervertir deux blocs sans que ça se voie, c'est raté.`;
+}
 
 // ── Le sous-titre de l'écran d'accueil ──────────────────────────────
 //
