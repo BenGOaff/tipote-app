@@ -36,9 +36,38 @@ test("l'espace manquante est insérée devant ? ! : ;", () => {
   assert.equal(fr("Donc; ensuite"), `Donc${NBSP}; ensuite`);
 });
 
-test("les guillemets français prennent leur espace des deux côtés", () => {
-  assert.equal(fr("«oui»"), `«${NBSP}oui${NBSP}»`);
-  assert.equal(fr("« oui »"), `«${NBSP}oui${NBSP}»`);
+// Bene, 25 aout 2026 : "le generateur de quiz de tiquiz et tipote et
+// partout en fait ne doit jamais utiliser ce type de guillemet en
+// francais : « mais " ".
+//
+// Cette page faisait EXACTEMENT l'inverse jusqu'a ce jour : elle posait
+// une espace insecable autour des chevrons pour les rendre
+// typographiquement justes. C'etait juste, et ce n'est pas ce qu'elle
+// veut. Le test d'avant figeait donc l'ancien comportement : il a rougi,
+// c'est son travail.
+test("les chevrons deviennent des guillemets droits", () => {
+  assert.equal(fr("«oui»"), '"oui"');
+  assert.equal(fr("« oui »"), '"oui"');
+  assert.equal(fr("Il a dit « bonjour » hier"), 'Il a dit "bonjour" hier');
+});
+
+test("l'espace interieure part AVEC le chevron", () => {
+  // Une insecable orpheline collee a un guillemet droit serait pire que
+  // le chevron d'origine.
+  assert.ok(!fr("« oui »").includes(NBSP));
+  assert.ok(!fr("«\u202Foui\u202F»").includes("\u202F"));
+});
+
+test("la ponctuation garde son espace meme collee a un chevron", () => {
+  // Les motifs de ponctuation se servent du `»` comme repere de fin de
+  // phrase : convertir les chevrons AVANT les priverait de ce repere.
+  assert.equal(fr("Il a dit « prêt? » hier"), `Il a dit "prêt${NBSP}?" hier`);
+});
+
+test("aucune autre langue n'est touchee par les chevrons", () => {
+  for (const loc of ["en", "es", "it", "pt", "pt-BR", "ar"]) {
+    assert.equal(applyFrenchTypography("« oui »", loc), "« oui »", loc);
+  }
 });
 
 test("une espace déjà là devient insécable", () => {

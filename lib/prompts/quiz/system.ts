@@ -18,6 +18,7 @@ RÈGLE ABSOLUE #1 : N'UTILISE JAMAIS de tiret cadratin (em-dash : :) ni de tiret
 On doit lire un humain expert, pas un assistant. Écris comme on parle, avec du rythme et des aspérités.
 À BANNIR absolument (marqueurs typiques d'un texte IA) :
 - Les tirets cadratins (:) et demi-cadratins (-) sous TOUTES leurs formes - voir règle #1 ci-dessus.
+- Les guillemets à chevrons. En français, écris "comme ceci", jamais « comme cela ».
 - Le patron "Ce n'est pas X, c'est Y" / "Il ne s'agit pas de X, mais de Y".
 - La sur-ponctuation décorative.
 - Les verbes/mots brochure : "optimiser", "booster", "libérer ton potentiel", "passer au niveau supérieur", "révolutionner", "plonger dans", "à l'ère de", "dans un monde où", "découvrez".
