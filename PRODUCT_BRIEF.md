@@ -203,13 +203,20 @@ Variations selon le canal :
 - Extension Chrome Tipote Boost qui amplifie la portée des publications.
 - Réservé aux plans Pro, Elite et Beta.
 
-### 7.11. Sécurité et alertes
+### 7.11. Partager un quiz entier à quelqu'un
+- **Un lien, un clic, et le quiz est installé chez l'autre**, dans son compte : textes, images, questions, points, profils de résultat, couleurs et mise en page. L'original ne bouge pas, la personne reçoit une copie.
+- Trois usages : montrer un quiz déjà construit à un client potentiel (il voit la page sans créer de compte), livrer un quiz réalisé pour un client, distribuer un modèle à un groupe.
+- **Ce qui reste chez l'expéditeur, et c'est un argument** : ses tags Systeme.io, ses pixels publicitaires, l'adresse de ses boutons, son lien de confidentialité, son pied de page. Sinon les leads du destinataire tomberaient dans les automatisations de l'expéditeur. L'écran d'installation liste ce qu'il reste à remplir.
+- **Le quiz arrive en brouillon**, toujours. Le lien ne sert qu'une fois par défaut, affiche son nombre d'installations et se désactive d'un clic.
+- La page vue par le destinataire parle la langue DU QUIZ partagé. Le contenu, lui, n'est jamais traduit.
+
+### 7.12. Sécurité et alertes
 - Email immédiat quand un compte social se déconnecte (token révoqué, expiré).
 - Email quand un post programmé bascule en échec, avec lien direct vers l'éditeur.
 - Détection automatique de token mort pendant la publication.
 - Dédup pour ne pas spammer en cas d'échecs en cascade.
 
-### 7.12. Dashboard d'affiliation (affiliate.tipote.com)
+### 7.13. Dashboard d'affiliation (affiliate.tipote.com)
 - Espace dédié aux affiliés qui promeuvent Tiquiz et Tipote, opérationnel en quelques minutes.
 - Vue d'ensemble : lien d'affiliation, gains, progression.
 - Promouvoir : liens trackés éditables (le code de suivi est ajouté automatiquement).
@@ -222,6 +229,10 @@ Variations selon le canal :
 - **Le cookie dure 1 an**, et une inscription gratuite via son lien rattache la personne à l'affilié **à vie**. Celui qui a amené le contact le garde, même si le prospect croise un autre lien plus tard.
 - **La commission est versable 30 jours après le paiement du client.** Ne jamais annoncer un autre délai : c'est celui que les affiliés connaissent.
 - **La commission est RÉCURRENTE** : 40 % sur Tiquiz versés chaque mois tant que la personne recommandée reste abonnée, pas une prime une seule fois. Elle s'arrête si la personne part ou se fait rembourser ; les mois déjà versés restent acquis. C'est l'argument principal du programme, et il ne doit jamais être présenté comme un paiement unique.
+- **Un affilié qui est aussi client est récompensé, et c'est LUI qui choisit comment** : soit son abonnement baisse de 10 % par tranche de 10 filleuls actifs (jusqu'à la gratuité), soit son taux de commission monte de 5 points par tranche, de 40 % à 70 %. Les deux sont exclusifs, et il bascule de l'un à l'autre quand il veut.
+- **Un filleul actif est quelqu'un qui PAIE**, pas un inscrit gratuit ni un essai. Le compte se recalcule chaque mois.
+- **Si sa récompense baisse, il est prévenu par email avant que le prix bouge**, avec la raison (combien de filleuls actifs) et pas seulement le chiffre. Une remise qui descend est un prélèvement qui monte : le découvrir sur son relevé, c'est perdre un affilié.
+- **Chaque affilié peut avoir son code de réduction**, et l'avantage est au choix : un pourcentage sur la première échéance, un pourcentage à vie, un pourcentage sur une période donnée (une opération de décembre par exemple), un pourcentage selon le plan, ou des jours offerts.
 - **Ce qu'on promet, on le tient dans les deux sens** : une commission tombe si la vente est remboursée ou impayée, comme le disent les conditions du programme. Un affilié qui découvrirait l'inverse cesserait de nous croire sur le reste.
 - Ne jamais annoncer un délai de versement inférieur à 21 jours après la vente : c'est le délai de rétractation plus une marge, et une commission virée ne se reprend pas.
 

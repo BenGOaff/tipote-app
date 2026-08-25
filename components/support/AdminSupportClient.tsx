@@ -85,8 +85,29 @@ export default function AdminSupportClient() {
     setMessage("");
     const res = await fetch("/api/admin/support/seed", { method: "POST" });
     const d = await res.json();
+    // CE QUI A CHANGÉ, pas seulement le total. Un compteur qui affiche
+    // le même nombre avant et après se lit comme un bouton qui ne
+    // marche pas (Béné, 26 août 2026 : "j'ai l'impression que ça
+    // n'ajoute rien"). `null` = on n'a pas pu lire l'existant, donc on
+    // ne prétend pas savoir.
+    const detail =
+      d.nouveaux === null || d.nouveaux === undefined
+        ? ""
+        : ` (${d.nouveaux} nouveau${d.nouveaux > 1 ? "x" : ""}, ${d.misAJour} mis à jour)`;
+    const rates: string[] = Array.isArray(d.rates) ? d.rates : [];
+
     if (d.ok) {
-      setMessage(`Seed réussi : ${d.categories} catégories, ${d.articles} articles`);
+      setMessage(
+        `Publié : ${d.categories} catégories, ${d.articles} articles${detail}`,
+      );
+      fetchData();
+    } else if (rates.length > 0) {
+      // Un refus n'est pas une panne : le reste EST passé, et on nomme
+      // ce qui ne l'est pas au lieu d'un "Erreur" qui laisse croire que
+      // rien n'a été publié.
+      setMessage(
+        `Publié avec ${rates.length} article(s) en échec${detail} : ${rates.join(" | ")}`,
+      );
       fetchData();
     } else {
       setMessage(`Erreur : ${d.error}`);

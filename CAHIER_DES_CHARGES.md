@@ -356,6 +356,18 @@ Langues : le contenu du quiz peut être généré dans de nombreuses langues (ca
 
 Stats et analytics : vues, partages, leads. Une page d'analytics par quiz (`/quiz/[id]/analytics`) présente des KPI, l'évolution des leads dans le temps, la distribution des résultats et un funnel par question (table `quiz_question_events`). Les compteurs de vues et de complétions sont recalculés en direct depuis `quiz_events`, jamais depuis le compteur dénormalisé `quizzes.views_count`, avec un garde-fou qui garantit un taux de capture inférieur ou égal à 100%.
 
+**Partager un quiz à un autre compte.** Menu d'une carte de Mes contenus, entrée **Partager ce quiz** : elle fabrique un lien (`/partage/<jeton>`, table `quiz_shares`) qui INSTALLE une copie du quiz dans le compte de celui qui l'ouvre. Le quiz d'origine n'est ni déplacé, ni publié, ni modifié.
+
+- **Les textes voyagent, les destinations et les identifiants restent** (`lib/quiz/partage.ts`) : clé et tags Systeme.io, pixels Meta / GA4 / Google Ads, `cta_url`, `privacy_url`, pied de page, redirections de fermeture et `hide_branding` ne traversent jamais. Sans ça, les leads du destinataire déclencheraient les automatisations de l'expéditeur et ses visiteurs atterriraient sur le site de l'expéditeur.
+- `aPersonnaliser()` rend ce qui a été retiré, **et seulement ce que l'expéditeur avait vraiment rempli** : l'écran d'installation l'affiche.
+- **Les images sont RECOPIÉES** dans le stockage du destinataire (`lib/quiz/partageImages.ts`), reconnues à leur FORME n'importe où dans la ligne y compris au fond d'un JSONB. Garder les URL de l'expéditeur marcherait jusqu'au jour où il fait le ménage : le quiz de son client se viderait des mois plus tard. Une copie ratée garde l'URL d'origine et l'écran dit combien de fichiers n'ont pas suivi.
+- Le lien ne sert qu'une fois par défaut, porte son compteur, son libellé privé et son interrupteur ; `etatPartage()` rend la raison exacte d'un refus (`inconnu` / `revoque` / `expire` / `epuise`).
+- La lecture du quiz source se fait en service-role (le destinataire n'a aucun droit dessus), **l'écriture de la copie avec SA session**, donc sous sa RLS, avec son `user_id` et son projet actif. Le plafond du plan gratuit s'y applique.
+- `/partage/<jeton>` est **publique** (montrer son travail à un prospect ne commence pas par une inscription) et parle la langue DU QUIZ partagé (`lib/quiz/partageTextes.ts`, 7 langues, `?lang=` prioritaire). Le contenu du quiz n'est jamais traduit.
+- Le module quiz de Tiquiz est jumeau : les deux modules purs y sont identiques.
+
+**La page de résultat, classique ou en 4 temps.** `quizzes.result_layout` vaut `'classic'` par défaut et `resultLayoutMode()` ne rend `'beats'` que sur la valeur explicite : un quiz d'hier est rendu comme hier. En `beats`, `lib/quiz/resultBeats.ts` décide seul des blocs et de leur ordre : le miroir (`title` + `description`), la cause (`insight`), le chemin (`projection`), le pont (`bridge`). Chacun masquable, chacun pouvant porter son image (`quiz_results.beat_media`, sanitizé). Le vocabulaire de la méthode ne sort jamais côté visiteur. **La taille du corps vit dans UNE constante, `RESULT_BODY_CLASS` (16 px)**, lue par le viewer ET par les quatre champs de l'éditeur : avant, l'aperçu affichait 18 px là où le visiteur voyait 16, et 14 là où il voyait 16. Une taille choisie à la main dans un champ passe devant.
+
 i18n interne : namespace `quizDetail`, classe CSS rich-text `tipote-quiz-rich`.
 
 ### 4.16. Module Popquiz (/popquiz)
@@ -524,6 +536,25 @@ Navigation : Vue d'ensemble, Promouvoir, Mes liens, Contenus, Revenus, Paiement,
 - Support : FAQ ouverte sur trois entrées pour débutants (par où commencer, quel produit promouvoir, où trouver le matériel), puis le calcul exact de la commission par vente. Les moyennes de revenus et les taux de conversion jamais mesurés en ont été retirés.
 - Essai gratuit : un mois Tiquiz Plus offert (octroyé côté base Tiquiz en service-role, retour au plan d'origine à J+30 par cron), pour créer du contenu de promo authentique.
 - CMS admin (`affiliate_contents`) : un espace admin gaté permet d'ajouter, éditer et publier articles, emails, posts et visuels, avec import des modèles par défaut et repli sur ces modèles tant que rien n'est publié.
+
+**Récompenser un affilié qui est aussi client.** L'affilié choisit, et peut basculer quand il veut (pris en compte au recalcul suivant) :
+
+| Son choix | Ce qu'il gagne |
+|---|---|
+| `abonnement` | -10 % sur son abonnement par tranche de 10 filleuls actifs, jusqu'à 100 % |
+| `commissions` | +5 points par tranche de 10 filleuls, de 40 % à 70 % maximum |
+
+Les deux sont EXCLUSIFS : choisir l'un laisse l'autre à son socle. Un filleul actif est quelqu'un qui a généré une commission dans les 35 derniers jours, c'est à dire qui a PAYÉ (ni un inscrit gratuit, ni un essai, ni un remboursé) ; 35 et pas 30 parce qu'un prélèvement peut glisser de quelques jours.
+
+**Le recalcul est MENSUEL** (`/api/cron/recompense-affilies`, le 2), et ce n'est pas une commodité : la récompense DESCEND quand un filleul arrête de payer, donc un calcul à la volée ferait monter un prix en cours de mois sans prévenir. Le mensuel est la seule forme qui permette d'annoncer AVANT d'appliquer.
+
+**Et l'annonce existe** : une BAISSE déclenche un email dans les 6 langues (`lib/affiliate/recompenseEmail.ts`) qui dit l'avant, l'après et surtout la CAUSE (le nombre de filleuls actifs), sans jamais promettre de date (l'échéance de chacun tombe le jour de son abonnement). Une hausse n'envoie rien. L'envoi vient APRÈS l'écriture et ne la bloque jamais ; un envoi raté crie dans le journal avec les deux pourcentages. Sans cet email, une remise qui passe de 20 à 10 % est un prélèvement qui monte, découvert sur le relevé.
+
+**Codes de réduction par affilié** (`affiliate_discount_codes`, gérés sur la ligne de l'affilié dans l'admin). La NATURE de l'avantage vient de la colonne `kind`, jamais devinée des champs remplis : pourcentage sur la première échéance, pourcentage à vie, pourcentage sur une durée précise, pourcentage selon le produit, ou jours offerts. Côté Tiquiz, `planDuCheckout()` traduit l'avantage en coupon Stripe ou en cycles PayPal ; des jours offerts REMPLACENT le mois offert (le maximum, jamais la somme) et une remise en pourcentage posée sur un essai est DIFFÉRÉE à la fin de l'essai, parce qu'une facture d'essai à 0 € consommerait un coupon `once`.
+
+**Affilié sans compte Systeme.io** : `affiliates.origin` distingue `systeme_io` de `tipote`, et `genererSa()` fabrique une clé interne pour un affilié recruté chez nous. `sa` reste la clé interne de tout l'historique, `ref` reste le seul code qui sort dans une URL.
+
+---
 
 Auth affilié : après connexion, navigation dure (`window.location.assign`) pour que le SSR du layout affilié lise le cookie de session.
 

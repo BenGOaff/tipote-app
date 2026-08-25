@@ -287,3 +287,106 @@ test("sans aucune copie reussie, rien n'est reecrit", () => {
   const entree = { cover_image_url: URL_BENE };
   assert.equal(reecrireImages(entree, new Map()), entree);
 });
+
+// ── LA LANGUE DE LA PAGE (Béné, 26 août 2026) ────────────────────────
+//
+// "Si je partage à un anglophone, le quiz ne sera pas traduit en
+// français quand même ?"
+//
+// Non : le CONTENU du quiz ne change jamais de langue. C'était notre
+// EMBALLAGE qui était en français, autour d'un quiz anglais.
+
+import { DEFAULT_LOCALE } from "@/i18n/config";
+import {
+  estRtl,
+  languePartage,
+  textesPartage,
+  type LanguePartage,
+} from "@/lib/quiz/partageTextes";
+
+const LANGUES: LanguePartage[] = ["fr", "en", "es", "it", "pt", "pt-BR", "ar"];
+
+test("la langue vient du QUIZ, pas du navigateur", () => {
+  // Celui qui reçoit un quiz anglais lit l'anglais, sinon on ne le lui
+  // aurait pas envoyé. C'est l'information la plus sûre qu'on ait.
+  assert.equal(languePartage(null, "en"), "en");
+  assert.equal(languePartage(undefined, "it"), "it");
+});
+
+test("un ?lang= valide gagne sur la langue du quiz", () => {
+  // L'expéditeur qui sait mieux peut trancher a la main, comme sur le
+  // centre d'aide.
+  assert.equal(languePartage("es", "fr"), "es");
+  // La casse est libre : un lien se recopie a la main.
+  assert.equal(languePartage("PT-br", "fr"), "pt-BR");
+});
+
+test("une langue inconnue ne casse rien et ne devient pas du francais", () => {
+  // Le repli est la locale par DEFAUT DE L'APP, pas le français écrit en
+  // dur : Tiquiz démarre en anglais, Tipote en français, et le même test
+  // doit dire vrai des deux côtés. Ce test a d'ailleurs attrapé la
+  // différence au moment du portage.
+  assert.equal(languePartage("klingon", null), DEFAULT_LOCALE);
+  assert.equal(languePartage("", ""), DEFAULT_LOCALE);
+  assert.equal(languePartage(42, {}), DEFAULT_LOCALE);
+  // Mais une langue inconnue NE DOIT PAS ecraser celle du quiz.
+  assert.equal(languePartage("klingon", "it"), "it");
+});
+
+test("les 7 langues repondent, sans trou ni gabarit non rempli", () => {
+  for (const l of LANGUES) {
+    const t = textesPartage(l);
+    const plats = [
+      t.surtitre, t.installer, t.installation, t.lecture, t.toutModifiable,
+      t.resteAToi, t.compteRequis, t.installeTitre, t.installeCorps,
+      t.avantPublier, t.pourquoiVide, t.ouvrir, t.liensMort,
+      ...Object.values(t.raisons),
+      ...Object.values(t.aFaire),
+      t.questions(3), t.resultats(4),
+    ];
+    for (const s of plats) {
+      assert.ok(s.trim().length > 0, `${l} : champ vide`);
+      assert.doesNotMatch(s, /\$\{|undefined|NaN/, `${l} : gabarit non rempli`);
+    }
+  }
+});
+
+test("chaque raison rendue par le serveur a une phrase, dans chaque langue", () => {
+  // Le serveur renvoie une RAISON, l'écran choisit la phrase (règle du
+  // 3 août). Une raison sans phrase, c'est un écran muet.
+  const rendues = [
+    "inconnu", "revoque", "expire", "epuise", "panne",
+    "non_connecte", "limite_quiz", "limite_sondage", "installation_impossible",
+  ] as const;
+  for (const l of LANGUES) {
+    const t = textesPartage(l);
+    for (const r of rendues) {
+      assert.ok(t.raisons[r]?.trim(), `${l} / ${r}`);
+    }
+  }
+});
+
+test("chaque element de aPersonnaliser a sa phrase, dans chaque langue", () => {
+  // Si `aPersonnaliser` gagne une entree et qu'on oublie de la traduire,
+  // l'ecran afficherait le code brut ("pied-de-page") au visiteur.
+  const tous = aPersonnaliser({
+    quiz: {
+      sio_capture_tag: "x", cta_url: "https://x.fr", privacy_url: "https://x.fr/p",
+      meta_pixel_id: "1", custom_footer_text: "y",
+    },
+    resultats: [],
+  });
+  for (const l of LANGUES) {
+    const t = textesPartage(l);
+    for (const cle of tous) {
+      assert.ok(t.aFaire[cle]?.trim(), `${l} / ${cle}`);
+    }
+  }
+});
+
+test("l'arabe s'ecrit de droite a gauche, et lui seul", () => {
+  assert.equal(estRtl("ar"), true);
+  for (const l of LANGUES.filter((x) => x !== "ar")) {
+    assert.equal(estRtl(l), false, l);
+  }
+});
