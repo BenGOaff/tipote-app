@@ -79,6 +79,7 @@ import {
   type ScoringAxis,
   type AxisScore,
 } from "@/lib/quizScoring";
+import { tiquizDiscoveryUrl } from "@/lib/affiliate/lienDecouverte";
 import { resolveShareNetworks } from "@/lib/quiz/shareNetworks";
 import { buildResultShareText, buildShareText, cleanShareUrl } from "@/lib/quiz/shareText";
 import { pickProfileWinner, tallyVotes, tieBreakMode, type ProfileVote } from "@/lib/quiz/profileWinner";
@@ -4626,14 +4627,6 @@ const tipoteFooterTexts: Record<string, string> = {
   ar: "\u0647\u0630\u0627 \u0627\u0644\u0627\u062e\u062a\u0628\u0627\u0631 \u0645\u0642\u062f\u0645 \u0644\u0643\u0645 \u0639\u0628\u0631 Tiquiz",
 };
 
-// URL de d\u00e9couverte Tiquiz c\u00f4t\u00e9 tipote.fr. Si le cr\u00e9ateur a pos\u00e9 son
-// ID affili\u00e9 dans Settings, on attache ?sa=<id> pour qu'il touche une
-// commission sur les inscriptions qui en d\u00e9coulent.
-function tiquizDiscoveryUrl(affiliateId: string | null | undefined): string {
-  const base = "https://www.tipote.fr/part-tiquiz";
-  if (!affiliateId) return base;
-  return `${base}?sa=${encodeURIComponent(affiliateId)}`;
-}
 
 function TipoteFooter({ locale, customText, customUrl, logoUrl, tipoteAffiliateId, hidden }: { locale?: string | null; customText?: string | null; customUrl?: string | null; logoUrl?: string | null; tipoteAffiliateId?: string | null; hidden?: boolean | null }) {
   // Plan payant qui a choisi de masquer completement le pied de page : on
