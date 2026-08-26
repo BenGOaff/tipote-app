@@ -16,6 +16,13 @@ import { localizedYesNo, isAnswered } from "@/lib/survey/format";
 import { buildQuestionPositions, resolveQuestionPosition } from "@/lib/quiz/questionIdentity";
 import { fetchAllRows } from "@/lib/db/fetchAllRows";
 import { EVIDENCE_RULES } from "@/lib/prompts/evidence";
+import {
+  ANSWER_READING_RULES,
+  estMultiSelect,
+  renderQuestionsForPrompt,
+  resoudreEchelle,
+  type EchelleRendue,
+} from "@/lib/survey/renderQuestions";
 
 // Analyse de sondage = CONTENU exploitable (enseignements + actions).
 // Béné (juin 2026) : le contenu utilise toujours le meilleur Claude
@@ -26,6 +33,9 @@ function resolveSurveyAnalysisModel(): string {
 }
 
 export const SURVEY_AI_MIN_RESPONSES = 5;
+
+/** Réponses libres gardées en mémoire par question, avant échantillonnage. */
+const MAX_TEXTES_GARDES = 200;
 
 export interface SurveyAnswerRaw {
   question_index?: number;
@@ -55,6 +65,14 @@ export interface AggregatedQuestion {
   textCount?: number;
   /** Moyenne pour les questions rating/stars. */
   average?: number | null;
+  /** Bornes et libellés d'une échelle. Une moyenne sans son échelle ne
+   *  veut rien dire (cf. lib/survey/renderQuestions.ts). */
+  echelle?: EchelleRendue | null;
+  /** Répartition des notes, valeur par valeur : une moyenne seule cache
+   *  une audience coupée en deux. */
+  notes?: { valeur: number; count: number }[] | null;
+  /** `config.multi_select` : les % se cumulent au delà de 100. */
+  multiSelect?: boolean;
   /** Nombre de répondants ayant RÉELLEMENT répondu à cette question. */
   answeredCount: number;
 }
@@ -81,6 +99,8 @@ interface QuestionRow {
   options: Array<{ text?: string }> | null;
   sort_order: number;
   question_type: string | null;
+  /** JSONB par type : bornes d'une échelle, libellés, multi_select. */
+  config: Record<string, unknown> | null;
 }
 
 /**
@@ -102,7 +122,7 @@ export async function aggregateSurvey(
 
   const { data: questionsRaw } = await supabaseAdmin
     .from("quiz_questions")
-    .select("id, question_text, options, sort_order, question_type")
+    .select("id, question_text, options, sort_order, question_type, config")
     .eq("quiz_id", quizId)
     // Tri secondaire sur `id` : miroir EXACT du row_number() de la RPC SQL,
     // pour que la position calculée ici soit la même partout en cas
@@ -130,6 +150,9 @@ export async function aggregateSurvey(
   // totals[qi][oi] = count
   const totals: Record<number, Record<number, number>> = {};
   const ratingSums: Record<number, { sum: number; n: number }> = {};
+  // Répartition note par note. La moyenne seule ne distingue pas une
+  // audience tiède d'une audience coupée en deux (26 août 2026).
+  const ratingCounts: Record<number, Record<number, number>> = {};
   const textSamples: Record<number, string[]> = {};
   const textCounts: Record<number, number> = {};
   // Combien de répondants ont RÉELLEMENT répondu à chaque question. Indispensable
@@ -167,11 +190,16 @@ export async function aggregateSurvey(
         if (!ratingSums[qi]) ratingSums[qi] = { sum: 0, n: 0 };
         ratingSums[qi].sum += ratingVal;
         ratingSums[qi].n += 1;
+        if (!ratingCounts[qi]) ratingCounts[qi] = {};
+        ratingCounts[qi][ratingVal] = (ratingCounts[qi][ratingVal] ?? 0) + 1;
       }
       if (typeof ans.text === "string" && ans.text.trim()) {
         textCounts[qi] = (textCounts[qi] ?? 0) + 1;
         if (!textSamples[qi]) textSamples[qi] = [];
-        if (textSamples[qi].length < 40) textSamples[qi].push(ans.text.trim());
+        // On garde large et on échantillonne AU RENDU, réparti sur toute
+        // la période : garder les 40 premiers ne montrait que l'audience
+        // du jour du lancement.
+        if (textSamples[qi].length < MAX_TEXTES_GARDES) textSamples[qi].push(ans.text.trim());
       }
     }
   }
@@ -215,6 +243,21 @@ export async function aggregateSurvey(
     }
 
     const rating = ratingSums[qi];
+    const echelle = resoudreEchelle(type, q.config);
+    const compteurs = ratingCounts[qi] ?? {};
+    const notes = echelle
+      ? (() => {
+          const liste: { valeur: number; count: number }[] = [];
+          // On parcourt l'ÉCHELLE, pas les valeurs reçues : une note que
+          // PERSONNE n'a donnée est une information (c'est le creux qui
+          // révèle une audience coupée en deux), et une valeur absente du
+          // tableau serait indistinguable d'une valeur hors échelle.
+          for (let v = echelle.min; v <= echelle.max; v++) {
+            liste.push({ valeur: v, count: compteurs[v] ?? 0 });
+          }
+          return liste;
+        })()
+      : null;
     return {
       index: qi,
       text: stripHtml(String(q.question_text ?? `Question ${qi + 1}`)).trim() || `Question ${qi + 1}`,
@@ -223,6 +266,9 @@ export async function aggregateSurvey(
       textSamples: textSamples[qi],
       textCount: textCounts[qi] ?? 0,
       average: rating && rating.n > 0 ? Math.round((rating.sum / rating.n) * 100) / 100 : null,
+      echelle,
+      notes,
+      multiSelect: estMultiSelect(q.config),
       answeredCount,
     };
   });
@@ -247,10 +293,7 @@ export async function generateSurveyAnalysis(
     "Tu réponds en français, ton direct et concret, tutoiement.",
     "Tu ne fais JAMAIS de remplissage : chaque phrase doit être actionnable ou révélatrice.",
     EVIDENCE_RULES,
-    "RÈGLE CLÉ sur le comptage :",
-    "- Chaque question affiche '[N/T ont répondu]' : N = personnes ayant répondu à CETTE question, T = total des participants. Si N > 0, la question A des réponses : ne dis JAMAIS qu'elle est vide ou sans données.",
-    "- Pour une question à réponses libres, le nombre total est donné explicitement ('N réponses libres'). Les exemples cités ne sont qu'un ÉCHANTILLON : n'en déduis pas que seules ces réponses existent, ni que les autres participants n'ont pas répondu.",
-    "- Les pourcentages d'une question sont calculés sur les répondants à cette question (pas sur le total), ils somment donc à 100% pour un choix unique.",
+    ANSWER_READING_RULES,
     PRIORITY_RULES,
     "Tu réponds STRICTEMENT en JSON valide, sans texte autour, au format :",
     '{ "summary": string, "priority": { "title": string, "why": string, "how": string }, "takeaways": string[], "actions": string[] }',
@@ -263,22 +306,7 @@ export async function generateSurveyAnalysis(
   ].join("\n");
 
   const lines: string[] = [`Sondage : "${surveyTitle}"`, `Nombre de participants : ${aggregate.totalResponses}`, ""];
-  for (const q of aggregate.questions) {
-    lines.push(`Q${q.index + 1}. ${q.text}  [${q.answeredCount}/${aggregate.totalResponses} ont répondu]`);
-    if (q.options.length > 0) {
-      for (const o of q.options) {
-        lines.push(`   - ${o.text} : ${o.pct}% (${o.count})`);
-      }
-    }
-    if (q.average !== null && q.average !== undefined) {
-      lines.push(`   (note moyenne : ${q.average})`);
-    }
-    if (q.textCount && q.textCount > 0) {
-      const samples = (q.textSamples ?? []).slice(0, 15).map((s) => `"${s}"`).join(", ");
-      lines.push(`   ${q.textCount} réponses libres au total. Échantillon : ${samples}`);
-    }
-    lines.push("");
-  }
+  lines.push(...renderQuestionsForPrompt(aggregate.questions, aggregate.totalResponses, { samples: 25 }));
 
   const userPrompt = lines.join("\n");
 
