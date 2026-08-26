@@ -300,33 +300,40 @@ export default function LoginAffiliateForm() {
               <p className="text-center text-sm text-muted-foreground mb-3">
                 {t.login.no_account}
               </p>
-              <Button variant="outline" className="w-full" asChild>
+
+              {/* L'INSCRIPTION D'ABORD, LA PAGE DE VENTE ENSUITE.
+
+                  Béné, 26 août 2026 : "ils doivent pouvoir s'inscrire
+                  directement depuis la page de login s'ils n'ont pas
+                  encore de compte."
+
+                  Le lien existait depuis le 25 août, mais en TROISIÈME
+                  position : un bouton plein renvoyait d'abord chez
+                  Systeme.io, dans un nouvel onglet, et l'inscription
+                  chez nous n'était qu'une ligne soulignée en dessous.
+                  Elle a lu l'écran et n'a pas vu l'option, ce qui est la
+                  seule mesure qui compte.
+
+                  Tant que l'inscription exigeait un identifiant
+                  Systeme.io, cette hiérarchie était juste. Elle ne l'est
+                  plus depuis qu'on recrute des affiliés sans compte
+                  chez eux : c'est NOTRE porte qui doit être la première.
+
+                  Lien interne, donc <Link> : on ne fait pas quitter
+                  l'espace pour une page de l'espace. */}
+              <Button className="w-full" asChild>
+                <Link href="/signup">{t.login.signup_direct}</Link>
+              </Button>
+
+              <p className="mt-3 text-center text-sm">
                 <a
                   href={AFFILIATE_SIGNUP_URL}
                   target="_blank"
                   rel="noopener noreferrer"
+                  className="text-primary underline underline-offset-4 hover:opacity-80"
                 >
                   {t.login.discover_program}
                 </a>
-              </Button>
-              {/* LA PORTE D'ENTRÉE DIRECTE (Béné, 25 août 2026 :
-                  "pourquoi un type sans systeme io ne pourrait pas
-                  devenir affilié chez nous ??").
-
-                  Elle l'avait déjà demandée le 6 août ("le lien
-                  d'inscription pour ceux qui veulent voir l'espace
-                  affilié, comme ça ils peuvent s'inscrire directement").
-                  Le bouton au dessus mène à la page qui EXPLIQUE le
-                  programme, et son parcours passe par Systeme.io : tant
-                  que l'inscription exigeait un identifiant Systeme.io,
-                  c'était la seule route possible. Elle ne l'est plus.
-
-                  Lien interne, donc <Link> : on ne fait pas quitter
-                  l'espace pour une page de l'espace. */}
-              <p className="mt-3 text-center text-sm">
-                <Link href="/signup" className="text-primary underline underline-offset-4 hover:opacity-80">
-                  {t.login.signup_direct}
-                </Link>
               </p>
             </div>
           </CardContent>

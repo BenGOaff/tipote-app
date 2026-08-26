@@ -118,6 +118,40 @@ export const IT: AffiliateDict = {
     err_default: "Questo link potrebbe essere già stato usato o essere scaduto (max 30 min).",
     request_new_link: "Richiedi un nuovo link",
   },
+  nouveautes: {
+    titre:
+      "Il programma è cambiato, ecco l'essenziale",
+    intro:
+      "È tutto pronto e spiegato qui. I tuoi vecchi link restano validi e continuano a pagarti.",
+    p1_titre:
+      "I tuoi link portano il tuo codice",
+    p1_corps:
+      "Basta identificatori illeggibili: i tuoi link portano ora un codice che puoi dettare al telefono. Quelli che hai già condiviso in video o email funzionano ancora.",
+    p2_titre:
+      "L'Atelier du Quiz è passato da noi",
+    p2_corps:
+      "Le sue vendite sono tracciate e pagate da noi, al 70%, come Tiquiz al 40%. Non ti serve più un account Systeme.io per essere pagato sul corso.",
+    p3_titre:
+      "Siamo noi a pagarti",
+    p3_corps:
+      "Tra il 10 e il 13 di ogni mese, da 20 € (la soglia precedente era di 50 €). Una commissione diventa pagabile 30 giorni dopo il pagamento del cliente. Sotto la soglia, il denaro resta tuo e passa al bonifico successivo.",
+    p4_titre:
+      "Scriviamo la tua fattura al posto tuo",
+    p4_corps:
+      "Ogni mese, per la tua contabilità, dai dati che inserisci una volta sola. La scarichi dal tuo spazio.",
+    p5_titre:
+      "Il tuo cookie dura un anno",
+    p5_corps:
+      "Chi clicca a gennaio e compra a giugno ti paga ancora. E un'iscrizione gratuita dal tuo link collega quella persona a te per sempre.",
+    cta_liens:
+      "Vedi i miei link",
+    cta_paiement:
+      "Inserire le mie coordinate",
+    cta_conditions:
+      "Leggi le condizioni",
+    masquer:
+      "Ho letto",
+  },
   overview: {
     greeting: "Ciao {name} 👋",
     subtitle: "Ecco la tua panoramica del programma di affiliazione.",

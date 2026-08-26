@@ -126,6 +126,24 @@ export type AffiliateDict = {
   };
 
   // ─── Overview (dashboard) ────────────────────────────────────────
+  nouveautes: {
+    titre: string;
+    intro: string;
+    p1_titre: string;
+    p1_corps: string;
+    p2_titre: string;
+    p2_corps: string;
+    p3_titre: string;
+    p3_corps: string;
+    p4_titre: string;
+    p4_corps: string;
+    p5_titre: string;
+    p5_corps: string;
+    cta_liens: string;
+    cta_paiement: string;
+    cta_conditions: string;
+    masquer: string;
+  };
   overview: {
     greeting: string; // "Bonjour {name} 👋"
     subtitle: string;
