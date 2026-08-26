@@ -234,7 +234,10 @@ Variations selon le canal :
 - **Si sa récompense baisse, il est prévenu par email avant que le prix bouge**, avec la raison (combien de filleuls actifs) et pas seulement le chiffre. Une remise qui descend est un prélèvement qui monte : le découvrir sur son relevé, c'est perdre un affilié.
 - **Chaque affilié peut avoir son code de réduction**, et l'avantage est au choix : un pourcentage sur la première échéance, un pourcentage à vie, un pourcentage sur une période donnée (une opération de décembre par exemple), un pourcentage selon le plan, ou des jours offerts.
 - **Ce qu'on promet, on le tient dans les deux sens** : une commission tombe si la vente est remboursée ou impayée, comme le disent les conditions du programme. Un affilié qui découvrirait l'inverse cesserait de nous croire sur le reste.
+- **Les liens mènent à NOS pages** (`tiquiz.fr`, `tiquiz.fr/commande/<produit>`, `atelierduquiz.fr`) depuis le 26 août, et plus aux tunnels Systeme.io. Ce n'est pas cosmétique : leur page ne transmet pas ce qu'on ajoute à l'URL, donc un lien qui passait par eux ne pouvait atteindre ni notre commissionnement ni le mois offert. Seule l'inscription gratuite reste chez eux, parce que son formulaire crée le contact et pose le tag qui déclenche les séquences email.
+- **L'Atelier du Quiz est dans le même programme**, au même endroit, avec le même lien et le même versement. Un élève de l'Atelier n'a plus rien à aller chercher dans Systeme.io : son lien est déjà là quand il ouvre l'onglet.
 - Ne jamais annoncer un délai de versement inférieur à 21 jours après la vente : c'est le délai de rétractation plus une marge, et une commission virée ne se reprend pas.
+- **Ne jamais présenter un identifiant Systeme.io comme nécessaire pour être affilié.** Il est facultatif depuis le 25 août, et il ne sert qu'à rattacher les ventes arrivées par les anciens tunnels. Le présenter comme un prérequis fait renoncer quelqu'un qui n'a pas de compte chez eux.
 
 ## 8. Plans et tarification
 

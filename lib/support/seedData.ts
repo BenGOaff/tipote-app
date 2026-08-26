@@ -3511,6 +3511,14 @@ Une adresse déjà inscrite sous un autre identifiant est refusée, et on te le 
 
 Il vit dans **Promouvoir**. Il porte ton code public, du genre \`?ref=jocelyne\`. C'est lui qui pose le cookie chez ton prospect, et ce cookie dure **un an** : quelqu'un qui clique en janvier et achète en juin te paie quand même.
 
+Depuis le 26 août 2026, ces liens mènent à **nos propres pages** (\`tiquiz.fr\`, notre bon de commande, \`atelierduquiz.fr\`) et non plus aux tunnels Systeme.io. Tes anciens liens restent valides et continuent de te payer, mais **seuls les liens de Promouvoir ouvrent le mois offert** à ton prospect : une page Systeme.io ne nous transmet pas ce que tu ajoutes à l'URL. Si tu promets un mois offert avec un ancien lien, c'est toi qui passeras pour un menteur.
+
+### L'Atelier du Quiz aussi, à 70 %
+
+L'Atelier du Quiz fait partie du même programme, avec le même espace, le même cookie d'un an et le même versement. La commission y est de **70 % sur la vente**.
+
+Si tu es élève de l'Atelier, ton lien est aussi dans l'onglet **Affiliation** de la formation, et il est **déjà prêt** : tu n'as plus rien à configurer, et tu n'as plus à aller chercher un identifiant dans Systeme.io.
+
 Et si cette personne s'inscrit en gratuit par ton lien, elle reste **ton** filleul à vie, même si elle passe payante trois mois plus tard.
 
 ### Les codes de réduction
@@ -4017,7 +4025,21 @@ En haut, quatre compteurs : le total, les leads **synchronisés** avec Systeme.i
 
 ## Exporter
 
-Bouton **Exporter CSV**. Le fichier contient l'email, le prénom, le nom, le téléphone, le pays, le quiz, le résultat et la date. Il s'ouvre dans un tableur ou s'importe dans n'importe quel outil d'emailing.
+Bouton **Exporter CSV**. Le fichier s'ouvre dans un tableur et s'importe dans n'importe quel outil d'emailing ou n'importe quel CRM.
+
+Il contient, pour chaque contact :
+
+- l'email, le prénom, le nom ;
+- le **résultat obtenu** ;
+- la **date**, au format \`AAAA-MM-JJ HH:MM\`, donc triable ;
+- le téléphone et le pays quand tu les collectes ;
+- les **scores** sur un quiz scoré ;
+- le **tag Systeme.io** posé sur ce contact ;
+- **une colonne par question**, avec la réponse : les choix, le texte libre, les notes d'échelle et les étoiles, exactement comme tu les vois à l'écran.
+
+**Tu n'utilises pas Systeme.io ?** La colonne de tag reste simplement vide, et tout le reste s'exploite normalement. L'export n'est pas un plan B : c'est ta porte de sortie, et elle est complète.
+
+Les accents s'affichent correctement dans Excel. Si tu as fait un export avant le 26 août 2026 et que tu y as vu des caractères bizarres à la place des accents, ou une colonne Date vide sur un quiz scoré, refais-le : c'est corrigé.
 
 ## La synchronisation Systeme.io
 
