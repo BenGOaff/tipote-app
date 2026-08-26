@@ -383,22 +383,27 @@ export const FR: AffiliateDict = {
     minimum_note: "Les versements partent entre le 10 et le 13 de chaque mois, pour les commissions acquises depuis plus de 30 jours. En dessous de 20 €, le montant reste acquis et part au versement suivant.",
     page_title: "Paiement",
     page_subtitle_sio:
-      "Le paiement est géré par Systeme.io. Configure ton moyen de paiement directement chez eux, on s'occupe du reste.",
-    sio_config_title: "Configurer ton paiement (PayPal ou virement)",
+      "Tu choisis comment tu veux être payé, on s'occupe du virement.",
+    sio_config_title:
+      "Tes anciennes commissions Systeme.io",
     sio_config_body:
-      "Va sur ton profil Systeme.io et choisis PayPal ou virement bancaire (RIB). Tu peux changer à tout moment depuis cette même page.",
-    sio_config_cta: "Configurer dans Systeme.io",
-    schedule_title: "Quand tu es payé",
+      "Les ventes arrivées par les anciens tunnels Systeme.io continuent d'être versées par eux, sur le moyen de paiement de ton profil là-bas. Tout ce qui passe par les liens de cette page est versé par nous, avec les coordonnées ci-dessus.",
+    sio_config_cta:
+      "Voir mon profil Systeme.io",
+    schedule_title:
+      "Quand tu es payé",
     schedule_when:
-      "Les commissions sont virées entre le 10 et le 13 de chaque mois, directement sur la méthode que tu as configurée dans Systeme.io.",
+      "Les versements partent entre le 10 et le 13 de chaque mois, sur la méthode que tu as choisie ci-dessus.",
     schedule_cooloff:
-      "Une commission est validée à la fin du délai de rétractation légal du client (généralement 14 jours après la vente). Une commission encore en attente apparaît dans la colonne \"En attente\" de ton tableau de bord.",
-    invoices_title: "Tes factures mensuelles",
+      "Une commission devient versable 30 jours après le paiement du client, le temps que son délai d'annulation soit passé. En dessous de 20 € de total, le montant reste acquis et part au versement suivant.",
+    invoices_title:
+      "Tes factures",
     invoices_body:
-      "Le détail de tes commissions et l'historique des paiements se consultent depuis l'onglet Affiliations de ton dashboard Systeme.io.",
-    invoices_cta: "Voir mes factures dans Systeme.io",
+      "Chaque mois, on génère ta facture à ta place pour ta compta, et tu la télécharges depuis ton espace. Les commissions versées par Systeme.io gardent leurs propres factures, dans ton dashboard là-bas.",
+    invoices_cta:
+      "Voir mes anciennes factures Systeme.io",
     note_no_action_in_tipote:
-      "Aucune information de paiement n'est stockée dans Tipote. Tout passe par Systeme.io, ce qui te garantit que c'est eux qui font les virements (pas nous).",
+      "Ton IBAN est chiffré et ne ressort jamais en clair, pas même pour toi : tu vois seulement les derniers chiffres, de quoi reconnaître ton compte.",
   },
   support: {
     page_title: "Support",
@@ -409,16 +414,16 @@ export const FR: AffiliateDict = {
     restart_tour_button: "Refaire le tour guidé",
     faq_title: "Questions fréquentes",
     faq_start_q: "Je débute, je fais quoi en premier ?",
-    faq_start_a: "Trois choses, dans cet ordre. 1. Copie ton lien depuis la vue d'ensemble : celui de la formation, celui de Tiquiz, ou les deux. 2. Configure ton moyen de paiement dans Systeme.io, sinon tes commissions s'accumulent sans pouvoir partir. 3. Va dans Contenus, prends le premier email de la séquence, remplace ce qui ne te ressemble pas, envoie-le à ta liste. Le guide de lancement sur la vue d'ensemble reprend ces étapes une par une et coche au fur et à mesure.",
+    faq_start_a: "Trois choses, dans cet ordre. 1. Copie ton lien depuis la vue d'ensemble : celui de la formation, celui de Tiquiz, ou les deux. 2. Renseigne tes coordonnées de versement dans l'onglet Paiement, sinon tes commissions s'accumulent sans pouvoir partir. 3. Va dans Contenus, prends le premier email de la séquence, remplace ce qui ne te ressemble pas, envoie-le à ta liste. Le guide de lancement sur la vue d'ensemble reprend ces étapes une par une et coche au fur et à mesure.",
     faq_which_product_q: "Je promeus l'outil ou la formation ?",
-    faq_which_product_a: "La formation paie le plus (70% contre 40%) et elle amène l'outil derrière, puisqu'on y apprend à créer ses quiz avec Tiquiz. Si ton audience débute et cherche une méthode, pousse L'Atelier du Quiz. Si elle sait déjà ce qu'elle veut faire et cherche juste l'outil, pousse Tiquiz : l'abonnement te paie chaque mois pendant un an. Rien ne t'empêche de faire les deux avec un lien différent selon le message.",
+    faq_which_product_a: "La formation paie le plus (70% contre 40%) et elle amène l'outil derrière, puisqu'on y apprend à créer ses quiz avec Tiquiz. Si ton audience débute et cherche une méthode, pousse L'Atelier du Quiz. Si elle sait déjà ce qu'elle veut faire et cherche juste l'outil, pousse Tiquiz : l'abonnement te paie chaque mois tant que le client reste abonné. Rien ne t'empêche de faire les deux avec un lien différent selon le message.",
     faq_where_material_q: "Où je trouve les emails, les posts et les visuels ?",
     faq_where_material_a: "Dans l'onglet Contenus. Tu y trouves la séquence email de la formation, la séquence email Tiquiz, les posts réseaux jour par jour avec leur visuel, les articles et la banque de visuels à télécharger. Ton lien tracké et ton prénom sont déjà injectés : tu cliques sur Copier, tu colles. Tu peux éditer chaque texte pour qu'il sonne comme toi, ta version est sauvegardée.",
     terms_card_title:
       "📜 Pour les conditions complètes (commission, exclusions, durée de cookie, fiscalité, dispute…) :",
     terms_card_button: "Voir les CGV affiliation",
     faq_payment_q: "Quand suis-je payé ?",
-    faq_payment_a: "Les commissions sont virées entre le 10 et le 13 de chaque mois, au minimum 30 jours après la vente (le temps que le délai d'annulation du client soit passé). Seuil minimum de 50 € : si ton solde éligible est en dessous, il est reporté au mois suivant.",
+    faq_payment_a: "Les commissions sont virées entre le 10 et le 13 de chaque mois, au minimum 30 jours après la vente (le temps que le délai d'annulation du client soit passé). Seuil minimum de 20 € : si ton solde éligible est en dessous, il est reporté au mois suivant.",
     faq_cookie_q: "Comment ça marche, le cookie 90 jours ?",
     faq_cookie_a: "Quand un visiteur clique sur ton lien d'affiliation, on stocke ton identifiant dans son navigateur pendant 90 jours. Si ce visiteur achète Tiquiz ou L'Atelier du Quiz durant cette période, la commission t'est attribuée - même s'il achète à J+89.",
     faq_multi_link_q: "Que se passe-t-il si un visiteur clique sur plusieurs liens affiliés différents ?",
@@ -426,7 +431,7 @@ export const FR: AffiliateDict = {
     faq_best_channels_q: "Quels canaux marchent le mieux pour promouvoir ?",
     faq_best_channels_a: "L'email arrive largement en tête : tu parles à des gens qui te connaissent déjà. Viennent ensuite les recommandations directes dans les groupes et les communautés où tu es vraiment actif, puis les réseaux sociaux, qui demandent plus de répétitions pour le même résultat. La vidéo (YouTube, TikTok) met du temps à démarrer mais continue de ramener des ventes des mois plus tard. Je ne te donne pas de taux de conversion type : ça dépend surtout de ta relation avec ton audience.",
     faq_minimum_q: "Y a-t-il un minimum pour être payé ?",
-    faq_minimum_a: "Oui, 50 €. C'est le seuil standard pour éviter des virements coûteux pour des petits montants. Les commissions s'accumulent jusqu'à atteindre 50 €, puis le virement part le 10 du mois suivant.",
+    faq_minimum_a: "Oui, 20 €. En dessous, un virement coûte plus cher en frais et en temps qu'il ne rapporte. L'argent reste acquis : les commissions s'accumulent jusqu'à 20 €, puis le virement part avec le lot du mois suivant, entre le 10 et le 13.",
     faq_subscriptions_q: "Est-ce que je touche des commissions sur les abonnements mensuels ?",
     faq_subscriptions_a: "Oui, sur les 12 premiers mois d'abonnement de chaque client. Un client sur l'accès simple à 17 €/mois te rapporte 5,67 € par mois, soit 68,04 € sur l'année. Un client sur le Plus à 29 €/mois te rapporte 9,67 € par mois, soit 116,04 € sur l'année. C'est pour ça qu'il vaut le coup de parler du Plus aux agences, aux freelances qui vendent des prestations de quiz et aux gens qui gèrent plusieurs projets. Les commissions se calculent sur le montant hors taxes.",
     faq_self_click_q: "Mon propre clic est-il compté ?",
@@ -537,7 +542,7 @@ export const FR: AffiliateDict = {
     step5_tier_mid: "10-24 ventes",
     step5_tier_high: "25+ ventes",
     step5_body_outro:
-      "Paiement le 10 de chaque mois, à partir de 50€ accumulés. PayPal ou virement, à toi de choisir dans Paiement.",
+      "Versement entre le 10 et le 13 de chaque mois, à partir de 20 € accumulés. PayPal ou virement, à toi de choisir dans Paiement.",
     skip: "Passer",
     finish: "C'est parti !",
     next: "Suivant",
