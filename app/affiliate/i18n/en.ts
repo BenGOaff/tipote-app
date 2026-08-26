@@ -381,17 +381,28 @@ export const EN: AffiliateDict = {
     complete_banner: "All set. Your commissions go out at the next payout.",
     minimum_note: "Payouts run between the 10th and the 13th of each month, for commissions earned more than 30 days ago. Below 20 EUR the amount stays yours and rolls over to the next payout.",
     page_title: "Payment",
-    page_subtitle_sio: "Payments are handled by Systeme.io. Set up your payment method on their side, we handle the rest.",
-    sio_config_title: "Set up your payment (PayPal or bank transfer)",
-    sio_config_body: "Go to your Systeme.io profile and choose PayPal or bank transfer (IBAN). You can change it any time from the same page.",
-    sio_config_cta: "Set up in Systeme.io",
-    schedule_title: "When you get paid",
-    schedule_when: "Commissions are paid between the 10th and 13th of each month, directly to the method you configured in Systeme.io.",
-    schedule_cooloff: "A commission is validated at the end of the legal cooling-off period (usually 14 days after the sale). A commission still in this period shows in the \"Pending\" column of your dashboard.",
-    invoices_title: "Your monthly invoices",
-    invoices_body: "Detailed commissions and payment history live in the Affiliations tab of your Systeme.io dashboard.",
-    invoices_cta: "View invoices in Systeme.io",
-    note_no_action_in_tipote: "No payment info is stored in Tipote. Everything goes through Systeme.io, which means they're the ones making the transfers (not us).",
+    page_subtitle_sio:
+      "You choose how you want to be paid, we handle the transfer.",
+    sio_config_title:
+      "Your older Systeme.io commissions",
+    sio_config_body:
+      "Sales that came through the old Systeme.io funnels are still paid by them, to the payment method on your profile there. Everything that comes through the links on this page is paid by us, using the details above.",
+    sio_config_cta:
+      "Open my Systeme.io profile",
+    schedule_title:
+      "When you get paid",
+    schedule_when:
+      "Payouts go out between the 10th and the 13th of each month, to the method you chose above.",
+    schedule_cooloff:
+      "A commission becomes payable 30 days after the customer pays, once their cancellation window has passed. Below 20 EUR in total, the amount stays yours and rolls over to the next payout.",
+    invoices_title:
+      "Your invoices",
+    invoices_body:
+      "Every month we generate your invoice for you, for your bookkeeping, and you download it from your dashboard. Commissions paid by Systeme.io keep their own invoices, in your dashboard there.",
+    invoices_cta:
+      "See my older Systeme.io invoices",
+    note_no_action_in_tipote:
+      "Your IBAN is encrypted and never shown in full, not even to you: you only see the last digits, enough to recognise your account.",
   },
   support: {
     page_title: "Support",
@@ -403,16 +414,16 @@ export const EN: AffiliateDict = {
     restart_tour_button: "Restart guided tour",
     faq_title: "Frequently asked questions",
     faq_start_q: "I'm just starting. What do I do first?",
-    faq_start_a: "Three things, in this order. 1. Copy your link from the overview: the course one, the Tiquiz one, or both. 2. Set up your payout method in Systeme.io, otherwise your commissions pile up with no way out. 3. Go to Contents, take the first email of the sequence, change whatever doesn't sound like you, send it to your list. The launch guide on the overview walks through these steps and ticks them off as you go.",
+    faq_start_a: "Three things, in this order. 1. Copy your link from the overview: the course one, the Tiquiz one, or both. 2. Fill in your payout details on the Payment tab, otherwise your commissions pile up with no way out. 3. Go to Contents, take the first email of the sequence, change whatever doesn't sound like you, send it to your list. The launch guide on the overview walks through these steps and ticks them off as you go.",
     faq_which_product_q: "Should I promote the tool or the course?",
-    faq_which_product_a: "The course pays the most (70% vs 40%) and it brings the tool along, since it teaches how to build quizzes with Tiquiz. If your audience is starting out and wants a method, push L'Atelier du Quiz (French-speaking market). If they already know what they want and just need the tool, push Tiquiz: the subscription pays you every month for a year. Nothing stops you doing both with a different link per message.",
+    faq_which_product_a: "The course pays the most (70% vs 40%) and it brings the tool along, since it teaches how to build quizzes with Tiquiz. If your audience is starting out and wants a method, push L'Atelier du Quiz (French-speaking market). If they already know what they want and just need the tool, push Tiquiz: the subscription pays you every month for as long as the customer stays subscribed. Nothing stops you doing both with a different link per message.",
     faq_where_material_q: "Where do I find the emails, posts and visuals?",
     faq_where_material_a: "In the Contents tab. You'll find the course email sequence, the Tiquiz email sequence, day-by-day social posts with their visual, articles, and the downloadable visual bank. Your tracked link and your first name are already injected: click Copy, paste. You can edit any text so it sounds like you, and your version is saved.",
     terms_card_title:
       "📜 For full terms (commission, exclusions, cookie duration, taxes, disputes...):",
     terms_card_button: "See affiliate T&Cs",
     faq_payment_q: "When do I get paid?",
-    faq_payment_a: "Commissions are transferred between the 10th and the 13th of each month, at least 30 days after the sale (once the customer's cancellation window has passed). Minimum threshold of 50 €: if your eligible balance is below, it rolls over to the next month.",
+    faq_payment_a: "Commissions are transferred between the 10th and the 13th of each month, at least 30 days after the sale (once the customer's cancellation window has passed). Minimum threshold of 20 €: if your eligible balance is below, it rolls over to the next month.",
     faq_cookie_q: "How does the 90-day cookie work?",
     faq_cookie_a: "When a visitor clicks your affiliate link, we store your ID in their browser for 90 days. If that visitor buys Tiquiz during that window, the commission is attributed to you - even on day 89.",
     faq_multi_link_q: "What happens if a visitor clicks several different affiliate links?",
@@ -420,7 +431,7 @@ export const EN: AffiliateDict = {
     faq_best_channels_q: "Which channels work best to promote?",
     faq_best_channels_a: "Email is far ahead: you're talking to people who already know you. Then come direct recommendations in groups and communities where you're genuinely active, then social media, which needs more repetition for the same result. Video (YouTube, TikTok) takes longer to start but keeps bringing sales months later. I won't quote you typical conversion rates: it depends mostly on your relationship with your audience.",
     faq_minimum_q: "Is there a minimum payout?",
-    faq_minimum_a: "Yes, €50. It's the standard threshold to avoid costly wires for small amounts. Commissions accumulate until they reach €50, then the wire goes out on the 10th of the following month.",
+    faq_minimum_a: "Yes, €20. Below that, a transfer costs more in fees and time than it pays out. The money stays yours: commissions build up until they reach €20, then the transfer goes out with the next monthly batch, between the 10th and the 13th.",
     faq_subscriptions_q: "Do I earn commissions on monthly subscriptions?",
     faq_subscriptions_a: "Yes, on the first 12 months of each customer's subscription. A customer on the simple tier at €17/month pays you €5.67 per month, so €68.04 over the year. A customer on Plus at €29/month pays you €9.67 per month, so €116.04 over the year. That's why it's worth mentioning Plus to agencies, freelancers selling quiz work, and people running several projects. Commissions are calculated on the amount excluding tax.",
     faq_self_click_q: "Does my own click count?",
@@ -531,7 +542,7 @@ export const EN: AffiliateDict = {
     step5_tier_mid: "10-24 sales",
     step5_tier_high: "25+ sales",
     step5_body_outro:
-      "Payment on the 10th of each month, from €50 accumulated. PayPal or bank transfer, your choice in Payment.",
+      "Payout between the 10th and the 13th of each month, from €20 accumulated. PayPal or bank transfer, your choice in Payment.",
     skip: "Skip",
     finish: "Let's go!",
     next: "Next",

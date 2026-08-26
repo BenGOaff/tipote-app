@@ -381,17 +381,28 @@ export const IT: AffiliateDict = {
     complete_banner: "Tutto pronto. Le tue commissioni partono al prossimo versamento.",
     minimum_note: "I versamenti partono tra il 10 e il 13 di ogni mese, per le commissioni maturate da più di 30 giorni. Sotto i 20 EUR l'importo resta tuo e passa al versamento successivo.",
     page_title: "Pagamento",
-    page_subtitle_sio: "I pagamenti sono gestiti da Systeme.io. Configura il tuo metodo di pagamento da loro, pensiamo noi al resto.",
-    sio_config_title: "Configura il pagamento (PayPal o bonifico)",
-    sio_config_body: "Vai sul tuo profilo Systeme.io e scegli PayPal o bonifico (IBAN). Puoi modificarlo in qualsiasi momento dalla stessa pagina.",
-    sio_config_cta: "Configura in Systeme.io",
-    schedule_title: "Quando vieni pagato",
-    schedule_when: "Le commissioni vengono pagate tra il 10 e il 13 di ogni mese, direttamente sul metodo che hai configurato in Systeme.io.",
-    schedule_cooloff: "Una commissione viene convalidata al termine del periodo di recesso legale del cliente (di solito 14 giorni dopo la vendita). Una commissione ancora in questo periodo appare nella colonna «In attesa» del tuo dashboard.",
-    invoices_title: "Le tue fatture mensili",
-    invoices_body: "Il dettaglio delle tue commissioni e lo storico dei pagamenti si consultano nella scheda Affiliazioni del tuo dashboard Systeme.io.",
-    invoices_cta: "Vedi le fatture in Systeme.io",
-    note_no_action_in_tipote: "Nessuna informazione di pagamento è memorizzata in Tipote. Tutto passa da Systeme.io, quindi sono loro a fare i bonifici (non noi).",
+    page_subtitle_sio:
+      "Scegli come vuoi essere pagato, al bonifico pensiamo noi.",
+    sio_config_title:
+      "Le tue vecchie commissioni Systeme.io",
+    sio_config_body:
+      "Le vendite arrivate dai vecchi funnel Systeme.io continuano a essere pagate da loro, sul metodo di pagamento del tuo profilo lì. Tutto ciò che passa dai link di questa pagina lo paghiamo noi, con i dati qui sopra.",
+    sio_config_cta:
+      "Apri il mio profilo Systeme.io",
+    schedule_title:
+      "Quando vieni pagato",
+    schedule_when:
+      "I bonifici partono tra il 10 e il 13 di ogni mese, sul metodo che hai scelto qui sopra.",
+    schedule_cooloff:
+      "Una commissione diventa pagabile 30 giorni dopo il pagamento del cliente, passato il suo termine di annullamento. Sotto i 20 € di totale, l'importo resta tuo e passa al bonifico successivo.",
+    invoices_title:
+      "Le tue fatture",
+    invoices_body:
+      "Ogni mese generiamo la tua fattura al posto tuo, per la tua contabilità, e la scarichi dal tuo spazio. Le commissioni pagate da Systeme.io mantengono le loro fatture, nella tua dashboard lì.",
+    invoices_cta:
+      "Vedi le mie vecchie fatture Systeme.io",
+    note_no_action_in_tipote:
+      "Il tuo IBAN è cifrato e non compare mai per intero, nemmeno a te: vedi solo le ultime cifre, quanto basta per riconoscere il tuo conto.",
   },
   support: {
     page_title: "Supporto",
@@ -403,16 +414,16 @@ export const IT: AffiliateDict = {
     restart_tour_button: "Rifai il tour guidato",
     faq_title: "Domande frequenti",
     faq_start_q: "Sto iniziando, cosa faccio per primo?",
-    faq_start_a: "Tre cose, in quest'ordine. 1. Copia il tuo link dalla panoramica: quello del corso, quello di Tiquiz, o entrambi. 2. Configura il tuo metodo di pagamento in Systeme.io, altrimenti le commissioni si accumulano senza poter uscire. 3. Vai in Contenuti, prendi la prima email della sequenza, cambia ciò che non ti somiglia e inviala alla tua lista. La guida al lancio nella panoramica segue questi passi e li spunta man mano.",
+    faq_start_a: "Tre cose, in quest'ordine. 1. Copia il tuo link dalla panoramica: quello del corso, quello di Tiquiz, o entrambi. 2. Inserisci le tue coordinate di pagamento nella scheda Pagamento, altrimenti le commissioni si accumulano senza poter uscire. 3. Vai in Contenuti, prendi la prima email della sequenza, cambia ciò che non ti somiglia e inviala alla tua lista. La guida al lancio nella panoramica segue questi passi e li spunta man mano.",
     faq_which_product_q: "Promuovo lo strumento o il corso?",
-    faq_which_product_a: "Il corso paga di più (70% contro 40%) e si porta dietro lo strumento, visto che insegna a creare quiz con Tiquiz. Se il tuo pubblico è alle prime armi e cerca un metodo, spingi L'Atelier du Quiz (mercato francofono). Se sa già cosa vuole e cerca solo lo strumento, spingi Tiquiz: l'abbonamento ti paga ogni mese per un anno. Niente ti impedisce di fare entrambi con un link diverso a seconda del messaggio.",
+    faq_which_product_a: "Il corso paga di più (70% contro 40%) e si porta dietro lo strumento, visto che insegna a creare quiz con Tiquiz. Se il tuo pubblico è alle prime armi e cerca un metodo, spingi L'Atelier du Quiz (mercato francofono). Se sa già cosa vuole e cerca solo lo strumento, spingi Tiquiz: l'abbonamento ti paga ogni mese finché il cliente resta abbonato. Niente ti impedisce di fare entrambi con un link diverso a seconda del messaggio.",
     faq_where_material_q: "Dove trovo le email, i post e i visual?",
     faq_where_material_a: "Nella scheda Contenuti. Ci trovi la sequenza email del corso, la sequenza email Tiquiz, i post social giorno per giorno con il loro visual, gli articoli e la banca di visual scaricabili. Il tuo link tracciato e il tuo nome sono già inseriti: clicchi Copia e incolli. Puoi modificare ogni testo perché suoni come te, la tua versione viene salvata.",
     terms_card_title:
       "📜 Per le condizioni complete (commissione, esclusioni, durata del cookie, fiscalità, dispute...):",
     terms_card_button: "Vedi le condizioni di affiliazione",
     faq_payment_q: "Quando vengo pagato?",
-    faq_payment_a: "Le commissioni sono bonificate tra il 10 e il 13 di ogni mese, almeno 30 giorni dopo la vendita (passato il termine di annullamento del cliente). Soglia minima di 50 €: se il tuo saldo idoneo è sotto, slitta al mese successivo.",
+    faq_payment_a: "Le commissioni sono bonificate tra il 10 e il 13 di ogni mese, almeno 30 giorni dopo la vendita (passato il termine di annullamento del cliente). Soglia minima di 20 €: se il tuo saldo idoneo è sotto, slitta al mese successivo.",
     faq_cookie_q: "Come funziona il cookie di 90 giorni?",
     faq_cookie_a: "Quando un visitatore clicca sul tuo link di affiliazione, memorizziamo il tuo identificativo nel suo browser per 90 giorni. Se questo visitatore acquista Tiquiz in quel periodo, la commissione ti viene attribuita - anche al giorno 89.",
     faq_multi_link_q: "Cosa succede se un visitatore clicca su più link affiliati diversi?",
@@ -420,7 +431,7 @@ export const IT: AffiliateDict = {
     faq_best_channels_q: "Quali canali funzionano meglio per promuovere?",
     faq_best_channels_a: "L'email è nettamente davanti: parli a persone che ti conoscono già. Poi vengono i consigli diretti nei gruppi e nelle community dove sei davvero attivo, poi i social, che richiedono più ripetizioni per lo stesso risultato. Il video (YouTube, TikTok) parte lentamente ma continua a portare vendite mesi dopo. Non ti do tassi di conversione tipo: dipendono soprattutto dal tuo rapporto con il pubblico.",
     faq_minimum_q: "C'è un minimo per essere pagato?",
-    faq_minimum_a: "Sì, 50 €. È la soglia standard per evitare bonifici costosi per piccoli importi. Le commissioni si accumulano fino a raggiungere 50 €, poi il bonifico parte il 10 del mese successivo.",
+    faq_minimum_a: "Sì, 20 €. Sotto, un bonifico costa più in commissioni e in tempo di quanto renda. Il denaro resta tuo: le commissioni si accumulano fino a 20 €, poi il bonifico parte con il lotto del mese successivo, tra il 10 e il 13.",
     faq_subscriptions_q: "Ricevo commissioni sugli abbonamenti mensili?",
     faq_subscriptions_a: "Sì, sui primi 12 mesi di abbonamento di ogni cliente. Un cliente sull'accesso semplice a 17 €/mese ti frutta 5,67 € al mese, cioè 68,04 € sull'anno. Un cliente sul Plus a 29 €/mese ti frutta 9,67 € al mese, cioè 116,04 € sull'anno. Ecco perché conviene parlare del Plus alle agenzie, ai freelance che vendono servizi di quiz e a chi gestisce più progetti. Le commissioni si calcolano sull'importo al netto delle imposte.",
     faq_self_click_q: "Il mio clic conta?",
@@ -531,7 +542,7 @@ export const IT: AffiliateDict = {
     step5_tier_mid: "10-24 vendite",
     step5_tier_high: "25+ vendite",
     step5_body_outro:
-      "Pagamento il 10 di ogni mese, da 50 € accumulati. PayPal o bonifico, scegli tu in Pagamento.",
+      "Pagamento tra il 10 e il 13 di ogni mese, da 20 € accumulati. PayPal o bonifico, scegli tu in Pagamento.",
     skip: "Salta",
     finish: "Si parte!",
     next: "Avanti",

@@ -39,8 +39,36 @@ import {
 // `affiliate_rate_overrides` (créée le 19 août) n'était lue nulle part :
 // un partenariat négocié à 60% aurait été payé 40% en silence.
 //
-// L'Atelier (70%) est attribué côté formaquiz, dans SA base.
-const PRODUIT: keyof typeof COMMISSION_RATES = "tiquiz";
+// -- LE PRODUIT EST UN PARAMÈTRE OBLIGATOIRE (26 août 2026) -----------
+//
+// Il était écrit en dur ici (`"tiquiz"`), et le commentaire d'à côté
+// disait "l'Atelier est attribué côté formaquiz, dans SA base". C'était
+// vrai, et c'est précisément ce que Béné a refusé : "je veux notre
+// propre système d'affiliation pour l'atelier comme pour tiquiz."
+//
+// Le jour où l'Atelier passe par ici, une constante `"tiquiz"` paierait
+// ses ventes à 40% au lieu de 70%, en silence, sur chaque vente. C'est
+// exactement le défaut du 1er août (une logique écrite pour un cas
+// appliquée telle quelle à un autre), transposé à de l'argent qui part.
+//
+// `produit` est donc un ARGUMENT que l'appelant DOIT fournir. On ne peut
+// plus appeler cette fonction sans avoir dit de quel produit on parle :
+// c'est la seule protection qui survit au prochain qui touchera au
+// fichier.
+export type ProduitCommission = keyof typeof COMMISSION_RATES;
+
+/**
+ * L'ÉCHELLE DE FIDÉLITÉ EST CELLE DE TIQUIZ, ET ELLE NE S'APPLIQUE QU'À LUI.
+ *
+ * `recompense_commission_pct` monte de 40% à 70% par paliers de 10
+ * filleuls (`lib/affiliate/recompense.ts`). Appliqué à l'Atelier, dont
+ * le taux de BASE est déjà 70%, il ne pourrait que faire DESCENDRE la
+ * commission : un affilié récompensé à 55% serait payé 55% sur l'Atelier
+ * au lieu de 70%, donc puni d'avoir progressé.
+ */
+function palierApplicable(produit: ProduitCommission): boolean {
+  return produit === "tiquiz";
+}
 
 const AFF_COLS = "sa, email, status";
 const AFF_COLS_NEW = `${AFF_COLS}, recompense_commission_pct`;
@@ -89,7 +117,18 @@ export type AttributeSaleInput = {
    */
   reglePar: "nous" | "systeme_io";
   currency?: string;
-  source_app: "tipote" | "tiquiz";
+  /**
+   * QUELLE APP A ENCAISSÉ. `"atelier"` depuis le 26 août 2026 : la
+   * contrainte de `affiliate_commissions` a été élargie par la migration
+   * 20260826_affiliation_atelier.sql. Sans elle, Postgres REFUSE la
+   * ligne et la commission disparaît dans le webhook.
+   */
+  source_app: "tipote" | "tiquiz" | "atelier";
+  /**
+   * LE PRODUIT VENDU, donc le taux. Obligatoire : cf. le bloc en tête de
+   * fichier. `"tiquiz"` = 40%, `"atelier"` = 70%.
+   */
+  produit: ProduitCommission;
   sio_order_id: string;
   product_name?: string;
   sale_at: Date;
@@ -259,7 +298,7 @@ export async function attributeSale(input: AttributeSaleInput): Promise<Attribut
       .from("affiliate_rate_overrides")
       .select("rate")
       .eq("sa", sa)
-      .eq("product", PRODUIT)
+      .eq("product", input.produit)
       .maybeSingle();
     // LE PALIER DE FIDÉLITÉ (Béné, 25 août 2026 : "il a 10 affiliés
     // abonnés [...] il gagne 20 %"). Il s'insère à l'étage prévu pour
@@ -272,9 +311,11 @@ export async function attributeSale(input: AttributeSaleInput): Promise<Attribut
     // webhook d'un paiement n'a pas à aller compter des lignes, et le
     // taux doit être celui ANNONCÉ à l'affilié ce mois-ci, pas celui
     // qu'un décompte fait à la seconde près donnerait.
-    const palierPct = Number(aff.recompense_commission_pct ?? NaN);
+    const palierPct = palierApplicable(input.produit)
+      ? Number(aff.recompense_commission_pct ?? NaN)
+      : NaN;
     const rate = resolveCommissionRate({
-      product: PRODUIT,
+      product: input.produit,
       override: Number((overrideRow as { rate?: number } | null)?.rate ?? NaN),
       tierRate: Number.isFinite(palierPct) ? palierPct / 100 : null,
     });

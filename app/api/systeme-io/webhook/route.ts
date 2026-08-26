@@ -1034,6 +1034,13 @@ export async function POST(req: NextRequest) {
           const attribResult = await attributeSale({
             customer_email: resolvedEmail,
             sale_amount_cents: saleAmountCents,
+            // LE TAUX NE BOUGE PAS. Ce webhook est celui des ventes
+            // TIPOTE, et il a toujours payé au taux `tiquiz` (40%), par
+            // la constante qui vivait dans `attribution.ts`. Le produit
+            // est devenu un argument le 26 août pour que l'Atelier
+            // puisse arriver ; passer autre chose ici changerait la
+            // rémunération d'affiliés qui n'ont rien demandé.
+            produit: "tiquiz",
             // `order.total_price` est ce que l'acheteur a PAYE, donc du
             // TTC. La conversion en base de commission (le HT, decision
             // Bene du 19 aout) se fait dans `attributeSale`, une seule

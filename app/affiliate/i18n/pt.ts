@@ -381,17 +381,28 @@ export const PT: AffiliateDict = {
     complete_banner: "Está tudo pronto. As tuas comissões saem no próximo pagamento.",
     minimum_note: "Os pagamentos saem entre o dia 10 e o dia 13 de cada mês, para as comissões ganhas há mais de 30 dias. Abaixo de 20 EUR o valor continua a ser teu e passa para o pagamento seguinte.",
     page_title: "Pagamento",
-    page_subtitle_sio: "Os pagamentos são geridos pelo Systeme.io. Configura o teu método de pagamento lá, nós tratamos do resto.",
-    sio_config_title: "Configura o teu pagamento (PayPal ou transferência)",
-    sio_config_body: "Vai ao teu perfil Systeme.io e escolhe PayPal ou transferência (IBAN). Podes alterar a qualquer momento na mesma página.",
-    sio_config_cta: "Configurar no Systeme.io",
-    schedule_title: "Quando recebes",
-    schedule_when: "As comissões são pagas entre 10 e 13 de cada mês, diretamente para o método que configuraste no Systeme.io.",
-    schedule_cooloff: "Uma comissão é validada no final do prazo de retratação legal do cliente (normalmente 14 dias após a venda). Uma comissão ainda neste prazo aparece na coluna «Pendente» do teu dashboard.",
-    invoices_title: "As tuas faturas mensais",
-    invoices_body: "O detalhe das tuas comissões e o histórico de pagamentos consultam-se no separador Afiliações do teu dashboard Systeme.io.",
-    invoices_cta: "Ver faturas no Systeme.io",
-    note_no_action_in_tipote: "Nenhuma informação de pagamento é guardada no Tipote. Tudo passa pelo Systeme.io, é por isso que são eles a fazer as transferências (não nós).",
+    page_subtitle_sio:
+      "Escolhes como queres receber, a transferência é connosco.",
+    sio_config_title:
+      "As tuas comissões antigas do Systeme.io",
+    sio_config_body:
+      "As vendas que chegaram pelos antigos funis do Systeme.io continuam a ser pagas por eles, no método de pagamento do teu perfil lá. Tudo o que passa pelos links desta página é pago por nós, com os dados acima.",
+    sio_config_cta:
+      "Abrir o meu perfil Systeme.io",
+    schedule_title:
+      "Quando recebes",
+    schedule_when:
+      "As transferências saem entre o dia 10 e o dia 13 de cada mês, para o método que escolheste acima.",
+    schedule_cooloff:
+      "Uma comissão fica pagável 30 dias após o pagamento do cliente, quando o prazo de cancelamento dele já passou. Abaixo de 20 € no total, o valor continua a ser teu e passa para a transferência seguinte.",
+    invoices_title:
+      "As tuas faturas",
+    invoices_body:
+      "Todos os meses geramos a tua fatura por ti, para a tua contabilidade, e descarrega-la a partir do teu espaço. As comissões pagas pelo Systeme.io mantêm as suas próprias faturas, no teu dashboard lá.",
+    invoices_cta:
+      "Ver as minhas faturas antigas do Systeme.io",
+    note_no_action_in_tipote:
+      "O teu IBAN está cifrado e nunca aparece por inteiro, nem sequer para ti: vês apenas os últimos dígitos, o suficiente para reconheceres a tua conta.",
   },
   support: {
     page_title: "Suporte",
@@ -403,16 +414,16 @@ export const PT: AffiliateDict = {
     restart_tour_button: "Refazer o tour guiado",
     faq_title: "Perguntas frequentes",
     faq_start_q: "Estou a começar, o que faço primeiro?",
-    faq_start_a: "Três coisas, por esta ordem. 1. Copia o teu link a partir da visão geral: o da formação, o do Tiquiz, ou os dois. 2. Configura o teu método de pagamento no Systeme.io, senão as comissões acumulam-se sem poderem sair. 3. Vai a Conteúdos, pega no primeiro email da sequência, muda o que não soa a ti e envia-o à tua lista. O guia de lançamento na visão geral segue estes passos e vai assinalando-os.",
+    faq_start_a: "Três coisas, por esta ordem. 1. Copia o teu link a partir da visão geral: o da formação, o do Tiquiz, ou os dois. 2. Preenche os teus dados de pagamento no separador Pagamento, senão as comissões acumulam-se sem poderem sair. 3. Vai a Conteúdos, pega no primeiro email da sequência, muda o que não soa a ti e envia-o à tua lista. O guia de lançamento na visão geral segue estes passos e vai assinalando-os.",
     faq_which_product_q: "Promovo a ferramenta ou a formação?",
-    faq_which_product_a: "A formação paga mais (70% contra 40%) e arrasta a ferramenta atrás, já que ensina a criar quizzes com o Tiquiz. Se a tua audiência está a começar e procura um método, empurra L'Atelier du Quiz (mercado francófono). Se já sabe o que quer e só procura a ferramenta, empurra o Tiquiz: a subscrição paga-te todos os meses durante um ano. Nada te impede de fazer os dois com um link diferente conforme a mensagem.",
+    faq_which_product_a: "A formação paga mais (70% contra 40%) e arrasta a ferramenta atrás, já que ensina a criar quizzes com o Tiquiz. Se a tua audiência está a começar e procura um método, empurra L'Atelier du Quiz (mercado francófono). Se já sabe o que quer e só procura a ferramenta, empurra o Tiquiz: a subscrição paga-te todos os meses enquanto o cliente se mantiver subscrito. Nada te impede de fazer os dois com um link diferente conforme a mensagem.",
     faq_where_material_q: "Onde encontro os emails, as publicações e os visuais?",
     faq_where_material_a: "No separador Conteúdos. Encontras a sequência de emails da formação, a sequência do Tiquiz, as publicações de redes dia a dia com o respetivo visual, os artigos e o banco de visuais para descarregar. O teu link rastreado e o teu nome já estão inseridos: clicas em Copiar e colas. Podes editar cada texto para soar a ti, e a tua versão fica guardada.",
     terms_card_title:
       "📜 Para as condições completas (comissão, exclusões, duração do cookie, fiscalidade, disputa...):",
     terms_card_button: "Ver as condições de afiliação",
     faq_payment_q: "Quando sou pago?",
-    faq_payment_a: "As comissões são transferidas entre o dia 10 e o dia 13 de cada mês, no mínimo 30 dias após a venda (passado o prazo de cancelamento do cliente). Limite mínimo de 50 €: se o teu saldo elegível estiver abaixo, transita para o mês seguinte.",
+    faq_payment_a: "As comissões são transferidas entre o dia 10 e o dia 13 de cada mês, no mínimo 30 dias após a venda (passado o prazo de cancelamento do cliente). Limite mínimo de 20 €: se o teu saldo elegível estiver abaixo, transita para o mês seguinte.",
     faq_cookie_q: "Como funciona o cookie de 90 dias?",
     faq_cookie_a: "Quando um visitante clica no teu link de afiliação, guardamos o teu identificador no navegador dele durante 90 dias. Se esse visitante comprar Tiquiz nesse período, a comissão é-te atribuída - mesmo se comprar ao dia 89.",
     faq_multi_link_q: "O que acontece se um visitante clicar em vários links de afiliados diferentes?",
@@ -420,7 +431,7 @@ export const PT: AffiliateDict = {
     faq_best_channels_q: "Que canais funcionam melhor para promover?",
     faq_best_channels_a: "O email está muito à frente: falas com pessoas que já te conhecem. Depois vêm as recomendações diretas em grupos e comunidades onde és mesmo ativo, e depois as redes sociais, que exigem mais repetição para o mesmo resultado. O vídeo (YouTube, TikTok) demora a arrancar mas continua a trazer vendas meses depois. Não te dou taxas de conversão tipo: dependem sobretudo da tua relação com a audiência.",
     faq_minimum_q: "Existe um mínimo para receber?",
-    faq_minimum_a: "Sim, 50 €. É o limite padrão para evitar transferências caras para pequenos valores. As comissões acumulam até atingirem 50 €, e a transferência sai no dia 10 do mês seguinte.",
+    faq_minimum_a: "Sim, 20 €. Abaixo disso, uma transferência custa mais em taxas e em tempo do que rende. O dinheiro continua a ser teu: as comissões acumulam até aos 20 €, e a transferência sai com o lote do mês seguinte, entre o dia 10 e o dia 13.",
     faq_subscriptions_q: "Recebo comissões nas subscrições mensais?",
     faq_subscriptions_a: "Sim, nos primeiros 12 meses de subscrição de cada cliente. Um cliente no acesso simples de 17 €/mês rende-te 5,67 € por mês, ou seja 68,04 € no ano. Um cliente no Plus de 29 €/mês rende-te 9,67 € por mês, ou seja 116,04 € no ano. É por isso que vale a pena falar do Plus a agências, a freelancers que vendem serviços de quiz e a quem gere vários projetos. As comissões são calculadas sobre o montante sem impostos.",
     faq_self_click_q: "O meu próprio clique conta?",
@@ -531,7 +542,7 @@ export const PT: AffiliateDict = {
     step5_tier_mid: "10-24 vendas",
     step5_tier_high: "25+ vendas",
     step5_body_outro:
-      "Pagamento no dia 10 de cada mês, a partir de 50 € acumulados. PayPal ou transferência, escolhes tu em Pagamento.",
+      "Pagamento entre o dia 10 e o dia 13 de cada mês, a partir de 20 € acumulados. PayPal ou transferência, escolhes tu em Pagamento.",
     skip: "Saltar",
     finish: "Vamos a isto!",
     next: "Seguinte",
