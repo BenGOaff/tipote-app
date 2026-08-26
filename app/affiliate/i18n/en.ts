@@ -118,6 +118,40 @@ export const EN: AffiliateDict = {
     err_default: "This link may have already been used or has expired (30 min max).",
     request_new_link: "Request a new link",
   },
+  nouveautes: {
+    titre:
+      "The programme has changed, here is what matters",
+    intro:
+      "Everything is in place and explained here. Your older links stay valid and keep paying you.",
+    p1_titre:
+      "Your links carry your own code",
+    p1_corps:
+      "No more unreadable identifiers: your links now carry a code you can read out over the phone. The ones you already shared in videos or emails still work.",
+    p2_titre:
+      "L'Atelier du Quiz moved to our system",
+    p2_corps:
+      "Its sales are tracked and paid by us, at 70%, like Tiquiz at 40%. You no longer need a Systeme.io account to get paid on the course.",
+    p3_titre:
+      "We are the ones paying you",
+    p3_corps:
+      "Between the 10th and the 13th of each month, from €20 (the old threshold was €50). A commission becomes payable 30 days after the customer pays. Below the threshold the money stays yours and rolls over to the next payout.",
+    p4_titre:
+      "We write your invoice for you",
+    p4_corps:
+      "Every month, for your bookkeeping, from details you fill in once. You download it from your dashboard.",
+    p5_titre:
+      "Your cookie lasts a year",
+    p5_corps:
+      "Someone who clicks in January and buys in June still pays you. And a free sign-up through your link ties that person to you for life.",
+    cta_liens:
+      "See my links",
+    cta_paiement:
+      "Fill in my payout details",
+    cta_conditions:
+      "Read the terms",
+    masquer:
+      "Got it",
+  },
   overview: {
     greeting: "Hi {name} 👋",
     subtitle: "Here's your overview of the affiliate program.",

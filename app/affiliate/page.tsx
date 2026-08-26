@@ -21,6 +21,7 @@ import AffiliateLinkCopy from "./components/AffiliateLinkCopy";
 import { LaunchGuideCard } from "./components/LaunchGuideCard";
 import { BadgesCard } from "./components/BadgesCard";
 import { LeaderboardCard } from "./components/LeaderboardCard";
+import NouveautesProgramme from "./components/NouveautesProgramme";
 
 async function TrialTipoteCard({ sa, t }: { sa: string; t: AffiliateDict }) {
   const { data } = await supabaseAdmin
@@ -149,6 +150,24 @@ export default async function AffiliateOverviewPage() {
           </h1>
           <p className="text-muted-foreground mt-1">{t.overview.subtitle}</p>
         </div>
+
+        {/* CE QUI A CHANGÉ, ANNONCÉ (Béné, 26 août 2026 : "je ne vois
+            toujours rien des nouveaux liens ni nouveau système ni rien
+            sur affiliate : en l'état je peux pas dire à mes users allez
+            sur affiliate vous verrez tout est à jour et expliqué !").
+
+            Tout était corrigé et rien n'était annoncé : un affilié qui
+            revient voit la même page qu'avant, donc pour lui il ne s'est
+            rien passé. C'est la leçon du 3 août appliquée ici, une
+            nouveauté qu'on ne montre pas n'existe pas.
+
+            En TÊTE, avant les liens : c'est ce qui explique pourquoi ses
+            liens ont changé de forme. Se ferme et s'en souvient. */}
+        <NouveautesProgramme
+          t={t}
+          sa={session.sa}
+          conditionsUrl={`https://quiz.tipote.com/affiliate?lang=${normaliseLocale(session.locale)}`}
+        />
 
         <section className="space-y-4">
           <div>
