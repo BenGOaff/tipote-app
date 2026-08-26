@@ -400,15 +400,18 @@ test("les 8 destinations du seed sont toujours la", () => {
 });
 
 /**
- * LES DEUX EXCEPTIONS, ET ELLES SONT NOMMÉES.
+ * L'EXCEPTION, ET ELLE EST NOMMÉE. Il n'en reste qu'UNE.
  *
- * - `tiquiz_free` : un optin, dont le formulaire cree le contact et pose
- *   le tag chez Systeme.io.
- * - `atelier` : l'Atelier a son PROPRE registre d'affiliés
- *   (`profiles.sio_affiliate_id` dans SA base, pas la table `affiliates`
- *   d'ici) et ne lit que `?sa=`. Repointer changerait QUI est payé.
+ * `tiquiz_free` : un optin, dont le formulaire cree le contact et pose
+ * le tag chez Systeme.io. Le remplacer ferait disparaitre ces inscrits
+ * de ses sequences email.
+ *
+ * `atelier` en est SORTI le 26 aout 2026 : l'Atelier lit maintenant
+ * `?ref=` et remonte ses ventes au registre central d'ici. Tant qu'il
+ * pointait sur un tunnel Systeme.io avec un `?ref=`, il ne payait
+ * PERSONNE, et rien ne le disait.
  */
-const RESTENT_CHEZ_SYSTEME_IO = ["tiquiz_free", "atelier"];
+const RESTENT_CHEZ_SYSTEME_IO = ["tiquiz_free"];
 
 test("TOUTES les destinations menent chez nous, sauf deux exceptions nommees", () => {
   for (const d of seedDestinations()) {
@@ -432,8 +435,6 @@ test("L'OPTIN GRATUIT RESTE chez Systeme.io, et c'est deliberé", () => {
   // de ses sequences email.
   const gratuit = seedDestinations().find((d) => d.slug === "tiquiz_free");
   assert.equal(gratuit?.path, "/part-tiquiz-gratuit");
-  // Et l'Atelier, pour la raison ecrite juste au dessus.
-  assert.equal(seedDestinations().find((d) => d.slug === "atelier")?.path, "/atelier-du-quiz");
   const src = fs.readFileSync(
     path.join(process.cwd(), "lib/affiliate/linkDestinations.ts"),
     "utf8",
@@ -441,7 +442,18 @@ test("L'OPTIN GRATUIT RESTE chez Systeme.io, et c'est deliberé", () => {
   // Et la RAISON est ecrite a cote : sans elle, le prochain qui passe
   // "finit le travail" et casse le tunnel gratuit.
   assert.match(src, /RESTE chez Systeme\.io, et c'est deliberé/);
-  assert.match(src, /son PROPRE registre d'affiliés/);
+});
+
+test("L'ATELIER mene chez NOUS, sinon il ne paie personne", () => {
+  // Un tunnel Systeme.io ne nous transmet rien de ce qu'on ajoute a
+  // l'URL. Tant que cette destination y pointait avec un `?ref=`, la
+  // vente rentrait et aucune commission n'etait creee, en silence.
+  const atelier = seedDestinations().find((d) => d.slug === "atelier");
+  assert.ok(atelier, "la destination atelier a disparu du seed");
+  const hote = new URL(atelier!.path).hostname;
+  assert.ok(NOS_DOMAINES.includes(hote), `atelier pointe sur ${hote}`);
+  // Et le lien construit porte bien le code public.
+  assert.match(buildAffiliateLink("fr", atelier!.path, "jocelyne"), /[?&]ref=jocelyne/);
 });
 
 test("les paliers menent a NOTRE bon de commande, pas a une page morte", () => {

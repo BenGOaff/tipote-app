@@ -56,7 +56,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ ok: false, reason: "invalid_body" }, { status: 400 });
   }
 
-  const sourceApp = body.source_app === "tipote" || body.source_app === "tiquiz" ? body.source_app : null;
+  // `atelier` depuis le 26 août 2026 : ses commissions vivent ici
+  // désormais, donc ses remboursements doivent pouvoir les annuler ici.
+  // Sans cette ligne, une vente Atelier remboursée continuerait de mûrir
+  // et partirait en virement 30 jours plus tard.
+  const sourceApp =
+    body.source_app === "tipote" || body.source_app === "tiquiz" || body.source_app === "atelier"
+      ? body.source_app
+      : null;
   const orderId = String(body.sio_order_id ?? "").trim();
   // LE MOTIF EST OBLIGATOIRE ET VALIDÉ. Il finit dans un journal qu'on
   // relira le jour où il faudra expliquer à un affilié pourquoi sa

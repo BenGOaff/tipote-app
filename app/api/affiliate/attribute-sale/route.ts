@@ -47,7 +47,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     /** "nous" ou "systeme_io" : qui verse cette commission. Voir plus bas. */
     regle_par?: string;
     currency?: string;
-    source_app?: "tipote" | "tiquiz";
+    source_app?: "tipote" | "tiquiz" | "atelier";
     sio_order_id?: string;
     product_name?: string;
     sale_at?: string;
@@ -69,7 +69,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     typeof body.sale_amount_cents !== "number" ||
     body.sale_amount_cents < 0 ||
     typeof body.sio_order_id !== "string" ||
-    (body.source_app !== "tipote" && body.source_app !== "tiquiz")
+    (body.source_app !== "tipote" &&
+      body.source_app !== "tiquiz" &&
+      // L'Atelier depuis le 26 août 2026. Sans cette ligne, ses ventes
+      // sont refusées en 400 et l'affilié n'est payé sur rien.
+      body.source_app !== "atelier")
   ) {
     return NextResponse.json({ ok: false, reason: "invalid_fields" }, { status: 400 });
   }
@@ -115,8 +119,21 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
   }
 
+  // LE PRODUIT SE DÉDUIT DE L'APP QUI A VENDU, ET DE RIEN D'AUTRE.
+  //
+  // Ajouter un champ `produit` au corps aurait créé un drapeau de plus à
+  // maintenir, donc un drapeau qu'un appelant finit par oublier : et
+  // l'oublier ferait payer une vente Atelier à 40% au lieu de 70%, en
+  // silence. `source_app` est déjà obligatoire et déjà sans ambiguïté.
+  // C'est la leçon du 24 août : quand une décision demande un drapeau,
+  // se demander d'abord si la donnée qu'on a déjà ne répond pas seule.
+  //
+  // `tipote` reste au taux `tiquiz` : c'est ce qu'il a toujours été.
+  const produit = body.source_app === "atelier" ? "atelier" : "tiquiz";
+
   const result = await attributeSale({
     customer_email: body.customer_email,
+    produit,
     sale_amount_cents: body.sale_amount_cents,
     base: base ?? "ttc",
     reglePar: reglePar ?? "systeme_io",

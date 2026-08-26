@@ -42,7 +42,7 @@ interface LigneCommission {
  * conclut qu'on l'a volé.
  */
 export async function annulerCommissionsDeLaVente(args: {
-  sourceApp: "tipote" | "tiquiz";
+  sourceApp: "tipote" | "tiquiz" | "atelier";
   orderId: string;
   motif: MotifAnnulation;
 }): Promise<ResultatAnnulation> {
