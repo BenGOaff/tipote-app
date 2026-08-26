@@ -68,12 +68,21 @@ export function buildPlayerWrapperStyle(
   return {};
 }
 
-/** URL d'affiliation Tiquiz côté tipote.fr. Si le créateur a posé
- *  son ID affilié SIO dans Settings, on attache ?sa=<id> pour qu'il
- *  touche une commission sur les inscriptions qui découlent de ce
- *  popquiz. Sinon, lien direct (non tracké mais fonctionnel). */
+/**
+ * URL de découverte Tiquiz, sur NOTRE domaine.
+ *
+ * Elle pointait sur le tunnel Systeme.io `tipote.fr/part-tiquiz`, ce qui
+ * était juste tant que la vente se faisait là-bas. Depuis que le bon de
+ * commande est chez nous, ce tunnel **ne transmet rien** de ce qu'on
+ * ajoute à l'URL : le `?sa=` du créateur n'atteignait donc jamais notre
+ * commissionnement (26 août 2026).
+ *
+ * Le `?sa=` reste la forme lue ici : c'est l'identifiant Systeme.io que
+ * le créateur a posé dans ses réglages, et le middleware de Tiquiz le
+ * lit toujours. Sans identifiant, lien direct, non tracké.
+ */
 export function tiquizDiscoveryUrl(affiliateId: string | null | undefined): string {
-  const base = "https://www.tipote.fr/part-tiquiz";
+  const base = "https://tiquiz.fr/";
   if (!affiliateId) return base;
   return `${base}?sa=${encodeURIComponent(affiliateId)}`;
 }

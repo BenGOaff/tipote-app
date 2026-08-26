@@ -12,6 +12,10 @@
 // table n'a pas encore été créée en prod (avant migration).
 
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import {
+  destinationsDivergentes as comparerDestinations,
+  type Divergence,
+} from "@/lib/affiliate/destinationsDivergentes";
 
 export type LinkDestinationSlug =
   | "tiquiz_direct"
@@ -116,6 +120,30 @@ export async function getAllLinkDestinations(): Promise<LinkDestinationRow[]> {
     const rows = data as LinkDestinationRow[];
     const connus = new Set(rows.map((r) => r.slug));
     const manquants = FALLBACK.filter((f) => !connus.has(f.slug));
+
+    // -- LA BASE GAGNE, DONC ELLE PEUT MENTIR EN SILENCE ---------------
+    //
+    // Béné, 26 août 2026, capture de son espace à l'appui : "tu me sors
+    // que affiliate est à jour alors que tu sers encore l'url de systeme
+    // au lieu de NOTRE page."
+    //
+    // Elle avait raison. Le seed avait été réécrit le 25 août, la base
+    // non, et comme les lignes de la base gagnent, chaque affilié
+    // copiait un lien vers `tipote.fr` : la vente partait et personne
+    // n'était payé. Rien, nulle part, ne le disait.
+    //
+    // On ne réécrit PAS la ligne (elle peut avoir été posée à la main),
+    // mais on refuse de se taire : une divergence sur une destination
+    // que le code fait pointer chez nous est de l'argent qui se perd.
+    for (const d of comparerDestinations(rows, FALLBACK)) {
+      console.error(
+        `[affiliate/destinations] ${d.slug} pointe sur "${d.enBase}" en base, ` +
+          `alors que le code attend "${d.attendu}". Le lien affiché ne nous ` +
+          `transmet peut-etre pas le ?ref= : commissions perdues. ` +
+          `Corriger dans /admin/links ou passer la migration.`,
+      );
+    }
+
     return [...rows, ...manquants].sort((a, b) => a.sort_order - b.sort_order);
   } catch {
     return FALLBACK;
@@ -138,4 +166,12 @@ export async function getLinkPath(slug: LinkDestinationSlug): Promise<string> {
   if (row) return row.path;
   const fb = FALLBACK.find((r) => r.slug === slug);
   return fb?.path ?? "/";
+}
+
+/** Les divergences de CETTE liste, comparée au seed du code. Sert à
+ *  l'écran d'admin. La comparaison elle même vit dans un module pur. */
+export function divergencesAvecLeCode(
+  rows: ReadonlyArray<{ slug: string; path: string }>,
+): Divergence[] {
+  return comparerDestinations(rows, FALLBACK);
 }
