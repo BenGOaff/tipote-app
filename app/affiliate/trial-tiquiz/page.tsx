@@ -216,12 +216,13 @@ function TrialExpired({ expiresAt, t, locale }: { expiresAt: Date; t: AffiliateD
         <p className="text-sm text-muted-foreground leading-relaxed">{t.trial.expired_body_2}</p>
         <div className="flex flex-col sm:flex-row gap-2">
           <Button asChild>
-            {/* /part-tiquiz au lieu de /tiquiz : meme contenu, mais
-                /tiquiz nu n'est PAS tagge affiliation cote SIO (drame
-                Bene 8 juin 2026). Coherence avec ce qu'on demande aux
-                affilies de partager. */}
+            {/* NOTRE domaine depuis le 26 aout 2026. Ce lien pointait
+                sur le tunnel Systeme.io `/part-tiquiz`, ce qui etait
+                juste tant que la vente se faisait la-bas. Aujourd'hui
+                la vente se fait chez nous, et un tunnel Systeme.io ne
+                nous transmet rien de ce qu'on ajoute a l'URL. */}
             <a
-              href="https://www.tipote.fr/part-tiquiz"
+              href="https://tiquiz.fr/"
               target="_blank"
               rel="noopener noreferrer"
             >

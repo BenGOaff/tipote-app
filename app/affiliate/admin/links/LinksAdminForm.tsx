@@ -24,12 +24,19 @@ type Row = LinkDestinationRow & {
 };
 
 const SLUG_HINTS: Record<string, string> = {
-  tiquiz_main: "Recommande par defaut. Doit etre /part-tiquiz.",
-  tiquiz_free: "Compte gratuit a vie.",
-  tiquiz_monthly: "Abonnement mensuel 9 EUR.",
-  tiquiz_monthly_plus: "Plus mensuel. ATTENTION ordre inverse : /tiquiz-mensuel-plus-part",
-  tiquiz_yearly: "Abonnement annuel 90 EUR.",
-  tiquiz_yearly_plus: "Plus annuel. ATTENTION ordre inverse : /tiquiz-annuel-plus-part",
+  // NOS DOMAINES, depuis le 25 aout 2026. Ces libelles conseillaient
+  // encore les chemins Systeme.io du 8 juin : quelqu'un qui suivait
+  // l'ecran remettait donc un lien qui ne nous transmet pas le ?ref=,
+  // donc une commission perdue. Un ecran qui conseille l'inverse de ce
+  // que fait le code est pire qu'un ecran sans conseil.
+  atelier: "L'Atelier du Quiz. Doit etre https://atelierduquiz.fr/",
+  tiquiz_main: "Recommande par defaut. Doit etre https://tiquiz.fr/",
+  tiquiz_direct: "Lien direct Tiquiz. Doit etre https://tiquiz.fr/",
+  tiquiz_free: "Compte gratuit a vie. RESTE chez Systeme.io : son optin cree le contact et pose le tag chez eux.",
+  tiquiz_monthly: "Abonnement mensuel 17 EUR. Notre bon de commande.",
+  tiquiz_monthly_plus: "Plus mensuel 29 EUR. Notre bon de commande.",
+  tiquiz_yearly: "Abonnement annuel 170 EUR. Notre bon de commande.",
+  tiquiz_yearly_plus: "Plus annuel 290 EUR. Notre bon de commande.",
 };
 
 export function LinksAdminForm({ initial }: { initial: LinkDestinationRow[] }) {
@@ -118,7 +125,7 @@ export function LinksAdminForm({ initial }: { initial: LinkDestinationRow[] }) {
                 <Input
                   value={row.path}
                   onChange={(e) => update(row.slug, { path: e.target.value })}
-                  placeholder="/part-tiquiz"
+                  placeholder="https://tiquiz.fr/"
                   className="font-mono text-sm"
                 />
               </div>
