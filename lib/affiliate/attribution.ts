@@ -359,6 +359,43 @@ export async function attributeSale(input: AttributeSaleInput): Promise<Attribut
       return { status: "error", error: insertErr.message };
     }
 
+    // UNE VENTE ATTRIBUÉE RATTACHE L'ACHETEUR, À VIE.
+    //
+    // Béné, 26 août 2026 : "un mec qui vend l'atelier en affi doit bien
+    // sûr toucher ses commissions sur tiquiz si son affilié s'abonne et
+    // inversement pour l'atelier vendu via tiquiz."
+    //
+    // Ça ne marchait QUE dans un sens, et personne ne pouvait le voir.
+    // Cette fonction LISAIT `affiliate_conversions` et n'y écrivait
+    // jamais. Quelqu'un qui achetait l'Atelier par le lien de Marc
+    // n'avait donc aucun rattachement : trois mois plus tard, en
+    // s'abonnant à Tiquiz depuis son compte, il n'avait plus de lien
+    // dans son URL, la recherche par email ne trouvait rien, et Marc ne
+    // touchait rien. Il avait pourtant amené le client.
+    //
+    // Le rattachement vaut pour LA PERSONNE, pas pour le produit :
+    // c'est ce qui fait que les commissions se croisent entre l'Atelier
+    // et Tiquiz, dans les deux sens, au taux du produit vendu.
+    //
+    // LE PREMIER RATTACHEMENT GAGNE : on n'écrit que s'il n'y en a pas.
+    // Un contact appartient à celui qui l'a AMENÉ, pas au dernier qui
+    // lui a vendu quelque chose.
+    //
+    // Best-effort, et jamais bloquant : la commission vient d'être
+    // écrite, elle compte plus que le rattachement. Mais on ne se tait
+    // pas, parce qu'un rattachement perdu, c'est un affilié qui ne
+    // touchera rien sur les ventes suivantes.
+    if (!conversion) {
+      const { error: rattErr } = await supabaseAdmin
+        .from("affiliate_conversions")
+        .insert({ email, sa, page_url: null });
+      if (rattErr && rattErr.code !== "23505") {
+        console.error(
+          `[affiliate/attribution] rattachement ${email} -> ${sa} refuse : ${rattErr.message}`,
+        );
+      }
+    }
+
     return {
       status: "attributed",
       sa,
