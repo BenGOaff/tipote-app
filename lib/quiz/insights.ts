@@ -37,6 +37,7 @@ import {
   type StartRateProject,
 } from "@/lib/insights/startRate";
 import { aggregateSurvey, type AggregatedQuestion } from "@/lib/survey/analysis";
+import { ANSWER_READING_RULES, renderQuestionsForPrompt } from "@/lib/survey/renderQuestions";
 import { EVIDENCE_RULES } from "@/lib/prompts/evidence";
 import { fetchAnthropic } from "@/lib/aiRetry";
 
@@ -471,15 +472,11 @@ function renderAggregateForPrompt(a: QuizInsightsAggregate): string {
   }
   if (a.questions.length > 0) {
     lines.push(`DISTRIBUTION DES REPONSES (${a.totalAnswered} participants ayant repondu) :`);
-    for (const q of a.questions) {
-      lines.push(`Q${q.index + 1}. ${q.text}  [${q.answeredCount}/${a.totalAnswered} ont repondu]`);
-      for (const o of q.options) lines.push(`   - ${o.text} : ${o.pct}% (${o.count})`);
-      if (q.average !== null && q.average !== undefined) lines.push(`   (note moyenne : ${q.average})`);
-      if (q.textCount && q.textCount > 0) {
-        const samples = (q.textSamples ?? []).slice(0, 12).map((s) => `"${s}"`).join(", ");
-        lines.push(`   ${q.textCount} reponses libres. Echantillon : ${samples}`);
-      }
-    }
+    // Le format et les regles de lecture vivent au meme endroit
+    // (lib/survey/renderQuestions.ts) : l'analyse de sondage et celle-ci
+    // decrivaient la meme chose chacune de son cote, et une seule des
+    // deux se faisait corriger.
+    lines.push(...renderQuestionsForPrompt(a.questions, a.totalAnswered, { samples: 15 }));
   }
   return lines.join("\n");
 }
@@ -506,7 +503,7 @@ export async function generateQuizInsights(aggregate: QuizInsightsAggregate): Pr
     "- LE PARTAGE N'EST PAS UN LEVIER UNIVERSEL. Sur un sujet intime ou stigmatisant (sante, sante mentale, neuroatypie, argent, poids, sexualite, famille, echec), partager publiquement revient a s'exposer : un taux de partage bas n'y est ni un defaut du quiz ni un cadeau trop faible. Ne recommande pas d'augmenter le partage dans ce cas, propose plutot l'envoi a UNE personne (message prive, email), les groupes fermes, ou concentre-toi sur d'autres leviers.",
     "- Un profil de resultat sur-represente peut signaler une cible reelle a exploiter (offre dediee) OU un quiz mal equilibre : tranche selon le contexte.",
     "- Si les vues sont partiellement trackees, ne conclus pas sur le taux de capture, concentre-toi sur les leads et les profils.",
-    "- Ne dis JAMAIS qu'une question est vide si des reponses sont indiquees.",
+    ANSWER_READING_RULES,
     "TON ROLE EST PEDAGOGIQUE, PAS ENCYCLOPEDIQUE. Tu ne deverses pas tout ce que tu sais : tu donnes la bonne information au bon moment. Une creatrice n'appliquera JAMAIS dix conseils, elle en appliquera un, et si tu ne choisis pas lequel, elle choisira au hasard, souvent le plus facile plutot que le plus rentable. Choisir a sa place, c'est ton travail.",
     "Tu designes donc UNE priorite unique, celle qui rapporte le plus par rapport a l'effort qu'elle demande, et tu la traites a fond : ce que c'est, pourquoi ca compte CHEZ ELLE avec ses chiffres, et comment s'y prendre concretement. Le reste passe apres, et tu le dis.",
     "Tu reponds STRICTEMENT en JSON valide, sans texte autour, au format :",

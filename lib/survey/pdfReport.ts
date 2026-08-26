@@ -18,6 +18,7 @@
 // barres directement avec les primitives jspdf. Léger, fiable, brandé.
 
 import type { jsPDF } from "jspdf";
+import { echantillonReparti } from "@/lib/survey/renderQuestions";
 
 export interface AggregatedOption {
   text: string;
@@ -31,7 +32,13 @@ export interface AggregatedQuestion {
   type: string;
   options: AggregatedOption[];
   textSamples?: string[];
+  /** Nombre TOTAL de réponses libres : sans lui, 3 extraits se lisent
+   *  comme 3 réponses. */
+  textCount?: number;
   average?: number | null;
+  /** Bornes de l'échelle. Une moyenne sans son échelle ne veut rien dire :
+   *  4,2 sur 5 est excellent, 4,2 sur 10 est mauvais. */
+  echelle?: { min: number; max: number } | null;
 }
 
 export interface SurveyPdfRespondent {
@@ -234,7 +241,7 @@ function drawKpiBand(
     { label: "Questions", value: String(payload.questions.length) },
     {
       label: "Taux de complétion par question",
-      value: payload.totalResponses > 0 ? "100 %" : "—",
+      value: payload.totalResponses > 0 ? "100 %" : "-",
     },
   ];
   const blockW = (contentW - gap * (blocks.length - 1)) / blocks.length;
@@ -522,7 +529,8 @@ function drawQuestion(
     setText(doc, brand.muted);
     doc.setFont("helvetica", "italic");
     doc.setFontSize(9);
-    doc.text(`Note moyenne : ${q.average}`, margin, cursor.y);
+    const surEchelle = q.echelle ? ` sur ${q.echelle.max}` : "";
+    doc.text(`Note moyenne : ${q.average}${surEchelle}`, margin, cursor.y);
     cursor.y += 14;
   }
 
@@ -571,13 +579,22 @@ function drawQuestion(
     setText(doc, brand.muted);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(7);
-    doc.text("RÉPONSES LIBRES (extraits)", margin, cursor.y);
+    // Échantillon RÉPARTI du début à la fin, pas les 3 premiers arrivés,
+    // et on dit combien il y en a en tout : sinon 3 extraits se lisent
+    // comme 3 réponses.
+    const cites = echantillonReparti(q.textSamples, 3);
+    const total = q.textCount ?? q.textSamples.length;
+    const entete =
+      total > cites.length
+        ? `RÉPONSES LIBRES (${cites.length} extraits sur ${total})`
+        : `RÉPONSES LIBRES (${total})`;
+    doc.text(entete, margin, cursor.y);
     cursor.y += 11;
     setText(doc, brand.text);
     doc.setFont("helvetica", "italic");
     doc.setFontSize(9);
-    for (const sample of q.textSamples.slice(0, 3)) {
-      const lines = doc.splitTextToSize(`« ${sample} »`, contentW - 8) as string[];
+    for (const sample of cites) {
+      const lines = doc.splitTextToSize(`"${sample}"`, contentW - 8) as string[];
       ensureSpace(doc, lines.length * 12, pageH, margin, cursor);
       for (const ln of lines) {
         doc.text(ln, margin + 4, cursor.y);
@@ -625,7 +642,7 @@ function drawFooters(
     setText(doc, brand.muted);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
-    const leftText = truncate(`${brand.name} — ${surveyTitle}`, 80);
+    const leftText = truncate(`${brand.name} - ${surveyTitle}`, 80);
     doc.text(leftText, margin, pageH - margin);
     doc.text(`Page ${i} / ${total}`, pageW - margin, pageH - margin, { align: "right" });
   }
