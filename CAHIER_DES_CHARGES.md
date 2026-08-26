@@ -554,6 +554,14 @@ Les deux sont EXCLUSIFS : choisir l'un laisse l'autre à son socle. Un filleul a
 
 **Affilié sans compte Systeme.io** : `affiliates.origin` distingue `systeme_io` de `tipote`, et `genererSa()` fabrique une clé interne pour un affilié recruté chez nous. `sa` reste la clé interne de tout l'historique, `ref` reste le seul code qui sort dans une URL.
 
+**Les destinations atterrissent sur NOS domaines (26 août).** Les 8 slugs de `lib/affiliate/linkDestinations.ts` mènent désormais à `tiquiz.fr`, `tiquiz.fr/commande/<produit>` ou `atelierduquiz.fr`, à UNE exception nommée : `tiquiz_free` reste un optin Systeme.io, parce que son formulaire crée le contact et pose le tag chez eux, et que c'est le seul événement qui porte une URL de tunnel. La bascule s'est faite par migration (`20260826_destinations_nos_domaines.sql` et `20260826_destination_atelier.sql`), et pas par une édition de code : `getAllLinkDestinations()` fait gagner la LIGNE EN BASE sur le seed, donc une destination déjà présente ne bouge jamais d'un changement de code. C'est ce qui a fait qu'un premier correctif n'avait rien changé à l'écran.
+
+`divergencesAvecLeCode()` compare ce que la base sert à ce que le code attend, et l'admin des liens affiche un panneau rouge par écart. Sans lui, la seule façon de voir qu'une destination est restée sur un ancien tunnel est qu'une affiliée le signale, ce qui est arrivé.
+
+**L'Atelier du Quiz est commissionné par ce registre (26 août).** `attribute-sale` accepte `source_app: "atelier"`, qui décide du TAUX (70 %) : un `source_app` faux paierait 40 %. `palierApplicable(produit)` réserve les paliers de récompense à Tiquiz. La contrainte `affiliate_commissions_source_app_check` a été élargie à `('tipote','tiquiz','atelier')` par `20260826_affiliation_atelier.sql`.
+
+**`POST /api/affiliate/code` : le code public d'une personne, pour une autre app.** L'Atelier appelle ici (secret partagé, comparaison à temps constant) pour fabriquer le lien de son élève, et l'affilié est CRÉÉ au premier passage s'il ne l'était pas. Le registre reste unique : le copier là-bas donnerait deux codes pour la même personne, donc deux liens et des statistiques coupées en deux, ce qui était très exactement l'état de l'Atelier avant cette date. Les décisions vivent dans `lib/affiliate/codeAffilie.ts`, pur et testé : un affilié EXCLU n'obtient aucun lien, un affilié en PAUSE garde le sien, et une adresse déjà affiliée sous un autre `sa` n'est jamais re-clée en silence (l'argent déjà gagné y est accroché).
+
 ---
 
 Auth affilié : après connexion, navigation dure (`window.location.assign`) pour que le SSR du layout affilié lise le cookie de session.
@@ -821,9 +829,11 @@ Les dernières ventes SIO sont injectées dans le contexte du coach (CA total, v
 
 ### 10.8. Lien d'affiliation Tiquiz
 
-Footer permanent sur les popquiz publics et leur embed iframe, et sur les quiz publics gratuits ou sans footer custom, redirigeant vers `www.tipote.fr/part-tiquiz` avec `?sa=<id>`, l'identifiant affilié Systeme.io du créateur (`business_profiles.tipote_affiliate_id`).
+Footer permanent sur les popquiz publics et leur embed iframe, et sur les quiz publics gratuits ou sans footer custom, redirigeant vers **`https://tiquiz.fr/`** avec `?sa=<id>`, l'identifiant affilié Systeme.io du créateur (`business_profiles.tipote_affiliate_id`).
 
-**C'est le SEUL endroit où l'app fabrique encore un `?sa=`, et c'est voulu.** Nos liens d'affiliation portent `?ref=` depuis le 24 août ; ici la destination est un tunnel d'optin Systeme.io, dont le formulaire crée la conversion chez eux, et l'identifiant qu'ils comprennent est le leur. Le remplacer par un `?ref=` casserait l'attribution sans rien apporter. Corollaire : ce chemin n'ouvre PAS le mois offert, réservé aux liens `?ref=`.
+**La destination a changé le 26 août, la forme du paramètre non.** Elle pointait sur le tunnel Systeme.io `tipote.fr/part-tiquiz`, dont la page ne nous transmet rien de ce qu'on ajoute à l'URL : le `?sa=` du créateur n'atteignait donc jamais notre middleware. Il arrive maintenant sur notre domaine, où il est lu et rangé en cookie comme n'importe quel lien d'affiliation.
+
+**C'est le SEUL endroit où l'app fabrique encore un `?sa=`, et c'est voulu.** Nos liens portent `?ref=` depuis le 24 août, mais ce footer est posé pour un créateur dont on ne connaît que l'identifiant Systeme.io : c'est le champ qu'il a rempli dans ses réglages. Corollaire inchangé : ce chemin n'ouvre PAS le mois offert, réservé aux liens `?ref=`, et c'est le nom du paramètre qui le décide, sans aucun marqueur à maintenir.
 
 ---
 
