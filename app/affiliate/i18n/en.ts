@@ -266,6 +266,12 @@ export const EN: AffiliateDict = {
     empty_title: "No tracked link yet",
     empty_body: "Clicks are only counted on tracking links, the ones that go through our redirector. The links on the Promote page go straight to the sales page: they still pay your commission, but they report nothing here.",
     empty_cta: "Get my link",
+    col_visitors: "visitors",
+    provenance_title: "Where your clicks come from",
+    provenance_body: "The source is detected on its own from the site the visitor came from. The channel is yours to write, by adding `?c=` to your link (for example `?c=newsletter`), for what leaves no trace: an email, a bio link, a QR code.",
+    provenance_sources: "Source",
+    provenance_canaux: "Your channels",
+    provenance_canaux_vide: "You have not labelled any link yet. Add `?c=youtube` to the end of your link and compare what each channel brings you.",
   },
   promouvoir: {
     page_title: "Promote",

@@ -36,6 +36,7 @@ import { timingSafeEqual } from "node:crypto";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { recordClick } from "@/lib/affiliate/goRedirect";
 import { REF_MIN_LENGTH, sanitizeRef } from "@/lib/affiliate/ref";
+import { sanitizeChannel } from "@/lib/affiliate/clickSource";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -57,6 +58,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const body = (await req.json().catch(() => ({}))) as {
     ref?: unknown;
+    canal?: unknown;
     pageUrl?: unknown;
     referrer?: unknown;
     userAgent?: unknown;
@@ -94,7 +96,17 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       // n'en a aucun, et inventer une valeur ferait apparaître un canal
       // que personne n'a créé.
       destination: "",
-      channel: null,
+      // LE CANAL VIENT DE L'AFFILIÉ, LA PROVENANCE DU REFERRER.
+      //
+      // Les deux sont écrits sur chaque clic, et c'est la règle du
+      // 19 août : ne garder que le canal donnerait un écran vide à tous
+      // ceux qui ne taguent rien (l'immense majorité), ne garder que la
+      // provenance empêcherait de distinguer deux vidéos YouTube.
+      //
+      // Le nettoyage se fait ICI et pas chez l'appelant : deux versions
+      // de la même règle feraient de `youtube` et `Youtube` deux canaux
+      // différents dans le tableau de l'affilié.
+      channel: sanitizeChannel(typeof body.canal === "string" ? body.canal : null),
       linkId: null,
       pageUrl: String(body.pageUrl ?? ""),
       referrer: typeof body.referrer === "string" ? body.referrer : null,

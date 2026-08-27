@@ -266,6 +266,12 @@ export const IT: AffiliateDict = {
     empty_title: "Ancora nessun link tracciato",
     empty_body: "I clic vengono contati solo sui link di monitoraggio, quelli che passano dal nostro redirect. I link della pagina Promuovi portano diritto alla pagina di vendita: la tua commissione resta, ma qui non arriva nessun dato.",
     empty_cta: "Vai a prendere il mio link",
+    col_visitors: "visitatori",
+    provenance_title: "Da dove arrivano i tuoi clic",
+    provenance_body: "La provenienza si rileva da sola, dal sito da cui arriva il visitatore. Il canale lo scrivi tu, aggiungendo `?c=` al tuo link (per esempio `?c=newsletter`), per ciò che non lascia traccia: una email, un link in bio, un codice QR.",
+    provenance_sources: "Provenienza",
+    provenance_canaux: "I tuoi canali",
+    provenance_canaux_vide: "Non hai ancora etichettato nessun link. Aggiungi `?c=youtube` alla fine del tuo link e confronta quello che ogni canale ti porta.",
   },
   promouvoir: {
     page_title: "Promuovere",

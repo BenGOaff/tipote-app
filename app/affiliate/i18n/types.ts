@@ -268,6 +268,12 @@ export type AffiliateDict = {
     empty_title: string;
     empty_body: string;
     empty_cta: string;
+    col_visitors: string;
+    provenance_title: string;
+    provenance_body: string;
+    provenance_sources: string;
+    provenance_canaux: string;
+    provenance_canaux_vide: string;
   };
   promouvoir: {
     page_title: string;

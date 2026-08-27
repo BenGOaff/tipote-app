@@ -266,6 +266,12 @@ export const PT: AffiliateDict = {
     empty_title: "Ainda sem links seguidos",
     empty_body: "Os cliques só são contados nos links de acompanhamento, os que passam pelo nosso redirecionador. Os links da página Promover vão direto para a página de venda: continuam a pagar a tua comissão, mas não registam nada aqui.",
     empty_cta: "Ir buscar o meu link",
+    col_visitors: "visitantes",
+    provenance_title: "De onde vêm os teus cliques",
+    provenance_body: "A proveniência é detetada sozinha, a partir do site de onde vem a visita. O canal escreve-lo tu, juntando `?c=` ao teu link (por exemplo `?c=newsletter`), para o que não deixa rasto: um email, uma ligação na bio, um código QR.",
+    provenance_sources: "Proveniência",
+    provenance_canaux: "Os teus canais",
+    provenance_canaux_vide: "Ainda não etiquetaste nenhum link. Junta `?c=youtube` ao fim do teu link e compara o que cada canal te traz.",
   },
   promouvoir: {
     page_title: "Promover",
