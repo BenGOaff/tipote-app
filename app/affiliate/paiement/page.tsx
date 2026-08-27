@@ -129,7 +129,6 @@ export default async function PaiementPage() {
         <CardContent className="pt-5 flex items-start gap-3">
           <Info className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
           <p className="text-sm text-amber-900 dark:text-amber-200">
-            {t.paiement.note_no_action_in_tipote}
           </p>
         </CardContent>
       </Card>

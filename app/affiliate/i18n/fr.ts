@@ -248,7 +248,7 @@ export const FR: AffiliateDict = {
     tipote_order_description: "Page de commande directe Tipote.",
   },
   liens: {
-    page_title: "Mes liens",
+    page_title: "Suivi de mes liens",
     page_subtitle: "Un lien par canal, et chacun te dit ce qu'il rapporte. Compare, garde ce qui marche.",
     stat_links: "Liens",
     stat_clicks: "Clics",
@@ -265,7 +265,7 @@ export const FR: AffiliateDict = {
     copy_long: "Copier le lien complet",
     open: "Ouvrir le lien",
     empty_title: "Pas encore de lien suivi",
-    empty_body: "Tes liens apparaissent ici dès le premier clic. Prends celui de la page Promouvoir, partage-le, et reviens voir ce qu'il donne.",
+    empty_body: "Les clics ne sont comptés que sur les liens de suivi, ceux qui passent par notre redirecteur. Les liens de la page Promouvoir mènent direct à la page de vente : ils te commissionnent, mais ils ne remontent aucun chiffre ici.",
     empty_cta: "Aller chercher mon lien",
   },
   promouvoir: {
@@ -281,8 +281,6 @@ export const FR: AffiliateDict = {
     mois_offert_limit: "Un mois par personne, jamais deux. Quelqu'un qui a déjà eu le sien, ou qui utilise son propre lien, garde son accès mais pas le cadeau.",
     main_link_title: "Lien principal d'affiliation",
     main_link_description: "Ton lien tracké universel. Plus loin tu trouveras des variantes par destination.",
-    warning_naked_url_title: "Attention : ne partage JAMAIS tipote.fr/tiquiz tel quel",
-    warning_naked_url_body: "Cette page n'est PAS paramétrée affiliation côté Systeme.io. Même en ajoutant ton ?ref=, le lien ne traque RIEN et tu ne touches AUCUNE commission. Ne l'utilise jamais : prends toujours un des liens ci-dessous (eux sont bien tagués).",
     tab_links: "Liens",
     tab_emails: "Emails",
     tab_posts: "Réseaux",
@@ -405,6 +403,7 @@ export const FR: AffiliateDict = {
     save: "Enregistrer",
     saving: "Enregistrement...",
     saved: "Coordonnées enregistrées.",
+    saved_facture_seule: "Tes informations pour la facture sont enregistrées.",
     err_save: "Impossible d'enregistrer. Réessaie dans un instant.",
     err_methode_inconnue: "Choisis PayPal ou le virement bancaire.",
     err_paypal_email: "Indique l'adresse email de ton compte PayPal.",
@@ -436,8 +435,6 @@ export const FR: AffiliateDict = {
       "Chaque mois, on génère ta facture à ta place pour ta compta, et tu la télécharges depuis ton espace. Les commissions versées par Systeme.io gardent leurs propres factures, dans ton dashboard là-bas.",
     invoices_cta:
       "Voir mes anciennes factures Systeme.io",
-    note_no_action_in_tipote:
-      "Ton IBAN est chiffré et ne ressort jamais en clair, pas même pour toi : tu vois seulement les derniers chiffres, de quoi reconnaître ton compte.",
   },
   support: {
     page_title: "Support",

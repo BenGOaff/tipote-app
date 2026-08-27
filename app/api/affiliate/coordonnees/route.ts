@@ -110,70 +110,99 @@ export async function PUT(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ ok: false, reason: "invalid_body" }, { status: 400 });
   }
 
+  // -- DEUX BLOCS INDÉPENDANTS, ET C'EST LA CORRECTION (Béné, 27 août) --
+  //
+  // "Je ne peux pas enregistrer Tes informations pour la facture, donc
+  // quand je reviens dessus rien n'a été sauvegardé."
+  //
+  // Elle avait raison, et la cause était ici : cette route refusait
+  // TOUTE la requête tant que les coordonnées de VERSEMENT n'étaient pas
+  // valides. Un `return` sur la méthode manquante, un autre sur
+  // `manquesVersement`, tous les deux AVANT l'écriture du profil fiscal.
+  // Elle remplissait son adresse et son SIREN, cliquait, et le serveur
+  // jetait tout parce qu'il n'avait pas encore son IBAN.
+  //
+  // Le commentaire plus bas disait pourtant l'intention juste : "il est
+  // ACCEPTÉ MÊME INCOMPLET... refuser tout parce qu'il manque une ligne
+  // lui ferait tout ressaisir, et c'est comme ça qu'on perd la moitié
+  // d'un formulaire". L'intention était bonne, deux `return` posés plus
+  // haut la rendaient inatteignable.
+  //
+  // Les deux blocs répondent à deux questions différentes ("où
+  // t'envoyer l'argent" et "quoi écrire sur ta facture") et se
+  // remplissent à deux moments différents. On enregistre donc CHACUN dès
+  // qu'il est valide, et on DIT ce qui n'est pas passé.
   const methode = String(body.methode ?? "").trim().toLowerCase() as MethodeVersement;
-  if (!METHODES.includes(methode)) {
-    return NextResponse.json({ ok: false, reason: "methode_inconnue" }, { status: 400 });
-  }
 
-  // ON VALIDE AVANT D'ÉCRIRE, avec la MÊME fonction que celle qui décide
-  // si le lot peut la payer. Deux règles écrites séparément finiraient
-  // par ne pas dire la même chose, et c'est l'écran qui mentirait :
-  // "enregistré" ici, "coordonnées incomplètes" dans le lot.
-  const candidat = lireCoordonnees({
-    payout_method: methode,
-    paypal_email: body.paypalEmail,
-    iban_holder: body.titulaire,
-    iban_number: body.iban,
-    bic: body.bic,
-  });
-  const manques = manquesVersement(candidat);
-  if (manques.length > 0) {
-    return NextResponse.json({ ok: false, reason: "incomplet", manques }, { status: 400 });
-  }
-
-  const ecrit = await ecrireCoordonneesAffiliee({
-    sa: session.sa,
-    methode,
-    paypalEmail: candidat.paypalEmail,
-    titulaire: candidat.titulaire,
-    iban: candidat.iban,
-    bic: candidat.bic,
-  });
-  if (!ecrit.ok) {
-    return NextResponse.json({ ok: false, reason: ecrit.reason ?? "base" }, { status: 500 });
-  }
-
-  // LE PROFIL FISCAL, ÉCRIT DANS LA MÊME REQUÊTE.
+  // ── LE PROFIL FISCAL, D'ABORD ──
   //
-  // Il est ACCEPTÉ MÊME INCOMPLET, et c'est voulu : quelqu'un qui donne
-  // son IBAN aujourd'hui et cherchera son SIREN demain doit pouvoir
-  // enregistrer ce qu'il a. Ce qui manque part dans `manquesFiscaux`,
-  // et l'écran le dit. Refuser tout parce qu'il manque une ligne lui
-  // ferait tout ressaisir, et c'est comme ça qu'on perd la moitié d'un
-  // formulaire.
+  // Accepté MÊME INCOMPLET : quelqu'un qui donne son adresse aujourd'hui
+  // et cherchera son SIREN demain doit pouvoir enregistrer ce qu'il a.
+  // Ce qui manque part dans `manquesFiscaux`, et l'écran le dit. Ce qui
+  // n'est PAS négociable, c'est le lien avec l'argent : sans profil
+  // complet ET sans mandat, `construireLot` l'écarte en le DISANT
+  // (raison `profil-fiscal`, distincte de `coordonnees`). Son argent
+  // reste acquis et part au lot suivant.
   //
-  // Ce qui n'est PAS négociable, c'est le lien avec l'argent : sans
-  // profil complet ET sans mandat, `construireLot` l'écarte en le
-  // DISANT (raison `profil-fiscal`, distincte de `coordonnees`). Son
-  // argent reste acquis et part au lot suivant.
-  const profilRecu = lireProfilFiscal(
-    (body.profil ?? {}) as Parameters<typeof lireProfilFiscal>[0],
-  );
-  const ecritProfil = await ecrireProfilFiscalAffiliee({
-    sa: session.sa,
-    profil: profilRecu,
-    // LA DATE DE L'ACCEPTATION VIENT DU SERVEUR (voir le store). Le
-    // navigateur dit qu'il accepte, il ne dit pas QUAND.
-    accepteLeMandat: body.accepteLeMandat === true,
-  });
-  if (!ecritProfil.ok) {
-    // Les coordonnées sont passées, le profil non : le dire, sinon elle
-    // repart en croyant les deux enregistrés et se retrouve écartée du
-    // lot sans comprendre pourquoi.
-    return NextResponse.json(
-      { ok: false, reason: "profil_non_enregistre" },
-      { status: 500 },
+  // On n'écrit QUE si l'appelant a envoyé un profil : sans ce garde, une
+  // requête qui ne porterait que les coordonnées effacerait l'adresse
+  // saisie la semaine d'avant.
+  if (body.profil !== undefined || body.accepteLeMandat !== undefined) {
+    const profilRecu = lireProfilFiscal(
+      (body.profil ?? {}) as Parameters<typeof lireProfilFiscal>[0],
     );
+    const ecritProfil = await ecrireProfilFiscalAffiliee({
+      sa: session.sa,
+      profil: profilRecu,
+      // LA DATE DE L'ACCEPTATION VIENT DU SERVEUR (voir le store). Le
+      // navigateur dit qu'il accepte, il ne dit pas QUAND.
+      accepteLeMandat: body.accepteLeMandat === true,
+    });
+    if (!ecritProfil.ok) {
+      return NextResponse.json(
+        { ok: false, reason: "profil_non_enregistre" },
+        { status: 500 },
+      );
+    }
+  }
+
+  // ── LES COORDONNÉES DE VERSEMENT ──
+  //
+  // Elles, on ne les écrit QUE complètes et valides : un IBAN à moitié
+  // saisi produirait un fichier SEPA rejeté par la banque trois jours
+  // plus tard. La validation passe par la MÊME fonction que celle qui
+  // décide si le lot peut la payer : deux règles écrites séparément
+  // finiraient par ne pas dire la même chose, et c'est l'écran qui
+  // mentirait ("enregistré" ici, "coordonnées incomplètes" dans le lot).
+  let manques: string[] = [];
+  let versementEnregistre = false;
+  if (METHODES.includes(methode)) {
+    const candidat = lireCoordonnees({
+      payout_method: methode,
+      paypal_email: body.paypalEmail,
+      iban_holder: body.titulaire,
+      iban_number: body.iban,
+      bic: body.bic,
+    });
+    manques = manquesVersement(candidat);
+    if (manques.length === 0) {
+      const ecrit = await ecrireCoordonneesAffiliee({
+        sa: session.sa,
+        methode,
+        paypalEmail: candidat.paypalEmail,
+        titulaire: candidat.titulaire,
+        iban: candidat.iban,
+        bic: candidat.bic,
+      });
+      if (!ecrit.ok) {
+        return NextResponse.json({ ok: false, reason: ecrit.reason ?? "base" }, { status: 500 });
+      }
+      versementEnregistre = true;
+    }
+  } else {
+    // Pas encore de moyen choisi. Ce n'est pas une erreur : c'est
+    // l'ordre dans lequel beaucoup de gens remplissent un formulaire.
+    manques = ["methode"];
   }
 
   // On relit : l'écran doit afficher le MASQUE que la base porte
@@ -185,6 +214,11 @@ export async function PUT(req: NextRequest): Promise<NextResponse> {
   ]);
   return NextResponse.json({
     ok: true,
+    // Ce qui a VRAIMENT été écrit, et ce qui bloque encore. L'écran a
+    // besoin des deux : dire "enregistré" sur un formulaire dont la
+    // moitié n'est pas passée est exactement le silence qu'on s'interdit.
+    versementEnregistre,
+    manques,
     coordonnees,
     profil,
     // Ce qui manque est calculé PAR LA MÊME fonction que celle qui

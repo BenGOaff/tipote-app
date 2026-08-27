@@ -243,19 +243,6 @@ export default async function PromouvoirPage({
         </CardContent>
       </Card>
 
-      {/* Garde-fou Bene 8 juin 2026 : l'URL "nue" tipote.fr/tiquiz n'est
-          PAS taggee affiliation cote Systeme.io, donc un affilie qui la
-          partage par habitude perd sa commission. On previent ici car
-          plusieurs ont remonte le piege. */}
-      <Card className="border-destructive/40 bg-destructive/5">
-        <CardContent className="pt-5 flex gap-3">
-          <AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
-          <div className="text-sm">
-            <p className="font-semibold text-destructive">{t.promouvoir.warning_naked_url_title}</p>
-            <p className="text-muted-foreground mt-1">{t.promouvoir.warning_naked_url_body}</p>
-          </div>
-        </CardContent>
-      </Card>
 
       <LinksManager
         refCode={refCode ?? ""}

@@ -247,7 +247,7 @@ export const PT: AffiliateDict = {
     tipote_order_description: "Página de encomenda direta Tipote.",
   },
   liens: {
-    page_title: "Os meus links",
+    page_title: "Acompanhamento dos meus links",
     page_subtitle: "Um link por canal, e cada um diz-te o que rende. Compara e fica com o que funciona.",
     stat_links: "Links",
     stat_clicks: "Cliques",
@@ -264,7 +264,7 @@ export const PT: AffiliateDict = {
     copy_long: "Copiar o link completo",
     open: "Abrir o link",
     empty_title: "Ainda sem links seguidos",
-    empty_body: "Os teus links aparecem aqui a partir do primeiro clique. Vai buscar o da página Promover, partilha-o e volta para ver como corre.",
+    empty_body: "Os cliques só são contados nos links de acompanhamento, os que passam pelo nosso redirecionador. Os links da página Promover vão direto para a página de venda: continuam a pagar a tua comissão, mas não registam nada aqui.",
     empty_cta: "Ir buscar o meu link",
   },
   promouvoir: {
@@ -280,8 +280,6 @@ export const PT: AffiliateDict = {
     mois_offert_limit: "Um mês por pessoa, nunca dois. Quem já teve o seu, ou usa o próprio link, mantém o acesso mas não a oferta.",
     main_link_title: "Link de afiliado principal",
     main_link_description: "O teu link rastreado universal. Mais abaixo encontras variantes por destino.",
-    warning_naked_url_title: "Atenção: NUNCA partilhes tipote.fr/tiquiz tal como está",
-    warning_naked_url_body: "Esta página NÃO está configurada para afiliação na Systeme.io. Mesmo acrescentando o teu ?ref=, o link não rastreia NADA e não recebes NENHUMA comissão. Nunca o uses: escolhe sempre um dos links abaixo (esses estão bem marcados).",
     tab_links: "Links",
     tab_emails: "Emails",
     tab_posts: "Redes",
@@ -404,6 +402,7 @@ export const PT: AffiliateDict = {
     save: "Guardar",
     saving: "A guardar...",
     saved: "Dados de pagamento guardados.",
+    saved_facture_seule: "Os teus dados para a fatura estão guardados.",
     err_save: "Não foi possível guardar. Tenta de novo daqui a pouco.",
     err_methode_inconnue: "Escolhe PayPal ou transferência bancária.",
     err_paypal_email: "Indica o email da tua conta PayPal.",
@@ -435,8 +434,6 @@ export const PT: AffiliateDict = {
       "Todos os meses geramos a tua fatura por ti, para a tua contabilidade, e descarrega-la a partir do teu espaço. As comissões pagas pelo Systeme.io mantêm as suas próprias faturas, no teu dashboard lá.",
     invoices_cta:
       "Ver as minhas faturas antigas do Systeme.io",
-    note_no_action_in_tipote:
-      "O teu IBAN está cifrado e nunca aparece por inteiro, nem sequer para ti: vês apenas os últimos dígitos, o suficiente para reconheceres a tua conta.",
   },
   support: {
     page_title: "Suporte",
