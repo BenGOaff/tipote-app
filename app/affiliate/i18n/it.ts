@@ -247,7 +247,7 @@ export const IT: AffiliateDict = {
     tipote_order_description: "Pagina d'ordine diretta Tipote.",
   },
   liens: {
-    page_title: "I miei link",
+    page_title: "Monitoraggio dei miei link",
     page_subtitle: "Un link per canale, e ognuno ti dice quanto rende. Confronta, tieni quello che funziona.",
     stat_links: "Link",
     stat_clicks: "Clic",
@@ -264,8 +264,14 @@ export const IT: AffiliateDict = {
     copy_long: "Copia il link completo",
     open: "Apri il link",
     empty_title: "Ancora nessun link tracciato",
-    empty_body: "I tuoi link compaiono qui dal primo clic. Prendi quello della pagina Promuovi, condividilo e torna a vedere come va.",
+    empty_body: "I clic vengono contati solo sui link di monitoraggio, quelli che passano dal nostro redirect. I link della pagina Promuovi portano diritto alla pagina di vendita: la tua commissione resta, ma qui non arriva nessun dato.",
     empty_cta: "Vai a prendere il mio link",
+    col_visitors: "visitatori",
+    provenance_title: "Da dove arrivano i tuoi clic",
+    provenance_body: "La provenienza si rileva da sola, dal sito da cui arriva il visitatore. Il canale lo scrivi tu, aggiungendo `?c=` al tuo link (per esempio `?c=newsletter`), per ciò che non lascia traccia: una email, un link in bio, un codice QR.",
+    provenance_sources: "Provenienza",
+    provenance_canaux: "I tuoi canali",
+    provenance_canaux_vide: "Non hai ancora etichettato nessun link. Aggiungi `?c=youtube` alla fine del tuo link e confronta quello che ogni canale ti porta.",
   },
   promouvoir: {
     page_title: "Promuovere",
@@ -280,8 +286,6 @@ export const IT: AffiliateDict = {
     mois_offert_limit: "Un mese a persona, mai due. Chi ha già avuto il suo, o usa il proprio link, mantiene l'accesso ma non il regalo.",
     main_link_title: "Link affiliato principale",
     main_link_description: "Il tuo link tracciato universale. Più sotto trovi le varianti per destinazione.",
-    warning_naked_url_title: "Attenzione: NON condividere mai tipote.fr/tiquiz così com'è",
-    warning_naked_url_body: "Questa pagina NON è configurata per l'affiliazione su Systeme.io. Anche aggiungendo il tuo ?ref=, il link non traccia NULLA e non ricevi NESSUNA commissione. Non usarlo mai: prendi sempre uno dei link qui sotto (quelli sono taggati correttamente).",
     tab_links: "Link",
     tab_emails: "Email",
     tab_posts: "Social",
@@ -404,6 +408,7 @@ export const IT: AffiliateDict = {
     save: "Salva",
     saving: "Salvataggio...",
     saved: "Dati di pagamento salvati.",
+    saved_facture_seule: "I tuoi dati per la fattura sono salvati.",
     err_save: "Impossibile salvare. Riprova tra un istante.",
     err_methode_inconnue: "Scegli PayPal o il bonifico bancario.",
     err_paypal_email: "Indica l'email del tuo conto PayPal.",
@@ -435,8 +440,6 @@ export const IT: AffiliateDict = {
       "Ogni mese generiamo la tua fattura al posto tuo, per la tua contabilità, e la scarichi dal tuo spazio. Le commissioni pagate da Systeme.io mantengono le loro fatture, nella tua dashboard lì.",
     invoices_cta:
       "Vedi le mie vecchie fatture Systeme.io",
-    note_no_action_in_tipote:
-      "Il tuo IBAN è cifrato e non compare mai per intero, nemmeno a te: vedi solo le ultime cifre, quanto basta per riconoscere il tuo conto.",
   },
   support: {
     page_title: "Supporto",

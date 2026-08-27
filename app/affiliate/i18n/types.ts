@@ -268,6 +268,12 @@ export type AffiliateDict = {
     empty_title: string;
     empty_body: string;
     empty_cta: string;
+    col_visitors: string;
+    provenance_title: string;
+    provenance_body: string;
+    provenance_sources: string;
+    provenance_canaux: string;
+    provenance_canaux_vide: string;
   };
   promouvoir: {
     page_title: string;
@@ -284,8 +290,6 @@ export type AffiliateDict = {
     mois_offert_limit: string;
     main_link_title: string;
     main_link_description: string;
-    warning_naked_url_title: string;
-    warning_naked_url_body: string;
     tab_links: string;
     tab_emails: string;
     tab_posts: string;
@@ -378,6 +382,7 @@ export type AffiliateDict = {
     save: string;
     saving: string;
     saved: string;
+    saved_facture_seule: string;
     err_save: string;
     err_methode_inconnue: string;
     err_paypal_email: string;
@@ -434,7 +439,6 @@ export type AffiliateDict = {
     invoices_title: string;
     invoices_body: string;
     invoices_cta: string;
-    note_no_action_in_tipote: string;
   };
 
   // ─── Support ─────────────────────────────────────────────────────

@@ -187,10 +187,16 @@ export default function CoordonneesVersement({ t }: { t: AffiliateDict }) {
   };
 
   async function enregistrer() {
-    if (!methode) {
-      setMessage({ ok: false, texte: p.err_methode_inconnue });
-      return;
-    }
+    // PLUS DE REFUS EN BLOC (Béné, 27 août 2026). "Je ne peux pas
+    // enregistrer Tes informations pour la facture, donc quand je
+    // reviens dessus rien n'a été sauvegardé."
+    //
+    // Ce garde renvoyait sans rien envoyer tant qu'aucun moyen de
+    // versement n'était choisi, et le serveur faisait la même chose de
+    // son côté : elle remplissait son adresse et son SIREN, cliquait, et
+    // tout partait à la poubelle parce qu'il manquait son IBAN. Les deux
+    // blocs sont indépendants, le serveur enregistre chacun dès qu'il
+    // est valide et DIT ce qui n'est pas passé.
     setEnvoi(true);
     setMessage(null);
     try {
@@ -212,6 +218,7 @@ export default function CoordonneesVersement({ t }: { t: AffiliateDict }) {
       const j = (await r.json().catch(() => ({}))) as {
         ok?: boolean;
         reason?: string;
+        versementEnregistre?: boolean;
         manques?: string[];
         manquesFiscaux?: string[];
         coordonnees?: Vue;
@@ -231,7 +238,18 @@ export default function CoordonneesVersement({ t }: { t: AffiliateDict }) {
       if (j.profil) setProfil(j.profil);
       setManquesFiscaux(j.manquesFiscaux ?? []);
       setFactures(j.factures ?? []);
-      setMessage({ ok: true, texte: p.saved });
+      // DIRE CE QUI EST PASSÉ, ET CE QUI NE L'EST PAS. Annoncer
+      // "enregistré" sur un formulaire dont la moitié n'est pas partie
+      // est exactement le silence qui a fait perdre sa saisie à Béné.
+      if (j.versementEnregistre) {
+        setMessage({ ok: true, texte: p.saved });
+      } else {
+        const premier = j.manques?.[0];
+        setMessage({
+          ok: true,
+          texte: `${p.saved_facture_seule} ${(premier && RAISONS[premier]) || p.err_methode_inconnue}`,
+        });
+      }
     } catch {
       setMessage({ ok: false, texte: p.err_save });
     } finally {

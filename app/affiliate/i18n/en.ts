@@ -247,7 +247,7 @@ export const EN: AffiliateDict = {
     tipote_order_description: "Direct Tipote order page.",
   },
   liens: {
-    page_title: "My links",
+    page_title: "My link tracking",
     page_subtitle: "One link per channel, each telling you what it earns. Compare, keep what works.",
     stat_links: "Links",
     stat_clicks: "Clicks",
@@ -264,8 +264,14 @@ export const EN: AffiliateDict = {
     copy_long: "Copy the full link",
     open: "Open the link",
     empty_title: "No tracked link yet",
-    empty_body: "Your links show up here from the first click. Grab the one on the Promote page, share it, and come back to see how it does.",
+    empty_body: "Clicks are only counted on tracking links, the ones that go through our redirector. The links on the Promote page go straight to the sales page: they still pay your commission, but they report nothing here.",
     empty_cta: "Get my link",
+    col_visitors: "visitors",
+    provenance_title: "Where your clicks come from",
+    provenance_body: "The source is detected on its own from the site the visitor came from. The channel is yours to write, by adding `?c=` to your link (for example `?c=newsletter`), for what leaves no trace: an email, a bio link, a QR code.",
+    provenance_sources: "Source",
+    provenance_canaux: "Your channels",
+    provenance_canaux_vide: "You have not labelled any link yet. Add `?c=youtube` to the end of your link and compare what each channel brings you.",
   },
   promouvoir: {
     page_title: "Promote",
@@ -280,8 +286,6 @@ export const EN: AffiliateDict = {
     mois_offert_limit: "One month per person, never two. Someone who already had theirs, or who uses their own link, keeps their access but not the gift.",
     main_link_title: "Main affiliate link",
     main_link_description: "Your universal tracked link. Below you'll find variants by destination.",
-    warning_naked_url_title: "Heads up: NEVER share tipote.fr/tiquiz as is",
-    warning_naked_url_body: "This page is NOT set up for affiliation on Systeme.io. Even if you add your ?ref=, the link tracks NOTHING and you earn ZERO commission. Never use it: always pick one of the links below (those are properly tagged).",
     tab_links: "Links",
     tab_emails: "Emails",
     tab_posts: "Social",
@@ -404,6 +408,7 @@ export const EN: AffiliateDict = {
     save: "Save",
     saving: "Saving...",
     saved: "Payout details saved.",
+    saved_facture_seule: "Your invoice details are saved.",
     err_save: "Could not save. Please try again in a moment.",
     err_methode_inconnue: "Pick PayPal or a bank transfer.",
     err_paypal_email: "Enter the email address of your PayPal account.",
@@ -435,8 +440,6 @@ export const EN: AffiliateDict = {
       "Every month we generate your invoice for you, for your bookkeeping, and you download it from your dashboard. Commissions paid by Systeme.io keep their own invoices, in your dashboard there.",
     invoices_cta:
       "See my older Systeme.io invoices",
-    note_no_action_in_tipote:
-      "Your IBAN is encrypted and never shown in full, not even to you: you only see the last digits, enough to recognise your account.",
   },
   support: {
     page_title: "Support",

@@ -32,6 +32,7 @@ import { timingSafeEqual } from "node:crypto";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { SA_RE } from "@/lib/affiliate/saFormat";
 import { REF_MIN_LENGTH, sanitizeRef } from "@/lib/affiliate/ref";
+import { prenomPublic } from "@/lib/affiliate/nomPublic";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -71,7 +72,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ ok: true, existe: false, actif: false, email: null });
   }
 
-  const requete = supabaseAdmin.from("affiliates").select("sa, email, status");
+  const requete = supabaseAdmin.from("affiliates").select("sa, email, status, display_name");
   const { data, error } = await (parRef
     ? requete.ilike("ref", ref)
     : requete.eq("sa", sa)
@@ -85,11 +86,28 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ ok: false, reason: "read_failed" }, { status: 502 });
   }
 
-  const aff = data as { sa: string; email: string; status: string } | null;
+  const aff = data as { sa: string; email: string; status: string; display_name: string | null } | null;
+  const actif = aff?.status === "active";
+  // -- LE PRENOM, ET SEULEMENT QUAND IL SERT (Bene, 27 aout 2026) ------
+  //
+  // "Jocelyne te propose de tester Tiquiz gratuitement." La page
+  // d'inscription de Tiquiz nomme l'affiliee qui amene le visiteur,
+  // donc elle a besoin d'un prenom, et ce point d'entree etait le seul
+  // a savoir qui c'est.
+  //
+  // L'en-tete de ce fichier disait "on ne rend ni son nom" : c'est
+  // assoupli ICI et nulle part ailleurs, avec deux bornes.
+  //   - le PRENOM seul, jamais le nom complet (`prenomPublic`), parce
+  //     que ce mot finit sur une page ouverte a tout le monde ;
+  //   - uniquement si elle est ACTIVE. Une affiliee en pause ou exclue
+  //     ne commissionne plus : afficher son prenom sur une page de vente
+  //     ferait la promotion de quelqu'un qui ne sera pas paye.
+  const nomPublic = actif ? prenomPublic(aff?.display_name) : null;
   return NextResponse.json({
     ok: true,
     existe: !!aff,
-    actif: aff?.status === "active",
+    actif,
     email: aff?.email ?? null,
+    nomPublic,
   });
 }

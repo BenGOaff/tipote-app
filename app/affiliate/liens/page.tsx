@@ -36,6 +36,7 @@ import { Link2, MousePointerClick, UserPlus, Wallet } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { construireProvenance, type LigneClic } from "@/lib/affiliate/provenanceClics";
 import { getAffiliateSession } from "@/lib/affiliate/session";
 import { assurerRefAffiliee } from "@/lib/affiliate/refServer";
 import { getActiveLinkDestinations } from "@/lib/affiliate/linkDestinations";
@@ -101,6 +102,21 @@ export default async function MesLiensPage() {
     .select("link_id")
     .eq("sa", session.sa);
 
+  // D'OU VIENNENT SES CLICS (Bene, 27 aout 2026). "Tout ce qui est
+  // interessant pour que l'affilie identifie d'ou viennent vraiment ses
+  // affilies et insister sur ce canal."
+  //
+  // On lit les clics BRUTS et on agrege dans un module pur : la page ne
+  // decide rien, elle affiche. Borne a 5000 lignes, les plus recentes :
+  // au dela, la tendance ne bouge plus et la page ralentirait.
+  const { data: clicsBruts } = await supabaseAdmin
+    .from("affiliate_clicks")
+    .select("source, channel, ip_hash")
+    .eq("sa", session.sa)
+    .order("created_at", { ascending: false })
+    .limit(5000);
+  const provenance = construireProvenance((clicsBruts ?? []) as LigneClic[]);
+
   const { data: commissions } = await supabaseAdmin
     .from("affiliate_commissions")
     .select("link_id, commission_cents, status")
@@ -164,6 +180,42 @@ export default async function MesLiensPage() {
         />
       </div>
 
+      {/* ── D'OU VIENNENT LES CLICS ──
+          C'est la question utile : sur quoi remettre du travail. La
+          PROVENANCE est deduite du referrer, donc elle existe meme pour
+          celui qui n'etiquette rien ; le CANAL est ce qu'il a ecrit
+          lui meme, pour ce que le referrer ne peut pas voir (une
+          newsletter, un lien en bio, un QR code). */}
+      {provenance.totaux.clics > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">{t.liens.provenance_title}</CardTitle>
+            <CardDescription>{t.liens.provenance_body}</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-6 sm:grid-cols-2">
+            <Repartition
+              titre={t.liens.provenance_sources}
+              lignes={provenance.parSource}
+              clics={t.liens.col_clicks}
+              visiteurs={t.liens.col_visitors}
+            />
+            {provenance.parCanal.length > 0 ? (
+              <Repartition
+                titre={t.liens.provenance_canaux}
+                lignes={provenance.parCanal}
+                clics={t.liens.col_clicks}
+                visiteurs={t.liens.col_visitors}
+              />
+            ) : (
+              <div>
+                <p className="text-sm font-semibold">{t.liens.provenance_canaux}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{t.liens.provenance_canaux_vide}</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {!refCode ? (
         <Card className="border-destructive/40">
           <CardContent className="py-4">
@@ -198,6 +250,50 @@ export default async function MesLiensPage() {
 }
 
 /** Un chiffre du bandeau. Serveur : ni etat ni gestionnaire d'evenement. */
+/**
+ * Une repartition, en barres proportionnelles.
+ *
+ * Pas de librairie de graphiques : des `div` a hauteur en pourcentage
+ * font le meme travail, et une dependance de plus est un `npm ci` qui
+ * peut casser en prod sans casser en local.
+ */
+function Repartition({
+  titre,
+  lignes,
+  clics,
+  visiteurs,
+}: {
+  titre: string;
+  lignes: { cle: string; clics: number; visiteurs: number }[];
+  clics: string;
+  visiteurs: string;
+}) {
+  const max = Math.max(1, ...lignes.map((l) => l.clics));
+  return (
+    <div>
+      <p className="text-sm font-semibold">{titre}</p>
+      <div className="mt-2 space-y-2">
+        {lignes.map((l) => (
+          <div key={l.cle}>
+            <div className="flex items-baseline justify-between gap-3 text-sm">
+              <span className="font-medium">{l.cle}</span>
+              <span className="text-muted-foreground tabular-nums">
+                {l.clics} {clics} · {l.visiteurs} {visiteurs}
+              </span>
+            </div>
+            <div className="mt-1 h-1.5 w-full rounded-full bg-muted">
+              <div
+                className="h-1.5 rounded-full bg-primary"
+                style={{ width: `${Math.round((l.clics / max) * 100)}%` }}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function Chiffre({
   icon: Icon,
   label,
