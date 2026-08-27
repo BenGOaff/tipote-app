@@ -441,6 +441,13 @@ export const FR: AffiliateDict = {
       "Chaque mois, on génère ta facture à ta place pour ta compta, et tu la télécharges depuis ton espace. Les commissions versées par Systeme.io gardent leurs propres factures, dans ton dashboard là-bas.",
     invoices_cta:
       "Voir mes anciennes factures Systeme.io",
+    identite_bouton: "Remplir",
+    identite_en_cours: "Recherche...",
+    identite_remplie: "C'est rempli. Relis et corrige si besoin.",
+    identite_rien_a_remplir: "Rien à ajouter : soit tout est déjà saisi, soit ce pays ne publie pas ces informations.",
+    identite_siren_absent: "Ce SIREN ne ressort pas de l'annuaire des entreprises. Vérifie la saisie, ou remplis à la main : un SIREN tout neuf met quelques jours à y apparaître.",
+    identite_tva_invalide: "Ce numéro de TVA n'existe pas dans le registre européen. Vérifie la saisie : sans numéro valide, ta facture ne pourra pas partir en autoliquidation.",
+    identite_injoignable: "L'annuaire ne répond pas en ce moment. Ce n'est pas ta saisie qui est en cause, remplis à la main et continue.",
   },
   support: {
     page_title: "Support",

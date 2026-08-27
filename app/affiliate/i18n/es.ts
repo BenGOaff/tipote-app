@@ -440,6 +440,13 @@ export const ES: AffiliateDict = {
       "Cada mes generamos tu factura en tu lugar, para tu contabilidad, y la descargas desde tu espacio. Las comisiones pagadas por Systeme.io conservan sus propias facturas, en tu dashboard allí.",
     invoices_cta:
       "Ver mis facturas antiguas de Systeme.io",
+    identite_bouton: "Rellenar",
+    identite_en_cours: "Buscando...",
+    identite_remplie: "Rellenado. Revísalo y corrígelo si hace falta.",
+    identite_rien_a_remplir: "Nada que añadir: o ya está todo escrito, o este país no publica estos datos.",
+    identite_siren_absent: "Este número de empresa no aparece en el registro francés. Revisa lo que has escrito, o rellénalo a mano: un número nuevo tarda unos días en aparecer.",
+    identite_tva_invalide: "Este número de IVA no existe en el registro europeo. Revisa lo que has escrito: sin un número válido, tu factura no podrá ir en inversión del sujeto pasivo.",
+    identite_injoignable: "El registro no responde ahora mismo. No es culpa de lo que has escrito, rellénalo a mano y sigue.",
   },
   support: {
     page_title: "Soporte",
