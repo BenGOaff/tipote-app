@@ -400,22 +400,20 @@ test("les 8 destinations du seed sont toujours la", () => {
 });
 
 /**
- * L'EXCEPTION, ET ELLE EST NOMMÉE. Il n'en reste qu'UNE.
+ * PLUS AUCUNE EXCEPTION (27 août 2026).
  *
- * `tiquiz_free` : un optin, dont le formulaire cree le contact et pose
- * le tag chez Systeme.io. Le remplacer ferait disparaitre ces inscrits
- * de ses sequences email.
+ * `tiquiz_free` était la dernière, et elle avait cessé de protéger quoi
+ * que ce soit : depuis que nos liens portent `?ref=`, Systeme.io ne
+ * comprend plus ce paramètre. Une inscription gratuite arrivée par un
+ * lien affilié ne rattachait donc personne, alors que le programme
+ * promet le rattachement à VIE.
  *
- * `atelier` en est SORTI le 26 aout 2026 : l'Atelier lit maintenant
- * `?ref=` et remonte ses ventes au registre central d'ici. Tant qu'il
- * pointait sur un tunnel Systeme.io avec un `?ref=`, il ne payait
- * PERSONNE, et rien ne le disait.
+ * `atelier` en était sorti le 26 août, pour la même raison exactement :
+ * tant qu'il pointait sur un tunnel Systeme.io avec un `?ref=`, il ne
+ * payait PERSONNE, et rien ne le disait.
  */
-const RESTENT_CHEZ_SYSTEME_IO = ["tiquiz_free"];
-
-test("TOUTES les destinations menent chez nous, sauf deux exceptions nommees", () => {
+test("TOUTES les destinations mènent chez nous, sans aucune exception", () => {
   for (const d of seedDestinations()) {
-    if (RESTENT_CHEZ_SYSTEME_IO.includes(d.slug)) continue;
     assert.ok(
       /^https?:\/\//i.test(d.path),
       `${d.slug} : un chemin relatif part sur le domaine de vente Systeme.io (${d.path})`,
@@ -428,20 +426,12 @@ test("TOUTES les destinations menent chez nous, sauf deux exceptions nommees", (
   }
 });
 
-test("L'OPTIN GRATUIT RESTE chez Systeme.io, et c'est deliberé", () => {
-  // Son formulaire cree le contact et pose le tag chez eux, et c'est le
-  // seul evenement qui porte une URL de tunnel, donc le seul qui sait
-  // d'ou vient l'inscrit. Le remplacer ferait disparaitre ces inscrits
-  // de ses sequences email.
+test("l'inscription gratuite passe par NOTRE page", () => {
+  // C'est la seule qui fait les trois choses : le compte, le
+  // rattachement à vie, et le contact chez Systeme.io avec son
+  // étiquette (donc la séquence email part comme avant).
   const gratuit = seedDestinations().find((d) => d.slug === "tiquiz_free");
-  assert.equal(gratuit?.path, "/part-tiquiz-gratuit");
-  const src = fs.readFileSync(
-    path.join(process.cwd(), "lib/affiliate/linkDestinations.ts"),
-    "utf8",
-  );
-  // Et la RAISON est ecrite a cote : sans elle, le prochain qui passe
-  // "finit le travail" et casse le tunnel gratuit.
-  assert.match(src, /RESTE chez Systeme\.io, et c'est deliberé/);
+  assert.equal(gratuit?.path, "https://tiquiz.fr/signup");
 });
 
 test("L'ATELIER mene chez NOUS, sinon il ne paie personne", () => {

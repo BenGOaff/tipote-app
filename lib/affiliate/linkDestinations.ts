@@ -56,13 +56,26 @@ export type LinkDestinationRow = {
 // meme palier, affiche le meme prix (il vient du catalogue) et propose
 // les trois autres en bas.
 //
-// **`tiquiz_free` RESTE chez Systeme.io, et c'est deliberé.** C'est un
-// optin, pas une vente : son formulaire cree le contact et pose le tag
-// chez eux, et c'est le seul evenement qui porte une URL de tunnel, donc
-// le seul qui sait d'ou vient l'inscrit. Le remplacer par notre `/signup`
-// ferait disparaitre ces inscrits de ses sequences email. A refaire le
+// -- `tiquiz_free` REVIENT CHEZ NOUS (27 aout 2026) -------------------
+//
+// C'etait la derniere destination sur un tunnel Systeme.io, et la seule
+// exception que ce fichier nommait. Le commentaire disait "a refaire le
 // jour ou notre inscription gratuite creera elle aussi le contact chez
-// Systeme.io.
+// Systeme.io" : ce jour est arrive le 25 aout.
+//
+// **Et l'exception avait cesse de proteger quoi que ce soit.** Depuis
+// que nos liens portent `?ref=` (24 aout), Systeme.io ne comprend plus
+// ce parametre : leur page l'ignore, notre middleware ne voit jamais la
+// requete donc ne pose aucun cookie, et leur webhook d'optin ne sait
+// lire qu'un `sa`. **Une inscription gratuite arrivee par un lien
+// affilie ne rattachait donc PERSONNE**, alors que le programme promet
+// "inscrit en free sur ton lien = ton affilie a vie".
+//
+// `https://tiquiz.fr/signup` fait les trois choses d'un coup :
+// le compte, le rattachement A VIE, et le contact chez Systeme.io avec
+// son etiquette `tiquiz-free` (`poserTagPlan` cree le contact quand il
+// n'existe pas). La sequence email part comme avant : le workflow de
+// Bene ecoute l'ajout de cette etiquette.
 const FALLBACK: LinkDestinationRow[] = [
   { slug: "tiquiz_direct",       path: "https://tiquiz.fr/",                        sort_order: 8,  enabled: true },
   // L'ATELIER EST REVENU CHEZ NOUS LE 26 AOÛT 2026.
@@ -82,7 +95,7 @@ const FALLBACK: LinkDestinationRow[] = [
   { slug: "atelier",             path: "https://atelierduquiz.fr/",                 sort_order: 5,  enabled: true },
   { slug: "tiquiz_main",         path: "https://tiquiz.fr/",                        sort_order: 10, enabled: true },
   // Le seul qui reste chez eux : voir le bloc ci-dessus.
-  { slug: "tiquiz_free",         path: "/part-tiquiz-gratuit",                      sort_order: 20, enabled: true },
+  { slug: "tiquiz_free",         path: "https://tiquiz.fr/signup",                  sort_order: 20, enabled: true },
   { slug: "tiquiz_monthly",      path: "https://tiquiz.fr/commande/mensuel",        sort_order: 30, enabled: true },
   { slug: "tiquiz_monthly_plus", path: "https://tiquiz.fr/commande/mensuel-plus",   sort_order: 40, enabled: true },
   { slug: "tiquiz_yearly",       path: "https://tiquiz.fr/commande/annuel",         sort_order: 50, enabled: true },
