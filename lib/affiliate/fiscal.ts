@@ -45,6 +45,7 @@
 // particulier non assujetti. Le reste est mécanique.
 
 import { normaliserNumeroTva, normaliserPays, numeroTvaBienForme, estDansLUnion, TAUX_UE } from "@/lib/facture/tva";
+import type { ControleVies } from "@/lib/facture/vies";
 
 /** Le pays du CLIENT, c'est à dire nous. Tout est écrit de son point de vue. */
 export const PAYS_CLIENT = "FR";
@@ -270,7 +271,24 @@ export const MENTION_AUTOFACTURATION =
  * ne facture pas la TVA, et lui en faire porter une l'obligerait à la
  * reverser.
  */
-export function resoudreTvaAutofacture(p: ProfilFiscal): DecisionAutofacture {
+export function resoudreTvaAutofacture(
+  p: ProfilFiscal,
+  /**
+   * CE QUE VIES A RÉPONDU SUR SON NUMÉRO, ET C'EST OBLIGATOIRE.
+   *
+   * Béné, 27 août 2026 : "pareil pour les affiliés, on utilise tout ce
+   * qu'on peut pour limiter les risques d'erreur et les actions à
+   * faire."
+   *
+   * Le risque est le même que du côté vente, et il est pour ELLE :
+   * c'est nous qui émettons la pièce, donc c'est nous qui portons une
+   * autoliquidation injustifiée. Un numéro bien formé ne prouve rien.
+   *
+   * Obligatoire, pour que le compilateur refuse un appelant muet. C'est
+   * la seule protection qui survit au prochain qui touchera au fichier.
+   */
+  vies: ControleVies,
+): DecisionAutofacture {
   const mentions = [MENTION_AUTOFACTURATION];
   const aVerifier: string[] = [];
   const pays = p.pays ?? PAYS_CLIENT;
@@ -307,6 +325,12 @@ export function resoudreTvaAutofacture(p: ProfilFiscal): DecisionAutofacture {
     // Sans numéro valide, on ne peut pas prouver que le prestataire est
     // assujetti. On n'invente pas d'autoliquidation : on marque.
     aVerifier.push("tva-numero-invalide");
+  } else if (dansLUnion && vies === "invalide") {
+    // VIES DIT QUE CE NUMÉRO N'EXISTE PAS. La forme ne prouvait rien :
+    // `BE0123456789` est parfaitement bien formé et n'appartient
+    // peut-être à personne. On marque, et le lot l'écarte plutôt que de
+    // virer sur une pièce fausse.
+    aVerifier.push("tva-numero-refuse-vies");
   }
 
   return {
@@ -318,7 +342,13 @@ export function resoudreTvaAutofacture(p: ProfilFiscal): DecisionAutofacture {
         ? "Autoliquidation : TVA due par le preneur (article 283-2 du CGI, article 196 de la directive 2006/112/CE)."
         : "Autoliquidation : TVA due par le preneur établi en France (article 283-2 du CGI).",
     ],
-    aVerifier: dansLUnion && numeroBon ? [...aVerifier, "tva-a-valider-vies"] : aVerifier,
+    // Vérifié auprès de VIES : plus rien à contrôler à la main. Pas
+    // vérifié, ou VIES injoignable : on marque, comme avant. Une pièce
+    // qui attendrait la Commission européenne bloquerait un virement.
+    aVerifier:
+      dansLUnion && numeroBon && vies !== "valide"
+        ? [...aVerifier, "tva-a-valider-vies"]
+        : aVerifier,
   };
 }
 

@@ -127,6 +127,101 @@ export default function CoordonneesVersement({ t }: { t: AffiliateDict }) {
   const [message, setMessage] = useState<{ ok: boolean; texte: string } | null>(null);
   const [profil, setProfil] = useState<Profil>(PROFIL_VIDE);
   const [manquesFiscaux, setManquesFiscaux] = useState<string[]>([]);
+
+  // SON SIREN OU SON NUMÉRO DE TVA REMPLIT SA FICHE (Béné, 27 août 2026).
+  //
+  // "On utilise tout ce qu'on peut pour limiter les risques d'erreur et
+  // les actions à faire."
+  //
+  // Ce n'est pas un confort de saisie : un profil fiscal incomplet
+  // ÉCARTE l'affilié du lot de versement. Il a gagné son argent, il ne
+  // le reçoit pas, et il faut lui écrire. Chaque champ rempli à sa place
+  // est une occasion de moins de rester bloqué.
+  const [recherche, setRecherche] = useState<
+    { etat: "encours" } | { etat: "fait"; texte: string; ok: boolean } | null
+  >(null);
+
+  async function chercherIdentite(quoi: "siren" | "numeroTva") {
+    const valeur = String(profil[quoi] ?? "").trim();
+    if (!valeur) return;
+    setRecherche({ etat: "encours" });
+    try {
+      const r = await fetch("/api/affiliate/identite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [quoi]: valeur }),
+      });
+      const j = (await r.json()) as {
+        ok?: boolean;
+        source?: string;
+        trouve?: boolean;
+        verdict?: string;
+        identite?: {
+          denomination?: string | null;
+          nom?: string | null;
+          adresse?: string | null;
+          codePostal?: string | null;
+          ville?: string | null;
+        };
+      };
+      if (!j.ok) {
+        setRecherche({ etat: "fait", texte: p.identite_injoignable, ok: false });
+        return;
+      }
+      if (j.source === "vies" && j.verdict === "invalide") {
+        setRecherche({ etat: "fait", texte: p.identite_tva_invalide, ok: false });
+        return;
+      }
+      if (j.source === "vies" && j.verdict !== "valide") {
+        setRecherche({ etat: "fait", texte: p.identite_injoignable, ok: false });
+        return;
+      }
+      if (j.source === "sirene" && !j.trouve) {
+        setRecherche({ etat: "fait", texte: p.identite_siren_absent, ok: false });
+        return;
+      }
+      // ON NE REMPLACE JAMAIS UNE SAISIE, on ne remplit que le vide :
+      // quelqu'un qui a corrigé son adresse la semaine dernière ne doit
+      // pas la voir écrasée par un fichier de l'État.
+      const suivant = { ...profil };
+      let rempli = 0;
+      const poser = (champ: "denomination" | "adresse1" | "codePostal" | "ville", v?: string | null) => {
+        if (v && !String(suivant[champ] ?? "").trim()) {
+          suivant[champ] = v;
+          rempli += 1;
+        }
+      };
+      poser("denomination", j.identite?.denomination ?? j.identite?.nom ?? null);
+      poser("adresse1", j.identite?.adresse ?? null);
+      poser("codePostal", j.identite?.codePostal ?? null);
+      poser("ville", j.identite?.ville ?? null);
+      if (rempli) setProfil(suivant);
+      setRecherche({
+        etat: "fait",
+        // Rien à remplir n'est pas un échec : c'est souvent que tout est
+        // déjà saisi, ou que l'État ne publie pas ces champs (Allemagne,
+        // Espagne). Le dire évite de faire chercher un problème.
+        texte: rempli ? p.identite_remplie : p.identite_rien_a_remplir,
+        ok: true,
+      });
+    } catch {
+      setRecherche({ etat: "fait", texte: p.identite_injoignable, ok: false });
+    }
+  }
+
+  /** Le bouton, identique pour les deux champs. */
+  function BoutonChercher({ quoi, actif }: { quoi: "siren" | "numeroTva"; actif: boolean }) {
+    return (
+      <button
+        type="button"
+        onClick={() => void chercherIdentite(quoi)}
+        disabled={!actif || recherche?.etat === "encours"}
+        className="h-10 shrink-0 self-end rounded-lg border px-3 text-sm font-medium hover:bg-muted disabled:opacity-50"
+      >
+        {recherche?.etat === "encours" ? p.identite_en_cours : p.identite_bouton}
+      </button>
+    );
+  }
   const [mandatCoche, setMandatCoche] = useState(false);
   const [factures, setFactures] = useState<FactureVue[]>([]);
   const [texteMandat, setTexteMandat] = useState<string[]>([]);
@@ -406,6 +501,12 @@ export default function CoordonneesVersement({ t }: { t: AffiliateDict }) {
             <p className="mt-1 text-sm text-muted-foreground">{p.fiscal_body}</p>
           </div>
 
+          {recherche?.etat === "fait" && (
+            <p className={`text-xs ${recherche.ok ? "text-emerald-700" : "text-muted-foreground"}`}>
+              {recherche.texte}
+            </p>
+          )}
+
           {manquesFiscaux.length > 0 && (
             <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
               {RAISONS[manquesFiscaux[0]] ?? p.err_statut}
@@ -484,12 +585,20 @@ export default function CoordonneesVersement({ t }: { t: AffiliateDict }) {
                   a pas : lui en réclamer un serait un formulaire qu'il
                   n'aura jamais fini. */}
               {profil.statut === "entreprise" && profil.pays === "FR" && (
-                <Champ
-                  label={p.label_siren}
-                  valeur={profil.siren}
-                  onChange={(v) => setProfil({ ...profil, siren: v })}
-                  mono
-                />
+                <div className="flex items-end gap-2">
+                  <div className="flex-1">
+                    <Champ
+                      label={p.label_siren}
+                      valeur={profil.siren}
+                      onChange={(v) => {
+                        setRecherche(null);
+                        setProfil({ ...profil, siren: v });
+                      }}
+                      mono
+                    />
+                  </div>
+                  <BoutonChercher quoi="siren" actif={!!String(profil.siren ?? "").trim()} />
+                </div>
               )}
 
               {profil.statut === "entreprise" && (
@@ -509,12 +618,23 @@ export default function CoordonneesVersement({ t }: { t: AffiliateDict }) {
                     </span>
                   </label>
                   {(profil.assujettiTva || (profil.pays && profil.pays !== "FR")) && (
-                    <Champ
-                      label={p.label_tva_numero}
-                      valeur={profil.numeroTva}
-                      onChange={(v) => setProfil({ ...profil, numeroTva: v })}
-                      mono
-                    />
+                    <div className="flex items-end gap-2">
+                      <div className="flex-1">
+                        <Champ
+                          label={p.label_tva_numero}
+                          valeur={profil.numeroTva}
+                          onChange={(v) => {
+                            setRecherche(null);
+                            setProfil({ ...profil, numeroTva: v });
+                          }}
+                          mono
+                        />
+                      </div>
+                      <BoutonChercher
+                        quoi="numeroTva"
+                        actif={!!String(profil.numeroTva ?? "").trim()}
+                      />
+                    </div>
                   )}
                 </>
               )}

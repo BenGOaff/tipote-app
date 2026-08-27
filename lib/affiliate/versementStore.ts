@@ -38,6 +38,7 @@ import {
   profilFiscalComplet,
   type ProfilFiscal,
 } from "@/lib/affiliate/fiscal";
+import { verifierVies } from "@/lib/facture/vies";
 import { decryptField, encryptField, generateDEK, unwrapDEK, wrapDEK } from "@/lib/piiCrypto";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
@@ -570,7 +571,16 @@ async function emettreAutofacturesDuLot(
       console.error(`[autofacture] profil introuvable pour ${ligne.sa} : piece NON emise.`);
       continue;
     }
-    const f = construireAutofacture({ ligne, profil, periode, lotId, emiseLe });
+    // ON DEMANDE A VIES, ET UNE PIECE N'ATTEND JAMAIS APRES LUI.
+    //
+    // `verifierVies` ne leve pas et rend `injoignable` au bout de six
+    // secondes : la piece sort alors marquee, comme avant. Un virement
+    // bloque parce que la Commission europeenne redemarrait serait pire
+    // que le doute (regle du 7 aout : on emet toujours).
+    const vies = profil.numeroTva
+      ? await verifierVies(profil.numeroTva)
+      : ("non-verifie" as const);
+    const f = construireAutofacture({ ligne, profil, periode, lotId, emiseLe, vies });
     const { data: sortie, error } = await supabaseAdmin.rpc("emettre_autofacture", {
       p_serie: f.serie,
       p_genre: "facture",

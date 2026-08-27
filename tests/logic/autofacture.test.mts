@@ -76,14 +76,14 @@ describe("La TVA d'une autofacture", () => {
     // Il n'existe PAS du côté vente. Un auto-entrepreneur sous les
     // seuils ne facture pas la TVA, et lui en faire porter une
     // l'obligerait à la reverser.
-    const d = resoudreTvaAutofacture(profil({ assujettiTva: false }));
+    const d = resoudreTvaAutofacture(profil({ assujettiTva: false }), "non-verifie");
     assert.equal(d.regime, "franchise-en-base");
     assert.equal(d.tauxBp, 0);
     assert.ok(d.mentions.some((m) => m.includes("293 B")));
   });
 
   test("prestataire français assujetti : 20 % qui S'AJOUTENT", () => {
-    const d = resoudreTvaAutofacture(profil({ assujettiTva: true, numeroTva: "FR38909349045" }));
+    const d = resoudreTvaAutofacture(profil({ assujettiTva: true, numeroTva: "FR38909349045" }), "non-verifie");
     assert.equal(d.regime, "france-tva");
     assert.equal(d.tauxBp, 2000);
   });
@@ -94,6 +94,7 @@ describe("La TVA d'une autofacture", () => {
     // le PRENEUR est établi, donc chez nous, en autoliquidation.
     const belge = resoudreTvaAutofacture(
       profil({ pays: "BE", siren: null, numeroTva: "BE0123456789", assujettiTva: true }),
+      "non-verifie",
     );
     assert.equal(belge.regime, "autoliquidation-ue");
     assert.equal(belge.tauxBp, 0, "jamais 21 %");
@@ -101,7 +102,7 @@ describe("La TVA d'une autofacture", () => {
   });
 
   test("hors Union : autoliquidation aussi", () => {
-    const d = resoudreTvaAutofacture(profil({ pays: "US", siren: null, numeroTva: null }));
+    const d = resoudreTvaAutofacture(profil({ pays: "US", siren: null, numeroTva: null }), "non-verifie");
     assert.equal(d.regime, "autoliquidation-hors-ue");
     assert.equal(d.tauxBp, 0);
     assert.ok(d.mentions.some((m) => m.includes("283-2")));
@@ -110,7 +111,7 @@ describe("La TVA d'une autofacture", () => {
   test("un prestataire UE sans numéro valide est SIGNALÉ", () => {
     // Sans numéro, on ne peut pas prouver qu'il est assujetti, et
     // l'autoliquidation deviendrait de la TVA à notre charge.
-    const d = resoudreTvaAutofacture(profil({ pays: "BE", siren: null, numeroTva: null }));
+    const d = resoudreTvaAutofacture(profil({ pays: "BE", siren: null, numeroTva: null }), "non-verifie");
     assert.ok(d.aVerifier.includes("tva-numero-invalide"));
   });
 
@@ -118,7 +119,7 @@ describe("La TVA d'une autofacture", () => {
     // Il ne peut pas, en principe, facturer une prestation à titre
     // habituel. On émet quand même (il a gagné cet argent) et on marque :
     // retenir son argent en attendant serait pire.
-    const d = resoudreTvaAutofacture(profil({ statut: "particulier", siren: null }));
+    const d = resoudreTvaAutofacture(profil({ statut: "particulier", siren: null }), "non-verifie");
     assert.equal(d.regime, "particulier");
     assert.equal(d.tauxBp, 0);
     assert.ok(d.aVerifier.includes("statut-particulier"));
@@ -133,7 +134,7 @@ describe("La TVA d'une autofacture", () => {
       profil({ pays: "US", siren: null }),
       profil({ statut: "particulier", siren: null }),
     ]) {
-      assert.equal(resoudreTvaAutofacture(p).mentions[0], MENTION_AUTOFACTURATION);
+      assert.equal(resoudreTvaAutofacture(p, "non-verifie").mentions[0], MENTION_AUTOFACTURATION);
     }
   });
 
@@ -229,8 +230,8 @@ describe("Ce qu'il faut avant d'émettre au nom de quelqu'un", () => {
     // PAS la TVA. Deviner ferait apparaître 20 % sur sa facture, et
     // c'est LUI qui devrait les reverser.
     const p = profil({ assujettiTva: false, numeroTva: "FR38909349045" });
-    assert.equal(resoudreTvaAutofacture(p).regime, "franchise-en-base");
-    assert.equal(resoudreTvaAutofacture(p).tauxBp, 0);
+    assert.equal(resoudreTvaAutofacture(p, "non-verifie").regime, "franchise-en-base");
+    assert.equal(resoudreTvaAutofacture(p, "non-verifie").tauxBp, 0);
   });
 
   test("sans statut, un seul manque : la question à poser", () => {
@@ -271,8 +272,7 @@ describe("La facture émise à sa place", () => {
       profil: profil(),
       periode: "2026-08",
       lotId: "lot-1",
-      emiseLe: "2026-09-10T08:00:00Z",
-    });
+      emiseLe: "2026-09-10T08:00:00Z", vies: "non-verifie" });
     assert.equal(f.serie, "AFF-2026");
     assert.equal(f.ttcCents, 3290);
     assert.equal(f.tvaCents, 0);
@@ -288,8 +288,7 @@ describe("La facture émise à sa place", () => {
       profil: profil({ assujettiTva: true, numeroTva: "FR38909349045" }),
       periode: "2026-08",
       lotId: "lot-1",
-      emiseLe: "2026-09-10T08:00:00Z",
-    });
+      emiseLe: "2026-09-10T08:00:00Z", vies: "non-verifie" });
     assert.equal(f.htCents, 3290);
     assert.equal(f.tvaCents, 658);
     assert.equal(f.ttcCents, 3948);
@@ -303,8 +302,7 @@ describe("La facture émise à sa place", () => {
       profil: profil(),
       periode: "2026-08",
       lotId: "lot-1",
-      emiseLe: "2026-09-10T08:00:00Z",
-    });
+      emiseLe: "2026-09-10T08:00:00Z", vies: "non-verifie" });
     assert.equal(f.commissionIds.length, 4);
     assert.equal(f.nombreVentes, 4);
   });
@@ -326,8 +324,7 @@ describe("La facture émise à sa place", () => {
     // champ qui répond.
     const f = construireAutofacture({
       ligne: ligne(), profil: profil(), periode: "2026-08",
-      lotId: "lot-42", emiseLe: "2026-09-10T08:00:00Z",
-    });
+      lotId: "lot-42", emiseLe: "2026-09-10T08:00:00Z", vies: "non-verifie" });
     assert.equal(f.lotId, "lot-42");
   });
 });

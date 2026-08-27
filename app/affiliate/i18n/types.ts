@@ -439,6 +439,13 @@ export type AffiliateDict = {
     invoices_title: string;
     invoices_body: string;
     invoices_cta: string;
+    identite_bouton: string;
+    identite_en_cours: string;
+    identite_remplie: string;
+    identite_rien_a_remplir: string;
+    identite_siren_absent: string;
+    identite_tva_invalide: string;
+    identite_injoignable: string;
   };
 
   // ─── Support ─────────────────────────────────────────────────────

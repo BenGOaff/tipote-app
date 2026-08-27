@@ -440,6 +440,13 @@ export const EN: AffiliateDict = {
       "Every month we generate your invoice for you, for your bookkeeping, and you download it from your dashboard. Commissions paid by Systeme.io keep their own invoices, in your dashboard there.",
     invoices_cta:
       "See my older Systeme.io invoices",
+    identite_bouton: "Fill in",
+    identite_en_cours: "Searching...",
+    identite_remplie: "Filled in. Read it over and correct if needed.",
+    identite_rien_a_remplir: "Nothing to add: either it is all filled in already, or this country does not publish these details.",
+    identite_siren_absent: "This company number does not come up in the French business registry. Check the entry, or fill it in by hand: a brand new number takes a few days to appear.",
+    identite_tva_invalide: "This VAT number does not exist in the European registry. Check the entry: without a valid number, your invoice cannot use reverse charge.",
+    identite_injoignable: "The registry is not answering right now. Nothing is wrong with your entry, fill it in by hand and carry on.",
   },
   support: {
     page_title: "Support",

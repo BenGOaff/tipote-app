@@ -34,6 +34,7 @@ import {
   type ProfilFiscal,
 } from "@/lib/affiliate/fiscal";
 import type { LigneLot } from "@/lib/affiliate/versement";
+import type { ControleVies } from "@/lib/facture/vies";
 
 /** Le préfixe de la série. Il ne bouge jamais : il est dans les numéros émis. */
 export const PREFIXE_SERIE_AFF = "AFF";
@@ -105,9 +106,16 @@ export function construireAutofacture(args: {
   periode: string;
   lotId: string;
   emiseLe: string;
+  /**
+   * Ce que VIES a répondu sur son numéro de TVA, demandé au moment de
+   * figer le lot. Obligatoire : un défaut optionnel ferait taire la
+   * question au premier appelant qui l'oublie, et c'est Béné qui
+   * porterait l'autoliquidation injustifiée.
+   */
+  vies: ControleVies;
 }): AutofactureAEmettre {
   const profil = lireProfilFiscal(args.profil);
-  const tva = resoudreTvaAutofacture(profil);
+  const tva = resoudreTvaAutofacture(profil, args.vies);
   const m = montantsAutofacture(args.ligne.montantCents, tva.tauxBp);
   return {
     serie: serieAutofacture(args.emiseLe),
