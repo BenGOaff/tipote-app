@@ -1050,7 +1050,19 @@ export function RichTextEdit({
           // (titres résultat/question = couleur branding), et on ne force
           // le foreground QUE pour les champs sans couleur explicite (CTA
           // blanc etc.), qui en ont besoin pour le contraste sur bg-white.
-          style={{ ...(style ?? {}), color: (style?.color as string | undefined) ?? "hsl(var(--foreground))" }}
+          // ET ON NE POSE PLUS LA VARIABLE EN INLINE (Damien, 27 aout
+          // 2026). Ce champ portait `color: hsl(var(--foreground))` quand
+          // il n'avait pas de couleur propre. C'etait redondant avec le
+          // `!text-foreground` de la ligne au dessus, qui fait deja
+          // exactement ca, et surtout le navigateur RECOPIE cette valeur
+          // inline dans un <span> du contenu a la premiere commande de
+          // mise en forme. Elle finissait donc enregistree en base, et le
+          // viewer, qui repeint `--foreground` avec la couleur de texte du
+          // quiz, rendait un libelle noir sur un bouton noir.
+          //
+          // Le sanitizer retire deja ces valeurs (lib/richText.ts) : ici
+          // on ferme la source, la-bas on repare ce qui est deja ecrit.
+          style={{ ...(style ?? {}), ...(style?.color ? { color: style.color as string } : {}) }}
           data-placeholder={placeholder}
         />
         {selectedImg && imgBox && !singleLine && (

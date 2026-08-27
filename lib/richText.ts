@@ -75,7 +75,7 @@ function installStyleStripperHook(): void {
   // Hook 2 : filtre les declarations `style`. Strip les proprietes
   // interdites + toutes les CSS custom properties EXCEPT --rt-fs-m /
   // --rt-fs-d sur le wrapper .rt-field-fs.
-  DOMPurify.addHook("uponSanitizeAttribute", (node: Element, data: { attrName: string; attrValue: string }) => {
+  DOMPurify.addHook("uponSanitizeAttribute", (node: Element, data: { attrName: string; attrValue: string; keepAttr?: boolean }) => {
     if (data.attrName !== "style" || typeof data.attrValue !== "string") return;
     const isImg = node?.tagName?.toLowerCase?.() === "img";
     const filtered = data.attrValue
@@ -98,6 +98,25 @@ function installStyleStripperHook(): void {
         // Toute autre CSS custom property strippee (--fs-m, --fs-d de
         // l'ancien systeme par mot + noise de paste Notion/Docs).
         if (prop.startsWith("--")) return false;
+        // UNE COULEUR QUI POINTE SUR UNE DE NOS VARIABLES CSS (Damien,
+        // 27 aout 2026). Son libelle de bouton portait
+        // `color: hsl(var(--foreground))`, qu'il n'a jamais tape : c'est
+        // notre editeur qui posait cette valeur sur le champ pendant
+        // l'edition, et le navigateur l'a recopiee dans un <span> au
+        // passage d'une commande de mise en forme.
+        //
+        // Le resultat est invisible a l'ecran de l'editeur et casse chez
+        // le visiteur : le viewer REPEINT `--foreground` avec la couleur
+        // de texte du quiz. Son bouton avait donc un libelle #171717 sur
+        // un fond #171717, et cette couleur inline battait le
+        // `text-primary-foreground` du bouton.
+        //
+        // Une variable CSS n'est jamais un choix de creatrice : elle ne
+        // peut pas la saisir, et sa valeur depend de l'ecran ou le
+        // contenu atterrit. On la retire donc pour de bon, ce qui repare
+        // AUSSI les contenus deja enregistres au moment du rendu (meme
+        // mecanique que le strip des tailles de police, sans migration).
+        if (value.includes("var(--")) return false;
         // width / height sur <img> : on tolere des unites explicites
         // (px / %) pour permettre le redimensionnement utilisateur du
         // GIF d'intro. Sur les autres elements on strip pour preserver
@@ -114,6 +133,12 @@ function installStyleStripperHook(): void {
         return true;
       })
       .join("; ");
+    // Un `style=""` vide ne sert a rien et traine ensuite dans tout le
+    // contenu enregistre : on retire l'attribut plutot que de le vider.
+    if (!filtered) {
+      data.keepAttr = false;
+      return;
+    }
     data.attrValue = filtered;
   });
 
@@ -213,6 +238,16 @@ export function isSafeUrl(url: string): boolean {
 export function stripHtml(input: string | null | undefined): string {
   if (!input) return "";
   return input
+    // UNE FRONTIERE DE BLOC EST UNE ESPACE (Damien, 27 aout 2026). Son
+    // titre est `Tu as une expertise ?<div>Qu'est-ce qui...</div>` : deux
+    // lignes a l'ecran, et un seul mot une fois les balises retirees,
+    // parce qu'on les remplacait par RIEN. Le texte de partage et le
+    // `og:title` sortaient en "expertise ?Qu'est-ce".
+    //
+    // Ca vaut pour l'ouvrante autant que pour la fermante : ici la
+    // coupure est un <div> OUVRANT, sans fermante avant lui. Le
+    // `\s+` -> " " plus bas absorbe les doublons de `</div><div>`.
+    .replace(/<\/?(?:div|p|li|ul|ol|h[1-6]|blockquote|section|article|tr)[^>]*>|<br\s*\/?>/gi, " ")
     .replace(/<[^>]*>/g, "")
     // Entités nommées les plus fréquentes du contentEditable (le browser
     // insère systématiquement `&nbsp;` à la place des espaces protégés).

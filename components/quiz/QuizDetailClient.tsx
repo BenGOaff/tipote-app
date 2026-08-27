@@ -57,7 +57,8 @@ import {
 import { interpolateText, extractResultLabel } from "@/lib/quizPersonalization";
 import { type TieConflict } from "@/lib/quizTieAnalysis";
 import { tieBreakMode } from "@/lib/quiz/profileWinner";
-import { analyzeOptionSupply, analyzeResultCoverage, analyzeResultTies, attributionMode } from "@/lib/quizCoherence";
+import { analyzeOptionSupply, analyzeProfileGaps, analyzeResultCoverage, analyzeResultTies, attributionMode } from "@/lib/quizCoherence";
+import { readCaptureCompliance } from "@/lib/quiz/captureCompliance";
 import { alignBlockMarginClass, alignJustifyClass, alignTextClass, resolveBlockAlign } from "@/lib/quiz/textAlign";
 import { answerGridClass, resolveAnswerLayout } from "@/lib/quiz/answerLayout";
 import {
@@ -2637,6 +2638,29 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     [editQuestions],
   );
 
+  // LE COMPTE EST BON, LA REPARTITION NON (Damien, 27 aout 2026). Une
+  // question qui a assez de reponses mais qui sert deux fois le meme
+  // profil en laisse un autre HORS COURSE, et ni `optionSupply` (qui
+  // compte) ni `resultCoverage` (qui regarde tout le quiz) ne le voient.
+  // Cf. lib/quizCoherence.ts. Le module quiz de Tiquiz est jumeau.
+  const profileGaps = useMemo(
+    () => analyzeProfileGaps(coherenceMode, coherenceQuestions, editResults.length),
+    [coherenceMode, coherenceQuestions, editResults.length],
+  );
+
+  // La case de consentement promet une politique de confidentialite que
+  // le visiteur n'a aucun moyen de lire. Le verdict vient du module pur,
+  // jamais recalcule ici : c'est celui que le viewer produira vraiment.
+  const captureCompliance = useMemo(
+    () => readCaptureCompliance({
+      captureEnabled,
+      showConsentCheckbox,
+      consentText,
+      privacyUrl,
+    }),
+    [captureEnabled, showConsentCheckbox, consentText, privacyUrl],
+  );
+
   const resultCoverage = useMemo(
     () => analyzeResultCoverage(coherenceMode, coherenceQuestions, editResults.length),
     [coherenceMode, coherenceQuestions, editResults.length],
@@ -5131,6 +5155,28 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                       </div>
                     </div>
                   )}
+                  {/* UNE CASE QUI NE RENVOIE A RIEN (Damien, 27 aout
+                      2026). Capture activee, case affichee, et ni
+                      `consent_text` ni `privacy_url` : le visiteur lit
+                      "J'accepte la politique de confidentialite." sans le
+                      moindre lien, pour une politique qui n'existe nulle
+                      part.
+
+                      Le verdict vient de `readCaptureCompliance`, pas d'un
+                      test recopie ici : c'est le meme calcul que celui du
+                      viewer, sinon cet apercu finirait par mentir. */}
+                  {captureCompliance.consentSansPolitique && (
+                    <div
+                      className="max-w-md mx-auto flex items-start gap-3 rounded-xl border px-4 py-3 text-sm text-left border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-100"
+                      role="status"
+                    >
+                      <span className="mt-1 inline-block w-2 h-2 rounded-full shrink-0 bg-amber-500" aria-hidden />
+                      <div className="flex-1">
+                        <p className="font-semibold">{t("consentNoPolicyHeading")}</p>
+                        <p className="text-xs opacity-90 mt-0.5">{t("consentNoPolicyHelp")}</p>
+                      </div>
+                    </div>
+                  )}
                   {/* Bouton submit — éditable WYSIWYG comme tout le reste.
                       Vide = "Accéder aux résultats" par défaut côté visiteur
                       (capture pour les quiz existants strictement préservée). */}
@@ -5625,6 +5671,42 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                                   results: optionSupply.resultCount,
                                 })
                               : t("resultCoverageHint")}
+                          </p>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="mt-2.5 bg-white/70 dark:bg-black/20"
+                            onClick={() => openRebalance(ri)}
+                          >
+                            <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                            {t("resultRebalanceAi")}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    {/* LE COMPTE EST BON, LA REPARTITION NON (Damien, 27
+                        aout 2026). Une question a 4 reponses pour 4
+                        profils peut servir deux fois le meme et en
+                        laisser un autre hors course : il n'y gagne aucune
+                        voix, et rien ne le disait.
+
+                        `!showCoverage` n'est pas une precaution : quand le
+                        bandeau rouge est deja la, le profil n'est
+                        atteignable NULLE PART, et ce detail-ci empilerait
+                        une deuxieme alerte sur la meme cause. */}
+                    {!showCoverage && (profileGaps[ri]?.length ?? 0) > 0 && (
+                      <div
+                        className="flex items-start gap-3 rounded-xl border px-4 py-3 text-sm border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-100"
+                        role="status"
+                      >
+                        <span className="mt-1 inline-block w-2 h-2 rounded-full shrink-0 bg-amber-500" aria-hidden />
+                        <div className="flex-1">
+                          <p className="font-semibold">{t("profileGapHeading")}</p>
+                          <p className="text-xs opacity-90 mt-0.5">
+                            {t("profileGapHelp", {
+                              questions: (profileGaps[ri] ?? []).map((qi) => qi + 1).join(", "),
+                            })}
                           </p>
                           <Button
                             type="button"
