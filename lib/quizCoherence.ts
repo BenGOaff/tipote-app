@@ -220,3 +220,71 @@ export function analyzeOptionSupply(
 export function missingOptionCount(optionCount: number, resultCount: number): number {
   return Math.max(0, resultCount - Math.max(0, optionCount));
 }
+
+/**
+ * Les questions où un profil est HORS COURSE alors que la question a
+ * pourtant assez de réponses.
+ *
+ * -- POURQUOI CE CONTRÔLE EXISTE (Damien, 27 août 2026) ---------------
+ *
+ * Son quiz a 4 profils et 8 questions. Aux questions 4 et 8, la dernière
+ * réponse décrit sans ambiguïté son profil 3 ("Trouver suffisamment de
+ * personnes intéressées", "Mon offre se vend régulièrement") et porte
+ * `result_index: 0`. Le profil 3 ne pouvait donc gagner aucune voix sur
+ * ces deux questions, et le profil 0 en gagnait deux qu'il n'aurait pas
+ * dû avoir.
+ *
+ * **Aucun de nos deux contrôles ne pouvait le voir**, et c'est ça le
+ * défaut :
+ *   - `analyzeOptionSupply` ne compte que le NOMBRE de réponses. 4
+ *     réponses pour 4 profils : il est content.
+ *   - `analyzeResultCoverage` compte les questions où un profil apparaît
+ *     AU MOINS UNE FOIS, sur tout le quiz. Le profil 3 apparaît dans 6
+ *     questions sur 8, le seuil attendu est 2 : il est content aussi.
+ *
+ * C'est la famille du drame Véronique du 3 août ("moins de réponses que
+ * de profils") par la porte qu'on n'avait pas fermée : le compte est bon,
+ * c'est la RÉPARTITION qui ne l'est pas.
+ *
+ * ON NE SIGNALE QUE LES QUESTIONS QUI ONT ASSEZ DE RÉPONSES, et ce n'est
+ * pas un détail : une question trop courte est déjà nommée par
+ * `analyzeOptionSupply`, avec sa propre cause et sa propre action. Le
+ * dire deux fois transformerait deux alertes utiles en bruit, et Béné a
+ * déjà tranché là dessus ("tu empiles les trucs, ça devient n'importe
+ * quoi l'éditeur").
+ *
+ * @returns un tableau indexé par résultat ; chaque entrée porte les
+ *   index (0-based) des questions où ce résultat ne peut rien gagner.
+ */
+export function analyzeProfileGaps(
+  mode: QuizAttributionMode,
+  questions: CoherenceQuestion[],
+  resultCount: number,
+): number[][] {
+  const vide = (): number[][] => Array.from({ length: Math.max(0, resultCount) }, () => []);
+
+  // En scoring, `result_index` ne veut rien dire : le résultat vient de
+  // la tranche de points. Même garde que ses deux voisines, pour la même
+  // raison (drame Véronique, 1er août).
+  if (mode === "scoring" || resultCount < 2) return vide();
+
+  const gaps = vide();
+
+  questions.forEach((q, qi) => {
+    const type = (q.question_type ?? "multiple_choice") || "multiple_choice";
+    // `yes_no` a deux réponses par principe, et les types sans options
+    // (texte libre, échelle, étoiles) n'en ont aucune : ce ne sont pas
+    // des manques, c'est leur nature.
+    if (type === "yes_no") return;
+    if (q.options.length === 0) return;
+    // Question trop courte : `analyzeOptionSupply` s'en charge.
+    if (q.options.length < resultCount) return;
+
+    const servis = new Set(q.options.map((o) => o.result_index));
+    for (let ri = 0; ri < resultCount; ri += 1) {
+      if (!servis.has(ri)) gaps[ri].push(qi);
+    }
+  });
+
+  return gaps;
+}

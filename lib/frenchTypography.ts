@@ -40,21 +40,38 @@ const NBSP = " ";
 // ── Étape 1 : une espace ASCII déjà là devient insécable ─────────────
 // Inchangé depuis l'origine. Une espace insécable déjà posée ne matche
 // pas (le motif exige une espace ASCII), donc la fonction est idempotente.
-const SPACE_BEFORE_CLOSING = /([\p{L}\p{N}]) ([:;!?»])/gu;
+// CE QUI PEUT PRECEDER LA PONCTUATION (Damien, 27 aout 2026).
+//
+// Il ecrit "justifient 500, 1 000 ou 2 000 € ?" et la regle ne faisait
+// RIEN : le motif exigeait une lettre ou un chiffre devant l'espace, et
+// `€` n'est ni l'un ni l'autre. Son `?` pouvait donc tomber seul a la
+// ligne suivante sur un telephone.
+//
+// `100 % ?` est le meme cas, et c'est une tournure que les creatrices
+// ecrivent tout le temps. On accepte donc aussi les symboles de monnaie,
+// le pourcent, le degre, et les fermetures (`(mot) ?`, `"mot" ?`).
+//
+// Ce qu'on n'accepte toujours pas : une espace devant (sinon on poserait
+// une insecable sur du vide) et une OUVRANTE (`( ?` n'est pas du
+// francais). `\s` couvre deja l'insecable U+00A0 en JavaScript, donc la
+// fonction reste idempotente.
+const AVANT = "[\\p{L}\\p{N}\\p{Sc}%\u00B0)\\]}\"'\u2026]";
+
+const SPACE_BEFORE_CLOSING = new RegExp(`(${AVANT}) ([:;!?\u00BB])`, "gu");
 const SPACE_AFTER_OPENING = /(«) ([\p{L}\p{N}])/gu;
 
 // ── Étape 2 : l'espace ABSENTE est insérée ───────────────────────────
 //
 // `?` et `!` : la ponctuation doit TERMINER (espace, fermeture, fin du
 // texte). Sans ce garde-fou, `page?ref=1` deviendrait `page ?ref=1`.
-const MISSING_BEFORE_BANG = /([\p{L}\p{N}])([!?])(?=[\s)\]}»"'.,…!?]|$)/gu;
+const MISSING_BEFORE_BANG = new RegExp(`(${AVANT})([!?])(?=[\\s)\\]}\u00BB"'.,\u2026!?]|$)`, "gu");
 // `;` : même garde-fou. Les entités HTML sont protégées en amont, par le
 // découpage de `applyFrenchTypographyToHtml`.
-const MISSING_BEFORE_SEMI = /([\p{L}\p{N}])(;)(?=[\s)\]}»"']|$)/gu;
+const MISSING_BEFORE_SEMI = new RegExp(`(${AVANT})(;)(?=[\\s)\\]}\u00BB"']|$)`, "gu");
 // `:` : une LETTRE devant, jamais un chiffre, sinon on casserait `12:30`
 // et `8:1`. Et une fin derrière, sinon on casserait `https://` et
 // `color:red`.
-const MISSING_BEFORE_COLON = /(\p{L})(:)(?=[\s)\]}»"']|$)/gu;
+const MISSING_BEFORE_COLON = new RegExp(`([\\p{L}\\p{Sc}%\u00B0])(:)(?=[\\s)\\]}\u00BB"']|$)`, "gu");
 // `»` et `«` : aucun risque, ces signes n'existent ni dans une URL ni
 // dans du CSS.
 // -- LES CHEVRONS DEVIENNENT DES GUILLEMETS DROITS (Béné, 25 août 2026)
