@@ -16,8 +16,9 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 
-import { chercherSirene, lireReponseSirene, lireSiren } from "@/lib/affiliate/sirene";
+import { chercherSirene, lireReponseSirene, lireSiren, sirenDepuisTvaFr } from "@/lib/affiliate/sirene";
 import { resoudreTvaAutofacture } from "@/lib/affiliate/fiscal";
 import { lireProfilFiscal } from "@/lib/affiliate/fiscal";
 
@@ -119,4 +120,55 @@ test("VIES injoignable : comportement d'avant, et on le DIT", () => {
     assert.equal(d.regime, "autoliquidation-ue");
     assert.ok(d.aVerifier.includes("tva-a-valider-vies"), v);
   }
+});
+
+// -- LE NUMERO DE TVA FRANCAIS PORTE SON SIREN (27 aout 2026) ----------
+//
+// Bene tape son numero, clique Remplir, et lit "l'annuaire ne repond
+// pas". Le message etait VRAI : VIES avait repondu
+// `MS_MAX_CONCURRENT_REQ` (service de l'Etat membre sature). Rien dans
+// la console parce qu'il n'y avait pas d'erreur.
+//
+// Pour un numero francais, VIES est le mauvais annuaire : bride en
+// nombre d'appels, alors que le SIREN est DANS le numero et que SIRENE
+// repond tout de suite avec l'adresse deja decoupee.
+
+test("le SIREN se lit dans le numéro de TVA français, sans réseau", () => {
+  assert.equal(sirenDepuisTvaFr("FR38909349045"), "909349045");
+  // La saisie humaine met des espaces, des points, des minuscules.
+  assert.equal(sirenDepuisTvaFr("fr 38 909 349 045"), "909349045");
+  assert.equal(sirenDepuisTvaFr("FR38.909349045"), "909349045");
+});
+
+test("une faute de frappe sur la clé ne part nulle part", () => {
+  // (12 + 3 * (SIREN mod 97)) mod 97 vaut 38 pour ce SIREN. Un chiffre
+  // change donne un numéro plausible et un annuaire qui répond à côté.
+  assert.equal(sirenDepuisTvaFr("FR39909349045"), null);
+  assert.equal(sirenDepuisTvaFr("FR38909349046"), null);
+});
+
+test("les vieux numéros à clé alphanumérique restent acceptés", () => {
+  // Leur clé ne se recalcule pas. Les refuser écarterait des
+  // entreprises anciennes pour rien, alors que le SIREN est là.
+  assert.equal(sirenDepuisTvaFr("FRK7909349045"), "909349045");
+});
+
+test("un numéro qui n'est pas français n'est pas détourné vers SIRENE", () => {
+  // Le SIREN n'existe qu'en France : VIES reste le seul annuaire pour
+  // les autres pays de l'Union.
+  assert.equal(sirenDepuisTvaFr("BE0123456789"), null);
+  assert.equal(sirenDepuisTvaFr("DE123456789"), null);
+  assert.equal(sirenDepuisTvaFr(""), null);
+  assert.equal(sirenDepuisTvaFr(null), null);
+});
+
+test("la route envoie un numéro français vers SIRENE, pas vers VIES", () => {
+  const src = readFileSync("app/api/affiliate/identite/route.ts", "utf8");
+  const posSiren = src.indexOf("sirenDepuisTvaFr(numeroTva)");
+  const posVies = src.indexOf("interrogerVies(numeroTva)");
+  assert.ok(posSiren > 0, "la route n'essaie plus de lire le SIREN du numéro");
+  assert.ok(
+    posSiren < posVies,
+    "VIES est interrogé avant d'avoir vu qu'il s'agit d'un numéro français",
+  );
 });

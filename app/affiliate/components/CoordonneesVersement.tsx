@@ -156,6 +156,7 @@ export default function CoordonneesVersement({ t }: { t: AffiliateDict }) {
         source?: string;
         trouve?: boolean;
         verdict?: string;
+        pays?: string;
         identite?: {
           denomination?: string | null;
           nom?: string | null;
@@ -191,6 +192,13 @@ export default function CoordonneesVersement({ t }: { t: AffiliateDict }) {
           rempli += 1;
         }
       };
+      // Le pays d'abord : c'est lui qui décide quels champs s'affichent
+      // (le SIREN n'existe qu'en France). Rempli depuis le préfixe du
+      // numéro de TVA quand la case est restée vide.
+      if (j.pays && !String(suivant.pays ?? "").trim()) {
+        suivant.pays = j.pays;
+        rempli += 1;
+      }
       poser("denomination", j.identite?.denomination ?? j.identite?.nom ?? null);
       poser("adresse1", j.identite?.adresse ?? null);
       poser("codePostal", j.identite?.codePostal ?? null);
