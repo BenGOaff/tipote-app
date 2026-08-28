@@ -29,6 +29,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 // ailleurs. Elle etait recopiee ici : c'est ainsi que commence une
 // divergence, et une commission se perd la ou personne ne regarde.
 import { SA_RE } from "@/lib/affiliate/saFormat";
+import { resumerPayload } from "@/lib/affiliate/inspecterPayload";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -166,6 +167,26 @@ export async function POST(req: NextRequest) {
   console.log(
     `[affiliate/sio-conversion] received email=${email ?? "(none)"} sa=${sa ?? "(none)"} keys=${Object.keys(body ?? {}).join(",")}`,
   );
+
+  // QUAND ON NE TROUVE PAS, ON DIT CE QU'ON A REÇU (27 août 2026).
+  //
+  // La ligne ci-dessus ne journalise que les clés de PREMIER NIVEAU, et
+  // l'identifiant, s'il arrive, est forcément imbriqué : c'est pour ça
+  // que personne ne l'a jamais vu. Les chemins de `extractSaFromPayload`
+  // sont DEVINÉS depuis le premier jour.
+  //
+  // On écrit donc la carte du payload : les chemins et leur type, jamais
+  // les valeurs (un webhook de vente porte l'email, le nom, l'adresse et
+  // le montant, et `pm2 logs` finit dans un fichier puis dans un
+  // copier-coller). Seules exceptions : une valeur qui a la FORME d'un
+  // identifiant Systeme.io, et l'hôte d'une URL.
+  //
+  // À retirer une fois le bon chemin ajouté à la liste.
+  if (!sa) {
+    console.log(
+      `[affiliate/sio-conversion] SA INTROUVABLE, forme du payload :\n${resumerPayload(body)}`,
+    );
+  }
 
   // Audit : on log CHAQUE webhook recu, meme ceux qui ne matchent pas
   // (no_email, no_sa). Permet a Bene de diagnostiquer "pourquoi ma
