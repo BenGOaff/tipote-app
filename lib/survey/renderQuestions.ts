@@ -194,8 +194,17 @@ export function renderQuestionsForPrompt(
         cites.length < q.textCount
           ? ` Échantillon de ${cites.length}, réparti de la première à la dernière réponse :`
           : " Les voici toutes :";
+      // SUR UNE QUESTION A CHOIX, ces textes viennent du "Autre :
+      // précisez" : ils ne disent pas la même chose qu'une question de
+      // texte libre. Ils nomment ce qui MANQUAIT dans la liste, et
+      // c'est une conclusion actionnable que le modèle ne peut pas
+      // tirer s'il croit lire une question ouverte.
+      const aChoix = Array.isArray(q.options) && q.options.length > 0;
+      const entete = aChoix
+        ? `${q.textCount} personnes ont choisi "Autre" et précisé (ce que la liste ne proposait pas).`
+        : `${q.textCount} réponses libres au total.`;
       lines.push(
-        `   ${q.textCount} réponses libres au total.${suffixe} ${cites.map((s) => `"${s}"`).join(", ")}`,
+        `   ${entete}${suffixe} ${cites.map((s) => `"${s}"`).join(", ")}`,
       );
     }
     lines.push("");

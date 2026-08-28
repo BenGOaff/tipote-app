@@ -18,6 +18,7 @@
 
 import { stripHtml } from "@/lib/richText";
 import { buildQuestionPositions, indexAnswersByPosition } from "@/lib/quiz/questionIdentity";
+import { autreAnswerLabel, otherOptionIndex } from "@/lib/quiz/otherOption";
 
 export type SurveyQuestionLike = {
   /** Identité stable de la question. Sert à rattacher les réponses à la
@@ -25,7 +26,7 @@ export type SurveyQuestionLike = {
   id?: string | null;
   question_text?: string | null;
   question_type?: string | null;
-  options?: Array<{ text?: string | null }> | null;
+  options?: Array<{ text?: string | null; is_other?: boolean | null }> | null;
   config?: Record<string, unknown> | null;
 };
 
@@ -111,13 +112,21 @@ export function formatSurveyAnswer(
   }
 
   // multiple_choice / image_choice (et tout type "à choix" par défaut).
+  //
+  // UNE RÉPONSE "AUTRE" SORT AVEC CE QUI A ÉTÉ ÉCRIT : `Autre : je suis
+  // coach sportif`. Le libellé seul perdrait toute l'information, et le
+  // texte seul rendrait une colonne CSV où l'on ne distingue plus une
+  // réponse de la liste d'une réponse libre.
+  const autre = otherOptionIndex(question.options);
+  const libelle = (oi: number): string => {
+    const brut = optionText(question, oi) || `Option ${oi + 1}`;
+    return oi === autre ? autreAnswerLabel(brut, answer.text) : brut;
+  };
   if (Array.isArray(answer.option_indices)) {
-    return answer.option_indices
-      .map((oi) => optionText(question, oi) || `Option ${oi + 1}`)
-      .join(" | ");
+    return answer.option_indices.map(libelle).join(" | ");
   }
   if (typeof answer.option_index === "number") {
-    return optionText(question, answer.option_index) || `Option ${answer.option_index + 1}`;
+    return libelle(answer.option_index);
   }
   // Tolérance : certaines réponses "à choix" peuvent arriver en texte/note.
   if (typeof answer.text === "string") return answer.text.trim();
