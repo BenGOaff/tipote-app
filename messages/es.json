@@ -4745,6 +4745,8 @@
     "freeTextAll": "Todas las respuestas escritas, de la más reciente a la más antigua.",
     "freeTextShown": "Las {shown} respuestas más recientes de {total}. El botón Copiar las coge todas.",
     "freeTextCopy": "Copiar las respuestas",
+    "sourcesTitle": "De dónde vienen tus leads",
+    "sourcesNone": "Sin afiliado",
     "optionIsOther": "Otro",
     "optionIsOtherPlaceholderDefault": "Especifica",
     "otherAnswersTitle": "Lo que escribieron en Otro",

@@ -4745,6 +4745,8 @@
     "freeTextAll": "كل الإجابات المكتوبة، من الأحدث إلى الأقدم.",
     "freeTextShown": "أحدث {shown} إجابة من أصل {total}. زر النسخ يأخذها كلها.",
     "freeTextCopy": "نسخ الإجابات",
+    "sourcesTitle": "من أين يأتي عملاؤك المحتملون",
+    "sourcesNone": "بدون مسوّق",
     "optionIsOther": "أخرى",
     "optionIsOtherPlaceholderDefault": "حدّد",
     "otherAnswersTitle": "ما كتبوه في خانة أخرى",
