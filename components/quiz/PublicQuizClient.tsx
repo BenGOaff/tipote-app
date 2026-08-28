@@ -93,6 +93,14 @@ import {
   otherOptionIndex,
   sanitizeAutreTexte,
 } from "@/lib/quiz/otherOption";
+import {
+  AFFILIATE_VIDE,
+  affiliateAbsent,
+  attacherAffiliate,
+  lireAffiliateDuQuiz,
+  lireAffiliateEnregistre,
+  type AffiliateDuQuiz,
+} from "@/lib/quiz/affiliateRelay";
 
 // Rich text fields contain raw HTML tags (<p>, <b>, <a>, …). Strings without any
 // tag are treated as legacy plain text so the old ✓/•/- bullet rendering still
@@ -119,7 +127,7 @@ function BeatImage({ item }: { item: BeatMediaItem }) {
   );
 }
 
-type QuizOption = { text: string; result_index: number; image_url?: string | null; points?: number | null; image_width?: number | null; is_other?: boolean | null };
+type QuizOption = { text: string; result_index: number; image_url?: string | null; points?: number | null; image_width?: number | null; is_other?: boolean | null; other_placeholder?: string | null };
 type QuestionType =
   | "multiple_choice"
   | "rating_scale"
@@ -527,7 +535,7 @@ const translations: Record<string, QuizTranslations> = {
     firstNamePlaceholder: "Pr\u00e9nom",
     lastNamePlaceholder: "Nom",
     phonePlaceholder: "T\u00e9l\u00e9phone",
-    otherPlaceholder: "Ta r\u00e9ponse",
+    otherPlaceholder: "Pr\u00e9cise",
     countryPlaceholder: "Pays",
     optional: "optionnel",
     skipQuestion: "Passer",
@@ -604,7 +612,7 @@ const translations: Record<string, QuizTranslations> = {
     firstNamePlaceholder: "Pr\u00e9nom",
     lastNamePlaceholder: "Nom",
     phonePlaceholder: "T\u00e9l\u00e9phone",
-    otherPlaceholder: "Votre r\u00e9ponse",
+    otherPlaceholder: "Pr\u00e9cisez",
     countryPlaceholder: "Pays",
     optional: "optionnel",
     skipQuestion: "Passer",
@@ -672,7 +680,7 @@ const translations: Record<string, QuizTranslations> = {
     firstNamePlaceholder: "First name",
     lastNamePlaceholder: "Last name",
     phonePlaceholder: "Phone",
-    otherPlaceholder: "Your answer",
+    otherPlaceholder: "Please specify",
     countryPlaceholder: "Country",
     optional: "optional",
     skipQuestion: "Skip",
@@ -740,7 +748,7 @@ const translations: Record<string, QuizTranslations> = {
     firstNamePlaceholder: "Nombre",
     lastNamePlaceholder: "Apellido",
     phonePlaceholder: "Tel\u00e9fono",
-    otherPlaceholder: "Tu respuesta",
+    otherPlaceholder: "Especifica",
     countryPlaceholder: "Pa\u00eds",
     optional: "opcional",
     skipQuestion: "Saltar",
@@ -808,7 +816,7 @@ const translations: Record<string, QuizTranslations> = {
     firstNamePlaceholder: "Vorname",
     lastNamePlaceholder: "Nachname",
     phonePlaceholder: "Telefon",
-    otherPlaceholder: "Deine Antwort",
+    otherPlaceholder: "Bitte angeben",
     countryPlaceholder: "Land",
     optional: "optional",
     skipQuestion: "Überspringen",
@@ -876,7 +884,7 @@ const translations: Record<string, QuizTranslations> = {
     firstNamePlaceholder: "Nome",
     lastNamePlaceholder: "Sobrenome",
     phonePlaceholder: "Telefone",
-    otherPlaceholder: "A tua resposta",
+    otherPlaceholder: "Especifica",
     countryPlaceholder: "Pa\u00eds",
     optional: "opcional",
     skipQuestion: "Ignorar",
@@ -944,7 +952,7 @@ const translations: Record<string, QuizTranslations> = {
     firstNamePlaceholder: "Nome",
     lastNamePlaceholder: "Cognome",
     phonePlaceholder: "Telefono",
-    otherPlaceholder: "La tua risposta",
+    otherPlaceholder: "Specifica",
     countryPlaceholder: "Paese",
     optional: "opzionale",
     skipQuestion: "Salta",
@@ -1012,7 +1020,7 @@ const translations: Record<string, QuizTranslations> = {
     firstNamePlaceholder: "\u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u0623\u0648\u0644",
     lastNamePlaceholder: "\u0627\u0633\u0645 \u0627\u0644\u0639\u0627\u0626\u0644\u0629",
     phonePlaceholder: "\u0627\u0644\u0647\u0627\u062a\u0641",
-    otherPlaceholder: "\u0625\u062c\u0627\u0628\u062a\u0643",
+    otherPlaceholder: "\u062d\u062f\u0651\u062f",
     countryPlaceholder: "\u0627\u0644\u0628\u0644\u062f",
     optional: "\u0627\u062e\u062a\u064a\u0627\u0631\u064a",
     skipQuestion: "تخطي",
@@ -1095,6 +1103,47 @@ export default function PublicQuizClient({
   // quiz creator pretending to be a real visitor (Marie's feedback #7).
   // We pre-fill firstName, skip the lead capture POST entirely, and mount
   // a sticky banner imperatively into <body>.
+  // ─── L'AFFILIÉ QUI A PARTAGÉ CE QUIZ (Maurice, 27 août 2026) ────────
+  //
+  // `?sa=` / `?ref=` collé à la fin du lien du quiz. On le garde d'un
+  // écran à l'autre et on le recolle sur le bouton de fin : c'est ce qui
+  // permet à un vendeur de proposer UN quiz à tous ses affiliés au lieu
+  // d'en dupliquer un par affilié.
+  //
+  // sessionStorage, PAS localStorage : un identifiant gardé des semaines
+  // attribuerait une visite d'aujourd'hui à quelqu'un qui a partagé le
+  // lien il y a un mois. La visite est la bonne portée, et ça survit au
+  // rafraîchissement, qui est le vrai risque sur un quiz de dix écrans.
+  const [affilie, setAffilie] = useState<AffiliateDuQuiz>(AFFILIATE_VIDE);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const cle = `tq_quiz_aff_${quizId}`;
+    const depuisUrl = lireAffiliateDuQuiz(window.location.search);
+    if (!affiliateAbsent(depuisUrl)) {
+      setAffilie(depuisUrl);
+      try {
+        window.sessionStorage.setItem(cle, JSON.stringify(depuisUrl));
+      } catch {
+        // Navigation privée stricte : on garde l'affilié en mémoire pour
+        // cette page. Mieux que rien, et rien ne casse.
+      }
+      return;
+    }
+    try {
+      const garde = window.sessionStorage.getItem(cle);
+      if (garde) setAffilie(lireAffiliateEnregistre(garde));
+    } catch {
+      // Valeur illisible : on continue sans affilié plutôt que de
+      // planter le quiz d'un visiteur.
+    }
+  }, [quizId]);
+
+  /** Un lien qui SORT du quiz, avec l'affilié recollé dessus. */
+  const lienSortant = useCallback(
+    (url: string) => attacherAffiliate(ensureExternalUrl(url), affilie),
+    [affilie],
+  );
+
   const [previewName, setPreviewName] = useState<string | null>(null);
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -1284,7 +1333,7 @@ export default function PublicQuizClient({
   useEffect(() => {
     if (!quiz || isPreviewMode) return;
     if (quiz.close_enabled !== true || quiz.close_action !== "redirect") return;
-    const url = ensureExternalUrl(quiz.close_redirect_url || "");
+    const url = lienSortant(quiz.close_redirect_url || "");
     if (url && typeof window !== "undefined") window.location.replace(url);
   }, [quiz, isPreviewMode]);
 
@@ -2270,6 +2319,10 @@ export default function PublicQuizClient({
             result_id: profile?.id ?? null,
             consent_given: consent,
             answers: answersPayload,
+            // L'AFFILIÉ QUI A AMENÉ CE LEAD (Maurice, 27 août 2026).
+            // Envoyé tel qu'il a été lu dans l'URL du quiz : le serveur
+            // revalide, il ne fait jamais confiance au navigateur.
+            ...(affiliateAbsent(affilie) ? {} : { affiliate: affilie }),
             // Snapshot {points, min, max} global + par axe (mode scoring).
             scores: snapshot ?? undefined,
             // event_id partagé avec le pixel navigateur → dédup CAPI.
@@ -2593,7 +2646,7 @@ export default function PublicQuizClient({
   // loader s'affiche pendant que l'effet ci-dessus renvoie le visiteur.
   // Sinon, message de fermeture + CTA optionnel.
   if (!isPreviewMode && quiz.close_enabled === true) {
-    const closeRedirect = ensureExternalUrl(quiz.close_redirect_url || "");
+    const closeRedirect = lienSortant(quiz.close_redirect_url || "");
     if (quiz.close_action === "redirect" && closeRedirect) {
       return (
         <div className="public-surface min-h-screen flex items-center justify-center" style={rootStyle}>
@@ -2601,7 +2654,7 @@ export default function PublicQuizClient({
         </div>
       );
     }
-    const closeCtaUrl = ensureExternalUrl(quiz.close_cta_url || "");
+    const closeCtaUrl = lienSortant(quiz.close_cta_url || "");
     return (
       <div className="public-surface min-h-screen flex flex-col" style={rootStyle}>
         <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6 text-center">
@@ -3045,22 +3098,19 @@ export default function PublicQuizClient({
     // à choix (liste et images). Recopier le bloc dans chacune, c'est se
     // condamner à n'en corriger qu'un.
     const autreIdx = otherOptionIndex(q.options);
+    const autrePlaceholder =
+      String(q.options?.[autreIdx]?.other_placeholder ?? "").trim() || t.otherPlaceholder;
     const renderAutreField = (): React.ReactNode => (
-      <div className="space-y-2">
-        <input
-          type="text"
-          value={autreTexte}
-          onChange={(e) => setAutreTexte(e.target.value.slice(0, AUTRE_TEXTE_MAX))}
-          maxLength={AUTRE_TEXTE_MAX}
-          placeholder={t.otherPlaceholder}
-          aria-label={t.otherPlaceholder}
-          autoFocus
-          className="w-full rounded-xl border-2 border-primary/50 bg-background px-4 py-3 text-base outline-none focus:border-primary"
-        />
-        <div className="text-right text-xs text-muted-foreground">
-          {autreTexte.length}/{AUTRE_TEXTE_MAX}
-        </div>
-      </div>
+      <input
+        type="text"
+        value={autreTexte}
+        onChange={(e) => setAutreTexte(e.target.value.slice(0, AUTRE_TEXTE_MAX))}
+        maxLength={AUTRE_TEXTE_MAX}
+        placeholder={autrePlaceholder}
+        aria-label={autrePlaceholder}
+        autoFocus
+        className="w-full rounded-xl border-2 border-primary/50 bg-background px-4 py-3 text-base outline-none focus:border-primary"
+      />
     );
 
     if (qType === "rating_scale") {
@@ -4021,7 +4071,7 @@ export default function PublicQuizClient({
               className={`w-full min-h-[48px] h-auto py-3 px-6 text-base rounded-full whitespace-normal leading-snug ${btnShapeClass}`}
               asChild
             >
-              <a href={ensureExternalUrl(ctaUrl)} target="_blank" rel="noopener noreferrer">
+              <a href={lienSortant(ctaUrl)} target="_blank" rel="noopener noreferrer">
                 {ctaText}
               </a>
             </Button>
@@ -4538,7 +4588,7 @@ export default function PublicQuizClient({
             const ctaText = interp(resultProfile?.cta_text || quiz.cta_text || "") || t.resultCtaDefault;
             return ctaUrl ? (
               <Button size="lg" className={`w-full min-h-[48px] h-auto py-3 px-6 text-base rounded-full whitespace-normal leading-snug ${btnShapeClass}`} asChild>
-                <a href={ensureExternalUrl(ctaUrl)} target="_blank" rel="noopener noreferrer">
+                <a href={lienSortant(ctaUrl)} target="_blank" rel="noopener noreferrer">
                   {ctaText}
                 </a>
               </Button>

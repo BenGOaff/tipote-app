@@ -40,6 +40,7 @@ import { localDateKey } from "@/lib/dateKeys";
 import { buildQuestionPositions, indexAnswersByPosition } from "@/lib/quiz/questionIdentity";
 import { maxSeriesValue, yAxisWidth } from "@/lib/charts/yAxis";
 import { collectAutreTextes } from "@/lib/quiz/otherOption";
+import { etiquetteSource } from "@/lib/quiz/affiliateRelay";
 
 // Donut palette: primary Tipote + tonal variations, repeats if > 7 slices.
 const CHART_COLORS = [
@@ -94,6 +95,11 @@ type Lead = {
     rating?: number;
     stars?: number;
   }[] | null;
+  /** L'affilié qui a amené ce lead (colonnes ajoutées le 27 août 2026).
+   *  Absentes de tout l'historique : `undefined` n'est pas une anomalie. */
+  affiliate_sa?: string | null;
+  affiliate_ref?: string | null;
+  affiliate_canal?: string | null;
   created_at: string;
 };
 
@@ -390,6 +396,38 @@ export default function QuizResultsAnalytics({
     });
   }, [leads, questions, t]);
 
+  // ─── D'OÙ VIENNENT LES LEADS (idée de Béné, 27 août 2026) ──────────
+  //
+  // "Dans le suivi de ses quiz il pourrait avoir un item qui récupère le
+  // prénom de son affilié pour identifier rapidement qui lui a apporté
+  // le lead."
+  //
+  // C'est ce qui remplace la duplication du quiz : un seul quiz, et on
+  // voit qui amène quoi. "Sans affilié" est une ligne comme les autres,
+  // pas un trou : c'est le trafic que la créatrice a amené elle même.
+  const sources = useMemo(() => {
+    const sansAffilie = t("sourcesNone");
+    const parSource = new Map<string, number>();
+    let avecAffilie = 0;
+    for (const l of leads) {
+      const a = {
+        sa: l.affiliate_sa ?? null,
+        ref: l.affiliate_ref ?? null,
+        canal: l.affiliate_canal ?? null,
+      };
+      if (a.sa || a.ref) avecAffilie += 1;
+      const cle = etiquetteSource(a, sansAffilie);
+      parSource.set(cle, (parSource.get(cle) ?? 0) + 1);
+    }
+    // Rien à montrer quand PERSONNE n'est passé par un affilié : la
+    // carte serait une ligne unique à 100%, donc du bruit pour toutes
+    // les créatrices qui n'ont pas de programme.
+    if (avecAffilie === 0) return [];
+    return [...parSource.entries()]
+      .map(([nom, count]) => ({ nom, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [leads, t]);
+
   const hasAnyAnswers = questionStats.some((q) => q.totalAnswered > 0);
 
   // ─── KPI card config ─────────────────────────────────────────────────────
@@ -581,6 +619,36 @@ export default function QuizResultsAnalytics({
                 })}
               </ul>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {sources.length > 0 && (
+        <Card>
+          <CardContent className="pt-6 space-y-3">
+            <p className="font-medium text-sm">{t("sourcesTitle")}</p>
+            {sources.map((src) => {
+              const pct = leads.length > 0 ? (src.count / leads.length) * 100 : 0;
+              return (
+                <div key={src.nom} className="space-y-1">
+                  <div className="flex items-center justify-between gap-3 text-sm">
+                    <span className="truncate">{src.nom}</span>
+                    <span className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
+                      {!hideCounts && (
+                        <span className="font-medium text-foreground tabular-nums">{src.count}</span>
+                      )}
+                      <span className="tabular-nums w-10 text-right">{pct.toFixed(0)}%</span>
+                    </span>
+                  </div>
+                  <div className="h-2 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-primary transition-all"
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
           </CardContent>
         </Card>
       )}

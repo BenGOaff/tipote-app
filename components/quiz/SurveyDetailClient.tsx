@@ -106,7 +106,7 @@ type QuestionType =
   | "free_text"
   | "image_choice"
   | "yes_no";
-type QuizOption = { text: string; result_index: number; image_url?: string | null; image_width?: number | null; sio_tag_name?: string | null; is_other?: boolean | null };
+type QuizOption = { text: string; result_index: number; image_url?: string | null; image_width?: number | null; sio_tag_name?: string | null; is_other?: boolean | null; other_placeholder?: string | null };
 type QuizQuestion = {
   id?: string;
   question_text: string;
@@ -1448,6 +1448,9 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
               // Reponse "Autre : precisez". Sans cette ligne, cocher
               // "Autre" ne survivrait pas a la sauvegarde, en silence.
               ...(o.is_other ? { is_other: true } : {}),
+              ...(o.is_other && o.other_placeholder?.trim()
+                ? { other_placeholder: o.other_placeholder.trim() }
+                : {}),
             })),
             sort_order: i,
             question_type: q.question_type,
@@ -1529,6 +1532,11 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   // EXCLUSIF : deux options marquées "Autre" donneraient deux champs de
   // texte pour un seul `text` en base, et le deuxième écraserait le
   // premier sans que personne le voie.
+  const updateOptAutrePlaceholder = (qi: number, oi: number, v: string) =>
+    setEditQuestions(p => p.map((q, i) => i !== qi ? q : {
+      ...q,
+      options: q.options.map((o, j) => j === oi ? { ...o, other_placeholder: v } : o),
+    }));
   const toggleOptAutre = (qi: number, oi: number) =>
     setEditQuestions(p => p.map((q, i) => i !== qi ? q : {
       ...q,
@@ -2429,22 +2437,30 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                                       </div>
                                     )}
                                     <InlineEdit value={opt.text} onChange={(v) => updateOpt(qi, oi, v)} onGenderize={genderize} onAIRewrite={aiRewriteOption} previewTransform={previewInterpolate} availableVars={personalizationVars} className="text-base font-medium" placeholder={`Option ${oi + 1}…`} />
-                                    {/* "Autre : précisez". Le visiteur choisit
-                                        cette réponse, puis écrit la sienne : elle
-                                        se compte comme les autres dans la synthèse,
-                                        ET ce qui a été écrit s'affiche dessous. */}
-                                    <label className="flex items-start gap-2 pt-1 text-xs" onClick={(e) => e.stopPropagation()}>
-                                      <input
-                                        type="checkbox"
-                                        checked={!!opt.is_other}
-                                        onChange={() => toggleOptAutre(qi, oi)}
-                                        className="mt-0.5"
-                                      />
-                                      <span>
+                                    {/* "Autre". La case, et le mot que le
+                                        visiteur voit dans son champ. Rien de plus. */}
+                                    <div className="flex flex-wrap items-center gap-2 pt-1 text-xs" onClick={(e) => e.stopPropagation()}>
+                                      <label className="flex items-center gap-1.5">
+                                        <input
+                                          type="checkbox"
+                                          checked={!!opt.is_other}
+                                          onChange={() => toggleOptAutre(qi, oi)}
+                                        />
                                         <span className="font-medium">{t("optionIsOther")}</span>
-                                        <span className="mt-0.5 block text-muted-foreground">{t("optionIsOtherHint")}</span>
-                                      </span>
-                                    </label>
+                                      </label>
+                                      {opt.is_other && (
+                                        <>
+                                          <span className="text-muted-foreground">:</span>
+                                          <input
+                                            type="text"
+                                            value={opt.other_placeholder ?? ""}
+                                            onChange={(e) => updateOptAutrePlaceholder(qi, oi, e.target.value)}
+                                            placeholder={t("optionIsOtherPlaceholderDefault")}
+                                            className="min-w-0 flex-1 rounded border px-2 py-1"
+                                          />
+                                        </>
+                                      )}
+                                    </div>
                                     {/* Tag Systeme.io appliqué au lead qui choisit cette réponse (Gwenn 19 juil 2026). */}
                                     <div className="pt-1" onClick={(e) => e.stopPropagation()}>
                                       <Label className="text-[10px] font-medium text-muted-foreground">{t("optionSioTagLabel")}</Label>
