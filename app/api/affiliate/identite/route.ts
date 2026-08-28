@@ -32,7 +32,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getAffiliateSession } from "@/lib/affiliate/session";
-import { chercherSirene } from "@/lib/affiliate/sirene";
+import { chercherSirene, sirenDepuisTvaFr } from "@/lib/affiliate/sirene";
 import { interrogerVies } from "@/lib/facture/vies";
 
 export const runtime = "nodejs";
@@ -63,6 +63,26 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   if (numeroTva) {
+    // UN NUMÉRO FRANÇAIS CONTIENT SON SIREN, donc on ne demande rien à
+    // VIES : il est bridé en nombre d'appels (il a répondu
+    // `MS_MAX_CONCURRENT_REQ` le 27 août, d'où le "l'annuaire ne répond
+    // pas" que Béné a vu), là où SIRENE répond tout de suite et rend
+    // l'adresse déjà découpée. La clé de contrôle se recalcule sans
+    // réseau : un numéro mal tapé ne part nulle part.
+    const sirenFr = sirenDepuisTvaFr(numeroTva);
+    if (sirenFr) {
+      const identite = await chercherSirene(sirenFr);
+      return NextResponse.json({
+        ok: true,
+        source: "sirene",
+        trouve: !!identite.denomination,
+        identite,
+        // Le pays se déduit du préfixe, et l'écran s'en sert pour
+        // remplir la case restée vide : sans elle, le champ SIREN ne
+        // s'affiche même pas.
+        pays: "FR",
+      });
+    }
     const { verdict, identite } = await interrogerVies(numeroTva);
     return NextResponse.json({ ok: true, source: "vies", verdict, identite });
   }

@@ -180,7 +180,7 @@ type QuestionType =
   | "free_text"
   | "image_choice"
   | "yes_no";
-type QuizOption = { text: string; result_index: number; image_url?: string | null; points?: number | null; image_width?: number | null };
+type QuizOption = { text: string; result_index: number; image_url?: string | null; points?: number | null; image_width?: number | null; is_other?: boolean | null };
 type QuizQuestion = {
   id?: string;
   question_text: string;
@@ -2484,6 +2484,9 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
               ...(o.points != null ? { points: o.points } : {}),
               // Largeur d'affichage de l'image de reponse (%).
               ...(o.image_width != null ? { image_width: o.image_width } : {}),
+              // Reponse "Autre : precisez". Sans cette ligne, cocher
+              // "Autre" ne survivrait pas a la sauvegarde, en silence.
+              ...(o.is_other ? { is_other: true } : {}),
             })),
             sort_order: i,
             // Per-question config (multi_select, future knobs). API accepts
@@ -2703,6 +2706,17 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const updateOptResult = (qi: number, oi: number, ri: number) => setEditQuestions(p => p.map((q, i) => i !== qi ? q : { ...q, options: q.options.map((o, j) => j === oi ? { ...o, result_index: ri } : o) }));
   // Mode scoring : points portes par l'option (bonne reponse = 1 par defaut).
   const updateOptPoints = (qi: number, oi: number, pts: number) => setEditQuestions(p => p.map((q, i) => i !== qi ? q : { ...q, options: q.options.map((o, j) => j === oi ? { ...o, points: pts } : o) }));
+  // "Autre : précisez" (idée de Damien, 27 août 2026). LE CHOIX EST
+  // EXCLUSIF : deux options marquées "Autre" donneraient deux champs de
+  // texte pour un seul `text` en base, et le deuxième écraserait le
+  // premier sans que personne le voie.
+  const toggleOptAutre = (qi: number, oi: number) =>
+    setEditQuestions(p => p.map((q, i) => i !== qi ? q : {
+      ...q,
+      options: q.options.map((o, j) =>
+        j === oi ? { ...o, is_other: !o.is_other } : { ...o, is_other: false },
+      ),
+    }));
   const addOpt = (qi: number) => setEditQuestions(p => p.map((q, i) => i !== qi ? q : { ...q, options: [...q.options, { text: "", result_index: 0 }] }));
   const removeOpt = (qi: number, oi: number) => setEditQuestions(p => p.map((q, i) => i !== qi ? q : { ...q, options: q.options.filter((_, j) => j !== oi) }));
   // Gwenn (2026-05-14) : "noter dans l'ordre, puis mélanger". Le bouton
@@ -5031,6 +5045,22 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                                 </label>
                               )}
                               <InlineEdit value={opt.text} onChange={(v) => updateOpt(qi, oi, v)} onGenderize={genderize} onAIRewrite={aiRewriteOption} previewTransform={previewInterpolate} availableVars={personalizationVars} className="text-base font-medium" placeholder={`Option ${oi + 1}…`} />
+                                    {/* "Autre : précisez". Le visiteur choisit
+                                        cette réponse, puis écrit la sienne : elle
+                                        se compte comme les autres dans la synthèse,
+                                        ET ce qui a été écrit s'affiche dessous. */}
+                                    <label className="flex items-start gap-2 pt-1 text-xs" onClick={(e) => e.stopPropagation()}>
+                                      <input
+                                        type="checkbox"
+                                        checked={!!opt.is_other}
+                                        onChange={() => toggleOptAutre(qi, oi)}
+                                        className="mt-0.5"
+                                      />
+                                      <span>
+                                        <span className="font-medium">{t("optionIsOther")}</span>
+                                        <span className="mt-0.5 block text-muted-foreground">{t("optionIsOtherHint")}</span>
+                                      </span>
+                                    </label>
                               {isScoring ? (
                                 <div className="flex items-center gap-3 mt-2 flex-wrap">
                                   <label className="flex items-center gap-1.5 text-xs cursor-pointer font-medium" style={{ color: pc }}>

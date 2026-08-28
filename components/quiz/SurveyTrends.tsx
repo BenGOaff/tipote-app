@@ -24,8 +24,9 @@ import {
 } from "recharts";
 import { stripHtml } from "@/lib/richText";
 import { buildQuestionPositions, indexAnswersByPosition } from "@/lib/quiz/questionIdentity";
+import { collectAutreTextes } from "@/lib/quiz/otherOption";
 
-type SurveyOption = { text: string; result_index: number; image_url?: string | null };
+type SurveyOption = { text: string; result_index: number; image_url?: string | null; is_other?: boolean | null };
 type SurveyQuestion = {
   /** Identité stable : rattache les réponses à LA question, même après
    *  une suppression ou un déplacement (cf. lib/quiz/questionIdentity.ts). */
@@ -324,6 +325,14 @@ function QuestionTrend({
             )}
           />
         )}
+        {/* Les "Autre : précisez" d'une question à choix. La barre est
+            comptée juste au dessus comme n'importe quelle option ; ici
+            on montre ce qui a été écrit, qui est la seule information
+            que la liste de départ ne contenait pas. */}
+        {(question.question_type === "multiple_choice" || question.question_type === "image_choice") &&
+          collectAutreTextes(question.options, answers).length > 0 && (
+            <FreeTextList entries={collectAutreTextes(question.options, answers)} />
+          )}
         {question.question_type === "free_text" && (
           <FreeTextList
             entries={answers

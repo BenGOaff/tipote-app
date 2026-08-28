@@ -156,6 +156,7 @@ export default function CoordonneesVersement({ t }: { t: AffiliateDict }) {
         source?: string;
         trouve?: boolean;
         verdict?: string;
+        pays?: string;
         identite?: {
           denomination?: string | null;
           nom?: string | null;
@@ -191,6 +192,13 @@ export default function CoordonneesVersement({ t }: { t: AffiliateDict }) {
           rempli += 1;
         }
       };
+      // Le pays d'abord : c'est lui qui décide quels champs s'affichent
+      // (le SIREN n'existe qu'en France). Rempli depuis le préfixe du
+      // numéro de TVA quand la case est restée vide.
+      if (j.pays && !String(suivant.pays ?? "").trim()) {
+        suivant.pays = j.pays;
+        rempli += 1;
+      }
       poser("denomination", j.identite?.denomination ?? j.identite?.nom ?? null);
       poser("adresse1", j.identite?.adresse ?? null);
       poser("codePostal", j.identite?.codePostal ?? null);
@@ -474,22 +482,9 @@ export default function CoordonneesVersement({ t }: { t: AffiliateDict }) {
               />
             </label>
 
-            <p className="text-xs text-muted-foreground">{p.iban_stored_note}</p>
           </div>
         )}
 
-        <div className="flex flex-wrap items-center gap-3">
-          <Button onClick={() => void enregistrer()} disabled={envoi || !methode}>
-            {envoi ? p.saving : p.save}
-          </Button>
-          {message && (
-            <p className={`text-sm ${message.ok ? "text-emerald-700" : "text-destructive"}`}>
-              {message.texte}
-            </p>
-          )}
-        </div>
-
-        <p className="text-xs text-muted-foreground">{p.minimum_note}</p>
 
         {/* ── LE PROFIL FISCAL ET LE MANDAT ────────────────────────
             "Où j'envoie l'argent" et "sur quelle pièce" sont les deux
@@ -537,34 +532,6 @@ export default function CoordonneesVersement({ t }: { t: AffiliateDict }) {
 
           {profil.statut && (
             <div className="space-y-3">
-              <Champ
-                label={p.label_denomination}
-                valeur={profil.denomination}
-                onChange={(v) => setProfil({ ...profil, denomination: v })}
-              />
-              <Champ
-                label={p.label_adresse}
-                valeur={profil.adresse1}
-                onChange={(v) => setProfil({ ...profil, adresse1: v })}
-              />
-              <Champ
-                label={p.label_adresse2}
-                valeur={profil.adresse2}
-                onChange={(v) => setProfil({ ...profil, adresse2: v })}
-              />
-              <div className="grid gap-3 sm:grid-cols-[1fr_2fr]">
-                <Champ
-                  label={p.label_code_postal}
-                  valeur={profil.codePostal}
-                  onChange={(v) => setProfil({ ...profil, codePostal: v })}
-                />
-                <Champ
-                  label={p.label_ville}
-                  valeur={profil.ville}
-                  onChange={(v) => setProfil({ ...profil, ville: v })}
-                />
-              </div>
-
               <label className="block text-sm font-medium">
                 {p.label_pays}
                 <select
@@ -638,6 +605,34 @@ export default function CoordonneesVersement({ t }: { t: AffiliateDict }) {
                   )}
                 </>
               )}
+              <Champ
+                label={p.label_denomination}
+                valeur={profil.denomination}
+                onChange={(v) => setProfil({ ...profil, denomination: v })}
+              />
+              <Champ
+                label={p.label_adresse}
+                valeur={profil.adresse1}
+                onChange={(v) => setProfil({ ...profil, adresse1: v })}
+              />
+              <Champ
+                label={p.label_adresse2}
+                valeur={profil.adresse2}
+                onChange={(v) => setProfil({ ...profil, adresse2: v })}
+              />
+              <div className="grid gap-3 sm:grid-cols-[1fr_2fr]">
+                <Champ
+                  label={p.label_code_postal}
+                  valeur={profil.codePostal}
+                  onChange={(v) => setProfil({ ...profil, codePostal: v })}
+                />
+                <Champ
+                  label={p.label_ville}
+                  valeur={profil.ville}
+                  onChange={(v) => setProfil({ ...profil, ville: v })}
+                />
+              </div>
+
             </div>
           )}
 
@@ -674,6 +669,19 @@ export default function CoordonneesVersement({ t }: { t: AffiliateDict }) {
             )}
           </div>
         </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <Button onClick={() => void enregistrer()} disabled={envoi}>
+            {envoi ? p.saving : p.save}
+          </Button>
+          {message && (
+            <p className={`text-sm ${message.ok ? "text-emerald-700" : "text-destructive"}`}>
+              {message.texte}
+            </p>
+          )}
+        </div>
+
+        <p className="text-xs text-muted-foreground">{p.minimum_note}</p>
 
         {/* ── SES FACTURES ──────────────────────────────────────── */}
         <div className="space-y-2 border-t pt-5">

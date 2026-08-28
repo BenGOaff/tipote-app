@@ -635,9 +635,19 @@ describe("Le cycle de versement, vu de la structure", () => {
   test("l'écran affilié affiche les DEUX méthodes, dans les 6 langues", () => {
     for (const l of ["fr", "en", "es", "it", "pt", "ar"]) {
       const src = lire(`app/affiliate/i18n/${l}.ts`);
-      for (const c of ["method_paypal", "method_virement", "err_iban_invalide", "iban_stored_note"]) {
+      for (const c of ["method_paypal", "method_virement", "err_iban_invalide"]) {
         assert.match(src, new RegExp(`${c}:`), `${l} : ${c} manquant`);
       }
+      // LA CONSERVATION DE L'IBAN EST UNE CLAUSE, PAS UNE NOTE DE
+      // FORMULAIRE (Béné, 27 août 2026 : "vire ça on s'en fout, on doit
+      // le mettre dans les conditions affiliation"). Elle vit dans
+      // l'article 6 des conditions du programme (dépôt Tiquiz,
+      // lib/legal/affiliate.ts), pas dans un dictionnaire d'écran.
+      assert.doesNotMatch(
+        src,
+        /iban_stored_note:/,
+        `${l} : la phrase sur l'IBAN est revenue dans l'écran`,
+      );
     }
   });
 

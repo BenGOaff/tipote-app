@@ -153,7 +153,15 @@ export function commissionEur(params: {
 }
 
 /**
- * Ce qu'un abonné rapporte sur ses 12 premiers mois.
+ * Ce qu'un abonné rapporte sur une PROJECTION de N mois (12 par défaut).
+ *
+ * C'est un HORIZON DE SIMULATION, jamais un plafond : rien dans le
+ * chemin de paiement n'arrête les commissions après douze mois, la
+ * commission tombe à chaque encaissement tant que l'abonné reste
+ * (Béné, 26 août 2026). L'espace affilié a annoncé "les 12 premiers
+ * mois" jusqu'au 27 août, dans 7 chaînes et 6 langues : le programme
+ * versait plus que ce qu'il promettait, et des affiliés ont pu renoncer
+ * sur un chiffre faux.
  *
  * C'est bien 12 x la commission MENSUELLE arrondie, pas la commission
  * d'un montant annuel : chaque échéance produit sa propre ligne de

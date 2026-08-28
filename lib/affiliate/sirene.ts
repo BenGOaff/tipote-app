@@ -57,6 +57,43 @@ export function lireSiren(brut: string | null | undefined): string | null {
 }
 
 /**
+ * LE SIREN CACHÉ DANS UN NUMÉRO DE TVA FRANÇAIS.
+ *
+ * PURE. `FR38909349045` = `FR` + une clé de 2 caractères + les 9
+ * chiffres du SIREN. La clé numérique se recalcule :
+ * `(12 + 3 * (SIREN mod 97)) mod 97`, ce qui attrape la faute de frappe
+ * sans aucun appel réseau.
+ *
+ * -- POURQUOI CETTE FONCTION EXISTE (27 août 2026) ---------------------
+ *
+ * Béné tape son numéro de TVA, clique Remplir, et lit "l'annuaire ne
+ * répond pas". Le message était VRAI : VIES avait répondu
+ * `MS_MAX_CONCURRENT_REQ`, c'est à dire que le service de l'État membre
+ * était saturé. Rien dans la console, parce qu'il n'y avait pas
+ * d'erreur : juste une réponse honnête et inutilisable.
+ *
+ * Or pour un numéro FRANÇAIS, VIES est le mauvais annuaire deux fois :
+ * il est bridé en nombre d'appels, et il ne sert à rien quand SIRENE
+ * répond instantanément, gratuitement, avec l'adresse déjà découpée.
+ * Le SIREN étant DANS le numéro, il n'y a rien à demander à personne.
+ *
+ * Les vieux numéros ont une clé alphanumérique : on ne peut alors pas
+ * la vérifier, mais le SIREN est là et il reste bon à prendre. Refuser
+ * ces numéros écarterait des entreprises anciennes pour rien.
+ */
+export function sirenDepuisTvaFr(brut: string | null | undefined): string | null {
+  const propre = String(brut ?? "").replace(/[\s.\-]/g, "").toUpperCase();
+  const m = /^FR([0-9A-Z]{2})(\d{9})$/.exec(propre);
+  if (!m) return null;
+  const [, cle, siren] = m;
+  if (/^\d{2}$/.test(cle)) {
+    const attendue = (12 + 3 * (Number(siren) % 97)) % 97;
+    if (Number(cle) !== attendue) return null;
+  }
+  return siren;
+}
+
+/**
  * Lit la réponse de l'annuaire.
  *
  * PURE, et volontairement méfiante : chaque champ est optionnel, et une
