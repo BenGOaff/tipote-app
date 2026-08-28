@@ -36,7 +36,7 @@ Tarifs : compte gratuit à vie (1 quiz, 10 réponses par mois, sans carte bancai
 Ce que fait l'outil : génération du quiz par IA à partir d'une idée, quiz à profils ou quiz scoré multi-axes, page de résultat dédiée par profil avec son propre appel à l'action, capture d'email, tagging automatique dans Systeme.io, sondages, popquiz (quiz incrusté dans une vidéo), statistiques question par question, partage du résultat obtenu.
 Ce que débloque le Plus : multiprofils (un espace par client ou par marque, branding et statistiques séparés), analyse IA des réponses, plusieurs clés API Systeme.io, modèles pré-conçus.
 Différence avec un formulaire classique (Typeform, Tally) : le quiz qualifie, segmente et pré-vend au lieu de seulement collecter.
-Commission affilié : 40% sur chaque vente, sur les 12 premiers mois de chaque abonnement.`;
+Commission affilié : 40% sur chaque vente, et sur chaque mois payé tant que l'abonné reste.`;
 
 export function productFacts(product: ContentProduct): string {
   return product === "atelier" ? ATELIER_FACTS : TIQUIZ_FACTS;
