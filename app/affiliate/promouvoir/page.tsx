@@ -26,6 +26,7 @@ import {
   getLinkPath,
   type LinkDestinationSlug,
 } from "@/lib/affiliate/linkDestinations";
+import { conditionsAffiliationUrl } from "@/lib/affiliate/conditionsUrl";
 
 export const dynamic = "force-dynamic";
 
@@ -281,7 +282,7 @@ export default async function PromouvoirPage({
           <p>{t.promouvoir.conditions_tiers}</p>
           <Button variant="outline" asChild className="mt-2">
             <a
-              href="https://www.tipote.fr/conditions-generales-affiliation"
+              href={conditionsAffiliationUrl(session.locale)}
               target="_blank"
               rel="noopener noreferrer"
             >

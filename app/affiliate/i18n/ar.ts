@@ -402,7 +402,6 @@ export const AR: AffiliateDict = {
     label_iban: "IBAN",
     label_bic: "BIC",
     bic_optional: "اختياري",
-    iban_stored_note: "رقم حسابك مشفَّر. لا نعرضه كاملًا مرة أخرى، ولا حتى لك: ترى أول 4 وآخر 4 خانات لتتعرّف عليه.",
     iban_current: "IBAN المحفوظ",
     iban_replace: "استبدال",
     save: "حفظ",

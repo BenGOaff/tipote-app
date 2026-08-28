@@ -376,7 +376,6 @@ export type AffiliateDict = {
     label_iban: string;
     label_bic: string;
     bic_optional: string;
-    iban_stored_note: string;
     iban_current: string;
     iban_replace: string;
     save: string;

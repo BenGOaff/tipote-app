@@ -22,6 +22,7 @@ import { LaunchGuideCard } from "./components/LaunchGuideCard";
 import { BadgesCard } from "./components/BadgesCard";
 import { LeaderboardCard } from "./components/LeaderboardCard";
 import NouveautesProgramme from "./components/NouveautesProgramme";
+import { conditionsAffiliationUrl } from "@/lib/affiliate/conditionsUrl";
 
 async function TrialTipoteCard({ sa, t }: { sa: string; t: AffiliateDict }) {
   const { data } = await supabaseAdmin
@@ -166,7 +167,7 @@ export default async function AffiliateOverviewPage() {
         <NouveautesProgramme
           t={t}
           sa={session.sa}
-          conditionsUrl={`https://quiz.tipote.com/affiliate?lang=${normaliseLocale(session.locale)}`}
+          conditionsUrl={conditionsAffiliationUrl(session.locale)}
         />
 
         <section className="space-y-4">

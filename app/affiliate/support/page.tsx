@@ -18,6 +18,7 @@ import {
 import { getAffiliateSession } from "@/lib/affiliate/session";
 import { getDict, normaliseLocale } from "../i18n";
 import type { AffiliateDict } from "../i18n/types";
+import { conditionsAffiliationUrl } from "@/lib/affiliate/conditionsUrl";
 
 export const dynamic = "force-dynamic";
 
@@ -109,7 +110,7 @@ export default async function SupportPage() {
             </p>
             <Button variant="outline" asChild className="mt-3">
               <a
-                href="https://www.tipote.fr/conditions-generales-affiliation"
+                href={conditionsAffiliationUrl(session.locale)}
                 target="_blank"
                 rel="noopener noreferrer"
               >

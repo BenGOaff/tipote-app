@@ -402,7 +402,6 @@ export const PT: AffiliateDict = {
     label_iban: "IBAN",
     label_bic: "BIC",
     bic_optional: "facultativo",
-    iban_stored_note: "O teu IBAN está cifrado. Nunca o mostramos por inteiro outra vez, nem a ti: vês os 4 primeiros e os 4 últimos caracteres para o reconheceres.",
     iban_current: "IBAN guardado",
     iban_replace: "Substituir",
     save: "Guardar",

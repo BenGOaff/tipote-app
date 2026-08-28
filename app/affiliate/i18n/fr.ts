@@ -403,7 +403,6 @@ export const FR: AffiliateDict = {
     label_iban: "IBAN",
     label_bic: "BIC",
     bic_optional: "facultatif",
-    iban_stored_note: "Ton IBAN est chiffré. On ne le réaffiche jamais en entier, même à toi : tu vois les 4 premiers et les 4 derniers caractères pour le reconnaître.",
     iban_current: "IBAN enregistré",
     iban_replace: "Remplacer",
     save: "Enregistrer",
