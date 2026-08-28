@@ -119,7 +119,7 @@ function BeatImage({ item }: { item: BeatMediaItem }) {
   );
 }
 
-type QuizOption = { text: string; result_index: number; image_url?: string | null; points?: number | null; image_width?: number | null; is_other?: boolean | null };
+type QuizOption = { text: string; result_index: number; image_url?: string | null; points?: number | null; image_width?: number | null; is_other?: boolean | null; other_placeholder?: string | null };
 type QuestionType =
   | "multiple_choice"
   | "rating_scale"
@@ -527,7 +527,7 @@ const translations: Record<string, QuizTranslations> = {
     firstNamePlaceholder: "Pr\u00e9nom",
     lastNamePlaceholder: "Nom",
     phonePlaceholder: "T\u00e9l\u00e9phone",
-    otherPlaceholder: "Ta r\u00e9ponse",
+    otherPlaceholder: "Pr\u00e9cise",
     countryPlaceholder: "Pays",
     optional: "optionnel",
     skipQuestion: "Passer",
@@ -604,7 +604,7 @@ const translations: Record<string, QuizTranslations> = {
     firstNamePlaceholder: "Pr\u00e9nom",
     lastNamePlaceholder: "Nom",
     phonePlaceholder: "T\u00e9l\u00e9phone",
-    otherPlaceholder: "Votre r\u00e9ponse",
+    otherPlaceholder: "Pr\u00e9cisez",
     countryPlaceholder: "Pays",
     optional: "optionnel",
     skipQuestion: "Passer",
@@ -672,7 +672,7 @@ const translations: Record<string, QuizTranslations> = {
     firstNamePlaceholder: "First name",
     lastNamePlaceholder: "Last name",
     phonePlaceholder: "Phone",
-    otherPlaceholder: "Your answer",
+    otherPlaceholder: "Please specify",
     countryPlaceholder: "Country",
     optional: "optional",
     skipQuestion: "Skip",
@@ -740,7 +740,7 @@ const translations: Record<string, QuizTranslations> = {
     firstNamePlaceholder: "Nombre",
     lastNamePlaceholder: "Apellido",
     phonePlaceholder: "Tel\u00e9fono",
-    otherPlaceholder: "Tu respuesta",
+    otherPlaceholder: "Especifica",
     countryPlaceholder: "Pa\u00eds",
     optional: "opcional",
     skipQuestion: "Saltar",
@@ -808,7 +808,7 @@ const translations: Record<string, QuizTranslations> = {
     firstNamePlaceholder: "Vorname",
     lastNamePlaceholder: "Nachname",
     phonePlaceholder: "Telefon",
-    otherPlaceholder: "Deine Antwort",
+    otherPlaceholder: "Bitte angeben",
     countryPlaceholder: "Land",
     optional: "optional",
     skipQuestion: "Überspringen",
@@ -876,7 +876,7 @@ const translations: Record<string, QuizTranslations> = {
     firstNamePlaceholder: "Nome",
     lastNamePlaceholder: "Sobrenome",
     phonePlaceholder: "Telefone",
-    otherPlaceholder: "A tua resposta",
+    otherPlaceholder: "Especifica",
     countryPlaceholder: "Pa\u00eds",
     optional: "opcional",
     skipQuestion: "Ignorar",
@@ -944,7 +944,7 @@ const translations: Record<string, QuizTranslations> = {
     firstNamePlaceholder: "Nome",
     lastNamePlaceholder: "Cognome",
     phonePlaceholder: "Telefono",
-    otherPlaceholder: "La tua risposta",
+    otherPlaceholder: "Specifica",
     countryPlaceholder: "Paese",
     optional: "opzionale",
     skipQuestion: "Salta",
@@ -1012,7 +1012,7 @@ const translations: Record<string, QuizTranslations> = {
     firstNamePlaceholder: "\u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u0623\u0648\u0644",
     lastNamePlaceholder: "\u0627\u0633\u0645 \u0627\u0644\u0639\u0627\u0626\u0644\u0629",
     phonePlaceholder: "\u0627\u0644\u0647\u0627\u062a\u0641",
-    otherPlaceholder: "\u0625\u062c\u0627\u0628\u062a\u0643",
+    otherPlaceholder: "\u062d\u062f\u0651\u062f",
     countryPlaceholder: "\u0627\u0644\u0628\u0644\u062f",
     optional: "\u0627\u062e\u062a\u064a\u0627\u0631\u064a",
     skipQuestion: "تخطي",
@@ -3045,22 +3045,19 @@ export default function PublicQuizClient({
     // à choix (liste et images). Recopier le bloc dans chacune, c'est se
     // condamner à n'en corriger qu'un.
     const autreIdx = otherOptionIndex(q.options);
+    const autrePlaceholder =
+      String(q.options?.[autreIdx]?.other_placeholder ?? "").trim() || t.otherPlaceholder;
     const renderAutreField = (): React.ReactNode => (
-      <div className="space-y-2">
-        <input
-          type="text"
-          value={autreTexte}
-          onChange={(e) => setAutreTexte(e.target.value.slice(0, AUTRE_TEXTE_MAX))}
-          maxLength={AUTRE_TEXTE_MAX}
-          placeholder={t.otherPlaceholder}
-          aria-label={t.otherPlaceholder}
-          autoFocus
-          className="w-full rounded-xl border-2 border-primary/50 bg-background px-4 py-3 text-base outline-none focus:border-primary"
-        />
-        <div className="text-right text-xs text-muted-foreground">
-          {autreTexte.length}/{AUTRE_TEXTE_MAX}
-        </div>
-      </div>
+      <input
+        type="text"
+        value={autreTexte}
+        onChange={(e) => setAutreTexte(e.target.value.slice(0, AUTRE_TEXTE_MAX))}
+        maxLength={AUTRE_TEXTE_MAX}
+        placeholder={autrePlaceholder}
+        aria-label={autrePlaceholder}
+        autoFocus
+        className="w-full rounded-xl border-2 border-primary/50 bg-background px-4 py-3 text-base outline-none focus:border-primary"
+      />
     );
 
     if (qType === "rating_scale") {
