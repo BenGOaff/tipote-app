@@ -66,20 +66,28 @@ export default async function AdminAffiliesPage() {
       .limit(PLAFOND),
     supabaseAdmin
       .from("affiliate_conversions")
-      .select("sa, created_at")
+      .select("sa, created_at, email")
       .order("created_at", { ascending: false })
       .limit(PLAFOND),
   ]);
 
   const connus = new Set((affs ?? []).map((a) => String((a as { sa: string }).sa)));
-  const activite = new Map<string, { clics: number; contacts: number; dernier: string }>();
+  const activite = new Map<
+    string,
+    { clics: number; contacts: number; dernier: string; exemple: string | null }
+  >();
   const compter = (lignes: unknown[], champ: "clics" | "contacts") => {
-    for (const l of (lignes ?? []) as { sa?: string | null; created_at?: string }[]) {
+    for (const l of (lignes ?? []) as { sa?: string | null; created_at?: string; email?: string }[]) {
       const sa = String(l.sa ?? "").trim();
       if (!sa || connus.has(sa)) continue;
-      const e = activite.get(sa) ?? { clics: 0, contacts: 0, dernier: "" };
+      const e = activite.get(sa) ?? { clics: 0, contacts: 0, dernier: "", exemple: null };
       e[champ] += 1;
       if ((l.created_at ?? "") > e.dernier) e.dernier = l.created_at ?? "";
+      // UN CONTACT QU'IL A AMENÉ, et c'est la clé du problème : leur API
+      // ne dit pas QUI est un identifiant d'affilié, mais leur fiche
+      // CONTACT affiche la ligne "Affilié". Ouvrir ce contact chez eux
+      // donne donc le nom qu'on ne peut pas lire autrement.
+      if (champ === "contacts" && !e.exemple && l.email) e.exemple = l.email;
       activite.set(sa, e);
     }
   };
