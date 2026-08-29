@@ -291,6 +291,8 @@ export const IT: AffiliateDict = {
     tab_posts: "Social",
     tab_visuels: "Visual",
     links_info: "💡 Puoi anche aggiungere ?ref={ref} alla fine di qualsiasi URL tipote.fr o tipote.blog (tranne tipote.fr/tiquiz nudo, che NON è configurato per l'affiliazione). Per esempio, promuovi un articolo del blog: la commissione è tua se il visitatore acquista entro 12 mesi.",
+    canal_title: "Sapere quale canale funziona",
+    canal_info: "Aggiungi &sc= seguito dal nome che vuoi alla fine di qualsiasi link per sapere da dove arrivano i tuoi clic: ?ref={ref}&sc=youtube, &sc=newsletter, &sc=storia-martedi. Il nome lo scegli tu, sei tu a leggerlo nelle tue statistiche. Senza, il clic viene comunque contato e la commissione non cambia: il canale serve solo a confrontare cosa funziona.",
     emails_info_title: "📧 Sequenza email evergreen - 8 email",
     emails_info_body:
       "Cadenza consigliata: 1 email ogni 2 giorni, o 1 a settimana per 2 mesi. La variabile {first_name} è quella di Systeme.io (lasciala così per la personalizzazione all'invio). Il tuo link tracciato e il tuo nome sono già inseriti.",

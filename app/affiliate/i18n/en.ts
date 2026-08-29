@@ -291,6 +291,8 @@ export const EN: AffiliateDict = {
     tab_posts: "Social",
     tab_visuels: "Visuals",
     links_info: "💡 You can also add ?ref={ref} to the end of any tipote.fr or tipote.blog URL (except bare tipote.fr/tiquiz which is NOT affiliate-tagged). For example, promote a specific blog post: the commission goes to you if the visitor buys within 12 months.",
+    canal_title: "Know which channel works",
+    canal_info: "Add &sc= followed by any name at the end of any link to see where your clicks come from: ?ref={ref}&sc=youtube, &sc=newsletter, &sc=tuesday-story. The name is yours to choose, you are the one reading it in your stats. Without it the click still counts and your commission is the same: the channel is only there to compare what works.",
     emails_info_title: "📧 Evergreen email sequence - 8 emails",
     emails_info_body:
       "Recommended cadence: 1 email every 2 days, or 1 per week over 2 months. The {first_name} variable is Systeme.io's (leave it as-is for personalization at send time). Your tracked link and name are already injected.",

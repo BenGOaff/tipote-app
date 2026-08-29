@@ -294,7 +294,9 @@ export type AffiliateDict = {
     tab_emails: string;
     tab_posts: string;
     tab_visuels: string;
-    links_info: string; // "Tu peux aussi rajouter ?sa= partout..."
+    links_info: string; // "Tu peux aussi rajouter ?ref= partout..."
+    canal_title: string; // "Savoir quel canal marche"
+    canal_info: string; // "&sc=youtube, &sc=newsletter..."
     emails_info_title: string;
     emails_info_body: string;
     posts_info_title: string;
