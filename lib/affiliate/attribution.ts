@@ -247,6 +247,45 @@ async function lireAffilie(sa: string): Promise<{
   status: string;
   recompense_commission_pct?: number | null;
 } | null> {
+  const direct = await lireLigneAffilie(sa);
+  if (direct) return direct;
+
+  // UN ANCIEN IDENTIFIANT DÉSIGNE ENCORE SON PROPRIÉTAIRE (29 août 2026).
+  //
+  // Systeme.io peut désigner une même personne par deux identifiants
+  // (constaté sur Eric Legrigeois : deux `sa` de 40 caractères pour la
+  // même adresse). Ses liens en circulation portent l'ancien, et sans
+  // cette lecture ils n'attribuaient RIEN, pour toujours.
+  //
+  // La table est vide tant que personne n'a posé d'alias, et un
+  // deuxième aller-retour ne se paie que sur un identifiant déjà
+  // introuvable, c'est à dire jamais dans le cas normal.
+  const { data: alias, error } = await supabaseAdmin
+    .from("affiliate_sa_aliases")
+    .select("sa")
+    .eq("sa_alias", sa)
+    .maybeSingle();
+  if (error) {
+    // Migration pas encore appliquée : on se comporte comme avant. Un
+    // écran vide serait mieux qu'une commission perdue, mais ici c'est
+    // l'inverse qu'il faut éviter : ne rien casser de ce qui marche.
+    console.error(`[affiliate/attribution] alias illisible pour ${sa} : ${error.message}`);
+    return null;
+  }
+  const cible = (alias as { sa?: string } | null)?.sa;
+  if (!cible) return null;
+
+  console.log(`[affiliate/attribution] alias suivi : ${sa} -> ${cible}`);
+  return lireLigneAffilie(cible);
+}
+
+/** La ligne portant EXACTEMENT cet identifiant, sans suivre d'alias. */
+async function lireLigneAffilie(sa: string): Promise<{
+  sa: string;
+  email: string;
+  status: string;
+  recompense_commission_pct?: number | null;
+} | null> {
   const { data: affRow } = await supabaseAdmin
     .from("affiliates")
     .select(AFF_COLS_NEW)

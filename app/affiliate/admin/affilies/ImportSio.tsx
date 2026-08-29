@@ -33,7 +33,23 @@ type Apercu = {
   lignes: Ligne[];
   refusees: Refusee[];
 };
-type Resultat = { crees: number; existants: number; refusees: Refusee[]; erreurs: { sa: string; message: string }[] };
+type Resultat = {
+  crees: number;
+  existants: number;
+  alias?: { sa: string; vers: string }[];
+  refusees: Refusee[];
+  erreurs: { sa: string; message: string }[];
+};
+
+// UNE ERREUR SERVEUR N'EST JAMAIS LA PHRASE QUE LIT BÉNÉ (règle du
+// 3 août). "duplicate key value violates unique constraint
+// affiliates_email_key" décrit notre base, pas ce qu'elle doit faire.
+const ERREURS: Record<string, string> = {
+  email_pris_par_un_autre:
+    "cette adresse appartient déjà à un AUTRE affilié. Rien n'a été écrit : "
+    + "relier les deux enverrait ses commissions à quelqu'un d'autre.",
+  "code public non attribué": "créé, mais sans code public. Son lien ?ref= ne marchera pas.",
+};
 
 const RAISONS: Record<string, string> = {
   "sa-invalide": "identifiant Systeme.io illisible",
@@ -235,9 +251,32 @@ export function ImportSio({
               présent{resultat.existants > 1 ? "s" : ""} (inchangé
               {resultat.existants > 1 ? "s" : ""}, code public assuré).
             </p>
+            {/* DEUX IDENTIFIANTS POUR UNE SEULE PERSONNE. Systeme.io
+                peut en donner plusieurs ; l'ancien continue de circuler
+                dans des liens déjà publiés. On ne crée pas une deuxième
+                ligne (ce serait quelqu'un de plus à payer), on fait
+                pointer l'ancien vers la bonne. */}
+            {(resultat.alias ?? []).length > 0 && (
+              <div className="rounded-lg border bg-muted/30 p-3 text-xs">
+                <p className="font-medium">
+                  {resultat.alias?.length} identifiant
+                  {(resultat.alias?.length ?? 0) > 1 ? "s" : ""} rattaché
+                  {(resultat.alias?.length ?? 0) > 1 ? "s" : ""} à quelqu&apos;un qui existait déjà.
+                </p>
+                <p className="mt-1 text-muted-foreground">
+                  Même adresse, deux identifiants Systeme.io. Ses anciens liens paient
+                  maintenant la bonne personne, et aucune ligne en double n&apos;a été créée.
+                </p>
+                {resultat.alias?.map((a) => (
+                  <p key={a.sa} className="mt-1 font-mono">
+                    {a.sa.slice(0, 12)}… vers {a.vers.slice(0, 12)}…
+                  </p>
+                ))}
+              </div>
+            )}
             {resultat.erreurs.map((e) => (
               <p key={e.sa} className="font-mono text-xs text-destructive">
-                {e.sa} : {e.message}
+                {e.sa.slice(0, 12)}… : {ERREURS[e.message] ?? e.message}
               </p>
             ))}
             {resultat.refusees.map((r) => (
