@@ -255,7 +255,23 @@ export default async function PromouvoirPage({
 
       <Card className="border-dashed bg-muted/30">
         <CardContent className="pt-5 text-sm text-muted-foreground">
-          {interpolate(t.promouvoir.links_info, { sa: session.sa })}
+          {/* LA VARIABLE EST `ref`, PAS `sa`. On passait `sa` à une phrase
+              qui écrit `{ref}` : l'affilié lisait donc "?ref={ref}" mot
+              pour mot, sur l'écran même qui lui explique son lien.
+              `refCode` peut manquer (aucun code attribué) : on retombe
+              sur un mot lisible plutôt que sur un trou. */}
+          {interpolate(t.promouvoir.links_info, { ref: refCode ?? "ton-code" })}
+        </CardContent>
+      </Card>
+
+      {/* LE CANAL : savoir CE QUI marche, pas seulement COMBIEN.
+          Ça existait depuis le 19 août et personne ne l'avait jamais
+          expliqué : une fonctionnalité qu'on ne montre pas n'existe pas
+          (leçon Jocelyne, 3 août). */}
+      <Card className="border-dashed bg-muted/30">
+        <CardContent className="space-y-2 pt-5 text-sm text-muted-foreground">
+          <p className="font-medium text-foreground">{t.promouvoir.canal_title}</p>
+          <p>{interpolate(t.promouvoir.canal_info, { ref: refCode ?? "ton-code" })}</p>
         </CardContent>
       </Card>
 

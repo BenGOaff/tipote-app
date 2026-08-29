@@ -51,7 +51,21 @@ import { lireSa } from "@/lib/affiliate/saFormat";
 
 export const REF_PARAM = "ref";
 export const SA_PARAM = "sa";
-export const CANAL_PARAM = "c";
+/**
+ * Le paramètre par lequel un affilié nomme son canal.
+ *
+ * `?ref=eric&sc=youtube`. Il s'appelait `c` jusqu'au 29 août, et des
+ * liens le portent peut être déjà : on LIT les deux, on n'en ÉCRIT
+ * qu'un. Un canal perdu ne se retrouve pas, le clic est passé.
+ *
+ * Le module jumeau de Tiquiz porte la MÊME règle. Un canal accepté d'un
+ * côté et ignoré de l'autre, c'est un affilié qui compare deux chiffres
+ * qui ne se comparent pas.
+ */
+export const CANAL_PARAM = "sc";
+
+/** Les noms acceptés en LECTURE, le nôtre d'abord. */
+export const CANAL_PARAMS: readonly string[] = [CANAL_PARAM, "c"];
 
 // Le format du `sa` n'est écrit qu'à UN endroit dans ce dépôt
 // (`lib/affiliate/saFormat.ts`), et un test interdit d'en recopier la
@@ -90,6 +104,20 @@ function lireCanalBrut(valeur: string | null | undefined): string | null {
   return brut || null;
 }
 
+/**
+ * Le canal porté par cette URL, quel que soit le nom utilisé.
+ *
+ * Le premier nom RENSEIGNÉ gagne : quelqu'un qui écrit les deux a
+ * probablement corrigé son lien sans retirer l'ancien.
+ */
+export function canalDeLUrl(params: { get(cle: string): string | null }): string | null {
+  for (const nom of CANAL_PARAMS) {
+    const v = lireCanalBrut(params.get(nom));
+    if (v) return v;
+  }
+  return null;
+}
+
 /** Ce que le lien du quiz portait. Chaque champ peut manquer. */
 export interface AffiliateDuQuiz {
   /** L'identifiant Systeme.io de l'affilié du vendeur. */
@@ -123,7 +151,7 @@ export function lireAffiliateDuQuiz(
   return {
     sa: readSa(params.get(SA_PARAM)),
     ref: readRef(params.get(REF_PARAM)),
-    canal: lireCanalBrut(params.get(CANAL_PARAM)),
+    canal: canalDeLUrl(params),
   };
 }
 
