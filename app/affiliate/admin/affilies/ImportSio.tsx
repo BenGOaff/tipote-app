@@ -17,8 +17,20 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
 type Refusee = { ligne: number; contenu: string; raison: string };
+type Ligne = {
+  sa: string;
+  email: string;
+  nom: string | null;
+  code: string;
+  codePris: boolean;
+  clics: number;
+  contacts: number;
+  existant: boolean;
+  jamaisVu: boolean;
+};
 type Apercu = {
   affilies: { sa: string; email: string; nom: string | null }[];
+  lignes: Ligne[];
   refusees: Refusee[];
 };
 type Resultat = { crees: number; existants: number; refusees: Refusee[]; erreurs: { sa: string; message: string }[] };
@@ -70,7 +82,7 @@ export function ImportSio({
         return;
       }
       if (j.apercu) {
-        setApercu({ affilies: j.affilies, refusees: j.refusees });
+        setApercu({ affilies: j.affilies, lignes: j.lignes ?? [], refusees: j.refusees });
         setResultat(null);
       } else {
         setResultat(j as Resultat);
@@ -168,17 +180,44 @@ export function ImportSio({
               {apercu.affilies.length > 1 ? "s" : ""}, {apercu.refusees.length} refusée
               {apercu.refusees.length > 1 ? "s" : ""}.
             </p>
-            {apercu.affilies.slice(0, 10).map((a) => (
-              <p key={a.sa} className="font-mono text-xs text-muted-foreground">
-                {a.sa} · {a.email}
-                {a.nom ? ` · ${a.nom}` : ""}
-              </p>
-            ))}
-            {apercu.affilies.length > 10 && (
-              <p className="text-xs text-muted-foreground">
-                et {apercu.affilies.length - 10} autres.
+            {/* UN IDENTIFIANT JAMAIS VU chez elle est presque toujours une
+                faute de recopie : un `sa` est un hash de 40 caractères, un
+                caractère faux reste un `sa` valide et crée quelqu'un qui
+                n'attribuera jamais rien, sans le moindre symptôme. On
+                SIGNALE, on ne refuse pas : un affilié tout neuf n'a encore
+                rien envoyé. */}
+            {apercu.lignes.some((l) => l.jamaisVu) && (
+              <p className="rounded-lg border border-amber-300/50 bg-amber-50 p-3 text-xs dark:bg-amber-950/20">
+                Les lignes marquées <strong>jamais vue</strong> n&apos;ont produit ni clic ni
+                contact chez toi. C&apos;est normal pour quelqu&apos;un qui vient d&apos;arriver,
+                mais c&apos;est aussi ce que donne un identifiant mal recopié. Vérifie ceux-là
+                contre ton écran Systeme.io avant d&apos;importer.
               </p>
             )}
+            {apercu.lignes.map((l) => (
+              <p key={l.sa} className="font-mono text-xs">
+                <span className="text-muted-foreground">
+                  {l.sa.slice(0, 12)}… · {l.email}
+                  {l.nom ? ` · ${l.nom}` : ""}
+                </span>{" "}
+                {l.code ? (
+                  <span className="text-foreground">
+                    lien ?ref=<strong>{l.code}</strong>
+                    {l.codePris ? " (déjà pris, un suffixe sera ajouté)" : ""}
+                  </span>
+                ) : (
+                  <span className="text-destructive">aucun code public possible</span>
+                )}{" "}
+                <span className="text-muted-foreground">
+                  ·{" "}
+                  {l.existant
+                    ? "déjà dans ton registre"
+                    : l.jamaisVu
+                      ? "jamais vue dans tes données"
+                      : `${l.contacts} contact${l.contacts > 1 ? "s" : ""}, ${l.clics} clic${l.clics > 1 ? "s" : ""}`}
+                </span>
+              </p>
+            ))}
             {/* CE QUI EST REFUSÉ SE DIT, avec son numéro de ligne : sinon
                 l'affilié absent se découvre au moment de le payer. */}
             {apercu.refusees.map((r) => (

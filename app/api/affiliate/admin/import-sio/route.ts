@@ -26,6 +26,7 @@ import { getAffiliateAdmin } from "@/lib/affiliate/admin";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { lireImportSio } from "@/lib/affiliate/importSio";
 import { assurerRefAffiliee } from "@/lib/affiliate/refServer";
+import { annoterImport, type ActiviteSa } from "@/lib/affiliate/importApercu";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -43,7 +44,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // chaque ligne crée quelqu'un qui pourra être payé, et une liste
   // collée de travers ne doit pas se découvrir après coup.
   if (body.appliquer !== true) {
-    return NextResponse.json({ ok: true, apercu: true, affilies, refusees });
+    const lignes = await annoter(affilies);
+    return NextResponse.json({ ok: true, apercu: true, affilies, lignes, refusees });
   }
 
   const crees: string[] = [];
@@ -94,4 +96,54 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     refusees,
     erreurs,
   });
+}
+
+/**
+ * Confronte les lignes lues à ce que ses propres données savent déjà.
+ *
+ * On lit SES clics et SES conversions plutôt que de faire confiance à la
+ * liste : un `sa` est un hash de 40 caractères recopié à la main, un
+ * caractère faux reste un `sa` valide et crée un affilié qui
+ * n'attribuera jamais rien, sans le moindre symptôme.
+ */
+async function annoter(affilies: { sa: string; email: string; nom: string | null }[]) {
+  if (affilies.length === 0) return [];
+  const sas = affilies.map((a) => a.sa);
+
+  const [clics, conversions, deja] = await Promise.all([
+    supabaseAdmin.from("affiliate_clicks").select("sa").in("sa", sas).limit(5000),
+    supabaseAdmin.from("affiliate_conversions").select("sa").in("sa", sas).limit(5000),
+    supabaseAdmin.from("affiliates").select("sa, ref").in("sa", sas),
+  ]);
+
+  const activite = new Map<string, ActiviteSa>();
+  const compter = (lignes: unknown, champ: "clics" | "contacts") => {
+    for (const l of (lignes as { sa?: string }[] | null) ?? []) {
+      const sa = String(l?.sa ?? "");
+      if (!sa) continue;
+      const vu = activite.get(sa) ?? { clics: 0, contacts: 0 };
+      vu[champ] += 1;
+      activite.set(sa, vu);
+    }
+  };
+  compter(clics.data, "clics");
+  compter(conversions.data, "contacts");
+
+  const existants = new Set<string>(
+    ((deja.data as { sa: string }[] | null) ?? []).map((r) => r.sa),
+  );
+
+  // Les codes publics déjà pris, pour dire tout de suite qu'un suffixe
+  // sera ajouté au lieu de la laisser le découvrir sur le lien publié.
+  const { data: refs } = await supabaseAdmin
+    .from("affiliates")
+    .select("sa, ref")
+    .not("ref", "is", null)
+    .limit(5000);
+  const refsPris = new Map<string, string>();
+  for (const r of ((refs as { sa: string; ref: string | null }[] | null) ?? [])) {
+    if (r.ref) refsPris.set(String(r.ref).toLowerCase(), r.sa);
+  }
+
+  return annoterImport(affilies, activite, refsPris, existants);
 }
