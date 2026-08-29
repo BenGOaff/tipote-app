@@ -443,7 +443,8 @@
         "s1": "Open the DNS management for {root} in your registrar's dashboard.",
         "s2": "Find the option to add a new DNS record.",
         "s3": "Create a CNAME with Name = \"{name}\" and Target/Value = \"{cnameTarget}\".",
-        "s4": "Save the record. We'll detect the change automatically."
+        "s4": "Save the record. We'll detect the change automatically.",
+        "s3Apex": "Create an A record with Name = \"{name}\" and Value = \"{cnameTarget}\"."
       }
     },
     "domainPollingProgress": "Checking DNS… ({n}/{total})",
@@ -476,7 +477,10 @@
     "salesArgsSaved": "Arguments saved",
     "salesArgsSaveFailed": "Save failed",
     "salesArgsUnknownError": "Unknown error",
-    "subtitle": "Configure your profile, connections and preferences."
+    "subtitle": "Configure your profile, connections and preferences.",
+    "dnsFieldNameSubdomain": "Sub-domain",
+    "dnsApexWhy": "This is the root of your domain, and every DNS provider refuses a CNAME there: an A record is the only option. This is not a mistake on our side, your provider will tell you the same thing.",
+    "dnsApexPrefer": "A subdomain holds up better: on {suggestion}, a CNAME points at our server by name, so your setup stays correct even if our address changes one day. Remove this domain and add {suggestion} instead."
   },
   "common": {
     "save": "Save",

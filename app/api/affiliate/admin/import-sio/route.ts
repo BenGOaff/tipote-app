@@ -27,6 +27,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { lireImportSio } from "@/lib/affiliate/importSio";
 import { assurerRefAffiliee } from "@/lib/affiliate/refServer";
 import { annoterImport, type ActiviteSa } from "@/lib/affiliate/importApercu";
+import { actionPourLigne } from "@/lib/affiliate/saAlias";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -51,18 +52,50 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const crees: string[] = [];
   const existants: string[] = [];
   const erreurs: { sa: string; message: string }[] = [];
+  const alias: { sa: string; vers: string }[] = [];
 
   for (const a of affilies) {
-    const { data: deja } = await supabaseAdmin
-      .from("affiliates")
-      .select("sa")
-      .eq("sa", a.sa)
-      .maybeSingle();
+    // DEUX LECTURES, PARCE QUE CE SONT DEUX CONTRAINTES DISTINCTES en
+    // base, et c'est leur désaccord qui nous intéresse : un identifiant
+    // inconnu dont l'ADRESSE est déjà prise n'est pas une erreur, c'est
+    // une même personne que Systeme.io désigne de deux façons.
+    const [{ data: parSa }, { data: parEmail }] = await Promise.all([
+      supabaseAdmin.from("affiliates").select("sa").eq("sa", a.sa).maybeSingle(),
+      supabaseAdmin.from("affiliates").select("sa, email").ilike("email", a.email).maybeSingle(),
+    ]);
 
-    if (deja) {
-      // Il existe : on ne touche à rien, on lui assure seulement un code
-      // public s'il n'en a pas encore. C'est tout l'objet de l'import.
+    const decision = actionPourLigne({
+      sa: a.sa,
+      email: a.email,
+      parSa: (parSa as { sa: string } | null) ?? null,
+      parEmail: (parEmail as { sa: string; email: string } | null) ?? null,
+    });
+
+    // L'identifiant qui portera le code public : le SIEN quand on
+    // aliasse, jamais celui qu'on vient de lire dans la liste.
+    let saCible = a.sa;
+
+    if (decision.action === "refuser") {
+      erreurs.push({ sa: a.sa, message: "email_pris_par_un_autre" });
+      continue;
+    }
+
+    if (decision.action === "deja-la") {
       existants.push(a.sa);
+    } else if (decision.action === "alias") {
+      // Son ancien identifiant DÉSIGNE sa ligne. Jamais une deuxième
+      // ligne : ce serait une deuxième personne à payer.
+      saCible = decision.vers;
+      const { error } = await supabaseAdmin.from("affiliate_sa_aliases").insert({
+        sa_alias: a.sa,
+        sa: decision.vers,
+        raison: "import systeme.io : meme adresse, deux identifiants",
+      });
+      if (error && !/duplicate|unique/i.test(error.message)) {
+        erreurs.push({ sa: a.sa, message: `alias_impossible: ${error.message}` });
+        continue;
+      }
+      alias.push({ sa: a.sa, vers: decision.vers });
     } else {
       const { error } = await supabaseAdmin.from("affiliates").insert({
         sa: a.sa,
@@ -79,10 +112,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       crees.push(a.sa);
     }
 
-    // LE CODE PUBLIC, dans les deux cas. C'est LUI qui permet à cet
+    // LE CODE PUBLIC, dans tous les cas. C'est LUI qui permet à cet
     // affilié d'utiliser nos liens : sans code, `?ref=` ne peut désigner
     // personne, et il reste enfermé dans l'ancien système.
-    const ref = await assurerRefAffiliee({ sa: a.sa, email: a.email, displayName: a.nom });
+    const ref = await assurerRefAffiliee({ sa: saCible, email: a.email, displayName: a.nom });
     if (!ref) {
       erreurs.push({ sa: a.sa, message: "code public non attribué" });
     }
@@ -93,6 +126,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     apercu: false,
     crees: crees.length,
     existants: existants.length,
+    alias,
     refusees,
     erreurs,
   });

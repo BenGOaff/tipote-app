@@ -31,6 +31,7 @@ import { RegistrarInstructions } from "./RegistrarInstructions";
 
 type Props = {
   cnameTarget: string;
+  ipTarget: string;
   onCreated: (domain: CustomDomainRow, registrar: RegistrarInfo | null) => void;
 };
 
@@ -40,7 +41,7 @@ type DetectionResult = {
   registrar: RegistrarInfo;
 };
 
-export function AddCustomDomainDialog({ cnameTarget, onCreated }: Props) {
+export function AddCustomDomainDialog({ cnameTarget, ipTarget, onCreated }: Props) {
   const t = useTranslations("settings");
 
   const [open, setOpen] = useState(false);
@@ -187,6 +188,7 @@ export function AddCustomDomainDialog({ cnameTarget, onCreated }: Props) {
               <RegistrarInstructions
                 hostname={detection.hostname}
                 cnameTarget={cnameTarget}
+                ipTarget={ipTarget}
                 registrar={detection.registrar}
               />
             </div>

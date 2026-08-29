@@ -72,6 +72,20 @@ export default async function AdminAffiliesPage() {
   ]);
 
   const connus = new Set((affs ?? []).map((a) => String((a as { sa: string }).sa)));
+
+  // LES ANCIENS IDENTIFIANTS COMPTENT COMME CONNUS (29 août 2026).
+  //
+  // Systeme.io peut désigner une même personne par deux identifiants.
+  // Une fois l'alias posé, ses clics paient bien quelqu'un : le lister
+  // encore comme "inconnu" enverrait Béné chercher un nom qu'elle vient
+  // de donner, et ferait douter d'une correction qui marche.
+  const { data: aliases } = await supabaseAdmin
+    .from("affiliate_sa_aliases")
+    .select("sa_alias")
+    .limit(5000);
+  for (const a of ((aliases as { sa_alias: string }[] | null) ?? [])) {
+    if (a?.sa_alias) connus.add(String(a.sa_alias));
+  }
   const activite = new Map<
     string,
     { clics: number; contacts: number; dernier: string; exemple: string | null }

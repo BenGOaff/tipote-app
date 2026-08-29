@@ -35,6 +35,11 @@ export function CustomDomainsTab() {
   const [isPaid, setIsPaid] = useState(false);
   const [domains, setDomains] = useState<CustomDomainRow[]>([]);
   const [cnameTarget, setCnameTarget] = useState("");
+  // L'ADRESSE IP AUSSI. La route la renvoyait depuis toujours
+  // (`dnsTargetIp`) et personne ne la lisait : c'est la seule
+  // configuration possible à la RACINE d'un domaine, où le CNAME est
+  // refusé par l'hébergeur (drame Eric, 29 août).
+  const [ipTarget, setIpTarget] = useState("");
   // Per-domain registrar info isn't stored server-side (no point — NS
   // can change), so we keep it in component state, keyed by domain id.
   // Set when the user adds a new domain (we detect at that moment).
@@ -68,6 +73,7 @@ export function CustomDomainsTab() {
           setIsPaid(!!domData.isPaid);
           setDomains(domData.domains ?? []);
           setCnameTarget(domData.dnsTargetCname ?? "");
+          setIpTarget(domData.dnsTargetIp ?? "");
         } else {
           toast.error(domData?.error ?? t("errGeneric"));
         }
@@ -187,6 +193,7 @@ export function CustomDomainsTab() {
           </div>
           <AddCustomDomainDialog
             cnameTarget={cnameTarget || "connect.tipote.com"}
+            ipTarget={ipTarget || "82.25.115.166"}
             onCreated={handleCreated}
           />
         </CardHeader>
@@ -202,6 +209,7 @@ export function CustomDomainsTab() {
                   key={d.id}
                   domain={d}
                   cnameTarget={cnameTarget || "connect.tipote.com"}
+                  ipTarget={ipTarget || "82.25.115.166"}
                   registrar={registrars[d.id] ?? null}
                   onUpdated={handleUpdated}
                   onDeleted={handleDeleted}

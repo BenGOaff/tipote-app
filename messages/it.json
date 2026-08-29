@@ -443,7 +443,8 @@
         "s1": "Apri la gestione DNS di {root} nel pannello del tuo registrar.",
         "s2": "Trova l'opzione per aggiungere un nuovo record DNS.",
         "s3": "Crea un CNAME con Name = \"{name}\" e Target/Value = \"{cnameTarget}\".",
-        "s4": "Salva il record. Rileveremo il cambiamento automaticamente."
+        "s4": "Salva il record. Rileveremo il cambiamento automaticamente.",
+        "s3Apex": "Crea un record A con Nome = \"{name}\" e Valore = \"{cnameTarget}\"."
       }
     },
     "domainPollingProgress": "Verifica DNS in corso… ({n}/{total})",
@@ -476,7 +477,10 @@
     "faviconRemoveBtn": "Rimuovi",
     "faviconUploaded": "Favicon caricato",
     "errFaviconUpload": "Errore caricamento favicon: {msg}",
-    "errImageTooLarge2": "Immagine troppo grande (max 5 MB)."
+    "errImageTooLarge2": "Immagine troppo grande (max 5 MB).",
+    "dnsFieldNameSubdomain": "Sottodominio",
+    "dnsApexWhy": "Qui si tratta della radice del tuo dominio, e tutti i provider rifiutano un CNAME: un record A è l'unica via possibile. Non è un nostro errore, il tuo provider ti dirà la stessa cosa.",
+    "dnsApexPrefer": "Un sottodominio è più solido: su {suggestion}, un CNAME indica il nostro server per nome, quindi la configurazione resta corretta anche se un giorno il nostro indirizzo cambia. Elimina questo dominio e aggiungi {suggestion}."
   },
   "common": {
     "save": "Salva",
