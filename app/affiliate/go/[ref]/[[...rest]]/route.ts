@@ -27,6 +27,7 @@ import {
   sanitizeDestination,
   visitCookieHeader,
 } from "@/lib/affiliate/goRedirect";
+import { canalDeLUrl } from "@/lib/quiz/affiliateRelay";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -38,9 +39,19 @@ export async function GET(
   const { ref: refBrut, rest } = await ctx.params;
 
   const destination = sanitizeDestination(rest?.[0]);
-  // Le canal peut aussi arriver en query (`?c=youtube`) : c'est la forme
-  // qu'on colle dans un outil qui n'accepte pas les chemins profonds.
-  const canal = sanitizeChannel(rest?.[1] ?? req.nextUrl.searchParams.get("c"));
+  // Le canal peut aussi arriver en query (`?sc=youtube`) : c'est la
+  // forme qu'on colle dans un outil qui n'accepte pas les chemins
+  // profonds.
+  //
+  // LE CANAL SE LIT SOUS SES DEUX NOMS. Le paramètre s'appelle `sc`
+  // depuis le 29 août (`CANAL_PARAM`), il s'appelait `c` avant, et des
+  // liens portent déjà l'un ou l'autre. La page Promouvoir enseigne
+  // `&sc=` : ne lire que `c` ici perdait le canal de tous ceux qui ont
+  // suivi la consigne, en silence. Un canal perdu ne se retrouve pas,
+  // le clic est passé.
+  const canal = sanitizeChannel(
+    rest?.[1] ?? canalDeLUrl(req.nextUrl.searchParams),
+  );
 
   const affilie = await resolveAffiliateByRef(refBrut).catch(() => null);
   const cible = await destinationUrl(destination, affilie);

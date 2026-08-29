@@ -47,6 +47,8 @@ import {
   type CompteursParLien,
   type LigneLien,
 } from "@/lib/affiliate/mesLiens";
+import { lireClicsParLien } from "@/lib/affiliate/clicsParLien";
+import { buildAffiliateLink } from "@/lib/affiliate/links";
 import { getDict, normaliseLocale } from "../i18n";
 import MesLiensTable from "../components/MesLiensTable";
 
@@ -94,7 +96,10 @@ export default async function MesLiensPage() {
   // rien", et c'est faux.
   const { data: liensBruts } = await supabaseAdmin
     .from("affiliate_links")
-    .select("id, destination, channel, short_code, clicks_count, created_at")
+    // `clicks_count` n'est PAS lu : personne ne l'incrémente (cf.
+    // l'en-tête de `mesLiens.ts`). Les clics se comptent dans
+    // `affiliate_clicks`, la seule table où ils sont écrits.
+    .select("id, destination, channel, short_code, created_at")
     .eq("sa", session.sa);
 
   const { data: conversions } = await supabaseAdmin
@@ -126,7 +131,19 @@ export default async function MesLiensPage() {
     link_id?: string | null;
     commission_cents?: number | null;
   }[];
+
+  // LES CLICS VIENNENT DE LEUR PROPRE TABLE, ET SANS PLAFOND.
+  //
+  // C'est la même définition que la vue `affiliate_stats` lue par la
+  // console de pilotage. Les deux écrans ne peuvent donc plus annoncer
+  // deux chiffres différents pour la même journée, ce qui est
+  // exactement ce qui est arrivé le 29 août.
+  const lignesLien = (liensBruts ?? []) as LigneLien[];
+  const comptes = await lireClicsParLien(session.sa, lignesLien.map((l) => l.id));
+
   const parLien: CompteursParLien = {
+    clics: comptes.clics,
+    visiteurs: comptes.visiteurs,
     inscrits: compter((conversions ?? []) as { link_id?: string | null }[]),
     // Un inscrit devenu PAYANT est un inscrit qui a produit une
     // commission : c'est la même chose, comptée sur une autre table.
@@ -138,15 +155,41 @@ export default async function MesLiensPage() {
     }, new Map<string, number>()),
   };
 
+  // CE QUI N'EST RATTACHÉ À AUCUN LIEN NOMMÉ.
+  //
+  // C'est le cas NORMAL, pas un cas limite : le lien distribué par
+  // Promouvoir est `?ref=<code>` et son clic s'enregistre sans
+  // `link_id`. Le compter à part puis l'afficher sur sa propre ligne
+  // est ce qui remet les quatre chiffres du haut d'accord avec la
+  // réalité.
+  const sansLien = <T extends { link_id?: string | null }>(l: T[]) =>
+    l.filter((x) => !String(x.link_id ?? "").trim()).length;
+  const horsLien = {
+    clics: comptes.horsLien.clics,
+    visiteurs: comptes.horsLien.visiteurs,
+    inscrits: sansLien((conversions ?? []) as { link_id?: string | null }[]),
+    payants: sansLien(lignesCommission),
+    commissionsCents: lignesCommission
+      .filter((c) => !String(c.link_id ?? "").trim())
+      .reduce((t, c) => t + (Number(c.commission_cents) || 0), 0),
+  };
+
   const liens = refCode
     ? construireMesLiens({
-        liens: (liensBruts ?? []) as LigneLien[],
+        liens: lignesLien,
         compteurs: parLien,
         nomsDestinations,
         refCode,
         destinationsConnues: new Set(destinations.map((d) => d.slug)),
         origine: ORIGINE_PAR_DEFAUT,
         destinationParDefaut: DEFAULT_DESTINATION,
+        horsLien,
+        nomLienParDefaut: t.liens.lien_de_base,
+        // L'URL RÉELLEMENT DISTRIBUÉE, pas une reconstruction. C'est
+        // `buildAffiliateLink` qui fabrique le lien de Promouvoir : le
+        // réécrire ici ferait diverger les deux écrans au premier
+        // changement de domaine.
+        urlLienParDefaut: buildAffiliateLink(session.locale, "/", refCode),
       })
     : [];
   const totaux = totauxDesLiens(liens);
@@ -170,7 +213,20 @@ export default async function MesLiensPage() {
           qu'elle croit. */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Chiffre icon={Link2} label={t.liens.stat_links} valeur={String(totaux.liens)} />
-        <Chiffre icon={MousePointerClick} label={t.liens.stat_clicks} valeur={String(totaux.clics)} />
+        <Chiffre
+          icon={MousePointerClick}
+          label={t.liens.stat_clicks}
+          valeur={String(totaux.clics)}
+          note={
+            // LES VISITEURS SONT UNE APPROXIMATION, et l'écran le dit :
+            // une famille partage une adresse, un téléphone en 4G en
+            // change en marchant. On n'affiche rien tant qu'on ne sait
+            // pas les calculer, plutôt qu'un nombre inventé.
+            comptes.visiteursConnus && totaux.visiteurs > 0
+              ? `${totaux.visiteurs} ${t.liens.col_visitors}`
+              : undefined
+          }
+        />
         <Chiffre icon={UserPlus} label={t.liens.stat_signups} valeur={String(totaux.inscrits)} />
         <Chiffre
           icon={Wallet}
@@ -298,11 +354,13 @@ function Chiffre({
   icon: Icon,
   label,
   valeur,
+  note,
   fort = false,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   valeur: string;
+  note?: string;
   fort?: boolean;
 }) {
   return (
@@ -313,6 +371,7 @@ function Chiffre({
           <span className="text-[11px] font-semibold uppercase tracking-wider">{label}</span>
         </div>
         <p className="mt-1.5 text-2xl font-bold tracking-tight">{valeur}</p>
+        {note ? <p className="text-xs text-muted-foreground">{note}</p> : null}
       </CardContent>
     </Card>
   );

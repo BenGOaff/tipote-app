@@ -42,6 +42,7 @@ export type AffiliateDict = {
     overview: string;
     promouvoir: string;
     liens: string;
+    stats: string;
     contenus: string;
     trial: string;
     revenus: string;
@@ -248,6 +249,37 @@ export type AffiliateDict = {
 
   // ─── Promouvoir ──────────────────────────────────────────────────
   // ─── Mes liens (inspiré de l'espace ambassadeur Waalaxy, 24 août) ──
+  stats: {
+    page_title: string;
+    page_subtitle: string;
+    fenetre_jours: string;
+    fenetre_an: string;
+    etape_clics: string;
+    etape_clics_note: string;
+    etape_inscrits: string;
+    etape_clients: string;
+    des_clics: string;
+    des_inscrits: string;
+    taux_inconnu: string;
+    courbe_title: string;
+    courbe_body: string;
+    courbe_vide: string;
+    serie_clics: string;
+    serie_inscrits: string;
+    serie_ventes: string;
+    filleuls_title: string;
+    filleuls_body: string;
+    filleuls_vide: string;
+    col_date: string;
+    col_personne: string;
+    col_origine: string;
+    col_etat: string;
+    col_commission: string;
+    etat_inscrit: string;
+    etat_client: string;
+    etat_annule: string;
+    masque_note: string;
+  };
   liens: {
     page_title: string;
     page_subtitle: string;
@@ -274,6 +306,9 @@ export type AffiliateDict = {
     provenance_sources: string;
     provenance_canaux: string;
     provenance_canaux_vide: string;
+    lien_de_base: string;
+    lien_de_base_badge: string;
+    destination_retiree: string;
   };
   promouvoir: {
     page_title: string;
