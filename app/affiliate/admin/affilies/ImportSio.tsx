@@ -36,6 +36,10 @@ export interface AffilieInconnu {
   clics: number;
   contacts: number;
   dernier: string;
+  /** Un contact qu'il a amené. Sa fiche Systeme.io affiche la ligne
+   *  "Affilié", qui NOMME la personne : c'est le seul chemin qui
+   *  existe, leur API ne dit rien de l'affiliation. */
+  exemple: string | null;
 }
 
 export function ImportSio({
@@ -103,10 +107,11 @@ export function ImportSio({
               {inconnus.length > 1 ? "nt" : ""} du monde sans exister dans ton registre.
             </p>
             <p className="text-xs text-muted-foreground">
-              Ce sont eux à réunir en premier : tant qu&apos;ils n&apos;ont pas de ligne, aucune
-              commission ne peut leur être attribuée sur nos pages. Copie une ligne, ajoute son
-              adresse email à la suite, et colle le tout ci-dessous. Sur les {plafond} derniers
-              clics et contacts.
+              Ceux qui ont amené des contacts sont les seuls qui coûtent quelque chose
+              aujourd&apos;hui : les autres n&apos;ont fait que des clics, donc zéro commission
+              perdue tant qu&apos;ils n&apos;amènent personne. Pour savoir QUI est un identifiant,
+              ouvre le contact indiqué dans Systeme.io : sa fiche affiche la ligne
+              Affilié. Leur API ne dit rien de l&apos;affiliation, c&apos;est le seul chemin. Sur les {plafond} derniers clics et contacts.
             </p>
             <ul className="max-h-56 space-y-1 overflow-y-auto font-mono text-xs">
               {inconnus.map((i) => (
@@ -124,6 +129,11 @@ export function ImportSio({
                     {i.clics > 1 ? "s" : ""}
                     {i.dernier ? ` · dernier ${i.dernier.slice(0, 10)}` : ""}
                   </span>
+                  {i.exemple && (
+                    <span className="text-foreground">
+                      ouvrir chez Systeme.io le contact <strong>{i.exemple}</strong>
+                    </span>
+                  )}
                 </li>
               ))}
             </ul>
