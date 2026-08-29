@@ -43,6 +43,57 @@ export default async function AdminAffiliesPage() {
     .order("created_at", { ascending: false })
     .limit(500);
 
+  // ─── LES AFFILIÉS QU'ON VOIT TRAVAILLER SANS LES CONNAÎTRE ─────────
+  //
+  // Béné, 29 août : "je ne sais pas qui fait la promo de Tiquiz, sauf
+  // quand il apporte des contacts. On a rien qui permet de les
+  // reconnaître ?"
+  //
+  // Si : chaque clic et chaque conversion garde le `sa` qui l'a produit.
+  // La liste des affiliés actifs est donc DANS ses données, elle n'a
+  // jamais eu besoin d'un export Systeme.io. Il suffit de retirer ceux
+  // qu'on connaît déjà.
+  //
+  // On lit les lignes récentes plutôt qu'un agrégat SQL : ça évite une
+  // migration pour un écran d'admin, et le plafond est DIT à l'écran
+  // plutôt que de laisser croire à une liste complète.
+  const PLAFOND = 5000;
+  const [clicsRes, convRes] = await Promise.all([
+    supabaseAdmin
+      .from("affiliate_clicks")
+      .select("sa, created_at")
+      .order("created_at", { ascending: false })
+      .limit(PLAFOND),
+    supabaseAdmin
+      .from("affiliate_conversions")
+      .select("sa, created_at")
+      .order("created_at", { ascending: false })
+      .limit(PLAFOND),
+  ]);
+
+  const connus = new Set((affs ?? []).map((a) => String((a as { sa: string }).sa)));
+  const activite = new Map<string, { clics: number; contacts: number; dernier: string }>();
+  const compter = (lignes: unknown[], champ: "clics" | "contacts") => {
+    for (const l of (lignes ?? []) as { sa?: string | null; created_at?: string }[]) {
+      const sa = String(l.sa ?? "").trim();
+      if (!sa || connus.has(sa)) continue;
+      const e = activite.get(sa) ?? { clics: 0, contacts: 0, dernier: "" };
+      e[champ] += 1;
+      if ((l.created_at ?? "") > e.dernier) e.dernier = l.created_at ?? "";
+      activite.set(sa, e);
+    }
+  };
+  compter(clicsRes.data ?? [], "clics");
+  compter(convRes.data ?? [], "contacts");
+
+  // Les contacts d'abord : un affilié qui AMÈNE des gens compte plus
+  // qu'un qui fait cliquer. C'est celui là qu'elle a intérêt à réunir
+  // en premier.
+  const inconnus = [...activite.entries()]
+    .map(([sa, e]) => ({ sa, ...e }))
+    .sort((a, b) => b.contacts - a.contacts || b.clics - a.clics)
+    .slice(0, 100);
+
   if (errAffs) {
     return (
       <main className="space-y-4">
@@ -130,7 +181,7 @@ export default async function AdminAffiliesPage() {
         </div>
       </div>
 
-      <ImportSio />
+      <ImportSio inconnus={inconnus} plafond={PLAFOND} />
 
       {panneCodes && (
         <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-100">

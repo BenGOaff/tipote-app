@@ -30,7 +30,21 @@ const RAISONS: Record<string, string> = {
   doublon: "identifiant déjà présent plus haut dans la liste",
 };
 
-export function ImportSio() {
+/** Un `sa` vu à l'oeuvre dans nos données, absent du registre. */
+export interface AffilieInconnu {
+  sa: string;
+  clics: number;
+  contacts: number;
+  dernier: string;
+}
+
+export function ImportSio({
+  inconnus,
+  plafond,
+}: {
+  inconnus: AffilieInconnu[];
+  plafond: number;
+}) {
   const [liste, setListe] = useState("");
   const [apercu, setApercu] = useState<Apercu | null>(null);
   const [resultat, setResultat] = useState<Resultat | null>(null);
@@ -77,6 +91,44 @@ export function ImportSio() {
             liens <code>?sa=</code> le désignent lui.
           </p>
         </div>
+
+        {/* CE QU'ON SAIT DÉJÀ, AVANT DE LUI DEMANDER QUOI QUE CE SOIT.
+            Chaque clic et chaque conversion garde le `sa` qui l'a
+            produit : la liste des affiliés actifs est dans SES données,
+            elle n'a jamais eu besoin d'un export Systeme.io. */}
+        {inconnus.length > 0 && (
+          <div className="space-y-2 rounded-lg border border-amber-300/50 bg-amber-50 p-3 dark:bg-amber-950/20">
+            <p className="text-sm font-medium">
+              {inconnus.length} identifiant{inconnus.length > 1 ? "s" : ""} t&apos;amène
+              {inconnus.length > 1 ? "nt" : ""} du monde sans exister dans ton registre.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Ce sont eux à réunir en premier : tant qu&apos;ils n&apos;ont pas de ligne, aucune
+              commission ne peut leur être attribuée sur nos pages. Copie une ligne, ajoute son
+              adresse email à la suite, et colle le tout ci-dessous. Sur les {plafond} derniers
+              clics et contacts.
+            </p>
+            <ul className="max-h-56 space-y-1 overflow-y-auto font-mono text-xs">
+              {inconnus.map((i) => (
+                <li key={i.sa} className="flex flex-wrap items-baseline gap-x-3">
+                  <button
+                    type="button"
+                    onClick={() => setListe((l) => (l ? `${l}\n${i.sa};` : `${i.sa};`))}
+                    className="text-primary underline underline-offset-2"
+                    title="Ajouter à la liste ci-dessous"
+                  >
+                    {i.sa}
+                  </button>
+                  <span className="text-muted-foreground">
+                    {i.contacts} contact{i.contacts > 1 ? "s" : ""} · {i.clics} clic
+                    {i.clics > 1 ? "s" : ""}
+                    {i.dernier ? ` · dernier ${i.dernier.slice(0, 10)}` : ""}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <textarea
           value={liste}
