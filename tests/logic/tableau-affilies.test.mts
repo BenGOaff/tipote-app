@@ -48,7 +48,7 @@ function base(sur: Partial<Parameters<typeof construireTableauAffilies>[0]> = {}
   return construireTableauAffilies({
     affilies: [ERIC],
     alias: new Map(),
-    clics: [],
+    clicsParSa: new Map(),
     conversions: [],
     commissions: [],
     maintenant: MAINTENANT,
@@ -63,7 +63,7 @@ test("UN ANCIEN IDENTIFIANT COMPTE POUR SON PROPRIÉTAIRE", () => {
   // exactement le problème qu'on venait de fermer.
   const [l] = base({
     alias: new Map([[ANCIEN_ERIC, ERIC.sa]]),
-    clics: [{ sa: ANCIEN_ERIC }, { sa: ANCIEN_ERIC }, { sa: ERIC.sa }],
+    clicsParSa: new Map([[ANCIEN_ERIC, 2], [ERIC.sa, 1]]),
     conversions: [{ sa: ANCIEN_ERIC, email: "client@exemple.fr" }],
   });
   assert.equal(l.clics, 3);
@@ -173,7 +173,7 @@ test("CELUI QUI TRAVAILLE LE PLUS EST EN HAUT", () => {
       { sa: "sa0bb11223344556677889900aabbccddeeff", email: "gros@x.fr" },
     ],
     alias: new Map(),
-    clics: [],
+    clicsParSa: new Map(),
     conversions: [],
     commissions: [
       commission({ id: "g", sa: "sa0bb11223344556677889900aabbccddeeff", status: "paid", commission_cents: 9000 }),
@@ -182,4 +182,55 @@ test("CELUI QUI TRAVAILLE LE PLUS EST EN HAUT", () => {
     maintenant: MAINTENANT,
   });
   assert.equal(trierAffilies(lignes)[0].email, "gros@x.fr");
+});
+
+test("UN TAUX SUR TROIS CLICS N'EST PAS UN TAUX", () => {
+  // Il ferait conclure "cet affilié ne convertit pas" sur une personne.
+  // Même leçon que le seuil d'échantillon du funnel : la retenue se
+  // calcule, elle ne se demande pas.
+  const [petit] = base({ clicsParSa: new Map([[ERIC.sa, 3]]) });
+  assert.equal(petit.tauxInscription, null);
+
+  const [gros] = base({
+    clicsParSa: new Map([[ERIC.sa, 100]]),
+    conversions: Array.from({ length: 12 }, (_, i) => ({
+      sa: ERIC.sa,
+      email: `c${i}@x.fr`,
+    })),
+  });
+  assert.equal(gros.tauxInscription, 12);
+});
+
+test("le taux de VENTE attend d'avoir assez d'inscrits", () => {
+  const [peu] = base({
+    conversions: [{ sa: ERIC.sa, email: "a@x.fr" }],
+    commissions: [commission({ status: "paid" })],
+  });
+  assert.equal(peu.tauxVente, null);
+
+  const [assez] = base({
+    conversions: Array.from({ length: 20 }, (_, i) => ({ sa: ERIC.sa, email: `c${i}@x.fr` })),
+    commissions: [
+      commission({ id: "a", status: "paid" }),
+      commission({ id: "b", status: "paid" }),
+    ],
+  });
+  assert.equal(assez.tauxVente, 10);
+});
+
+test("les ventes ANNULÉES ne comptent pas dans son nombre de ventes", () => {
+  const [l] = base({
+    commissions: [
+      commission({ id: "ok", status: "paid" }),
+      commission({ id: "ko", status: "cancelled" }),
+    ],
+  });
+  assert.equal(l.ventes, 1);
+});
+
+test("LES CLICS NE SONT PAS PLAFONNÉS : ils arrivent déjà comptés", () => {
+  // Compter des clics en lisant les lignes impose un plafond, et un
+  // plafond sur un compteur donne un chiffre faux qui a l'air juste.
+  const [l] = base({ clicsParSa: new Map([[ERIC.sa, 48213]]) });
+  assert.equal(l.clics, 48213);
 });
