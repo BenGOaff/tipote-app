@@ -234,6 +234,37 @@ async function findRecentConversion(email: string): Promise<{ id: string; sa: st
   return (data as { id: string; sa: string } | null) ?? null;
 }
 
+/**
+ * L'affilié d'un `sa`, ou `null` s'il n'existe pas dans le registre.
+ *
+ * DEUX LISTES DE COLONNES : PostgREST rejette la requête ENTIÈRE sur une
+ * colonne inconnue, et ici l'échec ne serait pas un écran vide, ce
+ * serait une commission jamais créée.
+ */
+async function lireAffilie(sa: string): Promise<{
+  sa: string;
+  email: string;
+  status: string;
+  recompense_commission_pct?: number | null;
+} | null> {
+  const { data: affRow } = await supabaseAdmin
+    .from("affiliates")
+    .select(AFF_COLS_NEW)
+    .eq("sa", sa)
+    .maybeSingle();
+  const affLu = affRow
+    ? affRow
+    : (
+        await supabaseAdmin.from("affiliates").select(AFF_COLS).eq("sa", sa).maybeSingle()
+      ).data;
+  return (affLu as unknown as {
+    sa: string;
+    email: string;
+    status: string;
+    recompense_commission_pct?: number | null;
+  } | null) ?? null;
+}
+
 export async function attributeSale(input: AttributeSaleInput): Promise<AttributeSaleResult> {
   try {
     const email = input.customer_email.trim().toLowerCase();
@@ -247,34 +278,52 @@ export async function attributeSale(input: AttributeSaleInput): Promise<Attribut
     // depuis le 24 août), le `sa` ensuite (anciens liens Systeme.io).
     const saDuRef = await saDepuisRef(input.ref_hint);
     const saHint = (input.sa_hint ?? "").trim();
-    const sa = conversion?.sa ?? saDuRef ?? (saHint || null);
-    if (!sa) return { status: "no_affiliate_match" };
 
-    // Vérifie que l'affilié existe dans notre registre (sinon refuse
-    // — un sa valide format mais inconnu = lien forgé ou ex-affilié banni).
-    const { data: affRow } = await supabaseAdmin
-      .from("affiliates")
-      // DEUX LISTES DE COLONNES : PostgREST rejette la requête ENTIÈRE
-      // sur une colonne inconnue, et ici l'échec ne serait pas un écran
-      // vide, ce serait une commission jamais créée.
-      .select(AFF_COLS_NEW)
-      .eq("sa", sa)
-      .maybeSingle();
-    const affLu = affRow
-      ? affRow
-      : (
-          await supabaseAdmin
-            .from("affiliates")
-            .select(AFF_COLS)
-            .eq("sa", sa)
-            .maybeSingle()
-        ).data;
-    const aff = affLu as unknown as {
+    // UN RATTACHEMENT QUI NE DÉSIGNE PERSONNE N'EST PAS UN RATTACHEMENT
+    // (trouvé sur un test de Béné, 29 août 2026).
+    //
+    // La cascade était `conversion ?? ref ?? sa`, puis un seul contrôle
+    // de registre. Donc une conversion pointant vers un `sa` INCONNU
+    // gagnait, échouait au contrôle, et n'essayait JAMAIS le `?ref=` qui
+    // suivait. Le rattachement périmé ne se contentait pas de ne rien
+    // payer : il EMPÊCHAIT le bon candidat de payer.
+    //
+    // Le cas réel : une conversion écrite avec `sa0134…`, absent de la
+    // table `affiliates`. Cette adresse ne pouvait plus JAMAIS être
+    // attribuée à personne, quel que soit le lien emprunté ensuite.
+    //
+    // On essaie donc les candidats DANS L'ORDRE, et on passe au suivant
+    // seulement quand le précédent ne désigne personne du tout.
+    //
+    // ATTENTION à la nuance, elle vaut de l'argent : un affilié
+    // `paused` ou `banned` EXISTE. Son rattachement est réel, il est
+    // simplement sans commission (règle du 26 août). Passer au candidat
+    // suivant dans ce cas paierait quelqu'un d'AUTRE à sa place. On ne
+    // saute que l'INTROUVABLE.
+    const candidats = [conversion?.sa, saDuRef, saHint || null];
+    let sa: string | null = null;
+    let aff: {
       sa: string;
       email: string;
       status: string;
       recompense_commission_pct?: number | null;
-    } | null;
+    } | null = null;
+
+    for (const candidat of candidats) {
+      if (!candidat) continue;
+      const lu = await lireAffilie(candidat);
+      if (!lu) {
+        console.log(
+          `[affiliate/attribution] candidat inconnu, on passe au suivant : sa=${candidat}`,
+        );
+        continue;
+      }
+      sa = candidat;
+      aff = lu;
+      break;
+    }
+
+    if (!sa) return { status: "no_affiliate_match" };
     if (!aff || aff.status !== "active") {
       return { status: "affiliate_not_registered", sa };
     }
