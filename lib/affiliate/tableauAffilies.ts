@@ -54,6 +54,18 @@ export interface LigneAffilie {
   clics: number;
   /** Les personnes qu'il a amenées, comptées une seule fois. */
   filleuls: number;
+  /** Ses ventes commissionnées, annulées exclues. */
+  ventes: number;
+  /**
+   * Sur 100 clics, combien s'inscrivent. `null` sous 30 clics.
+   *
+   * UN TAUX SUR TROIS CLICS N'EST PAS UN TAUX, c'est du bruit qui a
+   * l'air d'un diagnostic (même leçon que le seuil d'échantillon du
+   * funnel, 4 août). Mieux vaut ne rien afficher que faire conclure.
+   */
+  tauxInscription: number | null;
+  /** Sur 100 inscrits, combien achètent. `null` sous 10 inscrits. */
+  tauxVente: number | null;
   verseesCents: number;
   aVerserCents: number;
   sousGarantieCents: number;
@@ -62,6 +74,23 @@ export interface LigneAffilie {
   autresDevises: number;
   /** La date de sa dernière vente commissionnée. */
   derniereVente: string | null;
+}
+
+/**
+ * SOUS CES SEUILS, ON N'AFFICHE PAS DE TAUX.
+ *
+ * Un taux sur trois clics n'est pas un taux : c'est du bruit qui a
+ * l'air d'un diagnostic, et il ferait conclure "cet affilié ne convertit
+ * pas" sur une personne. Même leçon que le seuil d'échantillon du
+ * funnel (drame Jocelyne, 4 août) : la retenue se calcule, elle ne se
+ * demande pas.
+ */
+export const MIN_CLICS = 30;
+export const MIN_FILLEULS = 10;
+
+function taux(numerateur: number, denominateur: number, minimum: number): number | null {
+  if (denominateur < minimum) return null;
+  return Math.round((numerateur / denominateur) * 1000) / 10;
 }
 
 export interface EntreeAffilie {
@@ -82,7 +111,14 @@ export interface EntreeAffilie {
 export function construireTableauAffilies(args: {
   affilies: readonly EntreeAffilie[];
   alias: ReadonlyMap<string, string>;
-  clics: readonly { sa: string }[];
+  /**
+   * Le nombre de clics par identifiant, DÉJÀ agrégé.
+   *
+   * Une Map et pas une liste de lignes : compter des clics en lisant
+   * les lignes impose un plafond, et un plafond sur un compteur donne
+   * un chiffre faux qui a l'air juste. L'agrégation se fait en base.
+   */
+  clicsParSa: ReadonlyMap<string, number>;
   conversions: readonly { sa: string; email?: string | null }[];
   commissions: readonly CommissionAVerser[];
   maintenant: number;
@@ -95,10 +131,10 @@ export function construireTableauAffilies(args: {
   const connus = new Set(args.affilies.map((a) => a.sa));
 
   const clics = new Map<string, number>();
-  for (const c of args.clics) {
-    const sa = resoudre(c.sa);
+  for (const [brut, n] of args.clicsParSa) {
+    const sa = resoudre(brut);
     if (!connus.has(sa)) continue;
-    clics.set(sa, (clics.get(sa) ?? 0) + 1);
+    clics.set(sa, (clics.get(sa) ?? 0) + (Number(n) || 0));
   }
 
   // Les filleuls se comptent par ADRESSE, pas par ligne : la même
@@ -114,16 +150,26 @@ export function construireTableauAffilies(args: {
     filleuls.set(sa, vus);
   }
 
-  const argent = new Map<string, Omit<LigneAffilie, keyof EntreeAffilie | "alias" | "clics" | "filleuls" | "nom" | "statut">>();
-  const vide = () => ({
-    sa: "",
-    ref: null as string | null,
-    email: "",
+  /** Ce que les commissions apportent à une ligne. Nommé, pas déduit :
+      un type calculé par soustraction se casse au premier champ ajouté,
+      et il vient de le faire. */
+  type Argent = {
+    verseesCents: number;
+    aVerserCents: number;
+    sousGarantieCents: number;
+    annuleesCents: number;
+    autresDevises: number;
+    ventes: number;
+    derniereVente: string | null;
+  };
+  const argent = new Map<string, Argent>();
+  const vide = (): Argent => ({
     verseesCents: 0,
     aVerserCents: 0,
     sousGarantieCents: 0,
     annuleesCents: 0,
     autresDevises: 0,
+    ventes: 0,
     derniereVente: null as string | null,
   });
 
@@ -144,7 +190,10 @@ export function construireTableauAffilies(args: {
       if (t > actuelle) l.derniereVente = c.sale_at;
     }
 
-    if (c.cancelled_at || statut === "cancelled" || statut === "rejected") {
+    const annulee = Boolean(c.cancelled_at) || statut === "cancelled" || statut === "rejected";
+    if (!annulee) l.ventes += 1;
+
+    if (annulee) {
       l.annuleesCents += devise === "EUR" ? cents : 0;
       if (devise !== "EUR") l.autresDevises += 1;
     } else if (devise !== "EUR") {
@@ -176,6 +225,9 @@ export function construireTableauAffilies(args: {
       alias: [...args.alias.entries()].filter(([, vers]) => vers === a.sa).map(([old]) => old),
       clics: clics.get(a.sa) ?? 0,
       filleuls: filleuls.get(a.sa)?.size ?? 0,
+      ventes: l.ventes,
+      tauxInscription: taux(filleuls.get(a.sa)?.size ?? 0, clics.get(a.sa) ?? 0, MIN_CLICS),
+      tauxVente: taux(l.ventes, filleuls.get(a.sa)?.size ?? 0, MIN_FILLEULS),
       verseesCents: l.verseesCents,
       aVerserCents: l.aVerserCents,
       sousGarantieCents: l.sousGarantieCents,
