@@ -19,25 +19,28 @@ import { Button } from "@/components/ui/button";
 import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard";
 import { toast } from "sonner";
 import type { RegistrarId, RegistrarInfo } from "@/lib/registrarDetect";
+import { enregistrementPour } from "@/lib/dns/enregistrement";
 
 type Props = {
   hostname: string;
   cnameTarget: string; // e.g. "connect.tipote.com"
+  ipTarget: string; // e.g. "82.25.115.166", la seule voie à la racine
   registrar: RegistrarInfo;
 };
 
-// Splits "blog.alice-business.com" → { name: "blog", root: "alice-business.com" }
-// so we can show "Create a CNAME called 'blog' on alice-business.com".
-function splitHostname(hostname: string): { name: string; root: string } {
-  const labels = hostname.split(".");
-  if (labels.length <= 2) {
-    return { name: "@", root: hostname };
-  }
-  return {
-    name: labels.slice(0, -2).join("."),
-    root: labels.slice(-2).join("."),
-  };
-}
+// LE NOM DU CHAMP EST CELUI QU'IL VOIT À L'ÉCRAN (Béné, 29 août 2026).
+//
+// "Sur OVH c'est différent, il faut mettre sous domaine + cible, et pas
+// type nom cible, sinon mes users pas dégourdis sont paumés."
+//
+// Elle a raison, et c'est vérifiable sur sa capture : le formulaire OVH
+// intitule ses champs "Sous-domaine" et "Cible (nom d'hôte)". Quelqu'un
+// qui cherche un champ "Nom" ne le trouve pas, et conclut qu'il n'est
+// pas au bon endroit. On affiche donc le mot de SON hébergeur quand on
+// le connaît, et le mot générique sinon.
+const CHAMP_NOM_PAR_REGISTRAR: Partial<Record<RegistrarId, string>> = {
+  ovh: "dnsFieldNameSubdomain",
+};
 
 // Registrar-specific UI labels that drift over time but rarely break
 // fundamentally. Translation keys cover the verbs, this map covers
@@ -81,10 +84,22 @@ const STEPS_BY_REGISTRAR: Partial<Record<RegistrarId, ReadonlyArray<string>>> = 
   ],
 };
 
-export function RegistrarInstructions({ hostname, cnameTarget, registrar }: Props) {
+export function RegistrarInstructions({
+  hostname,
+  cnameTarget,
+  ipTarget,
+  registrar,
+}: Props) {
   const t = useTranslations("settings");
-  const { name, root } = splitHostname(hostname);
-  const stepKeys = STEPS_BY_REGISTRAR[registrar.id];
+  // La décision vit dans lib/dns/enregistrement.ts : à la RACINE d'un
+  // domaine, un CNAME est refusé par l'hébergeur, et le contrôle
+  // serveur accepte déjà l'enregistrement A. Recalculer ça ici ferait
+  // mentir l'écran, comme quatre fois avant lui.
+  const dns = enregistrementPour(hostname, { cname: cnameTarget, ip: ipTarget });
+  const name = dns.nom;
+  const root = dns.racine;
+  const stepKeys = dns.apex ? undefined : STEPS_BY_REGISTRAR[registrar.id];
+  const labelNom = t(CHAMP_NOM_PAR_REGISTRAR[registrar.id] ?? "dnsFieldName");
 
   return (
     <div className="space-y-4">
@@ -120,12 +135,12 @@ export function RegistrarInstructions({ hostname, cnameTarget, registrar }: Prop
             {t("dnsFieldType")}
           </span>
           <code className="bg-background rounded px-2 py-1 inline-block w-fit">
-            CNAME
+            {dns.forme === "a" ? "A" : "CNAME"}
           </code>
           <span />
 
           <span className="text-muted-foreground font-sans text-xs">
-            {t("dnsFieldName")}
+            {labelNom}
           </span>
           <CopyableField value={name} />
           <span />
@@ -133,10 +148,28 @@ export function RegistrarInstructions({ hostname, cnameTarget, registrar }: Prop
           <span className="text-muted-foreground font-sans text-xs">
             {t("dnsFieldTarget")}
           </span>
-          <CopyableField value={cnameTarget} />
+          <CopyableField value={dns.cible} />
           <span />
         </div>
       </div>
+
+      {/* À LA RACINE, ON DIT POURQUOI CE N'EST PAS UN CNAME.
+          Sans cette phrase, quelqu'un qui a lu ailleurs qu'il faut un
+          CNAME croit qu'on s'est trompé, et va se battre avec son
+          hébergeur qui refuse. Et on propose le sous-domaine, qui est
+          la MEILLEURE configuration : un CNAME désigne notre hôte par
+          son nom, donc il reste juste le jour où le serveur change
+          d'adresse. */}
+      {dns.apex && (
+        <div className="rounded-lg border border-amber-300/50 bg-amber-50 p-4 text-sm dark:bg-amber-950/20">
+          <p>{t("dnsApexWhy")}</p>
+          {dns.suggestion && (
+            <p className="mt-2">
+              {t("dnsApexPrefer", { suggestion: dns.suggestion })}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Step-by-step. Generic fallback if we don't recognise the
           registrar — still beats "good luck". */}
@@ -149,7 +182,12 @@ export function RegistrarInstructions({ hostname, cnameTarget, registrar }: Prop
           <>
             <li>{t("registrarSteps.generic.s1", { root })}</li>
             <li>{t("registrarSteps.generic.s2")}</li>
-            <li>{t("registrarSteps.generic.s3", { name, cnameTarget })}</li>
+            <li>
+              {t(dns.apex ? "registrarSteps.generic.s3Apex" : "registrarSteps.generic.s3", {
+                name,
+                cnameTarget: dns.cible,
+              })}
+            </li>
             <li>{t("registrarSteps.generic.s4")}</li>
           </>
         )}

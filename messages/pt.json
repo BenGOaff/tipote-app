@@ -445,7 +445,8 @@
         "s1": "Abra a gestão DNS de {root} no painel do seu registo.",
         "s2": "Encontre a opção para adicionar um novo registo DNS.",
         "s3": "Crie um CNAME com Name = \"{name}\" e Target/Value = \"{cnameTarget}\".",
-        "s4": "Guarde o registo. Vamos detetar a alteração automaticamente."
+        "s4": "Guarde o registo. Vamos detetar a alteração automaticamente.",
+        "s3Apex": "Cria um registo A com Nome = \"{name}\" e Valor = \"{cnameTarget}\"."
       }
     },
     "domainPollingProgress": "A verificar DNS… ({n}/{total})",
@@ -476,7 +477,10 @@
     "faviconRemoveBtn": "Remover",
     "faviconUploaded": "Favicon carregado",
     "errFaviconUpload": "Erro ao carregar o favicon: {msg}",
-    "errImageTooLarge2": "Imagem demasiado grande (máx. 5 MB)."
+    "errImageTooLarge2": "Imagem demasiado grande (máx. 5 MB).",
+    "dnsFieldNameSubdomain": "Subdomínio",
+    "dnsApexWhy": "Trata-se da raiz do teu domínio, e aí todos os fornecedores recusam um CNAME: um registo A é a única via possível. Não é um erro nosso, o teu fornecedor vai dizer o mesmo.",
+    "dnsApexPrefer": "Um subdomínio é mais sólido: em {suggestion}, um CNAME aponta para o nosso servidor pelo nome, por isso a configuração continua correta mesmo que o nosso endereço mude um dia. Remove este domínio e adiciona antes {suggestion}."
   },
   "common": {
     "save": "Guardar",
