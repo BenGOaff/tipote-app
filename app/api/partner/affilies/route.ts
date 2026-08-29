@@ -62,7 +62,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       supabaseAdmin.from("affiliate_conversions").select("sa, email").limit(20000),
       supabaseAdmin
         .from("affiliate_commissions")
-        .select("id, sa, status, commission_cents, currency, sale_at, cancelled_at, payout_id")
+        .select("id, sa, status, commission_cents, currency, sale_at, cancelled_at, payout_id, customer_email")
         .order("sale_at", { ascending: false })
         .limit(20000),
     ]);
@@ -92,9 +92,26 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       }),
     );
 
+    // QUI A AMENÉ QUEL CLIENT. La console des ventes en a besoin pour
+    // répondre à "via qui" : sans ça, la colonne resterait vide alors
+    // que l'information existe, simplement pas du bon côté.
+    //
+    // On rend une adresse et un PRÉNOM, jamais le reste de la fiche :
+    // un point d'entrée interne qui rend plus que nécessaire finit par
+    // être appelé pour autre chose.
+    const nomParSa = new Map(lignes.map((l) => [l.sa, l.nom ?? l.ref ?? null]));
+    const attributions: Record<string, string> = {};
+    for (const c of ((commRes.data as { sa: string; customer_email?: string | null }[] | null) ?? [])) {
+      const email = String(c.customer_email ?? "").trim().toLowerCase();
+      if (!email || attributions[email]) continue;
+      const nom = nomParSa.get(alias.get(c.sa) ?? c.sa);
+      if (nom) attributions[email] = nom;
+    }
+
     return NextResponse.json({
       ok: true,
       lignes,
+      attributions,
       // CE QU'ON N'A PAS PU LIRE SE DIT. Un écran qui affiche zéro clic
       // parce qu'une vue manque est indiscernable d'un affilié qui n'a
       // rien fait.
