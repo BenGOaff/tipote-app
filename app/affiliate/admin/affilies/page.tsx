@@ -23,6 +23,7 @@ import { ShieldCheck } from "lucide-react";
 import { getAffiliateAdmin } from "@/lib/affiliate/admin";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { AffiliesAdminTable, type LigneAffilie } from "./AffiliesAdminTable";
+import { ImportSio } from "./ImportSio";
 
 export const dynamic = "force-dynamic";
 
@@ -128,6 +129,8 @@ export default async function AdminAffiliesPage() {
           </p>
         </div>
       </div>
+
+      <ImportSio />
 
       {panneCodes && (
         <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
