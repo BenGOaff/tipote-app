@@ -84,6 +84,19 @@ test("le rattachement ne fait jamais échouer la commission", () => {
 test("la conversion passe AVANT le lien de l'URL", () => {
   // "Le PREMIER rattachement gagne" : un cookie plus récent ne peut pas
   // reprendre un filleul à celui qui l'a amené.
-  const ordre = SOURCE.indexOf("conversion?.sa ?? saDuRef");
-  assert.ok(ordre > 0, "l'ordre de résolution doit rester conversion -> ref -> sa");
+  //
+  // Ce test épinglait l'EXPRESSION `conversion?.sa ?? saDuRef`. Le 29
+  // août, la cascade est devenue une liste de candidats essayés à tour
+  // de rôle (un rattachement vers un `sa` inconnu bloquait tout le
+  // reste). La RÈGLE n'a pas bougé, seule son écriture : un test qui
+  // fige une syntaxe rougit sur une correction légitime et finit par
+  // être contourné au lieu d'être lu.
+  const liste = SOURCE.match(/const candidats = \[([^\]]+)\]/);
+  assert.ok(liste, "la liste des candidats est introuvable");
+  const ordre = liste![1].split(",").map((c) => c.trim());
+  assert.deepEqual(
+    ordre,
+    ["conversion?.sa", "saDuRef", "saHint || null"],
+    "l'ordre de résolution doit rester conversion -> ref -> sa",
+  );
 });
