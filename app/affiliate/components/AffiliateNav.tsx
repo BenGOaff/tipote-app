@@ -7,7 +7,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, Megaphone, Wallet, CreditCard, HelpCircle, LogOut, Gift } from "lucide-react";
+import { LayoutDashboard, Megaphone, Wallet, CreditCard, HelpCircle, LogOut, Gift, BarChart3, Link2 } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { Button } from "@/components/ui/button";
 import { useDict } from "../i18n/context";
@@ -15,13 +15,20 @@ import { LocaleSwitcher } from "./LocaleSwitcher";
 
 type NavItem = {
   href: string;
-  key: "overview" | "promouvoir" | "trial" | "revenus" | "paiement" | "support";
+  key: "overview" | "promouvoir" | "stats" | "liens" | "trial" | "revenus" | "paiement" | "support";
   icon: React.ComponentType<{ className?: string }>;
 };
 
+// MES STATISTIQUES ET MES LIENS SONT DANS LE MENU.
+//
+// `/liens` existait depuis le 24 août et n'était atteignable que par un
+// bouton posé sur une autre page : une page qu'on ne montre pas
+// n'existe pas pour celui qui l'utilise (leçon Jocelyne du 3 août).
 const NAV: NavItem[] = [
   { href: "/", key: "overview", icon: LayoutDashboard },
   { href: "/promouvoir", key: "promouvoir", icon: Megaphone },
+  { href: "/statistiques", key: "stats", icon: BarChart3 },
+  { href: "/liens", key: "liens", icon: Link2 },
   { href: "/trial-tiquiz", key: "trial", icon: Gift },
   { href: "/revenus", key: "revenus", icon: Wallet },
   { href: "/paiement", key: "paiement", icon: CreditCard },

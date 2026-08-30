@@ -81,10 +81,27 @@ export default function MesLiensTable({ liens }: { liens: LienAffiche[] }) {
             <tbody>
               {liens.map((lien) => (
                 <tr key={lien.id} className="border-b last:border-0">
-                  <td className="px-4 py-3 font-semibold">{lien.nom}</td>
+                  <td className="px-4 py-3 font-semibold">
+                    {lien.nom}
+                    {lien.parDefaut ? (
+                      <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                        {l.lien_de_base_badge}
+                      </span>
+                    ) : null}
+                    {!lien.destinationConnue ? (
+                      <p className="mt-0.5 text-xs font-normal text-muted-foreground">
+                        {l.destination_retiree}
+                      </p>
+                    ) : null}
+                  </td>
                   <td className="px-4 py-3">
+                    {/* LE LIEN DE BASE N'A PAS DE LIEN COURT : il n'est
+                        jamais passé par le redirecteur, il n'a donc
+                        aucun code à raccourcir. On montre le lien
+                        qu'elle partage vraiment plutôt qu'une adresse
+                        inventée qui ne répondrait pas. */}
                     <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
-                      {lien.urlCourte.replace(/^https?:\/\//, "")}
+                      {(lien.urlCourte ?? lien.url).replace(/^https?:\/\//, "")}
                     </code>
                   </td>
                   <td className="px-4 py-3 text-right tabular-nums">{lien.clics}</td>
@@ -95,7 +112,9 @@ export default function MesLiensTable({ liens }: { liens: LienAffiche[] }) {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-0.5">
-                      <Copier url={lien.urlCourte} titre={l.copy_short} />
+                      {lien.urlCourte ? (
+                        <Copier url={lien.urlCourte ?? lien.url} titre={l.copy_short} />
+                      ) : null}
                       <Copier url={lien.url} titre={l.copy_long} />
                       <a
                         href={lien.url}
@@ -125,11 +144,18 @@ export default function MesLiensTable({ liens }: { liens: LienAffiche[] }) {
           <Card key={lien.id}>
             <CardContent className="space-y-3 py-4">
               <div className="flex items-start justify-between gap-2">
-                <p className="font-semibold">{lien.nom}</p>
+                <p className="font-semibold">
+                  {lien.nom}
+                  {lien.parDefaut ? (
+                    <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                      {l.lien_de_base_badge}
+                    </span>
+                  ) : null}
+                </p>
                 <p className="shrink-0 font-semibold tabular-nums">{euros(lien.commissionsCents)}</p>
               </div>
               <code className="block break-all rounded bg-muted px-2 py-1 text-xs">
-                {lien.urlCourte.replace(/^https?:\/\//, "")}
+                {(lien.urlCourte ?? lien.url).replace(/^https?:\/\//, "")}
               </code>
               <div className="flex items-center justify-between">
                 <div className="flex gap-4 text-xs text-muted-foreground">
@@ -146,7 +172,7 @@ export default function MesLiensTable({ liens }: { liens: LienAffiche[] }) {
                   </span>
                 </div>
                 <div className="flex items-center gap-0.5">
-                  <Copier url={lien.urlCourte} titre={l.copy_short} />
+                  <Copier url={lien.urlCourte ?? lien.url} titre={l.copy_short} />
                   <a
                     href={lien.url}
                     target="_blank"
