@@ -325,7 +325,7 @@ export const EN: AffiliateDict = {
     tab_emails: "Emails",
     tab_posts: "Social",
     tab_visuels: "Visuals",
-    links_info: "💡 You can also add ?ref={ref} to the end of any tipote.fr or tipote.blog URL (except bare tipote.fr/tiquiz which is NOT affiliate-tagged). For example, promote a specific blog post: the commission goes to you if the visitor buys within 12 months.",
+    links_info: "💡 Your code works on OUR domains: add ?ref={ref} to the end of any tiquiz.fr or atelierduquiz.fr URL, including a blog post. On the old tipote.fr pages only a ?sa= link works: a ?ref= added there credits you with NOTHING. When in doubt, use the links from the My links tab: those also count your clicks.",
     canal_title: "Know which channel works",
     canal_info: "Add &sc= followed by any name at the end of any link to see where your clicks come from: ?ref={ref}&sc=youtube, &sc=newsletter, &sc=tuesday-story. The name is yours to choose, you are the one reading it in your stats. Without it the click still counts and your commission is the same: the channel is only there to compare what works.",
     emails_info_title: "📧 Evergreen email sequence - 8 emails",

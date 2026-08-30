@@ -325,7 +325,7 @@ export const PT: AffiliateDict = {
     tab_emails: "Emails",
     tab_posts: "Redes",
     tab_visuels: "Visuais",
-    links_info: "💡 Também podes acrescentar ?ref={ref} ao fim de qualquer URL tipote.fr ou tipote.blog (exceto tipote.fr/tiquiz sozinho, que NÃO está configurado para afiliação). Por exemplo, promove um artigo do blogue: a comissão é tua se o visitante comprar em 12 meses.",
+    links_info: "💡 O teu código funciona nos NOSSOS domínios: acrescenta ?ref={ref} ao fim de qualquer URL tiquiz.fr ou atelierduquiz.fr, incluindo um artigo do blog. Nas antigas páginas tipote.fr só funciona um link ?sa=: um ?ref= acrescentado lá não te atribui NADA. Na dúvida, usa os links do separador Os meus links: esses também contam os teus cliques.",
     canal_title: "Saber que canal funciona",
     canal_info: "Acrescenta &sc= seguido do nome que quiseres no fim de qualquer link para saber de onde vêm os teus cliques: ?ref={ref}&sc=youtube, &sc=newsletter, &sc=story-terca. O nome é à tua escolha, és tu que o lês nas tuas estatísticas. Sem ele o clique conta na mesma e a comissão é a mesma: o canal serve só para comparar o que funciona.",
     emails_info_title: "📧 Sequência de emails evergreen - 8 emails",

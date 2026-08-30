@@ -16,6 +16,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { lireCoordonnees, peutEtrePayee } from "../../lib/affiliate/coordonnees.ts";
+import { tauxCommissionPct } from "../../lib/affiliate/recompense.ts";
 
 const LANGUES = ["fr", "en", "es", "it", "pt", "ar"];
 
@@ -95,4 +96,51 @@ test("la case et le lot de versement appliquent LA MEME regle", () => {
     iban_number: null,
   });
   assert.equal(peutEtrePayee(ibanManquant), false);
+});
+
+// --- 3. `?ref=` SUR UNE URL tipote.fr NE PAIE RIEN -------------------
+
+test("le guide n'envoie plus poser ?ref= sur les pages Systeme.io", () => {
+  // Verifie le 30 aout : `/api/affiliate/track` n'accepte que `sa`
+  // (`isValidSa`, refus `invalid_sa`), et le script pose sur ses pages
+  // Systeme.io ne lit que `?sa=` (cookie `tipote_sa`). Un `?ref=`
+  // ajoute a une URL tipote.fr ne pose AUCUN cookie et n'attribue
+  // AUCUNE vente. Le conseil disait l'inverse, dans les 6 langues, sur
+  // l'ecran meme des contenus a partager.
+  for (const l of LANGUES) {
+    const info = /links_info: "([^"]*)"/.exec(dico(l))?.[1] ?? "";
+    assert.ok(info.length > 0, `${l} : le conseil sur les liens a disparu`);
+    assert.ok(
+      !/tipote\.fr ou tipote\.blog/.test(info),
+      `${l} : on conseille encore d'ajouter ?ref= a une URL tipote.fr`,
+    );
+    assert.match(info, /tiquiz\.fr/, `${l} : nos domaines ne sont pas nommes`);
+  }
+});
+
+// --- 4. DEUX SIMULATEURS, DEUX REPONSES -----------------------------
+
+test("le simulateur de l'espace affilie applique les MARCHES", () => {
+  // Il calculait au taux de BASE quel que soit le nombre de filleuls,
+  // alors que le simulateur PUBLIC (tiquiz.fr/affiliation) applique les
+  // marches. Un affilie avec 30 filleuls voyait 55 % de ses gains
+  // reels, sur l'ecran meme qui doit lui donner envie de pousser
+  // Tiquiz.
+  const src = fs.readFileSync(
+    path.join(process.cwd(), "app/affiliate/revenus/RevenueCalculator.tsx"),
+    "utf8",
+  );
+  assert.match(src, /tauxCommissionPct\(/, "le simulateur n'applique pas les marches");
+  assert.ok(
+    !/commission\(tiquizPrice, COMMISSION_RATES\.tiquiz\)/.test(src),
+    "le simulateur est revenu au taux fixe",
+  );
+});
+
+test("les marches sont bien celles du versement", () => {
+  assert.equal(tauxCommissionPct(0), 40);
+  assert.equal(tauxCommissionPct(1), 45, "la marche s'ouvre au PREMIER filleul");
+  assert.equal(tauxCommissionPct(30), 55);
+  assert.equal(tauxCommissionPct(51), 70, "le plafond est atteint a 51");
+  assert.equal(tauxCommissionPct(999), 70, "le plafond ne se depasse pas");
 });
