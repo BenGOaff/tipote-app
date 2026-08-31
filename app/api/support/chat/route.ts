@@ -12,12 +12,38 @@
 // d'inventer tout en ne lui donnant rien, d'où ses réponses évasives.
 //
 // Pas d'authentification. Limité en débit pour éviter les abus.
+//
+// -- LA LANGUE NE FAIT JAMAIS ÉCHOUER UNE QUESTION (31 août 2026) -----
+//
+// Le corps était validé par `z.enum(["fr","en","es","it","ar"])`, cinq
+// langues, alors que l'app en sert SEPT (`i18n/config.ts`). Le widget
+// envoie la langue résolue par `resolveHelpLocale`, qui rend très bien
+// `pt` ou `pt-BR` : zod refusait le corps ENTIER, la route répondait
+// 400, et le widget affichait son message d'erreur générique.
+//
+// **Le robot d'aide était donc mort en portugais**, à chaque message, et
+// le symptôme ne disait rien de la cause : ni "langue non gérée", ni une
+// trace côté serveur, juste "une erreur est survenue".
+//
+// Deux corrections, et la deuxième est la vraie :
+//
+//   1. la langue est un `string` NORMALISÉ, plus un `enum`. Une
+//      préférence d'affichage ne doit jamais faire échouer une question :
+//      on retombe sur le français au lieu de refuser, et la huitième
+//      langue ajoutée un jour ne cassera plus rien ;
+//   2. une langue SANS prompt à elle reçoit le prompt ANGLAIS plus une
+//      consigne de langue explicite. Le repli d'avant était le prompt
+//      FRANÇAIS, qui dit "Réponds toujours en français" : un lecteur
+//      portugais aurait été servi en français, ce qui est pire qu'une
+//      erreur parce que ça a l'air de marcher.
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { openai, OPENAI_MODEL, cachingParams } from "@/lib/openaiClient";
 import { sanitizeAiText } from "@/lib/aiTextSanitizer";
 import { buildSupportKnowledgeBase } from "@/lib/support/knowledgeBase";
+import { checkRateLimit } from "@/lib/aiRateLimit";
+import { normaliserLangueAide } from "@/lib/support/locale";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,23 +60,30 @@ const BodySchema = z.object({
     )
     .max(10)
     .optional(),
-  locale: z.enum(["fr", "en", "es", "it", "ar"]).optional(),
+  // Un `string` et pas un `enum` : voir l'en-tête. Une langue inconnue
+  // est NORMALISÉE, jamais refusée.
+  // Un `string` et pas un `enum` : voir l'en-tête. Une langue inconnue
+  // est NORMALISÉE, jamais refusée.
+  locale: z.string().trim().max(10).optional(),
 });
 
-// Simple in-memory rate limiter (per IP, 20 messages / 5 min)
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+// 20 messages par adresse et par tranche de 5 minutes.
+//
+// C'est `lib/aiRateLimit.ts` et plus une Map locale : celle-ci n'avait
+// AUCUN ramasse-miettes, donc elle gardait une entrée par adresse vue
+// depuis le démarrage du processus, pour toujours. Sur une page PUBLIQUE
+// (le centre d'aide n'exige aucun compte), c'est une fuite de mémoire
+// qui grandit avec le trafic et que personne ne verrait avant un
+// redémarrage de PM2.
+//
+// Le limiteur partagé purge les entrées expirées, et c'est déjà celui
+// des trois autres points d'entrée qui coûtent des jetons.
 const RATE_LIMIT = 20;
 const RATE_WINDOW_MS = 5 * 60 * 1000;
 
 function isRateLimited(ip: string): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(ip);
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS });
-    return false;
-  }
-  entry.count++;
-  return entry.count > RATE_LIMIT;
+  return !checkRateLimit({ key: `support-chat:${ip}`, limit: RATE_LIMIT, windowMs: RATE_WINDOW_MS })
+    .ok;
 }
 
 export async function POST(req: NextRequest) {
@@ -78,7 +111,8 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { message, history = [], locale = "fr" } = parsed.data;
+  const { message, history = [] } = parsed.data;
+  const locale = normaliserLangueAide(parsed.data.locale);
 
   try {
     const knowledgeBase = buildSupportKnowledgeBase(locale);
@@ -364,5 +398,41 @@ ${knowledgeBase}`,
 ${knowledgeBase}`,
   };
 
-  return prompts[locale] ?? prompts.fr;
+  const propre = prompts[locale];
+  if (propre) return propre;
+
+  // UNE LANGUE SANS PROMPT À ELLE EST SERVIE PAR L'ANGLAIS, avec une
+  // consigne de langue explicite ajoutée à la FIN.
+  //
+  // Le repli d'avant était le prompt FRANÇAIS, qui porte "Langue :
+  // Français. Réponds toujours en français." Un lecteur portugais
+  // recevait donc des réponses en français : ça a l'air de marcher, et
+  // c'est pire qu'une erreur.
+  //
+  // La consigne est posée APRÈS la base de connaissances, donc le
+  // préfixe reste identique à celui de l'anglais : le cache de prompt
+  // d'OpenAI sert les deux, et rien de variable n'est interpolé (c'est
+  // la règle écrite en tête de `knowledgeBase.ts`).
+  const langue = NOM_LANGUE[locale];
+  return `${prompts.en}
+
+## LANGUAGE (this instruction overrides any other language rule above)
+Always reply in ${langue ?? "the same language as the user's message"}. Never switch to English or French unless the user writes in that language.`;
 }
+
+/**
+ * Le nom de chaque langue, en anglais, pour la consigne de repli.
+ *
+ * En anglais parce que la consigne est posée dans le prompt anglais : un
+ * modèle suit mieux une instruction écrite dans la langue de son
+ * contexte immédiat.
+ */
+const NOM_LANGUE: Record<string, string> = {
+  fr: "French",
+  en: "English",
+  es: "Spanish",
+  it: "Italian",
+  ar: "Arabic",
+  pt: "European Portuguese (Portugal)",
+  "pt-BR": "Brazilian Portuguese",
+};

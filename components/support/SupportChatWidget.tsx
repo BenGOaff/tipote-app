@@ -128,7 +128,15 @@ const T: Record<string, Record<string, string>> = {
   },
 };
 
-const t = (key: string, locale: string) => T[key]?.[locale] ?? T[key]?.fr ?? key;
+// LE REPLI EST L'ANGLAIS, PAS LE FRANÇAIS.
+//
+// Cette table couvre cinq langues ; l'app en sert sept. Une lectrice
+// portugaise voyait donc le chrome du widget en FRANÇAIS, ce qui n'est
+// ni sa langue ni la langue de repli qu'on utilise partout ailleurs.
+// L'anglais ne sera pas sa langue non plus, mais c'est celle qu'on
+// choisit quand on ne sait pas (les deux ternaires du bandeau, plus
+// bas, le font déjà).
+const t = (key: string, locale: string) => T[key]?.[locale] ?? T[key]?.en ?? T[key]?.fr ?? key;
 
 /* ────────────────── Quick suggestions ────────────────── */
 
