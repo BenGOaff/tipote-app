@@ -1971,29 +1971,35 @@ fait les trois choses d'un coup, le compte, le rattachement À VIE, et le
 contact chez Systeme.io avec son étiquette `tiquiz-free` (`poserTagPlan`
 crée le contact quand il n'existe pas).
 
-🚨 **MAIS SES SÉQUENCES EMAIL NE PARTENT PAS, et cette page affirmait le
-contraire.** Mesuré le 31 août 2026 dans son compte Systeme.io, via leur
-API : ses **51 règles d'automatisation** se déclenchent TOUTES sur
-`form_subscribed`, c'est à dire la soumission d'un de LEURS formulaires.
-**Aucune** ne se déclenche sur `tag_added`. Poser une étiquette par
-l'API ne déclenche donc rien du tout.
+🚨 **J'AI ÉCRIT ICI QUE SES SÉQUENCES NE PARTAIENT PAS. LA MESURE ÉTAIT
+INVALIDE (corrigé le 31 août au soir).**
 
-Conséquence, en production depuis le 27 août : un inscrit gratuit qui
-passe par un lien affilié est bien créé chez Systeme.io, bien étiqueté
-`tiquiz-free`, et ne reçoit AUCUN email. Idem pour toute inscription
-directe sur `tiquiz.fr/signup`, et idem pour `poserTagAchat` après une
-vente prise sur notre bon de commande.
+Ce que l'API de Systeme.io rend : 51 règles, toutes déclenchées sur
+`form_subscribed`, aucune sur `tag_added`. J'en ai conclu que poser une
+étiquette ne déclenchait rien.
 
-Le code, lui, était honnête : `app/api/auth/signup/route.ts` porte
-depuis le 25 août "vérifié le 25 août 2026 : aucune règle n'écoute
-encore `tiquiz-free`". C'est CETTE page qui a écrit le contraire, et
-c'est elle qu'on croit.
+**Béné a envoyé la capture d'une règle « Tag "newsletter" ajouté ->
+S'abonner à la campagne Pépites 365 », active dans son tableau de
+bord.** Elle n'apparaît nulle part dans la réponse de l'API, même sans
+filtre. Et sur les 51 rendues, AUCUNE ne porte l'action « s'abonner à
+une campagne », alors que ses tunnels en font évidemment :
+**cette API ne montre qu'un sous-ensemble de ses règles.**
 
-**Ce qui reste à faire est chez Béné, pas dans le code** : créer dans
-Systeme.io une règle d'automatisation par étiquette (déclencheur "tag
-ajouté" sur `tiquiz-free`, puis sur les étiquettes de vente). Tant
-qu'elle n'existe pas, chaque inscription prise sur nos domaines est un
-contact qui ne reçoit rien.
+**J'ai enfreint une règle écrite dans ce fichier** (22 août) : ne pas
+conclure "ça n'existe pas" d'une recherche qui n'a rien trouvé. Une
+recherche vide dit "je n'ai pas trouvé". Et le raisonnement qui m'y a
+mené est le vrai coupable : l'API n'a pas de point d'entrée pour
+abonner un contact à une campagne, j'en ai déduit qu'elle ne pouvait
+pas non plus me MONTRER une règle qui le fait. **Un outil qui ne sait
+pas FAIRE quelque chose ne sait pas forcément le VOIR non plus.**
+
+**Ce qui est établi :** au moins une règle par étiquette existe et
+abonne à une campagne, donc poser un tag PEUT tout déclencher.
+
+**Ce qui reste inconnu :** si `tiquiz-free` et les étiquettes de vente
+ont la leur. Ça ne se vérifie QUE dans son tableau de bord
+(https://systeme.io/dashboard/automation-rules), jamais par cette API.
+Ne plus rien affirmer ici sur la foi de cet outil.
 
 **Et c'est pour ça qu'on ne bascule PAS le bouton d'essai gratuit de la
 page de vente** (`SALES_LINKS_LEFT_ALONE` chez Tiquiz) : leur optin est
