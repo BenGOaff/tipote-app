@@ -171,6 +171,8 @@ export type AffiliateDict = {
     gain_total: string;
     gain_pending: string;
     gain_paid: string;
+    /** Porte {montant}. Affiche uniquement quand il y a de l'annule. */
+    gain_annule: string;
     trial_cta_title: string;
     trial_cta_description: string;
     trial_cta_button: string;

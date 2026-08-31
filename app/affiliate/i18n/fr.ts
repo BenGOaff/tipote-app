@@ -179,6 +179,7 @@ export const FR: AffiliateDict = {
     gain_total: "Gains totaux",
     gain_pending: "En attente",
     gain_paid: "Déjà payé",
+    gain_annule: "Dont {montant} annulés suite à un remboursement ou un impayé. Ces commissions ne sont pas versées.",
     trial_cta_title: "🎁 Ton mois Tiquiz Plus offert t'attend",
     trial_cta_description:
       "Active ton mois offert pour tester Tiquiz en Plus (multi-profils, analyse IA), créer du contenu de promo authentique, et mieux vendre l'outil à ton audience. À utiliser quand tu veux.",

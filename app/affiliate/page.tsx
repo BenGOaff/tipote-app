@@ -71,6 +71,27 @@ type Stats = {
   pending_commission_cents: number;
   approved_commission_cents: number;
   paid_commission_cents: number;
+  /**
+   * GAGNÉ ET PAS ENCORE VERSÉ. Optionnel : la vue ne le rend qu'une fois
+   * la migration `20260831_affiliate_stats_honnetes.sql` passée, et un
+   * écran qui plante en attendant serait pire que le chiffre qu'il
+   * corrige.
+   *
+   * Ce qu'il ferme : "En attente" ne comptait que `pending`. Une
+   * commission mûre passe `approved` à J+30 et n'est virée qu'entre le
+   * 10 et le 13 : pendant cette fenêtre elle n'était NI en attente NI
+   * payée. Son argent disparaissait de deux compteurs sur trois.
+   */
+  a_venir_commission_cents?: number | null;
+  /**
+   * ANNULÉ (remboursement, impayé). Affiché quand il n'est pas nul.
+   *
+   * Il était COMPTÉ DANS LE TOTAL jusqu'au 31 août : l'affilié lisait un
+   * chiffre qu'il ne toucherait jamais, et l'écart n'apparaissait qu'au
+   * virement. Une somme retirée en silence est une décision qu'on ne
+   * peut plus expliquer, ni à lui, ni à un comptable.
+   */
+  cancelled_commission_cents?: number | null;
 };
 
 async function fetchStats(sa: string): Promise<Stats> {
@@ -90,6 +111,8 @@ async function fetchStats(sa: string): Promise<Stats> {
       pending_commission_cents: 0,
       approved_commission_cents: 0,
       paid_commission_cents: 0,
+      a_venir_commission_cents: 0,
+      cancelled_commission_cents: 0,
     }
   );
 }
@@ -234,9 +257,30 @@ export default async function AffiliateOverviewPage() {
 
         <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <GainCard label={t.overview.gain_total} value={eur(stats.total_commission_cents)} variant="primary" />
-          <GainCard label={t.overview.gain_pending} value={eur(stats.pending_commission_cents)} variant="warning" />
+          <GainCard
+            label={t.overview.gain_pending}
+            // CE QUI EST GAGNÉ ET PAS ENCORE VERSÉ, `pending` comme
+            // `approved`. Le repli sur `pending` seul couvre la période
+            // où la migration n'est pas encore passée : il vaut mieux
+            // l'ancien chiffre qu'un tiret.
+            value={eur(stats.a_venir_commission_cents ?? stats.pending_commission_cents)}
+            variant="warning"
+          />
           <GainCard label={t.overview.gain_paid} value={eur(stats.paid_commission_cents)} variant="success" />
         </section>
+
+        {/*
+          L'ANNULÉ SE DIT, il ne se soustrait pas en silence. Rien ne
+          s'affiche quand il n'y en a pas : un zéro permanent ferait
+          croire à un problème là où il n'y en a aucun.
+        */}
+        {(stats.cancelled_commission_cents ?? 0) > 0 && (
+          <p className="text-sm text-muted-foreground">
+            {interpolate(t.overview.gain_annule, {
+              montant: eur(stats.cancelled_commission_cents ?? 0),
+            })}
+          </p>
+        )}
 
         <TrialTipoteCard sa={session.sa} t={t} />
 

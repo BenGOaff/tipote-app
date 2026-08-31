@@ -2349,6 +2349,96 @@ dans `ROADMAP_SORTIE_SIO.md`, chantier 3.
 Test : `tests/logic/audit-26-aout.test.mts`, ici et dans les deux autres
 dépôts.
 
+## Le tableau de bord annonçait un chiffre jamais versé (31 août 2026)
+
+Béné : "vérifier que chaque affilié reçoit les bonnes infos, que le
+système lui attribue bien ses clients et qu'il sera payé pour son
+travail sans perdre de commission. Je vais démarcher de très gros
+affiliés, je ne peux pas me permettre de proposer un système instable."
+
+Deux défauts, et les deux ne se voient qu'À L'ÉCHELLE, c'est à dire
+exactement quand un gros affilié arrive.
+
+### 1. LES GAINS TOTAUX COMPTAIENT LES COMMISSIONS ANNULÉES
+
+`affiliate_stats` sommait `commission_cents` sur TOUS les statuts. Or
+depuis le 26 août un remboursement ou un impayé pose `cancelled`
+(`annulationStore.ts`) : la ligne restait donc dans "Gains totaux".
+L'affilié lisait 1 240 €, recevait 1 180 €, et **rien à l'écran
+n'expliquait l'écart**. Ça ne se découvre qu'au premier virement, et
+c'est le moment où on ne peut plus rattraper la confiance d'un gros
+affilié. Même faute sur `total_sales` : `BadgesCard` fêtait une vente
+remboursée.
+
+### 2. ET SON ARGENT DISPARAISSAIT PENDANT UN MOIS
+
+L'écran montre "Gains totaux / En attente / Déjà payé", et "En attente"
+ne comptait que `pending`. Une commission mûre passe `approved` à J+30
+et n'est virée qu'entre le 10 et le 13 : **pendant cette fenêtre, elle
+n'était NI en attente NI payée.** Elle sortait de deux compteurs sur
+trois tout en restant dans le total, ce qui produit toujours la même
+question, et elle est légitime : "où est passé mon argent ?"
+
+**Règle : la vue distingue quatre choses, et l'écran les dit.**
+
+| Colonne | Ce que ça veut dire |
+|---|---|
+| `total_commission_cents` | ce qui reste ACQUIS (annulé exclu) |
+| `a_venir_commission_cents` | gagné et pas encore versé (`pending` + `approved`) |
+| `paid_commission_cents` | viré |
+| `cancelled_commission_cents` | annulé, AFFICHÉ quand il n'est pas nul |
+
+`pending_commission_cents` garde son sens strict, il sert côté admin.
+**L'annulé se dit, il ne se soustrait pas en silence** : c'est la règle
+des lignes écartées d'un lot (25 août). Et rien ne s'affiche quand il
+est nul : un zéro permanent ferait croire à un problème là où il n'y en
+a aucun.
+
+L'écran survit à la migration pas encore passée (les deux champs sont
+optionnels, avec repli sur `pending`) : un écran qui plante en attendant
+serait pire que le chiffre qu'il corrige.
+
+### 3. LE LOT DU MOIS SE CASSAIT QUAND LES AFFILIÉS SE MULTIPLIAIENT
+
+`preparerLot` lisait le registre en UNE requête,
+`.in("sa", [tous les sa du lot])`. Un `.in()` part dans l'URL, un `sa`
+fait 20 à 80 caractères, et **la commission est RÉCURRENTE depuis le
+26 août** : le lot d'un mois réunit une ligne par abonné et par mois,
+donc de plus en plus d'affiliés distincts. Passé quelques milliers de
+caractères, le serveur refuse la requête entière.
+
+Et l'erreur était IGNORÉE (`const { data: affs }`, sans `error`). Donc
+`affs` valait `null`, donc **plus aucune affiliée n'était reconnue**,
+donc tout le monde sortait en `affiliee-inconnue` et le lot était vide.
+Le symptôme aurait été le pire possible : un écran qui affirme que le
+registre ne connaît pas des gens parfaitement inscrits, un mois après
+l'autre, sans une seule ligne d'erreur pour dire pourquoi.
+
+**Règle : `lireAffilieesParPaquets` lit par 100, et une erreur ARRÊTE
+tout.** Rendre ce qu'on a lu fabriquerait un lot partiel qui a l'air
+complet, et les manquants y seraient étiquetés "inconnues". "Je n'ai pas
+pu regarder" et "il n'y a rien" sont deux réponses différentes (règle du
+23 août).
+
+🚨 Migration : `supabase/migrations/20260831_affiliate_stats_honnetes.sql`
+(Supabase de TIPOTE). C'est une VUE : elle se remplace, aucune donnée
+n'est réécrite.
+
+Test : `tests/logic/audit-31-aout.test.mts`.
+
+### Ce qui a été corrigé côté Tiquiz le même jour
+
+Le détail vit dans SON `AGENTS.md`, et il touche directement ce que ce
+dépôt encaisse : **aucun appel de Tiquiz n'épingle de version d'API
+Stripe**, et Stripe a déplacé `invoice.subscription`, `invoice.tax` et
+`subscription.current_period_end`. Lus au seul premier niveau, ils
+donnaient zéro commission récurrente à partir du 2e mois et une
+commission calculée sur le TTC. `lib/checkout/formeStripe.ts` (chez eux)
+lit les deux formes, et `npm run check:stripe` dit la version réelle des
+webhooks. Un changement de palier perdait aussi l'affiliée en route, des
+deux côtés (PayPal ouvre un abonnement neuf, Stripe passe par un
+calendrier).
+
 ## Les 7 règles du programme d'affiliation (Béné, 26 août 2026)
 
 Elle a listé le fonctionnement de Systeme.io, règle par règle, après
