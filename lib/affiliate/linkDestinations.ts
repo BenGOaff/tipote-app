@@ -94,7 +94,7 @@ const FALLBACK: LinkDestinationRow[] = [
   // payé exactement comme avant.
   { slug: "atelier",             path: "https://atelierduquiz.fr/",                 sort_order: 5,  enabled: true },
   { slug: "tiquiz_main",         path: "https://tiquiz.fr/",                        sort_order: 10, enabled: true },
-  // Le seul qui reste chez eux : voir le bloc ci-dessus.
+  // Revenu chez nous le 27 aout : voir le bloc ci-dessus.
   { slug: "tiquiz_free",         path: "https://tiquiz.fr/signup",                  sort_order: 20, enabled: true },
   { slug: "tiquiz_monthly",      path: "https://tiquiz.fr/commande/mensuel",        sort_order: 30, enabled: true },
   { slug: "tiquiz_monthly_plus", path: "https://tiquiz.fr/commande/mensuel-plus",   sort_order: 40, enabled: true },

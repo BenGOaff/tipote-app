@@ -926,3 +926,79 @@ dans les liens. Rien à reconstruire.
 - réécrire les montants affichés aux affiliées (6 langues plus le
   simulateur) avant que Béné ait confirmé la baisse de 16,7% que la
   base HT implique, et la façon de l'annoncer.
+
+## 11. Le barème à paliers (Béné, 25 août 2026)
+
+**Le principe est bien dans le cahier des charges (section 16) et dans
+le brief produit**, en une ligne chacun. Ce qui manquait, c'est le
+détail qui fait payer juste : la différence de découpage entre les deux
+échelles, ce qu'est un "filleul abonné", et le fait que ces valeurs
+existent en DOUBLE dans un autre dépôt. C'est de l'argent, et c'est ce
+qu'on annonce aux affiliés : ça se lit avant d'y toucher.
+
+Source de vérité : `lib/affiliate/recompense.ts`, pur et testé.
+
+### Deux récompenses, et elles NE SE CUMULENT PAS
+
+L'affilié choisit : **des commissions plus élevées**, OU **une remise sur
+son propre abonnement Tiquiz**. `choix` est un paramètre OBLIGATOIRE de
+`recompenseDuMois()`, jamais déduit d'un champ rempli : deviner lequel
+s'applique finirait par en payer deux.
+
+Une valeur de choix illisible retombe sur `commissions`. C'est le seul
+des deux qui ne peut rien casser : il augmente ce qu'on doit sur des
+ventes réellement amenées, quand une remise d'abonnement posée par
+erreur ampute un revenu récurrent.
+
+### Le taux de commission
+
+Mot pour mot : *"0 affilié : 40 %, 1 à 10 affiliés : 45 %, 11 à 20 :
+50 %, 21 à 30 : 55 %, etc, jusqu'à 70 %."*
+
+| Filleuls abonnés | Taux |
+|---|---|
+| 0 | 40 % |
+| 1 à 10 | 45 % |
+| 11 à 20 | 50 % |
+| 21 à 30 | 55 % |
+| ... | +5 % par tranche de 10 |
+| 51 et plus | 70 % (plafond) |
+
+### La remise sur son abonnement
+
+Par marches de 10 : 10 filleuls -10 %, 20 -20 %, et **à 100 filleuls
+l'abonnement est offert**. Entre deux marches, rien ne bouge : c'est
+lisible sur une page de vente, et ça évite d'annoncer "-37 %" à
+quelqu'un qui repassera à "-36 %" le mois suivant.
+
+### LE PIÈGE : les deux échelles ne se découpent PAS pareil
+
+Le taux s'ouvre au **PREMIER** filleul (1 suffit pour 45 %), la remise
+attend le **DIXIÈME** (9 filleuls = 0 %). Ce sont les deux formulations
+de Béné, et les aligner de force reviendrait à changer un chiffre
+qu'elle a donné. `Math.ceil` d'un côté, `Math.floor` de l'autre, et les
+deux fonctions vivent côte à côte pour que la différence se LISE au lieu
+de se découvrir.
+
+### Ce qu'est un "filleul abonné"
+
+Quelqu'un qui a généré une commission RÉCEMMENT, c'est à dire qui a payé
+son mois. **Ni un inscrit gratuit, ni un essai, ni un remboursé.**
+Compter autre chose ouvrirait la porte aux faux filleuls, et la
+récompense se paie en argent réel.
+
+Conséquence assumée : **la récompense monte ET descend.** Un filleul qui
+arrête de payer sort du compte le mois suivant. Le recalcul est donc
+MENSUEL et annoncé : une remise qui baisserait du jour au lendemain
+serait une hausse de prix sans prévenir.
+
+### Où il est visible
+
+- l'espace affilié, page Revenus (`RevenueCalculator.tsx`, qui appelle
+  `tauxCommissionPct` et non plus le taux plat) ;
+- la page publique `tiquiz.fr/affiliation` et son simulateur
+  (`lib/site/recompenseAffiliation.ts`, le jumeau côté Tiquiz).
+
+**Les deux modules doivent dire la même chose.** Un simulateur public
+qui promet 70 % là où l'espace affilié en verse 40 est une réclamation
+garantie, et c'est le lecteur qui a raison.

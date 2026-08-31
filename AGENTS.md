@@ -2,6 +2,105 @@
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 
+## ÉTAT DU SYSTÈME au 30 août 2026 (à lire en premier)
+
+Ce fichier est CHRONOLOGIQUE : il raconte des pannes, dans l'ordre où
+elles sont arrivées. C'est utile pour comprendre POURQUOI une règle
+existe, et inutile pour savoir où on en est. Ce bloc là répond à la
+deuxième question.
+
+### Les trois applications, et les six domaines
+
+| Domaine | Sert | Dépôt | Port |
+|---|---|---|---|
+| `app.tipote.com` | l'app Tipote, le centre d'aide | tipote-app | 3000 |
+| `affiliate.tipote.com` | **l'espace affilié** | tipote-app | 3000 |
+| `tiquiz.fr` | vente Tiquiz, bon de commande, blog | tiquiz | 3001 |
+| `quiz.tipote.com` | l'app Tiquiz | tiquiz | 3001 |
+| `atelierduquiz.fr` | vente de l'Atelier du Quiz | formaquiz | 3002 |
+| `quizing.tipote.com` | l'app de l'Atelier (la formation) | formaquiz | 3002 |
+
+`www.tipote.fr` reste chez Systeme.io : ce sont les anciens tunnels, ils
+fonctionnent encore et **ne commissionnent plus** (voir plus bas).
+
+### CE DÉPÔT EST CELUI QUI PAIE
+
+C'est la chose la plus importante à savoir avant d'y toucher.
+
+- **Le registre d'affiliés, les taux, les commissions, les lots de
+  versement et les autofactures vivent ICI, et nulle part ailleurs.**
+  Tiquiz et l'Atelier remontent leurs ventes (`POST /api/affiliate/
+  attribute-sale`) et AFFICHENT des chiffres qu'ils ne calculent pas.
+- **L'Atelier n'a plus de registre propre depuis le 26 août.** Il envoie
+  `source_app: "atelier"`, et c'est ce champ qui fixe les 70 %. Son
+  ancien registre (`profiles.sio_affiliate_id` dans SA base) n'est plus
+  qu'un repli pour les élèves affiliés là-bas et pas ici.
+- **Les valeurs du barème existent en DOUBLE**, parce que
+  `tiquiz.fr/affiliation` doit les afficher sans pouvoir importer ce
+  dépôt. Les deux côtés sont figés par un test qui nomme l'autre :
+  `tests/logic/bareme-affiliation-source.test.mts` ici,
+  `tests/logic/bareme-affiliation-miroir.test.mts` chez Tiquiz.
+
+### Le programme d'affiliation, en six lignes
+
+- **40 % sur Tiquiz, à CHAQUE échéance** tant que la personne reste
+  abonnée. 70 % sur l'Atelier (achat unique).
+- **Le taux monte avec les filleuls** : 1 filleul 45 %, 11 50 %, ...
+  jusqu'à 70 % à 51. OU une remise sur son abonnement, par marches de
+  10 filleuls jusqu'à la gratuité à 100. **Les deux ne se cumulent pas.**
+- **Cookie 1 an. Versement à J+30, minimum 20 €, entre le 10 et le 13.**
+- Une inscription gratuite par son lien le rattache **à vie**, et le
+  PREMIER rattachement gagne.
+- Remboursement ou impayé : la commission de cette échéance est annulée.
+  Affilié `banned` : rien n'est dû. Affilié `paused` : ce qui est gagné
+  reste payé.
+- **Nos liens portent `?ref=`, jamais `?sa=`.** `sa` reste la clé
+  interne des commissions ; il ne sort plus dans une URL. Conséquence
+  décisive : un lien qui atterrit chez Systeme.io ne paie plus personne,
+  et c'est pour ça que les 8 destinations sont sur nos domaines.
+
+### Avant CHAQUE push, sans qu'on le demande
+
+```bash
+npm run test:logic     # runner natif, aucune dependance
+npx tsc --noEmit       # exit 0 obligatoire
+```
+
+Et selon ce qui a été touché : `npm run check:migrations-pending`
+(après un déploiement), `npm run check:supabase-keys` (un doute sur un
+`.env`). Le filet visuel du module quiz vit dans le dépôt TIQUIZ : un
+changement de design porté ici se valide là-bas.
+
+### Les cinq pièges qui ont coûté le plus cher
+
+1. **Une logique enfermée dans un composant React n'est pas testable,
+   donc elle n'est pas testée.** Toute règle métier sort dans `lib/` en
+   fonction pure. Même chose pour un module qui importe `supabaseAdmin` :
+   aucun test ne peut le charger, donc les décisions n'y vivent pas.
+2. **Quand un cas a deux mécaniques, la mécanique est un PARAMÈTRE
+   OBLIGATOIRE** (`mode`, `base`, `quand`, `choix`, `maintenant`), jamais
+   devinée. `base` a coûté 1,13 € de trop par vente pendant des mois.
+3. **Un `??` protège du MANQUANT, jamais du FAUX.**
+4. **L'espace affilié est un SOUS-DOMAINE** : `usePathname()` n'y rend
+   pas `/affiliate`. Gater sur le HOST, jamais sur le pathname.
+5. **Un garde-fou qui ne protège qu'un des deux jumeaux ne protège
+   personne.** Les modules quiz de Tipote et Tiquiz sont jumeaux.
+
+### Où chercher le reste
+
+| Question | Fichier |
+|---|---|
+| le programme d'affiliation en détail | `PLAN_AFFILIATION.md` |
+| ce que le produit promet | `PRODUCT_BRIEF.md` |
+| comment ça marche, écran par écran | `CAHIER_DES_CHARGES.md` |
+| les bugs récurrents et les conventions | `CLAUDE_PITFALLS.md` |
+| sur quelle branche pousser | `CLAUDE_WORKFLOW.md` |
+| ce qui reste à reprendre à Systeme.io | `ROADMAP_SORTIE_SIO.md` (dépôt tiquiz) |
+
+**Béné ne lit pas les dossiers.** Tout ce qu'elle doit faire ou copier
+se met dans le message final, jamais dans un fichier qu'on lui demande
+d'ouvrir. Une commande à la fois, aucun paramètre à remplacer.
+
 ## Espace affilié = sous-domaine, le pathname N'A PAS /affiliate (drame Gwenn 8 juin 2026)
 
 `affiliate.tipote.com/<path>` est rewrité vers `/affiliate/<path>`
@@ -1839,32 +1938,39 @@ Les paliers mènent donc à **NOTRE bon de commande**
 affiche le même prix (il vient du catalogue) et propose les trois autres
 en bas. Le hub et l'Atelier mènent à leurs pages sur nos domaines.
 
-| Destination | Où elle mène |
-|---|---|
-| `tiquiz_direct`, `tiquiz_main` | `https://tiquiz.fr/` |
-| les 4 paliers | `https://tiquiz.fr/commande/<produit>` |
-| `tiquiz_free` | **reste chez Systeme.io** |
-| `atelier` | **reste chez Systeme.io** |
+| Destination | Où elle mène | Depuis |
+|---|---|---|
+| `tiquiz_direct`, `tiquiz_main` | `https://tiquiz.fr/` | 25 août |
+| les 4 paliers | `https://tiquiz.fr/commande/<produit>` | 25 août |
+| `atelier` | `https://atelierduquiz.fr/` | **26 août** |
+| `tiquiz_free` | `https://tiquiz.fr/signup` | **27 août** |
 
-**DEUX destinations restent là-bas, et les deux raisons sont nommées.**
+**PLUS AUCUNE EXCEPTION : les 8 destinations sont sur nos domaines.**
+Les deux dernières sont tombées les 26 et 27 août, et les deux pour la
+même raison de fond, qui est la plus importante de cette section :
 
-**`tiquiz_free`, et c'est délibéré.** C'est un optin, pas
-une vente : son formulaire crée le contact et pose le tag chez eux, et
-c'est le seul événement qui porte une URL de tunnel, donc le seul qui
-sait d'où vient l'inscrit. Le remplacer par notre `/signup` ferait
-disparaître ces inscrits de ses séquences email. À refaire le jour où
-notre inscription gratuite créera elle aussi le contact chez Systeme.io
-(le chemin d'ACHAT le fait depuis le 25 août, pas encore l'inscription).
+**depuis que nos liens portent `?ref=` (24 août), un lien qui atterrit
+chez Systeme.io ne paie PLUS PERSONNE.** Leur page ignore ce paramètre,
+notre middleware ne voit jamais la requête donc ne pose aucun cookie, et
+leur webhook ne sait lire qu'un `sa`. Ce n'était donc plus une exception
+qui protégeait quelque chose : c'était un trou.
 
-**`atelier`, et on ne l'a vu qu'en allant lire son code.** L'Atelier a
-son PROPRE registre d'affiliés : `attributeQuizingSale` résout le `sa`
-contre `profiles.sio_affiliate_id` dans SA base, pas contre la table
-`affiliates` d'ici. Une affiliée Tipote qui n'est pas élève de l'Atelier
-serait donc `affiliate_not_registered`, alors que le tunnel Systeme.io
-la paie. Et l'Atelier ne lit que `?sa=`, jamais `?ref=`. **Repointer ce
-lien change QUI est payé** : c'est un chantier à part (unifier les deux
-registres, ou porter `?ref=` là-bas), pas une ligne à changer ici. Le
-lien a été repointé puis REMIS, avant de partir.
+**`atelier` (26 août).** Béné : "je veux notre propre système
+d'affiliation pour l'atelier comme pour tiquiz." Le chantier qui était
+"à part" est fait : l'Atelier lit `?ref=` (son `middleware.ts` +
+`lib/affiliate/refLien.ts`) et remonte ses ventes au registre CENTRAL
+d'ici, au taux de 70 % (`source_app: "atelier"`). Son registre
+historique (`profiles.sio_affiliate_id` dans SA base) reste interrogé en
+REPLI : un élève affilié là-bas et pas ici continue d'être payé
+exactement comme avant.
+
+**`tiquiz_free` (27 août).** L'ancienne note disait "à refaire le jour
+où notre inscription gratuite créera elle aussi le contact chez
+Systeme.io" : ce jour est arrivé le 25 août. `https://tiquiz.fr/signup`
+fait les trois choses d'un coup, le compte, le rattachement À VIE, et le
+contact chez Systeme.io avec son étiquette `tiquiz-free` (`poserTagPlan`
+crée le contact quand il n'existe pas). Ses séquences email partent
+comme avant, son workflow écoute l'ajout de cette étiquette.
 
 La chaîne est complète et elle a été vérifiée bout en bout : le `?ref=`
 arrive dans l'URL, le middleware le range dans `tq_ref`, le bon de
