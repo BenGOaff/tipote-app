@@ -29,7 +29,8 @@
     "storage:archive": "node scripts/storage-archive.mjs",
     "affiliate:login-as": "node scripts/affiliate-login-as.mjs",
     "test:e2e": "playwright test",
-    "test:e2e:install": "playwright install --with-deps chromium"
+    "test:e2e:install": "playwright install --with-deps chromium",
+    "check:resend": "node scripts/check-resend.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
