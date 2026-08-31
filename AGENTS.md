@@ -2761,3 +2761,39 @@ et il doit alors être explicite.
 
 Test : `tests/logic/email-pas-un-motif.test.mts`, vérifié en rejouant la
 version d'avant.
+
+## "Qui a envoyé qui" : l'inscription gratuite n'apparaissait nulle part (31 août 2026)
+
+Béné : "j'ai testé le ref de Nina : je ne suis pas taguée comme étant
+affiliée de Nina dans le suivi. Je ne peux jamais savoir qui a envoyé
+qui et qui a été envoyé par qui. Le système d'affiliation n'est pas
+fiable."
+
+Elle avait raison, et pour DEUX causes empilées qui donnaient le même
+écran vide.
+
+**1. L'attribution ne se construisait que sur les VENTES.** La table
+`attributions` de `/api/partner/affilies` était bâtie sur
+`affiliate_commissions`, c'est à dire sur les gens qui ont PAYÉ. Or une
+inscription GRATUITE par un lien affilié crée une **conversion**, pas
+une commission. Et c'est précisément la conversion qui rattache
+quelqu'un À VIE (règle du 26 août, sa règle).
+
+Les conversions étaient DÉJÀ lues dans cette route (elles alimentent le
+compteur de filleuls de chaque affilié). La donnée existait, personne ne
+la montrait : c'est le même défaut que les liens affiliés dormants du
+24 août.
+
+**Les conversions passent devant, en ordre ASCENDANT** (le premier
+rattachement gagne : un contact appartient à celui qui l'a AMENÉ). Les
+commissions complètent ensuite, pour les ventes historiques arrivées par
+un tunnel Systeme.io, où aucun rattachement n'a jamais été écrit chez
+nous. Jamais l'inverse : un acheteur écraserait celui qui l'a amené.
+
+**2. Et côté Tiquiz, la recherche échouait pour TOUT LE MONDE.** La
+fiche client du pilotage cherchait cette table avec l'adresse telle que
+l'URL la porte, c'est à dire ENCODÉE. Comme `@` s'encode toujours en
+`%40`, aucune fiche n'a jamais trouvé son "amené par". Détaillé dans
+l'AGENTS.md de Tiquiz.
+
+Test : `tests/logic/attribution-suivi.test.mts`.
