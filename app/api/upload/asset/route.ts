@@ -38,13 +38,13 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join, resolve, sep } from "node:path";
 
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import { urlAssetLocal, validerCheminAsset } from "@/lib/storage/cheminAsset";
+import { DOSSIER_ASSETS_DEFAUT, urlAssetLocal, validerCheminAsset } from "@/lib/storage/cheminAsset";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /** Le dossier servi par nginx. Voir le bloc `location ^~ /assets/` dans `infra/nginx/videos.*.conf`. */
-const DOSSIER = (process.env.ASSETS_DIR ?? "/srv/assets-tipote").replace(/\/+$/, "");
+const DOSSIER = (process.env.ASSETS_DIR ?? DOSSIER_ASSETS_DEFAUT).replace(/\/+$/, "");
 
 /**
  * 12 Mo. Les images sont déjà compressées côté navigateur (WebP q92,

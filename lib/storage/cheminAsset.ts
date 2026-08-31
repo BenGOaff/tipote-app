@@ -28,6 +28,31 @@
 // n'accepte que ce qu'on sait nommer. Une liste noire oublie toujours la
 // prochaine extension.
 
+/**
+ * LE DOSSIER OÙ LES IMAGES ATTERRISSENT, ET IL VIT ICI.
+ *
+ * PANNE DU 31 AOÛT 2026, CÔTÉ TIQUIZ, et ce dépôt portait exactement la
+ * même exposition. Le chemin était écrit dans la route d'envoi et dans
+ * une config nginx... alors que c'est CADDY qui répond sur les domaines
+ * `videos.*`. nginx ne voit jamais ces requêtes, donc toutes les images
+ * tombaient dans le bloc des VIDÉOS, qui exige un lien signé : 403 sur
+ * toutes les images de toutes les créatrices, favicons comprises, sur
+ * des quiz qui tournaient en publicité payante.
+ *
+ * **Un garde-fou qui ne protège qu'un des deux jumeaux ne protège
+ * personne** (leçon des deux versions de `pdf-parse`, 7 août). D'où
+ * cette constante ici aussi, dans le module PUR que les tests peuvent
+ * importer, et `npm run check:assets`.
+ *
+ * ATTENTION : ce dossier n'est PAS celui de Tiquiz. Les deux domaines
+ * `videos.*` partagent un seul bloc Caddy, donc chacun doit être routé
+ * vers SON dossier par un matcher sur l'hôte.
+ */
+export const DOSSIER_ASSETS_DEFAUT = "/srv/assets-tipote";
+
+/** Le préfixe public sous lequel ces fichiers sont servis. */
+export const PREFIXE_ASSETS = "/assets";
+
 /** Les dossiers de tête qu'on accepte. Un dossier inconnu est refusé. */
 export const DOSSIERS_ASSETS = [
   "bonus",

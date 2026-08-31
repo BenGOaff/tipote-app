@@ -2672,3 +2672,49 @@ jetons : c'est une décision de Béné, pas un bug.
 
 Test : `tests/logic/langues-servies.test.mts`, qui vérifie AUSSI qu'il
 attrape la régression (l'`enum` remis en place le fait rougir).
+
+## Les images de CE dépôt étaient exposées au même 403 (31 août 2026)
+
+Béné, sur Tiquiz : "toutes les images sont cassées c'est pas normal",
+puis "j'ai même plus les favicon putain". Et une vraie cliente, Damien,
+"a perdu tous ses visuels de quiz". Sur des quiz qui tournaient en
+PUBLICITÉ payante.
+
+**La panne était côté Tiquiz. Ce dépôt portait exactement la même
+exposition**, et c'est tout le sujet : `app/api/upload/asset/route.ts`
+est le MÊME code, avec `/srv/assets-tipote`, et son commentaire renvoie
+lui aussi à un bloc `location ^~ /assets/` dans une config **nginx**...
+alors que c'est **Caddy** qui répond sur les domaines `videos.*`. nginx
+ne voit jamais ces requêtes.
+
+Les images tombent alors dans le bloc des VIDÉOS, qui exige un lien
+signé. Une image n'en porte pas : **403 sur toutes, d'un coup**.
+
+**Le 403 est le diagnostic.** Un fichier absent rend 404. Un 403 dit que
+le refus vient de l'authentification, pas du disque : aucun fichier
+n'est perdu, ils sont refusés à la porte. Partir chercher des fichiers
+disparus, c'est chercher au mauvais endroit pendant des heures.
+
+**Et le dossier de ce dépôt N'EST PAS celui de Tiquiz.** Les deux
+domaines `videos.tipote.com` et `videos.quiz.tipote.com` partagent UN
+SEUL bloc de site Caddy : sans un matcher sur l'HÔTE, corriger Tiquiz
+sert Tipote depuis le dossier de Tiquiz, donc rejoue la panne ici. Le
+Caddyfile vit dans le dépôt TIQUIZ et route désormais chaque domaine
+vers son dossier.
+
+```bash
+npm run check:assets     # apres TOUT deploiement qui touche aux images
+```
+
+Il demande un nom qui n'existe PAS exprès : **404 = la route est saine**,
+403 = la panne. Il n'a donc besoin ni d'un vrai fichier ni d'un secret.
+
+**La règle générale, et elle dépasse les images :** quand un changement
+déplace l'endroit d'où quelque chose est SERVI, la dernière étape n'est
+pas d'écrire la configuration, c'est d'aller chercher l'URL et de lire
+le code de réponse. Le fichier était juste, commenté, relu, et adressé
+à un serveur qui ne répond pas.
+
+`DOSSIER_ASSETS_DEFAUT` vit dans `lib/storage/cheminAsset.ts`, le module
+PUR : un chemin écrit à deux endroits finit toujours par diverger, et
+ici la divergence coûte toutes les images.
