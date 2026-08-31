@@ -1969,8 +1969,35 @@ où notre inscription gratuite créera elle aussi le contact chez
 Systeme.io" : ce jour est arrivé le 25 août. `https://tiquiz.fr/signup`
 fait les trois choses d'un coup, le compte, le rattachement À VIE, et le
 contact chez Systeme.io avec son étiquette `tiquiz-free` (`poserTagPlan`
-crée le contact quand il n'existe pas). Ses séquences email partent
-comme avant, son workflow écoute l'ajout de cette étiquette.
+crée le contact quand il n'existe pas).
+
+🚨 **MAIS SES SÉQUENCES EMAIL NE PARTENT PAS, et cette page affirmait le
+contraire.** Mesuré le 31 août 2026 dans son compte Systeme.io, via leur
+API : ses **51 règles d'automatisation** se déclenchent TOUTES sur
+`form_subscribed`, c'est à dire la soumission d'un de LEURS formulaires.
+**Aucune** ne se déclenche sur `tag_added`. Poser une étiquette par
+l'API ne déclenche donc rien du tout.
+
+Conséquence, en production depuis le 27 août : un inscrit gratuit qui
+passe par un lien affilié est bien créé chez Systeme.io, bien étiqueté
+`tiquiz-free`, et ne reçoit AUCUN email. Idem pour toute inscription
+directe sur `tiquiz.fr/signup`, et idem pour `poserTagAchat` après une
+vente prise sur notre bon de commande.
+
+Le code, lui, était honnête : `app/api/auth/signup/route.ts` porte
+depuis le 25 août "vérifié le 25 août 2026 : aucune règle n'écoute
+encore `tiquiz-free`". C'est CETTE page qui a écrit le contraire, et
+c'est elle qu'on croit.
+
+**Ce qui reste à faire est chez Béné, pas dans le code** : créer dans
+Systeme.io une règle d'automatisation par étiquette (déclencheur "tag
+ajouté" sur `tiquiz-free`, puis sur les étiquettes de vente). Tant
+qu'elle n'existe pas, chaque inscription prise sur nos domaines est un
+contact qui ne reçoit rien.
+
+**Et c'est pour ça qu'on ne bascule PAS le bouton d'essai gratuit de la
+page de vente** (`SALES_LINKS_LEFT_ALONE` chez Tiquiz) : leur optin est
+aujourd'hui le seul chemin qui déclenche vraiment la séquence.
 
 La chaîne est complète et elle a été vérifiée bout en bout : le `?ref=`
 arrive dans l'URL, le middleware le range dans `tq_ref`, le bon de
