@@ -9,6 +9,7 @@
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { echapperMotifLike } from "@/lib/db/motifLike";
 
 export type AffiliateSession = {
   /**
@@ -62,7 +63,7 @@ export async function getAffiliateSession(): Promise<AffiliateSession | null> {
   const { data } = await supabaseAdmin
     .from("affiliates")
     .select("sa, ref, email, display_name, locale, status")
-    .ilike("email", email)
+    .ilike("email", echapperMotifLike(email))
     .maybeSingle();
   const row = data as {
     sa: string;

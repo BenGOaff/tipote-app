@@ -2718,3 +2718,40 @@ le code de réponse. Le fichier était juste, commenté, relu, et adressé
 `DOSSIER_ASSETS_DEFAUT` vit dans `lib/storage/cheminAsset.ts`, le module
 PUR : un chemin écrit à deux endroits finit toujours par diverger, et
 ici la divergence coûte toutes les images.
+
+## Une adresse email n'est pas un motif de recherche (31 août 2026)
+
+Dans un LIKE Postgres, **`_` remplace n'importe quel caractère** et `%`
+n'importe quelle suite. Or `_` est parfaitement légal dans une adresse :
+`jean_dupont@gmail.com` est banal.
+
+Cherché avec `.ilike("email", email)`, il matche donc
+`jeanXdupont@gmail.com`, c'est à dire le compte de QUELQU'UN D'AUTRE.
+
+**Dix sites dans les trois dépôts. Les deux pires sont ICI :**
+
+- `lib/affiliate/session.ts` résout la session affiliée sur cette
+  recherche. Un joker peut rendre la ligne d'un AUTRE affilié, donc lui
+  montrer son tableau de bord, ses commissions et ses coordonnées.
+- `app/affiliate/api/auth/start/route.ts` fait la même chose à la
+  connexion. Et quand deux lignes matchent, `maybeSingle` échoue :
+  l'affilié n'a alors plus de session du tout, sans qu'aucune erreur ne
+  le dise.
+
+**ON ÉCHAPPE, ON NE PASSE PAS À `.eq`.** `.eq` serait plus simple et il
+est sûr partout où la colonne ne contient que du minuscule. Mais
+`affiliates.email` est alimentée par des imports Systeme.io dont la
+casse n'est pas garantie : empêcher une connexion serait PIRE que le
+bug corrigé. `echapperMotifLike` (`lib/db/motifLike.ts`, pur et testé)
+ne change RIEN au comportement, sauf exactement le cas fautif.
+
+Le `\` s'échappe EN PREMIER, sinon on échapperait les barres qu'on vient
+d'ajouter.
+
+**Règle : toute valeur reçue de l'extérieur passée à `.like()` ou
+`.ilike()` passe par `echapperMotifLike`.** Une vraie recherche (un
+admin qui tape un fragment) est le seul cas où les jokers sont voulus,
+et il doit alors être explicite.
+
+Test : `tests/logic/email-pas-un-motif.test.mts`, vérifié en rejouant la
+version d'avant.

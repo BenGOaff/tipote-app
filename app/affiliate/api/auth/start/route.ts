@@ -12,6 +12,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { sendAffiliateMagicLink } from "@/lib/affiliate/sendMagicLink";
+import { echapperMotifLike } from "@/lib/db/motifLike";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -40,7 +41,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const { data } = await supabaseAdmin
     .from("affiliates")
     .select("sa, status, locale, display_name")
-    .ilike("email", email)
+    .ilike("email", echapperMotifLike(email))
     .maybeSingle();
   const row = data as { sa: string; status: string; locale: string | null; display_name: string | null } | null;
   if (!row || row.status !== "active") {
