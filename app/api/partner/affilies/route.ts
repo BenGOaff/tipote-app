@@ -59,7 +59,14 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         .limit(2000),
       supabaseAdmin.from("affiliate_stats").select("sa, total_clicks").limit(2000),
       supabaseAdmin.from("affiliate_sa_aliases").select("sa_alias, sa").limit(2000),
-      supabaseAdmin.from("affiliate_conversions").select("sa, email").limit(20000),
+      // `created_at` ET tri ASCENDANT : le PREMIER rattachement gagne
+      // (règle du 26 août). Sans la date, on ne peut pas départager deux
+      // affiliés dont le même prospect a croisé les liens.
+      supabaseAdmin
+        .from("affiliate_conversions")
+        .select("sa, email, created_at")
+        .order("created_at", { ascending: true })
+        .limit(20000),
       supabaseAdmin
         .from("affiliate_commissions")
         .select("id, sa, status, commission_cents, currency, sale_at, cancelled_at, payout_id, customer_email")
@@ -101,6 +108,39 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     // être appelé pour autre chose.
     const nomParSa = new Map(lignes.map((l) => [l.sa, l.nom ?? l.ref ?? null]));
     const attributions: Record<string, string> = {};
+
+    // LES CONVERSIONS D'ABORD, ET C'EST LA CORRECTION DU 31 AOÛT.
+    //
+    // Béné : "j'ai testé le ref de Nina, je ne suis pas taguée comme
+    // étant affiliée de Nina dans le suivi. Je ne peux jamais savoir qui
+    // a envoyé qui."
+    //
+    // Cette table ne se construisait QUE sur `affiliate_commissions`,
+    // c'est à dire sur les gens qui ont PAYÉ. Or une inscription
+    // GRATUITE par un lien affilié crée une CONVERSION, pas une
+    // commission : elle n'apparaissait donc nulle part, alors que c'est
+    // précisément elle qui rattache quelqu'un À VIE (règle du 26 août).
+    //
+    // Les conversions étaient déjà lues (elles alimentent le compteur de
+    // filleuls de chaque affilié), simplement pas utilisées ici : la
+    // donnée existait et personne ne la montrait.
+    //
+    // ORDRE ASCENDANT, donc le PREMIER rattachement gagne : un contact
+    // appartient à celui qui l'a AMENÉ, pas au dernier dont il a croisé
+    // un lien. `if (attributions[email]) continue` garde donc le plus
+    // ancien.
+    for (const c of ((convRes.data as { sa: string; email: string | null }[] | null) ?? [])) {
+      const email = String(c.email ?? "").trim().toLowerCase();
+      if (!email || attributions[email]) continue;
+      const nom = nomParSa.get(alias.get(c.sa) ?? c.sa);
+      if (nom) attributions[email] = nom;
+    }
+
+    // PUIS LES COMMISSIONS, pour ceux qui n'ont aucune conversion : les
+    // ventes historiques arrivées par un tunnel Systeme.io, où le
+    // rattachement n'a jamais été écrit chez nous. On ne les écrase
+    // jamais par dessus une conversion, sinon le dernier acheteur
+    // gagnerait sur celui qui l'a amené.
     for (const c of ((commRes.data as { sa: string; customer_email?: string | null }[] | null) ?? [])) {
       const email = String(c.customer_email ?? "").trim().toLowerCase();
       if (!email || attributions[email]) continue;
