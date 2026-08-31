@@ -2388,11 +2388,25 @@ protège personne.
 
 ### Ce que l'audit a laissé ouvert, et qui n'est pas du code
 
-**Les commissions de l'Atelier ne sont dans AUCUN lot.** Elles vivent
-dans SA base (`profiles.sio_affiliate_id` y tient lieu de registre), et
-`preparerLot` ne lit que celle d'ici. L'admin les AFFICHE en interrogeant
-les deux bases, ce qui rend la dette visible sans la solder. Détaillé
-dans `ROADMAP_SORTIE_SIO.md`, chantier 3.
+🚨 **CETTE LIGNE DISAIT "les commissions de l'Atelier ne sont dans
+AUCUN lot". C'EST PÉRIMÉ (vérifié le 31 août).**
+
+Elle était vraie le 26 août au matin, et la correction du même jour l'a
+annulée sans que la page soit reprise. Vérifié ligne par ligne :
+`commissionnerVente` (dépôt formaquiz) écrit dans le registre CENTRAL
+d'ici avec `source_app: "atelier"` et `regle_par: "nous"`, et
+`preparerLot` filtre sur `regle_par = "nous"` **sans filtrer
+`source_app`**. Les commissions de l'Atelier entrent donc dans le lot
+comme les autres.
+
+Ce qui reste vrai : le registre HISTORIQUE de l'Atelier
+(`profiles.sio_affiliate_id`, dans sa base) sert encore de REPLI pour
+un élève affilié là-bas et pas ici. Celles-là, oui, ne sont dans aucun
+lot.
+
+**La leçon est celle qui revient : une note d'état des lieux se relit
+quand on corrige ce qu'elle décrit**, sinon le prochain passage agit
+sur une dette déjà soldée.
 
 Test : `tests/logic/audit-26-aout.test.mts`, ici et dans les deux autres
 dépôts.
