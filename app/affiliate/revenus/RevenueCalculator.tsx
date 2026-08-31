@@ -11,11 +11,29 @@ import {
   PRICES_TTC_EUR,
   commissionEur,
 } from "@/lib/affiliate/commission";
+import { tauxCommissionPct } from "@/lib/affiliate/recompense";
 
 // Les taux, les prix et LE CALCUL vivent dans lib/affiliate/commission.ts.
 // Ce composant ne recalcule rien : il affichait `PRIX_TTC x TAUX` alors
 // que le paiement se fait sur le HT, donc il annonçait 16,7% de trop
 // (drame du 19 août 2026, voir l'en-tête du module).
+//
+// -- ET IL IGNORAIT LES MARCHES (audit du 30 août 2026) ---------------
+//
+// Il calculait au taux de BASE (40 %) quel que soit le nombre de
+// filleuls, alors que `tauxCommissionPct` donne 45 % dès le PREMIER et
+// monte jusqu'à 70 %. Un affilié avec 30 filleuls voyait donc 55 % de
+// ses gains réels, sur l'écran même qui doit lui donner envie de
+// pousser Tiquiz.
+//
+// Et le simulateur PUBLIC (tiquiz.fr/affiliation), lui, applique les
+// marches : deux simulateurs, deux reponses, pour la même personne.
+// C'est exactement ce que Béné refuse : "on ne doit pas mettre des
+// données différentes, tout doit être fiable et cohérent."
+//
+// On appelle donc `tauxCommissionPct`, LA MÊME fonction que le
+// versement. Le taux de l'Atelier, lui, ne monte pas : c'est un achat
+// unique, il n'y a pas de marche dessus.
 const ATELIER_PRICE_EUR = PRICES_TTC_EUR.atelier;
 const TIQUIZ_PRICE_EUR = {
   simple: PRICES_TTC_EUR.tiquiz_monthly,
@@ -52,7 +70,9 @@ export function RevenueCalculator({ showAtelier = true }: { showAtelier?: boolea
 
   const projected = useMemo(() => {
     const atelierUnit = commission(ATELIER_PRICE_EUR, COMMISSION_RATES.atelier);
-    const tiquizUnit = commission(tiquizPrice, COMMISSION_RATES.tiquiz);
+    // Le taux dépend du nombre de filleuls ABONNÉS, comme au versement.
+    const tauxTiquiz = tauxCommissionPct(tiquizSubs) / 100;
+    const tiquizUnit = commission(tiquizPrice, tauxTiquiz);
     const atelierMonth = showAtelier ? atelierSales * atelierUnit : 0;
     const tiquizMonth = tiquizSubs * tiquizUnit;
     const atelierYear = atelierMonth * 12;
@@ -119,10 +139,10 @@ export function RevenueCalculator({ showAtelier = true }: { showAtelier?: boolea
           {showAtelier
             ? interpolate(t.revenus.calculator_per_unit, {
                 atelierUnit: eur(commission(ATELIER_PRICE_EUR, COMMISSION_RATES.atelier), 2),
-                tiquizUnit: eur(commission(tiquizPrice, COMMISSION_RATES.tiquiz) * 12, 2),
+                tiquizUnit: eur(commission(tiquizPrice, tauxCommissionPct(tiquizSubs) / 100) * 12, 2),
               })
             : interpolate(t.revenus.calculator_per_unit_tiquiz, {
-                tiquizUnit: eur(commission(tiquizPrice, COMMISSION_RATES.tiquiz) * 12, 2),
+                tiquizUnit: eur(commission(tiquizPrice, tauxCommissionPct(tiquizSubs) / 100) * 12, 2),
               })}
         </p>
         <p className="text-xs text-muted-foreground leading-relaxed">

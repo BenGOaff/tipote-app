@@ -9,6 +9,7 @@
 // (link_copied, first_email, first_post) via /affiliate/api/guide.
 
 import { Sparkles, Check, Circle, Trophy } from "lucide-react";
+import { lireCoordonnees, peutEtrePayee } from "@/lib/affiliate/coordonnees";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -20,6 +21,12 @@ type AffiliateRow = {
   locale: string | null;
   trial_activated_at: string | null;
   launch_guide_completed: Record<string, string> | null;
+  // Les coordonnées de versement, pour SAVOIR si l'étape est faite au
+  // lieu de le demander. Voir plus bas.
+  payout_method: string | null;
+  paypal_email: string | null;
+  iban_holder: string | null;
+  iban_number: string | null;
 };
 
 type Step = {
@@ -39,7 +46,10 @@ export async function LaunchGuideCard({
 }) {
   const { data } = await supabaseAdmin
     .from("affiliates")
-    .select("display_name, locale, trial_activated_at, launch_guide_completed")
+    .select(
+      "display_name, locale, trial_activated_at, launch_guide_completed, " +
+        "payout_method, paypal_email, iban_holder, iban_number",
+    )
     .eq("sa", sa)
     .maybeSingle();
   const row = data as AffiliateRow | null;
@@ -64,17 +74,34 @@ export async function LaunchGuideCard({
       selfAttest: "link_copied",
     },
     {
-      // Drame Bene 8 juin 2026 : le paiement est config dans Systeme.io
-      // (https://systeme.io/dashboard/profile/affiliate-settings), JAMAIS
-      // dans Tipote. L'user clique le lien SIO, configure PayPal/RIB
-      // la-bas, puis marque l'etape fait (self-attestation). Plus de
-      // dependance sur les colonnes affiliates.paypal_email/iban_number
-      // qui suggeraient a tort que la config etait cote Tipote.
+      // CETTE ÉTAPE N'EST PLUS AUTO-DÉCLARÉE (audit du 30 août 2026).
+      //
+      // Elle l'était depuis le 8 juin, parce qu'à l'époque le paiement
+      // se configurait VRAIMENT chez Systeme.io et qu'on ne pouvait
+      // donc pas le vérifier. Depuis le 25 août, c'est NOUS qui virons,
+      // et `construireLot` ÉCARTE (raison "coordonnees") tout affilié
+      // dont `peutEtrePayee()` est faux.
+      //
+      // Un affilié pouvait donc cocher "fait", croire que tout était en
+      // ordre, et n'être jamais payé. Sans le moindre symptôme, et sans
+      // que personne ne puisse le lui dire.
+      //
+      // On lit maintenant la MÊME fonction que le lot de versement :
+      // l'étape est verte quand l'argent peut vraiment partir, et pas
+      // avant. C'est la seule façon que la case et le virement soient
+      // d'accord.
       key: "payment",
       title: t.overview.guide_step_payment_title,
       body: t.overview.guide_step_payment_body,
-      done: !!self.payment_set,
-      selfAttest: "payment_set",
+      done: peutEtrePayee(
+        lireCoordonnees({
+          payout_method: row.payout_method,
+          paypal_email: row.paypal_email,
+          iban_holder: row.iban_holder,
+          iban_number: row.iban_number,
+        }),
+      ),
+      selfAttest: null,
     },
     {
       key: "trial",
