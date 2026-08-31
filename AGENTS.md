@@ -2331,6 +2331,21 @@ CONSERVATEUR : lire un HT comme du TTC sous-paie de 17 %, ce qui se
 rattrape au lot suivant ; lire un TTC comme du HT surpaie de 20 %, et un
 virement parti ne revient pas.
 
+**LE `base: "ht"` DE PAYPAL ÉTAIT UN MENSONGE, jusqu'au 31 août 2026.**
+Béné : "pour l'affiliation on fait uniquement 40 % etc. sur le HT.
+Débrouille toi pour que sur PayPal ça marche aussi." Les webhooks PayPal
+de Tiquiz et de l'Atelier envoyaient `base: "ht"` avec une taxe à ZÉRO,
+donc un montant TTC dans un champ annoncé hors taxes. Ici, rien ne
+pouvait le voir : `attributeSale` fait confiance au champ, et c'est
+normal.
+
+C'est la limite de la règle du 1er août ("la mécanique est un PARAMÈTRE
+OBLIGATOIRE") : elle force l'appelant à DIRE, elle ne l'empêche pas de
+dire faux. **Un paramètre obligatoire ne protège de rien quand on lui
+ment.** Corrigé des deux côtés : la taxe vient désormais de la facture
+que ces apps émettent pour la vente (elles seules connaissent le pays de
+l'acheteur), voir leurs AGENTS.md respectifs.
+
 **Le montant lui même se lisait au pari.** Le webhook Systeme.io d'ICI
 faisait encore `extractNumber(rawBody, ["order.total_price"])`, donc
 `"17.00"` valait 17 CENTIMES. `readSioAmountCents` avait retiré ce pari
