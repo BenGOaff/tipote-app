@@ -28,6 +28,7 @@ import { lireImportSio } from "@/lib/affiliate/importSio";
 import { assurerRefAffiliee } from "@/lib/affiliate/refServer";
 import { annoterImport, type ActiviteSa } from "@/lib/affiliate/importApercu";
 import { actionPourLigne } from "@/lib/affiliate/saAlias";
+import { echapperMotifLike } from "@/lib/db/motifLike";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -61,7 +62,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // une même personne que Systeme.io désigne de deux façons.
     const [{ data: parSa }, { data: parEmail }] = await Promise.all([
       supabaseAdmin.from("affiliates").select("sa").eq("sa", a.sa).maybeSingle(),
-      supabaseAdmin.from("affiliates").select("sa, email").ilike("email", a.email).maybeSingle(),
+      supabaseAdmin.from("affiliates").select("sa, email").ilike("email", echapperMotifLike(a.email)).maybeSingle(),
     ]);
 
     const decision = actionPourLigne({

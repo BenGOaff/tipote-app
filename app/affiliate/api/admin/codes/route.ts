@@ -24,6 +24,7 @@ import { getAffiliateAdmin } from "@/lib/affiliate/admin";
 import { SA_RE } from "@/lib/affiliate/saFormat";
 import { REF_MIN_LENGTH, sanitizeRef } from "@/lib/affiliate/ref";
 import { normaliserCode, remiseValide } from "@/lib/affiliate/codeReduction";
+import { echapperMotifLike } from "@/lib/db/motifLike";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -66,7 +67,7 @@ async function trouverAffiliee(body: Record<string, unknown>): Promise<string | 
   let q;
   if (ref.length >= REF_MIN_LENGTH) q = req.ilike("ref", ref);
   else if (SA_RE.test(sa)) q = req.eq("sa", sa);
-  else if (email.includes("@")) q = req.ilike("email", email);
+  else if (email.includes("@")) q = req.ilike("email", echapperMotifLike(email));
   else return null;
 
   const { data } = await q.maybeSingle();

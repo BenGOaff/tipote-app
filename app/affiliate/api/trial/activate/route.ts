@@ -24,6 +24,7 @@ import { NextResponse } from "next/server";
 import { getAffiliateSession } from "@/lib/affiliate/session";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getTiquizAdmin } from "@/lib/tiquizAdmin";
+import { echapperMotifLike } from "@/lib/db/motifLike";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -98,7 +99,7 @@ export async function POST(): Promise<NextResponse> {
   const { data: existing, error: readErr } = await tiquiz
     .from("profiles")
     .select("user_id, email, plan")
-    .ilike("email", session.email)
+    .ilike("email", echapperMotifLike(session.email))
     .maybeSingle();
   if (readErr) {
     console.error("[affiliate/trial/activate] tiquiz read error:", readErr.message);
