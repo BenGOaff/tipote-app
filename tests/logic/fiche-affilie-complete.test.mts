@@ -34,7 +34,7 @@ test("un accord negocie passe DEVANT le barreme", () => {
     tauxStockePct: 45,
     tauxNegociePct: 60,
     remiseStockePct: 0,
-    filleuls: 3,
+    filleulsPayants: 3,
   });
   assert.equal(r.tauxPct, 60);
   assert.equal(r.tauxNegocie, true);
@@ -49,7 +49,7 @@ test("le taux affiche est celui qui sera VERSE, pas un bareme recalcule", () => 
     tauxStockePct: 50,
     tauxNegociePct: null,
     remiseStockePct: 0,
-    filleuls: 1, // le bareme dirait 45 %
+    filleulsPayants: 1, // le bareme dirait 45 %
   });
   assert.equal(r.tauxPct, 50);
   assert.equal(r.tauxNegocie, false);
@@ -61,7 +61,7 @@ test("sans rien de stocke, on retombe sur le bareme", () => {
     tauxStockePct: null,
     tauxNegociePct: null,
     remiseStockePct: 0,
-    filleuls: 0,
+    filleulsPayants: 0,
   });
   assert.equal(r.tauxPct, 40, "40 % est le taux de depart");
 });
@@ -74,7 +74,7 @@ test("qui a choisi la remise ne touche AUCUNE commission", () => {
     tauxStockePct: null,
     tauxNegociePct: null,
     remiseStockePct: 20,
-    filleuls: 20,
+    filleulsPayants: 20,
   });
   assert.equal(r.choix, "abonnement");
   assert.equal(r.remisePct, 20);
@@ -84,10 +84,10 @@ test("la marche suivante depend du CHOIX, elle ne se devine pas", () => {
   // Annoncer une marche de commission a quelqu'un qui a pris la remise
   // serait faux dans les deux sens.
   const com = construireRecompense({
-    choix: "commissions", tauxStockePct: null, tauxNegociePct: null, remiseStockePct: 0, filleuls: 3,
+    choix: "commissions", tauxStockePct: null, tauxNegociePct: null, remiseStockePct: 0, filleulsPayants: 3,
   });
   const abo = construireRecompense({
-    choix: "abonnement", tauxStockePct: null, tauxNegociePct: null, remiseStockePct: 0, filleuls: 3,
+    choix: "abonnement", tauxStockePct: null, tauxNegociePct: null, remiseStockePct: 0, filleulsPayants: 3,
   });
   assert.notEqual(com.prochaineMarcheValeur, abo.prochaineMarcheValeur);
 });
@@ -215,4 +215,81 @@ test("les comptes GRATUITS se comptent : filleuls moins acheteurs", () => {
   assert.equal(f.filleuls.length, 3);
   assert.equal(f.acheteurs, 1);
   assert.equal(f.filleuls.length - f.acheteurs, 2);
+});
+
+// --- LE PALIER NE COMPTE QUE CEUX QUI PAIENT --------------------------
+//
+// Bene, 31 aout 2026 : "on compte les affilies mais seuls ceux QUI
+// PAIENT permettent d'augmenter le palier de commission ! Tu veux que
+// je paye des gens qui ne me rapportent rien ?? Client payant =
+// augmente le %, client gratuit = aucun impact."
+//
+// L'ecran annoncait "encore 4 filleuls et il passe a 50 %" en comptant
+// des comptes gratuits. Le calcul qui decide vraiment
+// (`cron/recompense-affilies`) compte, lui, dans
+// `affiliate_commissions`.
+
+test("un compte GRATUIT ne compte pas dans le palier", () => {
+  const f = construireFiche({
+    sa: "sa1",
+    alias: new Map(),
+    conversions: [
+      { sa: "sa1", email: "gratuit1@ex.fr", created_at: ANCIEN },
+      { sa: "sa1", email: "gratuit2@ex.fr", created_at: ANCIEN },
+      { sa: "sa1", email: "gratuit3@ex.fr", created_at: ANCIEN },
+      { sa: "sa1", email: "client@ex.fr", created_at: ANCIEN },
+    ],
+    commissions: [comm({ id: "1" })] as never[],
+    maintenant: MAINTENANT,
+  });
+  assert.equal(f.filleuls.length, 4);
+  assert.equal(f.payants, 1, "un seul a paye");
+
+  // Avec le TOTAL, le bareme donnerait 45 % ; avec les payants, aussi,
+  // mais la MARCHE annoncee change, et c'est elle que Bene a vue.
+  const avecTotal = construireRecompense({
+    choix: "commissions", tauxStockePct: null, tauxNegociePct: null,
+    remiseStockePct: 0, filleulsPayants: f.filleuls.length,
+  });
+  const avecPayants = construireRecompense({
+    choix: "commissions", tauxStockePct: null, tauxNegociePct: null,
+    remiseStockePct: 0, filleulsPayants: f.payants,
+  });
+  assert.notEqual(
+    avecTotal.prochaineMarcheManque,
+    avecPayants.prochaineMarcheManque,
+    "le test ne prouverait rien si les deux comptes donnaient la meme marche",
+  );
+  assert.equal(avecPayants.prochaineMarcheManque, 10, "il lui manque 10 CLIENTS PAYANTS");
+});
+
+test("une commission ANNULEE ne fait pas gagner un palier", () => {
+  // Un remboursement ne doit pas laisser un palier derriere lui. Meme
+  // exclusion que le cron (`cancelled` / `rejected`).
+  const f = construireFiche({
+    sa: "sa1",
+    alias: new Map(),
+    conversions: [{ sa: "sa1", email: "rembourse@ex.fr", created_at: ANCIEN }],
+    commissions: [comm({ id: "1", status: "cancelled", customer_email: "rembourse@ex.fr" })] as never[],
+    maintenant: MAINTENANT,
+  });
+  assert.equal(f.payants, 0);
+  assert.equal(f.acheteurs, 1, "il a bien achete un jour : les deux comptes sont differents");
+});
+
+test("un filleul qui paie douze echeances ne vaut pas douze filleuls", () => {
+  // On compte des PERSONNES, pas des lignes de commission. C'est
+  // exactement ce que fait le cron avec son Set d'adresses.
+  const f = construireFiche({
+    sa: "sa1",
+    alias: new Map(),
+    conversions: [{ sa: "sa1", email: "abonne@ex.fr", created_at: ANCIEN }],
+    commissions: [
+      comm({ id: "1", customer_email: "abonne@ex.fr" }),
+      comm({ id: "2", customer_email: "abonne@ex.fr" }),
+      comm({ id: "3", customer_email: "abonne@ex.fr" }),
+    ] as never[],
+    maintenant: MAINTENANT,
+  });
+  assert.equal(f.payants, 1);
 });

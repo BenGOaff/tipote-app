@@ -131,7 +131,25 @@ export async function GET(
       tauxStockePct: brut.recompense_commission_pct,
       tauxNegociePct: (tauxRes.data as { rate_pct?: number }[] | null)?.[0]?.rate_pct,
       remiseStockePct: brut.recompense_remise_pct,
-      filleuls: fiche.filleuls.length,
+      // LES FILLEULS QUI PAIENT, JAMAIS LE TOTAL.
+      //
+      // Béné, 31 août : "seuls ceux QUI PAIENT permettent d'augmenter le
+      // palier. Client gratuit = aucun impact." J'avais passé le total,
+      // et l'écran annonçait une marche qui n'arriverait jamais.
+      //
+      // `recompense_filleuls` d'abord : c'est LA colonne que
+      // `cron/recompense-affilies` écrit, donc le nombre sur lequel sa
+      // récompense est vraiment calculée. Recompter ici donnerait un
+      // deuxième chiffre, et deux endroits qui calculent la même chose
+      // finissent toujours par se contredire.
+      //
+      // Repli sur le comptage LIVE (mêmes règles : une personne par
+      // adresse, annulations exclues) tant que le cron n'est jamais
+      // passé pour cet affilié : afficher zéro à quelqu'un qui a des
+      // clients payants serait pire qu'un chiffre à quelques jours près.
+      filleulsPayants: Number.isFinite(Number(brut.recompense_filleuls))
+        ? Number(brut.recompense_filleuls)
+        : fiche.payants,
     });
 
     const versement = construireVersement({

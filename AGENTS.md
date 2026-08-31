@@ -2868,6 +2868,35 @@ code qui déciderait où part l'argent de quelqu'un. Et `mandat` /
 manquantes" à quelqu'un qui a juste oublié de cocher le mandat
 l'envoie chercher au mauvais endroit.
 
+### LE PALIER NE COMPTE QUE LES CLIENTS PAYANTS
+
+Béné, en relisant l'écran le jour même : "on compte les affiliés mais
+seuls ceux QUI PAIENT permettent d'augmenter le palier de commission !
+Tu veux que je paye des gens qui ne me rapportent rien ?? Client payant
+= augmente le %, client gratuit = aucun impact, ça me semble logique."
+
+Elle avait raison, et c'était une faute introduite le jour même : la
+fiche passait le nombre TOTAL de filleuls au calcul de la marche, donc
+elle annonçait "encore 4 filleuls et il passe à 50 %" en comptant des
+comptes gratuits.
+
+**Le calcul qui décide vraiment le faisait déjà bien**, et c'est ce qui
+rend l'erreur impardonnable : `cron/recompense-affilies` compte dans
+`affiliate_commissions`, une personne par adresse, `cancelled` et
+`rejected` exclus. La fiche lit donc `recompense_filleuls`, LA colonne
+que ce cron écrit, plutôt que de recompter à côté.
+
+**Le paramètre s'appelle `filleulsPayants`, pas `filleuls`.** Un nom
+vague accepte silencieusement le mauvais nombre ; celui-là a fait
+échouer la compilation sur les six appelants au moment du renommage.
+C'est la seule protection qui survit au prochain qui touchera au
+fichier (règle du 1er août).
+
+Trois comptes qui se ressemblent et qu'il ne faut pas confondre :
+`filleuls` (tous), `acheteurs` (ont acheté un jour), `payants` (comptent
+pour le palier). Un remboursé est dans le deuxième et pas dans le
+troisième : un remboursement ne laisse pas un palier derrière lui.
+
 ### Les champs sont OPTIONNELS côté pilotage
 
 Le centre de pilotage et le registre sont deux serveurs déployés
