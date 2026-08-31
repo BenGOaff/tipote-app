@@ -178,6 +178,7 @@ export const AR: AffiliateDict = {
     gain_total: "إجمالي الأرباح",
     gain_pending: "قيد الانتظار",
     gain_paid: "مدفوع",
+    gain_annule: "منها {montant} أُلغيت بعد استرداد أو تعثر في الدفع. هذه العمولات لا تُدفع.",
     trial_cta_title: "🎁 شهرك المجاني من Tiquiz Plus بانتظارك",
     trial_cta_description:
       "فعّل شهرك المجاني لاختبار Tiquiz في خطة Plus (تعدّد الملفات، تحليل بالذكاء الاصطناعي)، وإنشاء محتوى ترويجي أصيل، وبيع الأداة بشكل أفضل لجمهورك. استخدمه متى شئت.",

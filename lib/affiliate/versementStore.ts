@@ -333,6 +333,56 @@ export async function approuverCommissionsMures(
   return { approuvees: mures.length };
 }
 
+/**
+ * LE REGISTRE DES AFFILIÉES CONCERNÉES, LU PAR PAQUETS.
+ *
+ * -- POURQUOI PAR PAQUETS (audit du 31 août 2026) ----------------------
+ *
+ * Un `.in("sa", [...])` part dans l'URL. Un `sa` fait 20 à 80
+ * caractères, et la commission est RÉCURRENTE depuis le 26 août : le lot
+ * d'un mois peut réunir des centaines d'affiliées distinctes. Passé
+ * quelques milliers de caractères, le serveur refuse la requête entière
+ * (414), et l'ancien code IGNORAIT l'erreur : `affs` valait `null`, donc
+ * plus AUCUNE affiliée n'était reconnue, donc tout le monde sortait en
+ * `affiliee-inconnue` et le lot du mois était vide.
+ *
+ * Le symptôme aurait été le pire possible : un écran qui dit « le
+ * registre ne connaît pas cette affiliée » à propos de gens parfaitement
+ * inscrits, un mois après l'autre, sans qu'une seule ligne d'erreur
+ * n'explique pourquoi. C'est exactement ce que Béné ne peut pas se
+ * permettre en démarchant de gros affiliés.
+ *
+ * 100 par paquet : largement sous la limite d'URL, et ça reste quelques
+ * allers-retours même sur un très gros mois.
+ *
+ * **Une erreur ARRÊTE tout et le dit.** Rendre ce qu'on a lu
+ * fabriquerait un lot partiel qui a l'air complet, et les manquants y
+ * seraient étiquetés « inconnues ».
+ */
+const PAQUET_AFFILIEES = 100;
+
+async function lireAffilieesParPaquets(
+  sas: readonly string[],
+): Promise<{ ok: true; lignes: unknown[] } | { ok: false }> {
+  const lignes: unknown[] = [];
+  for (let i = 0; i < sas.length; i += PAQUET_AFFILIEES) {
+    const paquet = sas.slice(i, i + PAQUET_AFFILIEES);
+    const { data, error } = await supabaseAdmin
+      .from(TABLE_AFF)
+      .select(`${CHAMPS_AFF}, ${CHAMPS_FISCAL}`)
+      .in("sa", paquet);
+    if (error) {
+      console.error(
+        `[versement] registre illisible sur le paquet ${i / PAQUET_AFFILIEES + 1} ` +
+          `(${paquet.length} affiliees) : ${error.message}`,
+      );
+      return { ok: false };
+    }
+    lignes.push(...((data ?? []) as unknown[]));
+  }
+  return { ok: true, lignes };
+}
+
 /** Construit le lot du mois, SANS rien écrire. C'est un aperçu. */
 export async function preparerLot(): Promise<Lot | null> {
   try {
@@ -368,10 +418,22 @@ export async function preparerLot(): Promise<Lot | null> {
     }
 
     const sas = [...new Set(commissions.map((c) => c.sa))];
-    const { data: affs } = await supabaseAdmin
-      .from(TABLE_AFF).select(`${CHAMPS_AFF}, ${CHAMPS_FISCAL}`).in("sa", sas);
+    const lecture = await lireAffilieesParPaquets(sas);
+    if (!lecture.ok) {
+      // ON NE CONSTRUIT PAS UN LOT SUR UNE LECTURE RATÉE.
+      //
+      // Sans ce garde-fou, un `.in()` refusé rendait `null`, donc AUCUNE
+      // affiliée connue, donc TOUT le monde écarté en
+      // `affiliee-inconnue` : l'écran annonçait que le registre ne les
+      // connaît pas alors qu'il les connaît très bien, et le lot du mois
+      // sortait vide. « Je n'ai pas pu regarder » et « il n'y a rien »
+      // sont deux réponses différentes (règle du 23 août).
+      console.error("[versement] lot NON prepare : le registre d'affiliees est illisible.");
+      return null;
+    }
+    const affs = lecture.lignes;
 
-    const affiliees: AffilieePayable[] = ((affs ?? []) as (LigneAffiliee & LigneFiscale)[]).map((l) => {
+    const affiliees: AffilieePayable[] = (affs as (LigneAffiliee & LigneFiscale)[]).map((l) => {
       const coordonnees: Coordonnees = lireCoordonnees({
         payout_method: l.payout_method,
         paypal_email: l.paypal_email,
