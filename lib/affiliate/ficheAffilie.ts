@@ -48,10 +48,42 @@ export interface Filleul {
   gagneCents: number;
 }
 
+/**
+ * L'ARGENT, EN POCHES QUI NE SE RECOUVRENT PAS (31 août 2026).
+ *
+ * Béné : "je veux TOUT parce que je ne peux le voir qu'ici." Un total
+ * unique ne répond à aucune de ses questions : "combien je lui dois",
+ * "combien part au prochain lot" et "combien il a déjà touché" sont
+ * trois nombres différents, et les additionner en un seul est ce qui a
+ * fait annoncer un chiffre jamais versé le 31 août.
+ *
+ * L'ANNULÉ S'AFFICHE, il ne se soustrait pas en silence : c'est la
+ * règle des lignes écartées d'un lot (25 août).
+ */
+export interface ArgentAffilie {
+  /** Gagné et pas encore versé : `sousGarantie` + `aVerser`. */
+  aVenirCents: number;
+  /** Encore dans le délai de 30 jours après le paiement. */
+  sousGarantieCents: number;
+  /** Mûr : ça part au prochain lot, entre le 10 et le 13. */
+  aVerserCents: number;
+  verseCents: number;
+  /** Remboursements et impayés. */
+  annuleCents: number;
+  /**
+   * Les commissions dans une AUTRE devise, comptées en NOMBRE et pas en
+   * montant : les additionner à des euros produirait un total faux qui
+   * a l'air juste. Elles sont écartées d'un lot avec la raison
+   * `devise` (26 août).
+   */
+  autresDevises: number;
+}
+
 export interface FicheAffilie {
   filleuls: Filleul[];
   /** Ceux qui ont acheté au moins une fois. */
   acheteurs: number;
+  argent: ArgentAffilie;
 }
 
 /** L'état d'une commission, dans les mots de l'écran des versements. */
@@ -83,6 +115,14 @@ export function construireFiche(args: {
   };
 
   const parEmail = new Map<string, Filleul>();
+  const argent: ArgentAffilie = {
+    aVenirCents: 0,
+    sousGarantieCents: 0,
+    aVerserCents: 0,
+    verseCents: 0,
+    annuleCents: 0,
+    autresDevises: 0,
+  };
 
   const prendre = (email: string): Filleul => {
     const cle = email.trim().toLowerCase();
@@ -123,6 +163,22 @@ export function construireFiche(args: {
     if (etat !== "annulee" && devise === "EUR") {
       f.gagneCents += Number(c.commission_cents) || 0;
     }
+
+    const montant = Number(c.commission_cents) || 0;
+    if (devise !== "EUR") {
+      // Comptée, jamais additionnée : voir `ArgentAffilie.autresDevises`.
+      argent.autresDevises += 1;
+    } else if (etat === "annulee") {
+      argent.annuleCents += montant;
+    } else if (etat === "versee") {
+      argent.verseCents += montant;
+    } else if (etat === "a-verser") {
+      argent.aVerserCents += montant;
+      argent.aVenirCents += montant;
+    } else {
+      argent.sousGarantieCents += montant;
+      argent.aVenirCents += montant;
+    }
   }
 
   const filleuls = [...parEmail.values()].map((f) => ({
@@ -140,5 +196,9 @@ export function construireFiche(args: {
     return tb - ta;
   });
 
-  return { filleuls, acheteurs: filleuls.filter((f) => f.achats.length > 0).length };
+  return {
+    filleuls,
+    acheteurs: filleuls.filter((f) => f.achats.length > 0).length,
+    argent,
+  };
 }

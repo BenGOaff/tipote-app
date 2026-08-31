@@ -2797,3 +2797,68 @@ l'URL la porte, c'est à dire ENCODÉE. Comme `@` s'encode toujours en
 l'AGENTS.md de Tiquiz.
 
 Test : `tests/logic/attribution-suivi.test.mts`.
+
+## La fiche d'un affilié dit TOUT, et à un seul endroit (31 août 2026)
+
+Béné : "je clique sur l'affilié, je vois combien de comptes gratuits il
+a fait créer, combien il a de clients payants, quel est son palier de
+commission et / ou sa réduction sur l'outil... les factures passées, en
+cours et à venir aussi, bref TOUT ! Son mode de paiement... je ne peux
+le voir qu'ici et j'ai besoin de tout ça."
+
+Le "je ne peux le voir qu'ici" est la vraie information : **le registre
+vit dans ce dépôt et nulle part ailleurs.** Un chiffre absent de cette
+fiche est un chiffre qu'elle ne peut obtenir qu'en ouvrant la base.
+
+`GET /api/partner/affilies/<sa>` rend maintenant, en plus des filleuls :
+la RÉCOMPENSE, l'ARGENT, le VERSEMENT et les FACTURES. Les décisions
+vivent dans `lib/affiliate/ficheComplete.ts`, pur et testé ; l'écran
+(centre de pilotage, dépôt Tiquiz) ne fait que les afficher.
+
+### Quatre choses à ne pas défaire
+
+**1. Le taux affiché est celui qui sera VERSÉ.** `attributeSale` pose
+`recompense_commission_pct` sur l'AFFILIÉ, et un accord négocié
+(`affiliate_rate_overrides`) passe devant le barème. Réafficher
+`tauxCommissionPct(filleuls)` donnerait un autre chiffre, et c'est
+celui de l'écran que Béné croirait. `affiliate_rate_overrides` existait
+depuis le 19 août sans être affichée nulle part : un partenariat à 60 %
+s'affichait à 40 %.
+
+**2. L'IBAN ne sort pas, même vers son écran à elle.** Seul le MASQUE
+(`FR14••••2606`), déjà stocké. Un écran se photographie, se partage, se
+laisse ouvert (règle du 25 août). **Donc AUCUN spread de la ligne
+`affiliates`** : la réponse est construite champ par champ. Un
+`...affRes.data` sur un `select("*")` ferait sortir `iban_chiffre` ET
+`pii_dek` d'un coup, sans qu'une ligne de code ne le dise. Le test
+l'interdit.
+
+Le `select("*")` est lui aussi voulu : la fiche lit des colonnes
+ajoutées par quatre migrations différentes, et les nommer ferait
+échouer toute la requête si l'une n'est pas passée, donc répondre
+"introuvable" sur un affilié qui existe.
+
+**3. Les quatre poches d'argent ne se recouvrent pas.** "Combien je lui
+dois", "combien part au prochain lot" et "combien il a déjà touché"
+sont trois nombres différents ; les fondre en un seul est exactement ce
+qui a fait annoncer un chiffre jamais versé le 31 août au matin.
+L'ANNULÉ s'affiche et ne se soustrait pas en silence, et il disparaît
+quand il est nul (un zéro permanent ferait croire à un problème). Les
+devises étrangères sont COMPTÉES, jamais additionnées à des euros.
+
+**4. La méthode de paiement est un CHOIX, devinée seulement pour les
+lignes historiques**, et l'écran le DIT (`explicite: false`). Les deux
+coordonnées remplies sans choix ne se départagent pas : ce serait le
+code qui déciderait où part l'argent de quelqu'un. Et `mandat` /
+`profil-fiscal` / `iban` sont des manques SÉPARÉS : dire "coordonnées
+manquantes" à quelqu'un qui a juste oublié de cocher le mandat
+l'envoie chercher au mauvais endroit.
+
+### Les champs sont OPTIONNELS côté pilotage
+
+Le centre de pilotage et le registre sont deux serveurs déployés
+séparément. Entre les deux déploiements, la fiche répond sans les
+nouveaux champs : chaque section se tait au lieu de faire planter un
+écran qui marchait très bien avant.
+
+Test : `tests/logic/fiche-affilie-complete.test.mts`.
