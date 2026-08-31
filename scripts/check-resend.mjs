@@ -102,9 +102,30 @@ const res = await fetch("https://api.resend.com/domains", {
 });
 
 if (res.status === 401 || res.status === 403) {
+  // DEUX CAUSES, ET CE CONTRÔLE NE LES DISTINGUE PAS (31 août 2026).
+  //
+  // Ce message disait "elle est révoquée, mal recopiée, ou elle n'a pas
+  // le droit de lire", ce qui met les trois sur le même plan alors que
+  // la troisième est un cas NORMAL : une clé Resend "Sending access"
+  // sait envoyer et n'a pas le droit de LISTER les domaines. Elle
+  // répond donc 401 ici tout en fonctionnant parfaitement.
+  //
+  // Un contrôle qui ne distingue pas ce qu'il est censé distinguer est
+  // pire qu'un contrôle absent (leçon des clés Supabase, 22 août), et
+  // je venais de le refaire.
   console.log("");
-  console.log(`❌ Resend REFUSE cette clé (${res.status}).`);
-  console.log("   Elle est révoquée, mal recopiée, ou elle n'a pas le droit de lire.");
+  console.log(`⚠️  Cette clé ne peut pas LISTER les domaines (${res.status}).`);
+  console.log("   Deux causes possibles, et elles n'appellent pas la même correction :");
+  console.log("");
+  console.log("   1. La clé est en 'Sending access'. C'est NORMAL : elle sait");
+  console.log("      envoyer, elle n'a pas le droit de lire la liste. Ce contrôle");
+  console.log("      ne peut alors rien dire, et ce n'est pas une panne.");
+  console.log("   2. La clé est révoquée ou mal recopiée. Là, aucun email ne part.");
+  console.log("");
+  console.log("   POUR TRANCHER : https://resend.com/api-keys, colonne Permission.");
+  console.log("   Une clé 'Full access' fait répondre ce contrôle pour de bon.");
+  console.log("   Et le journal du serveur dit toujours la vérité :");
+  console.log("     pm2 logs <app> --nostream --lines 200 | grep -i Resend");
   process.exit(1);
 }
 if (!res.ok) {
