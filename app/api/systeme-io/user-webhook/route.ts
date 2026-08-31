@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { createNotification } from "@/lib/notifications";
+import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from "@/i18n/config";
 
 export const dynamic = "force-dynamic";
 
@@ -89,6 +90,18 @@ const SALE_MESSAGES: Record<string, { title: string; body: string }> = {
     title: "عملية بيع جديدة!",
     body: "{name} اشترى للتو \"{offer}\" ({amount})",
   },
+  // Le portugais et le brésilien manquaient : un compte réglé sur l'une
+  // de ces deux langues recevait ses notifications de vente EN FRANÇAIS.
+  // La phrase est la même dans les deux ; les entrées restent séparées
+  // parce qu'elles divergeront au premier texte plus long.
+  pt: {
+    title: "Nova venda!",
+    body: "{name} acabou de comprar \"{offer}\" ({amount})",
+  },
+  "pt-BR": {
+    title: "Nova venda!",
+    body: "{name} acabou de comprar \"{offer}\" ({amount})",
+  },
 };
 
 const CANCEL_MESSAGES: Record<string, { title: string; body: string }> = {
@@ -112,6 +125,14 @@ const CANCEL_MESSAGES: Record<string, { title: string; body: string }> = {
     title: "تم إلغاء البيع",
     body: "تم إلغاء شراء \"{offer}\" من قبل {name}.",
   },
+  pt: {
+    title: "Venda cancelada",
+    body: "A compra de \"{offer}\" por {name} foi cancelada.",
+  },
+  "pt-BR": {
+    title: "Venda cancelada",
+    body: "A compra de \"{offer}\" por {name} foi cancelada.",
+  },
 };
 
 function formatAmount(amount: number, currency: string): string {
@@ -122,9 +143,17 @@ function formatAmount(amount: number, currency: string): string {
   }
 }
 
+/**
+ * La langue du compte qui reçoit la notification.
+ *
+ * La liste vient de `i18n/config.ts` : recopiée ici, elle était restée à
+ * cinq langues quand l'app en a servi sept, et un compte portugais
+ * recevait ses notifications de vente en français.
+ */
 function getUserLocale(uiLocale: string | null): string {
-  const supported = ["fr", "en", "es", "it", "ar"];
-  return supported.includes(uiLocale ?? "") ? uiLocale! : "fr";
+  return (SUPPORTED_LOCALES as readonly string[]).includes(uiLocale ?? "")
+    ? uiLocale!
+    : DEFAULT_LOCALE;
 }
 
 // ─── Event Handlers ───

@@ -2565,3 +2565,83 @@ réponses.
 | calendrier | entre le 10 et le 13 du mois | comme Systeme.io, annoncé dans les 6 langues |
 
 Test : `tests/logic/audit-26-aout.test.mts` (les deux dépôts).
+
+## Le robot d'aide était MORT en portugais (audit du support, 31 août 2026)
+
+Le portugais et le brésilien ont été ajoutés à `i18n/config.ts` après
+coup. **Cinq endroits gardaient leur propre copie de la liste des
+langues**, restée à cinq, et aucun ne le disait.
+
+### 1. Le robot du centre d'aide répondait 400 à chaque message
+
+`POST /api/support/chat` validait son corps par
+`z.enum(["fr","en","es","it","ar"])`. Le widget envoie la langue résolue
+par `resolveHelpLocale`, qui rend très bien `pt` ou `pt-BR` : zod
+refusait le corps ENTIER, la route répondait 400, et l'écran affichait
+"une erreur est survenue". **À chaque message, sans exception.**
+
+Reproduit avant de corriger, pas déduit : `safeParse({message:"ola",
+locale:"pt"})` -> refusé.
+
+Le symptôme ne disait rien de la cause. Ni "langue non gérée", ni une
+ligne dans `pm2 logs` : le message d'erreur générique du widget, celui
+qu'on lit comme "le service est en panne".
+
+**Règle : une préférence d'affichage ne fait JAMAIS échouer une
+question.** La langue est un `string` NORMALISÉ
+(`normaliserLangueAide`, dans le module pur `lib/support/locale.ts`),
+plus un `enum` : une valeur illisible retombe sur le français au lieu de
+refuser. La huitième langue ajoutée un jour ne cassera plus rien.
+
+**Et le repli de PROMPT était le français**, qui porte "Langue :
+Français. Réponds toujours en français." Une langue sans prompt à elle
+aurait donc été servie en français : ça a l'air de marcher, et c'est
+pire qu'une erreur. Elle reçoit maintenant le prompt ANGLAIS plus une
+consigne de langue explicite, posée APRÈS la base de connaissances pour
+que le préfixe reste cacheable (règle de `knowledgeBase.ts`).
+
+### 2. La préférence de langue ne se sauvegardait pas
+
+Le sélecteur propose les SEPT langues (`LanguageSwitcher` lit
+`SUPPORTED_LOCALES`). `PATCH /api/settings/ui-locale` en refusait deux,
+et `persistLocaleToDb` avale l'erreur (`catch {}`, non bloquant).
+
+**Le symptôme est le pire possible parce qu'il est différé** : ça marche
+tout de suite (le cookie est posé), et la langue revient au français sur
+un autre appareil, après un nettoyage de cookies, ou à l'expiration.
+
+### 3. Les notifications de vente partaient en français
+
+`SALE_MESSAGES` et `CANCEL_MESSAGES` couvraient cinq langues. Un compte
+réglé en portugais recevait "Nouvelle vente !" en français.
+
+### Ce qui a été trouvé au passage
+
+Le limiteur de débit du robot était une `Map` locale **sans aucun
+ramasse-miettes** : une entrée par adresse vue depuis le démarrage,
+gardée pour toujours. Sur une page PUBLIQUE, c'est une fuite de mémoire
+qui grandit avec le trafic, invisible jusqu'au redémarrage de PM2. Il
+passe sur `lib/aiRateLimit.ts`, qui purge, et qui est déjà celui des
+trois autres points d'entrée coûteux. Même famille que le compteur du
+support qui se désarmait tout seul (audit du 24 août).
+
+Le chrome du widget retombait sur le FRANÇAIS pour une langue absente de
+sa table. Il retombe sur l'anglais, comme les deux ternaires de son
+propre bandeau le faisaient déjà.
+
+### L'exception assumée
+
+`lib/affiliate/conditionsUrl.ts` liste cinq langues EXPRÈS : le texte
+des conditions n'existe pas en portugais, et demander `?lang=pt`
+servirait l'anglais en prétendant le contraire. C'est une décision
+écrite à côté du code, et elle reste. Le test l'exige toujours écrite :
+une exemption sans raison est une exemption que le prochain passage
+prend pour un oubli.
+
+**Ce qui reste ouvert, et qui n'est pas du code :** les pépites
+n'existent qu'en cinq langues (`lib/pepites/translatePepite.ts` ne
+traduit que vers en/es/it/ar). Les générer en portugais coûte des
+jetons : c'est une décision de Béné, pas un bug.
+
+Test : `tests/logic/langues-servies.test.mts`, qui vérifie AUSSI qu'il
+attrape la régression (l'`enum` remis en place le fait rougir).

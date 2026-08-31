@@ -18,7 +18,7 @@
 // meilleure que l'entête du navigateur (une Italienne peut très bien
 // avoir un Chrome en anglais).
 
-import { SUPPORTED_LOCALES, type SupportedLocale } from "@/i18n/config";
+import { DEFAULT_LOCALE, SUPPORTED_LOCALES, type SupportedLocale } from "@/i18n/config";
 
 /**
  * La langue demandée si elle est valide, sinon celle déjà résolue.
@@ -49,4 +49,36 @@ export function askedHelpLocale(asked: unknown): SupportedLocale | null {
       (l) => l.toLowerCase() === raw.toLowerCase(),
     ) as SupportedLocale | undefined
   ) ?? null;
+}
+
+
+/**
+ * LA LANGUE D'UNE CONVERSATION AVEC LE ROBOT D'AIDE.
+ *
+ * Béné, 31 août 2026, en demandant l'audit du support : le robot était
+ * MORT en portugais. Son corps était validé par
+ * `z.enum(["fr","en","es","it","ar"])`, cinq langues, alors que l'app en
+ * sert SEPT. Le widget envoie la langue résolue par
+ * `resolveHelpLocale`, qui rend très bien `pt` ou `pt-BR` : zod refusait
+ * le corps ENTIER, la route répondait 400, et l'écran affichait "une
+ * erreur est survenue" à chaque message.
+ *
+ * **Une préférence d'affichage ne doit JAMAIS faire échouer une
+ * question.** On normalise, on ne refuse pas : une valeur illisible
+ * retombe sur le français. La huitième langue ajoutée un jour ne
+ * cassera plus rien, parce que la liste n'est plus recopiée ici.
+ *
+ * Différent de `resolveHelpLocale`, et les deux sont utiles :
+ * celui-là a un repli EXPLICITE (la langue déjà résolue par la page),
+ * celui-ci a le défaut de l'app. Les fusionner obligerait un appelant à
+ * inventer un repli qu'il n'a pas.
+ */
+export function normaliserLangueAide(brut: unknown): SupportedLocale {
+  const raw = typeof brut === "string" ? brut.trim() : "";
+  if (!raw) return DEFAULT_LOCALE;
+  return (
+    ((SUPPORTED_LOCALES as readonly string[]).find(
+      (l) => l.toLowerCase() === raw.toLowerCase(),
+    ) as SupportedLocale | undefined) ?? DEFAULT_LOCALE
+  );
 }
