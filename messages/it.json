@@ -16,7 +16,8 @@
     "widgets": "Widgets",
     "webinars": "Webinar",
     "support": "Aiuto",
-    "becomeAffiliate": "Diventa affiliato"
+    "becomeAffiliate": "Diventa affiliato",
+    "generators": "Generatori"
   },
   "sidebar": {
     "tagline": "Il tuo compagno intelligente",
@@ -7752,6 +7753,124 @@
         "titre": "Niente da creare per questi profili",
         "aide": "Hai collegato un corso o una community. Tiquiz apre l'accesso da solo, e una regola in più lo aprirebbe due volte."
       }
+    }
+  },
+  "generateurs": {
+    "titre": "Generatori",
+    "intro": "Il tuo quiz sa già di cosa parla, a chi e con che tono. Questi tre generatori partono da lì per scrivere quello che viene dopo.",
+    "cartes": {
+      "bonus": {
+        "titre": "Il bonus offerto alla fine",
+        "resume": "Un contenuto breve, consegnato in automatico, che prolunga il risultato e porta alla tua offerta.",
+        "quoi": "Ottieni il bonus scritto per intero, le istruzioni per crearlo e consegnarlo, e i testi della schermata bonus."
+      },
+      "emails": {
+        "titre": "La sequenza di email dopo il quiz",
+        "resume": "Le email inviate a chi ha appena ottenuto un profilo preciso.",
+        "quoi": "Ottieni una sequenza completa, scritta per UN profilo, oggetto compreso, pronta da incollare nella tua campagna."
+      },
+      "promo": {
+        "titre": "I contenuti per far fare il tuo quiz",
+        "resume": "Le email e i post che fanno venire voglia di rispondere, senza vendere nulla.",
+        "quoi": "Ottieni email di invito e post per i tuoi social, con il link del tuo quiz."
+      }
+    },
+    "verrou": {
+      "badge": "Riservato agli account a pagamento",
+      "corps": "I generatori sono inclusi dal primo piano a pagamento. Il tuo lavoro e i tuoi quiz restano come sono: sblocchi solo questi tre strumenti.",
+      "cta": "Vedere i piani"
+    },
+    "retour": "Torna ai generatori",
+    "etapes": {
+      "projet": "1. Il progetto",
+      "profil": "2. Il profilo",
+      "offre": "L'offerta a cui porta",
+      "pistes": "Le proposte",
+      "contenus": "I contenuti"
+    },
+    "projet": {
+      "aide": "Tutto il resto viene da lì: il titolo, la promessa, il tono, i profili.",
+      "aucun": "Nessuno dei tuoi progetti può ancora servire a questo generatore.",
+      "aucunCta": "Creare un quiz",
+      "questions": "{count} domande",
+      "bloque": {
+        "sondage": "È un sondaggio: non ha profili di risultato da prolungare.",
+        "profils-vides": "I suoi profili di risultato sono ancora vuoti: compilali prima.",
+        "quiz-vide": "Questo progetto non ha ancora nessuna domanda."
+      }
+    },
+    "profil": {
+      "aide": "La sequenza parte dal tag di questo profilo. Non deve poter essere inviata a un altro.",
+      "sansTitre": "Profilo {rang}"
+    },
+    "offre": {
+      "aide": "È l'unica cosa che il tuo quiz non può sapere. Senza, il contenuto non porterebbe da nessuna parte.",
+      "promesse": "Cosa promette la tua offerta",
+      "promessePlaceholder": "Un percorso di 6 settimane per costruire un funnel che vende senza forzare",
+      "format": "La sua forma",
+      "formats": {
+        "formation": "Un corso online",
+        "accompagnement": "Un percorso o del coaching",
+        "prestation": "Un servizio svolto da te",
+        "outil": "Uno strumento o un software",
+        "produit": "Un prodotto fisico",
+        "abonnement": "Un abbonamento",
+        "groupe": "Un programma di gruppo"
+      },
+      "prix": "Il suo prezzo",
+      "prixPlaceholder": "497 EUR",
+      "prixAide": "Facoltativo. Se resta vuoto, nessun prezzo viene scritto da nessuna parte."
+    },
+    "pistes": {
+      "lancer": "Proporre tre proposte",
+      "relancer": "Proporre altre tre proposte",
+      "encours": "Sto scrivendo tre proposte",
+      "aide": "Scegline una. Non viene prodotto nulla finché non scegli.",
+      "recommandee": "Consigliata",
+      "choisir": "Vado con questa",
+      "choisie": "Proposta scelta",
+      "changer": "Cambiare proposta",
+      "morceaux": "{count} contenuti da scrivere"
+    },
+    "production": {
+      "lancer": "Scrivere i contenuti",
+      "encours": "In corso: {fait} su {total}",
+      "refaire": "Riscrivere questo contenuto",
+      "copier": "Copia",
+      "copie": "Copiato",
+      "brut": "Vedere il testo da copiare",
+      "rendu": "Tornare all'anteprima",
+      "tronque": "Questo contenuto è stato interrotto prima della fine. Riscrivilo, di solito riesce al secondo tentativo.",
+      "vide": "Non è ancora stato scritto nulla."
+    },
+    "blocs": {
+      "contenu": "Il bonus, per intero",
+      "guide": "Come crearlo e consegnarlo",
+      "remise": "I testi che lo consegnano",
+      "email": "Email {index}",
+      "post": "Post {index}"
+    },
+    "erreurs": {
+      "busy": "I server dell'IA sono saturi in questo momento. Aspetta un minuto e riprova, non si perde nulla.",
+      "too_long": "La scrittura ha superato il tempo disponibile e si è fermata. Riprova, di solito riesce al secondo tentativo.",
+      "refused": "La richiesta è stata rifiutata. Non dipende da te: segnalacelo e guardiamo il registro del server.",
+      "unreachable": "Impossibile raggiungere il servizio di scrittura. Controlla la connessione e riprova.",
+      "empty": "La risposta è arrivata vuota. Riprova, di solito al secondo tentativo va bene.",
+      "unreadable": "La risposta è arrivata in un formato illeggibile. Riprova, di solito al secondo tentativo va bene.",
+      "rate_limited": "Hai generato molto negli ultimi minuti. Torna tra poco, tutto viene conservato.",
+      "not_configured": "La scrittura non è disponibile al momento. Siamo già stati avvisati.",
+      "plan_required": "I generatori sono inclusi dal primo piano a pagamento.",
+      "offre_manquante": "Descrivi prima cosa promette la tua offerta.",
+      "profil_manquant": "Scegli prima un profilo.",
+      "not_found": "Questo progetto non è più disponibile. Può essere stato eliminato, oppure non ti appartiene. Non è stato modificato nulla.",
+      "generic": "Non è andata a buon fine. Riprova, il resto del tuo lavoro è conservato.",
+      "credits": "Non hai abbastanza crediti per questo contenuto. Ricarica i tuoi crediti, tutto quello che è già scritto resta."
+    },
+    "credits": {
+      "solde": "{count, plural, one {# credito rimasto} other {# crediti rimasti}}",
+      "cout": "{count, plural, one {# credito} other {# crediti}}",
+      "coutPistes": "Chiedere delle proposte costa {count, plural, one {# credito} other {# crediti}}, ogni volta.",
+      "environ": "circa {count, plural, one {# credito} other {# crediti}}"
     }
   }
 }

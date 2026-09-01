@@ -11,6 +11,7 @@ import {
   FolderOpen,
   BarChart3,
   Zap,
+  Wand2,
   Users,
   Briefcase,
   Video,
@@ -83,6 +84,12 @@ const MAIN_ITEM_CONFIG = [
   { key: "strategy" as const, url: "/strategy", icon: Target, spotlightId: "strategy" },
   { key: "create" as const, url: "/create", icon: Sparkles, spotlightId: "create" },
   { key: "contents" as const, url: "/contents", icon: FolderOpen, spotlightId: "contents" },
+  // Les trois generateurs de contenu (bonus, sequence d'emails, promo).
+  // APRES "Mes Contenus" : on genere a partir d'un quiz qui existe deja.
+  // spotlightId inerte tant qu'aucune phase de tour ne pointe dessus,
+  // comme "boost" : une phase sans ancre BLOQUE le tour, une ancre sans
+  // phase ne coute rien.
+  { key: "generators" as const, url: "/generateurs", icon: Wand2, spotlightId: "generators" },
 { key: "automations" as const, url: "/automations", icon: Zap, spotlightId: "automations" },
   // Extension Chrome (Boost) : page dédiée /boost (Béné 12 juin 2026).
   // spotlightId inerte tant qu'aucune phase de tour ne pointe dessus.

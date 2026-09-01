@@ -653,3 +653,35 @@ html[data-pq-compact] body {
   pointer-events: none;
 }
 
+/* LE CONTENU DES GÉNÉRATEURS (1er septembre 2026).
+ *
+ * Le rendu vient de `markdownVersHtml`, donc des balises nues : sans ces
+ * règles, Tailwind retire les puces des listes et met tous les titres à
+ * la même taille que le texte. La créatrice lirait alors un mur de
+ * paragraphes et conclurait que la génération est ratée, alors que c'est
+ * la feuille de style qui manque.
+ *
+ * Aucun aplat de couleur sous du texte (règle du 31 août, sortie trois
+ * fois) : le rythme vient des titres et de l'espace, pas d'un fond.
+ *
+ * Le nom ne porte PAS de préfixe de marque : ce bloc est le MÊME dans
+ * Tiquiz et dans Tipote, et un `tiquiz-` recopié dans Tipote se lirait
+ * comme une erreur de copie au prochain passage. */
+.gen-rendu h2 { font-size: 1.05rem; font-weight: 700; margin: 1.25em 0 0.4em; }
+.gen-rendu h3 { font-size: 0.98rem; font-weight: 700; margin: 1.1em 0 0.35em; }
+.gen-rendu h4,
+.gen-rendu h5 { font-size: 0.92rem; font-weight: 600; margin: 1em 0 0.3em; }
+.gen-rendu h2:first-child,
+.gen-rendu h3:first-child { margin-top: 0; }
+.gen-rendu p { margin: 0.6em 0; }
+.gen-rendu ul { list-style: disc outside; padding-left: 1.25rem; margin: 0.6em 0; }
+.gen-rendu li { margin: 0.25em 0; }
+.gen-rendu strong { font-weight: 700; }
+.gen-rendu em { font-style: italic; }
+.gen-rendu a { color: var(--primary); text-decoration: underline; }
+.gen-rendu code {
+  font-size: 0.9em;
+  background: color-mix(in srgb, currentColor 8%, transparent);
+  padding: 0.1em 0.3em;
+  border-radius: 0.25rem;
+}

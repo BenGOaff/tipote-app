@@ -16,7 +16,8 @@
     "widgets": "Widgets",
     "webinars": "Événements live",
     "support": "Aide",
-    "becomeAffiliate": "Devenir affilié"
+    "becomeAffiliate": "Devenir affilié",
+    "generators": "Générateurs"
   },
   "sidebar": {
     "tagline": "Ton compagnon malin",
@@ -7752,6 +7753,124 @@
         "titre": "Rien à créer pour ces profils",
         "aide": "Tu as relié une formation ou une communauté. Tiquiz ouvre l'accès tout seul, et une règle de plus l'ouvrirait deux fois."
       }
+    }
+  },
+  "generateurs": {
+    "titre": "Générateurs",
+    "intro": "Ton quiz sait déjà de quoi il parle, à qui, et sur quel ton. Ces trois générateurs partent de là pour écrire ce qui vient après.",
+    "cartes": {
+      "bonus": {
+        "titre": "Le bonus offert à la fin",
+        "resume": "Un livrable court, remis automatiquement, qui prolonge le résultat et amène ton offre.",
+        "quoi": "Tu obtiens le bonus écrit en entier, le mode d'emploi pour le fabriquer et le livrer, et les textes de l'écran bonus."
+      },
+      "emails": {
+        "titre": "La séquence d'emails après le quiz",
+        "resume": "Les emails envoyés à quelqu'un qui vient d'obtenir un profil précis.",
+        "quoi": "Tu obtiens une séquence complète, écrite pour UN profil, objet compris, prête à coller dans ta campagne."
+      },
+      "promo": {
+        "titre": "Les contenus pour faire passer ton quiz",
+        "resume": "Les emails et les posts qui donnent envie de répondre, sans rien vendre.",
+        "quoi": "Tu obtiens des emails d'invitation et des posts pour tes réseaux, avec le lien de ton quiz."
+      }
+    },
+    "verrou": {
+      "badge": "Réservé aux comptes payants",
+      "corps": "Les générateurs sont inclus dès le premier palier payant. Ton travail et tes quiz ne bougent pas : tu débloques juste ces trois outils.",
+      "cta": "Voir les formules"
+    },
+    "retour": "Retour aux générateurs",
+    "etapes": {
+      "projet": "1. Le projet",
+      "profil": "2. Le profil",
+      "offre": "L'offre vers laquelle ça mène",
+      "pistes": "Les pistes",
+      "contenus": "Les contenus"
+    },
+    "projet": {
+      "aide": "Tout le reste vient de lui : son titre, sa promesse, son ton, ses profils.",
+      "aucun": "Aucun de tes projets ne peut encore servir à ce générateur.",
+      "aucunCta": "Créer un quiz",
+      "questions": "{count} questions",
+      "bloque": {
+        "sondage": "C'est un sondage : il n'a pas de profil de résultat à prolonger.",
+        "profils-vides": "Ses profils de résultat sont encore vides : remplis les d'abord.",
+        "quiz-vide": "Ce projet n'a pas encore de question."
+      }
+    },
+    "profil": {
+      "aide": "La séquence part du tag de ce profil là. Elle ne doit pas pouvoir être envoyée à un autre.",
+      "sansTitre": "Profil {rang}"
+    },
+    "offre": {
+      "aide": "C'est la seule chose que ton quiz ne peut pas savoir. Sans elle, le contenu mènerait dans le vide.",
+      "promesse": "Ce que ton offre promet",
+      "promessePlaceholder": "Un accompagnement de 6 semaines pour construire un tunnel qui vend sans forcer",
+      "format": "Sa forme",
+      "formats": {
+        "formation": "Une formation en ligne",
+        "accompagnement": "Un accompagnement ou du coaching",
+        "prestation": "Une prestation de service",
+        "outil": "Un outil ou un logiciel",
+        "produit": "Un produit physique",
+        "abonnement": "Un abonnement",
+        "groupe": "Un programme en groupe"
+      },
+      "prix": "Son prix",
+      "prixPlaceholder": "497 €",
+      "prixAide": "Facultatif. S'il est vide, aucun prix n'est écrit nulle part."
+    },
+    "pistes": {
+      "lancer": "Proposer trois pistes",
+      "relancer": "Proposer trois autres pistes",
+      "encours": "Trois pistes en cours d'écriture",
+      "aide": "Choisis en une. Rien n'est produit tant que tu n'as pas choisi.",
+      "recommandee": "Conseillée",
+      "choisir": "Partir sur celle ci",
+      "choisie": "Piste choisie",
+      "changer": "Changer de piste",
+      "morceaux": "{count} contenus à écrire"
+    },
+    "production": {
+      "lancer": "Écrire les contenus",
+      "encours": "En cours : {fait} sur {total}",
+      "refaire": "Réécrire ce contenu",
+      "copier": "Copier",
+      "copie": "Copié",
+      "brut": "Voir le texte à copier",
+      "rendu": "Revenir au rendu",
+      "tronque": "Ce contenu a été coupé avant la fin. Réécris le, ça passe en général au deuxième essai.",
+      "vide": "Rien n'a encore été écrit."
+    },
+    "blocs": {
+      "contenu": "Le bonus, en entier",
+      "guide": "Comment le fabriquer et le livrer",
+      "remise": "Les textes qui le remettent",
+      "email": "Email {index}",
+      "post": "Post {index}"
+    },
+    "erreurs": {
+      "busy": "Les serveurs de l'IA sont saturés en ce moment. Attends une minute et relance, rien n'est perdu.",
+      "too_long": "L'écriture a dépassé le temps disponible et s'est arrêtée. Relance, ça passe en général au deuxième essai.",
+      "refused": "La demande a été refusée. Ce n'est pas de ton côté : signale le nous, on regarde le journal du serveur.",
+      "unreachable": "Impossible de joindre le service d'écriture. Vérifie ta connexion, puis relance.",
+      "empty": "La réponse est arrivée vide. Relance, c'est en général bon du deuxième coup.",
+      "unreadable": "La réponse est arrivée dans un format illisible. Relance, c'est en général bon du deuxième coup.",
+      "rate_limited": "Tu as beaucoup généré ces dernières minutes. Reprends dans un moment, tout est gardé.",
+      "not_configured": "L'écriture n'est pas disponible pour le moment. On est prévenus.",
+      "plan_required": "Les générateurs sont inclus dès le premier palier payant.",
+      "offre_manquante": "Décris d'abord ce que ton offre promet.",
+      "profil_manquant": "Choisis d'abord un profil.",
+      "not_found": "Ce projet n'est plus disponible. Il a peut être été supprimé, ou il ne t'appartient pas. Rien n'a été modifié.",
+      "generic": "Ça n'a pas abouti. Relance, le reste de ton travail est gardé.",
+      "credits": "Il te manque des crédits pour ce contenu. Recharge tes crédits, tout ce qui est déjà écrit est gardé."
+    },
+    "credits": {
+      "solde": "{count, plural, one {# crédit restant} other {# crédits restants}}",
+      "cout": "{count, plural, one {# crédit} other {# crédits}}",
+      "coutPistes": "Proposer des pistes coûte {count, plural, one {# crédit} other {# crédits}}, à chaque fois.",
+      "environ": "environ {count, plural, one {# crédit} other {# crédits}}"
     }
   }
 }
