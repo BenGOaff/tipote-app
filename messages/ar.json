@@ -4793,7 +4793,10 @@
     "settingsGroupResultatsHint": "ما يراه الزائر بعد حصوله على ملفه.",
     "settingsGroupGestion": "إدارة الاختبار",
     "settingsGroupGestionHint": "لغة الواجهة، وإغلاق الاختبار.",
-    "tabAutomation": "الأتمتة"
+    "tabAutomation": "الأتمتة",
+    "ctaReprendreTitre": "زرك الافتراضي",
+    "ctaReprendreAide": "ما زال {count} ملف/ملفات تعرض زرك الافتراضي. صار لكل ملف زره الخاص: استرجعه هنا حتى لا تفقد شيئا. الملفات التي لها زرها الخاص لن تتغير.",
+    "ctaReprendreAction": "استرجاع هذا الزر في هذه الملفات"
   },
   "contentStrategy": {
     "title": "استراتيجية المحتوى",
@@ -5523,7 +5526,10 @@
       "loadError": "تعذّر تحميل محتوياتك الآن.",
       "duplicate": "تكرار",
       "quizDuplicated": "تم إنشاء نسخة. يمكنك تعديلها الآن.",
-      "duplicateFailed": "فشل التكرار."
+      "duplicateFailed": "فشل التكرار.",
+      "startsCount": "{count} بدأوا",
+      "completionsCount": "{count} أكملوا",
+      "conversionRate": "{rate}% معدل التحويل"
     },
     "pageTitle": "محتوياتي"
   },

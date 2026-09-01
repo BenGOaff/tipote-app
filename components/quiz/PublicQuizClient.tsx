@@ -54,6 +54,7 @@ import {
   resultLayoutMode,
   type BeatMediaItem,
 } from "@/lib/quiz/resultBeats";
+import { resolveResultCta } from "@/lib/quiz/resultCta";
 import { resolveOtherResultsPlacement, showsOtherResultsAt } from "@/lib/quiz/otherResults";
 import {
   alignBlockMarginClass,
@@ -4075,8 +4076,14 @@ export default function PublicQuizClient({
   // STEP: Result — survey branch first, since survey leads land here too
   // (no resultProfile, no bonus flow, no profile reveal).
   if (step === "result" && quiz.mode === "survey") {
-    const ctaUrl = quiz.cta_url || "";
-    const ctaText = interp(quiz.cta_text || "") || t.resultCtaDefault;
+    // Un sondage n'a pas de profil : le CTA du quiz est le SEUL qui
+    // existe ici. La mécanique est un PARAMÈTRE, jamais devinée.
+    const ctaSondage = resolveResultCta("sondage", {
+      quizTexte: quiz.cta_text,
+      quizUrl: quiz.cta_url,
+    });
+    const ctaUrl = ctaSondage.url ?? "";
+    const ctaText = interp(ctaSondage.texte ?? "") || t.resultCtaDefault;
     return (
       <div
         className="public-surface min-h-screen flex flex-col"
@@ -4621,9 +4628,31 @@ export default function PublicQuizClient({
             // {score_<axe>}, {label_<axe>} résolus dans l'URL du CTA
             // (valeurs URL-encodées). UNIQUEMENT le score : jamais l'email
             // ni le prénom dans une URL.
-            const rawCtaUrl = resultProfile?.cta_url || quiz.cta_url;
+            // LE BOUTON VIENT DU PROFIL, JAMAIS DU QUIZ (Béné, 25 août
+            // 2026, portée ici le 1er septembre) : "on vire le CTA par
+            // défaut : il faut remplir pour chaque profil point barre.
+            // Si rien = pas de CTA."
+            //
+            // Le repli portait l'ADRESSE autant que le libellé, et c'est
+            // l'adresse qui décide si le bouton existe. La migration
+            // `20260901_cta_par_profil.sql` recopie donc l'adresse du
+            // quiz dans chaque profil qui n'en a pas AVANT que ce repli
+            // disparaisse : sans elle, tout quiz en ligne dont les
+            // profils n'ont pas leur propre adresse perd son bouton, sur
+            // la page qui vend.
+            //
+            // La mécanique est un PARAMÈTRE : l'écran de remerciement
+            // d'un SONDAGE n'a pas de profil, et `quiz.cta_url` y reste
+            // le seul bouton qui existe.
+            const cta = resolveResultCta("profil", {
+              profilTexte: resultProfile?.cta_text,
+              profilUrl: resultProfile?.cta_url,
+              quizTexte: quiz.cta_text,
+              quizUrl: quiz.cta_url,
+            });
+            const rawCtaUrl = cta.url;
             const ctaUrl = rawCtaUrl ? applyScorePlaceholders(rawCtaUrl, scoreCtx, { urlEncode: true }) : rawCtaUrl;
-            const ctaText = interp(resultProfile?.cta_text || quiz.cta_text || "") || t.resultCtaDefault;
+            const ctaText = interp(cta.texte ?? "") || t.resultCtaDefault;
             return ctaUrl ? (
               <Button size="lg" className={`w-full min-h-[48px] h-auto py-3 px-6 text-base rounded-full whitespace-normal leading-snug ${btnShapeClass}`} asChild>
                 <a href={lienSortant(ctaUrl)} target="_blank" rel="noopener noreferrer">

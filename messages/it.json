@@ -4793,7 +4793,10 @@
     "settingsGroupResultatsHint": "Cosa vede il visitatore una volta ottenuto il suo profilo.",
     "settingsGroupGestion": "Gestione del quiz",
     "settingsGroupGestionHint": "La lingua dell'interfaccia, e la chiusura del quiz.",
-    "tabAutomation": "Automatizzare"
+    "tabAutomation": "Automatizzare",
+    "ctaReprendreTitre": "Il tuo pulsante predefinito",
+    "ctaReprendreAide": "{count} profilo/i mostrano ancora il tuo pulsante predefinito. Ora c'è un pulsante per ogni profilo: riprendilo qui per non perdere nulla. I profili che hanno già il loro non vengono toccati.",
+    "ctaReprendreAction": "Riprendere questo pulsante su questi profili"
   },
   "contentStrategy": {
     "title": "Strategia di contenuto",
@@ -5523,7 +5526,10 @@
       "loadError": "Impossibile caricare i tuoi contenuti al momento.",
       "duplicate": "Duplica",
       "quizDuplicated": "Copia creata. Ora puoi modificarla.",
-      "duplicateFailed": "Duplicazione non riuscita."
+      "duplicateFailed": "Duplicazione non riuscita.",
+      "startsCount": "{count} avviati",
+      "completionsCount": "{count} completati",
+      "conversionRate": "{rate}% tasso di conversione"
     },
     "pageTitle": "I miei Contenuti"
   },

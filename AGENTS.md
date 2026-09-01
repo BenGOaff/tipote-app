@@ -3350,19 +3350,41 @@ exactement le bug corrigé chez Tiquiz le même jour.
 
 ### CE QUI RESTE DIFFÉRENT ENTRE LES DEUX, ET QUI N'EST PAS UN OUBLI
 
-1. **La liste des projets.** Tiquiz a une page dédiée aux quiz
-   (`/quizzes`) ; Tipote a un hub à dossiers (`/contents`) qui mélange
-   posts, quiz, tunnels et popquiz. Ce n'est pas un composant à copier :
-   c'est une décision de produit, et elle appartient à Béné.
-2. **La clé Systeme.io par quiz** (le cas du freelance qui envoie les
-   leads d'UN quiz chez son client). Elle demande une table et un écran :
-   à faire seulement si une créatrice Tipote le demande.
-3. 🚨 **LE CTA PAR DÉFAUT DE LA PAGE DE RÉSULTAT.** Béné, 25 août :
-   "on vire le CTA par défaut : il faut remplir pour chaque profil point
-   barre. Si rien = pas de CTA." **C'est fait dans Tiquiz, PAS ici** :
-   `PublicQuizClient` fait encore `resultProfile?.cta_url ||
-   quiz.cta_url`. Le porter demande la MÊME migration que là bas, et
-   dans le même ordre : recopier d'abord l'adresse du quiz dans chaque
-   profil qui n'en a pas, PUIS retirer le repli. L'inverse ferait
-   DISPARAÎTRE le bouton de tout quiz en ligne dont les profils n'ont
-   pas leur propre adresse, sur la page qui vend.
+**Le HUB à dossiers reste**, et c'est sa décision : "je veux juste la
+même présentation des quiz avec les mêmes options." Ce sont donc la
+LIGNE d'un quiz et ses boutons qui ont été alignés, pas la navigation.
+
+1. **La ligne d'un quiz est celle de Tiquiz** (1er septembre). Elle
+   portait trois chiffres, elle en porte six : vues, démarrés,
+   complétés, leads, partages, taux de conversion. `starts_count` et
+   `completions_count` existaient depuis avril (`20260410_quiz_funnel_
+   counters.sql`), la liste ne les SÉLECTIONNAIT pas. Sans elles, pas
+   de taux de conversion, et c'est le seul chiffre qui dit si un quiz
+   travaille.
+   La réconciliation de cohérence est reprise telle quelle (vues >=
+   démarrés >= complétés >= leads) : sans elle, un tracking qui a raté
+   en silence affiche "44 vues pour 276 leads" (retour Gwenn, 2 juin).
+2. **Les six boutons sont VISIBLES**, plus derrière un menu à trois
+   points. Ils y étaient tous, mais un menu coûte un geste de plus par
+   action et, surtout, on ne SAIT pas que l'action existe tant qu'on ne
+   l'a pas ouvert. Copier le lien et donner une copie sont les deux
+   qu'on répète le plus.
+   **Copier le lien et Voir en ligne restent réservés aux quiz ACTIFS** :
+   copier l'adresse d'un brouillon donnerait un lien qui répond 404 à
+   qui le reçoit. La rangée est donc plus courte sur un brouillon, et
+   c'est honnête.
+3. **Le CTA de la page de résultat vient du PROFIL** (porté le
+   1er septembre). Voir `lib/quiz/resultCta.ts` : la mécanique est un
+   PARAMÈTRE (`"profil"` ou `"sondage"`), parce qu'un sondage n'a pas de
+   profil et que `quiz.cta_url` y reste le SEUL bouton qui existe.
+   🚨 **La migration s'applique AVANT le code**, sinon tout quiz en ligne
+   dont les profils n'ont pas leur propre adresse perd son bouton, sur
+   la page qui vend.
+
+### CE QUI RESTE DIFFÉRENT, ET QUI N'EST PAS UN OUBLI
+
+- **La navigation de la liste** : page dédiée chez Tiquiz, hub à
+  dossiers ici. Décision produit, elle appartient à Béné.
+- **La clé Systeme.io par quiz** (le freelance qui envoie les leads d'UN
+  quiz chez son client). Elle demande une table et un écran : à faire
+  seulement si une créatrice Tipote le demande.

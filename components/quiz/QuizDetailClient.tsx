@@ -13,6 +13,7 @@ import { TipoteStudioButton } from "@/components/visual-studio/TipoteStudioButto
 import { GifPickerButton } from "@/components/quiz/GifPicker";
 import { ImageCropDialog } from "@/components/quiz/ImageCropDialog";
 import { AutomatisationPanel } from "@/components/quiz/AutomatisationPanel";
+import { profilsSansCta } from "@/lib/quiz/resultCta";
 import { SettingsSection } from "@/components/quiz/SettingsSection";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -4286,6 +4287,49 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                   <Input value={ctaText} onChange={e => setCtaText(e.target.value)} placeholder={t("ctaTextPh")} className="text-xs" />
                   <Input value={ctaUrl} onChange={e => setCtaUrl(e.target.value)} placeholder={t("ctaUrlPh")} className="text-xs" />
                 </section>
+                {/* LA REPRISE, PROPOSÉE ET JAMAIS FAITE EN DOUCE.
+
+                    Le bouton de la page de résultat vient désormais du
+                    PROFIL (Béné, 25 août : "si rien = pas de CTA"). La
+                    migration recopie l'adresse du quiz dans les profils
+                    qui n'en ont pas ; ce bouton rattrape les quiz créés
+                    ou importés entre le déploiement du code et le SQL.
+
+                    "On ne modifie pas les quiz existants MAIS on leur
+                    propose toujours de bénéficier des améliorations."
+                    Un profil qui a DÉJÀ son bouton n'est jamais touché,
+                    champ par champ. */}
+                {(() => {
+                  const aReprendre = profilsSansCta(ctaUrl, editResults);
+                  if (aReprendre === 0) return null;
+                  return (
+                    <section className="space-y-2 rounded-lg border border-amber-500/30 bg-amber-500/5 p-2.5">
+                      <div>
+                        <h3 className="text-sm font-semibold">{t("ctaReprendreTitre")}</h3>
+                        <p className="text-[11px] text-muted-foreground leading-snug">
+                          {t("ctaReprendreAide", { count: aReprendre })}
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="w-full text-xs"
+                        onClick={() => {
+                          setEditResults((prev) =>
+                            prev.map((r) => ({
+                              ...r,
+                              cta_url: String(r.cta_url ?? "").trim() ? r.cta_url : ctaUrl,
+                              cta_text: String(r.cta_text ?? "").trim() ? r.cta_text : ctaText,
+                            })),
+                          );
+                        }}
+                      >
+                        {t("ctaReprendreAction")}
+                      </Button>
+                    </section>
+                  );
+                })()}
                 </SettingsSection>
                 <SettingsSection titre={t("settingsGroupGestion")} aide={t("settingsGroupGestionHint")}>
                 {/* ── Fermeture du quiz ── */}

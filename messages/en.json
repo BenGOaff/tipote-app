@@ -4793,7 +4793,10 @@
     "settingsGroupResultatsHint": "What the visitor sees once they have their profile.",
     "settingsGroupGestion": "Quiz management",
     "settingsGroupGestionHint": "Interface language, and closing the quiz.",
-    "tabAutomation": "Automate"
+    "tabAutomation": "Automate",
+    "ctaReprendreTitre": "Your default button",
+    "ctaReprendreAide": "{count} profile(s) still show your default button. It has been replaced by one button per profile: bring it over so you lose nothing. Profiles that already have their own will not move.",
+    "ctaReprendreAction": "Bring this button to those profiles"
   },
   "contentStrategy": {
     "title": "Content strategy",
@@ -5523,7 +5526,10 @@
       "loadError": "Couldn't load your content right now.",
       "duplicate": "Duplicate",
       "quizDuplicated": "Copy created. You can now edit it.",
-      "duplicateFailed": "Duplication failed."
+      "duplicateFailed": "Duplication failed.",
+      "startsCount": "{count} started",
+      "completionsCount": "{count} completed",
+      "conversionRate": "{rate}% conversion rate"
     },
     "pageTitle": "My Content"
   },

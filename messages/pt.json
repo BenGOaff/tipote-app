@@ -4793,7 +4793,10 @@
     "settingsGroupResultatsHint": "O que o visitante vê depois de obter o seu perfil.",
     "settingsGroupGestion": "Gestão do quiz",
     "settingsGroupGestionHint": "O idioma da interface, e o fecho do quiz.",
-    "tabAutomation": "Automatizar"
+    "tabAutomation": "Automatizar",
+    "ctaReprendreTitre": "O teu botão por omissão",
+    "ctaReprendreAide": "{count} perfil(is) mostram ainda o teu botão por omissão. Agora há um botão próprio para cada perfil: recupera-o aqui para não perderes nada. Os perfis que já têm o seu não são tocados.",
+    "ctaReprendreAction": "Recuperar este botão nesses perfis"
   },
   "contentStrategy": {
     "title": "Estratégia de conteúdo",
@@ -5523,7 +5526,10 @@
       "loadError": "Não foi possível carregar os teus conteúdos de momento.",
       "duplicate": "Duplicar",
       "quizDuplicated": "Cópia criada. Já podes editá-la.",
-      "duplicateFailed": "A duplicação falhou."
+      "duplicateFailed": "A duplicação falhou.",
+      "startsCount": "{count} iniciados",
+      "completionsCount": "{count} concluídos",
+      "conversionRate": "{rate}% taxa de conversão"
     },
     "pageTitle": "Os meus Conteúdos"
   },
