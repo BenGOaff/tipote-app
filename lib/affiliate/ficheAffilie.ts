@@ -81,8 +81,26 @@ export interface ArgentAffilie {
 
 export interface FicheAffilie {
   filleuls: Filleul[];
-  /** Ceux qui ont acheté au moins une fois. */
+  /** Ceux qui ont acheté au moins une fois, annulations comprises. */
   acheteurs: number;
+  /**
+   * CEUX QUI COMPTENT POUR LE PALIER, et eux seuls.
+   *
+   * Béné, 31 août 2026 : "on compte les affiliés mais seuls ceux QUI
+   * PAIENT permettent d'augmenter le palier de commission ! Tu veux que
+   * je paye des gens qui ne me rapportent rien ? Client payant =
+   * augmente le %, client gratuit = aucun impact."
+   *
+   * Compté EXACTEMENT comme `cron/recompense-affilies`, qui est ce qui
+   * décide vraiment : une personne par adresse, et les commissions
+   * `cancelled` / `rejected` ne comptent pas. Un remboursement ne doit
+   * pas laisser un palier gagné derrière lui.
+   *
+   * Il diffère donc d'`acheteurs`, qui compte tous ceux qui ont acheté
+   * un jour : les deux se ressemblent et les confondre ferait annoncer
+   * un palier que le barème ne donnera pas.
+   */
+  payants: number;
   argent: ArgentAffilie;
 }
 
@@ -115,6 +133,10 @@ export function construireFiche(args: {
   };
 
   const parEmail = new Map<string, Filleul>();
+  // Les adresses qui ont au moins une commission NON annulée. Un Set
+  // parce qu'on compte des PERSONNES : un filleul qui paie douze
+  // échéances ne vaut pas douze filleuls.
+  const payants = new Set<string>();
   const argent: ArgentAffilie = {
     aVenirCents: 0,
     sousGarantieCents: 0,
@@ -164,6 +186,8 @@ export function construireFiche(args: {
       f.gagneCents += Number(c.commission_cents) || 0;
     }
 
+    if (etat !== "annulee" && email) payants.add(email);
+
     const montant = Number(c.commission_cents) || 0;
     if (devise !== "EUR") {
       // Comptée, jamais additionnée : voir `ArgentAffilie.autresDevises`.
@@ -199,6 +223,7 @@ export function construireFiche(args: {
   return {
     filleuls,
     acheteurs: filleuls.filter((f) => f.achats.length > 0).length,
+    payants: payants.size,
     argent,
   };
 }

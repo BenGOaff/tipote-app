@@ -2388,11 +2388,25 @@ protège personne.
 
 ### Ce que l'audit a laissé ouvert, et qui n'est pas du code
 
-**Les commissions de l'Atelier ne sont dans AUCUN lot.** Elles vivent
-dans SA base (`profiles.sio_affiliate_id` y tient lieu de registre), et
-`preparerLot` ne lit que celle d'ici. L'admin les AFFICHE en interrogeant
-les deux bases, ce qui rend la dette visible sans la solder. Détaillé
-dans `ROADMAP_SORTIE_SIO.md`, chantier 3.
+🚨 **CETTE LIGNE DISAIT "les commissions de l'Atelier ne sont dans
+AUCUN lot". C'EST PÉRIMÉ (vérifié le 31 août).**
+
+Elle était vraie le 26 août au matin, et la correction du même jour l'a
+annulée sans que la page soit reprise. Vérifié ligne par ligne :
+`commissionnerVente` (dépôt formaquiz) écrit dans le registre CENTRAL
+d'ici avec `source_app: "atelier"` et `regle_par: "nous"`, et
+`preparerLot` filtre sur `regle_par = "nous"` **sans filtrer
+`source_app`**. Les commissions de l'Atelier entrent donc dans le lot
+comme les autres.
+
+Ce qui reste vrai : le registre HISTORIQUE de l'Atelier
+(`profiles.sio_affiliate_id`, dans sa base) sert encore de REPLI pour
+un élève affilié là-bas et pas ici. Celles-là, oui, ne sont dans aucun
+lot.
+
+**La leçon est celle qui revient : une note d'état des lieux se relit
+quand on corrige ce qu'elle décrit**, sinon le prochain passage agit
+sur une dette déjà soldée.
 
 Test : `tests/logic/audit-26-aout.test.mts`, ici et dans les deux autres
 dépôts.
@@ -2854,6 +2868,35 @@ code qui déciderait où part l'argent de quelqu'un. Et `mandat` /
 manquantes" à quelqu'un qui a juste oublié de cocher le mandat
 l'envoie chercher au mauvais endroit.
 
+### LE PALIER NE COMPTE QUE LES CLIENTS PAYANTS
+
+Béné, en relisant l'écran le jour même : "on compte les affiliés mais
+seuls ceux QUI PAIENT permettent d'augmenter le palier de commission !
+Tu veux que je paye des gens qui ne me rapportent rien ?? Client payant
+= augmente le %, client gratuit = aucun impact, ça me semble logique."
+
+Elle avait raison, et c'était une faute introduite le jour même : la
+fiche passait le nombre TOTAL de filleuls au calcul de la marche, donc
+elle annonçait "encore 4 filleuls et il passe à 50 %" en comptant des
+comptes gratuits.
+
+**Le calcul qui décide vraiment le faisait déjà bien**, et c'est ce qui
+rend l'erreur impardonnable : `cron/recompense-affilies` compte dans
+`affiliate_commissions`, une personne par adresse, `cancelled` et
+`rejected` exclus. La fiche lit donc `recompense_filleuls`, LA colonne
+que ce cron écrit, plutôt que de recompter à côté.
+
+**Le paramètre s'appelle `filleulsPayants`, pas `filleuls`.** Un nom
+vague accepte silencieusement le mauvais nombre ; celui-là a fait
+échouer la compilation sur les six appelants au moment du renommage.
+C'est la seule protection qui survit au prochain qui touchera au
+fichier (règle du 1er août).
+
+Trois comptes qui se ressemblent et qu'il ne faut pas confondre :
+`filleuls` (tous), `acheteurs` (ont acheté un jour), `payants` (comptent
+pour le palier). Un remboursé est dans le deuxième et pas dans le
+troisième : un remboursement ne laisse pas un palier derrière lui.
+
 ### Les champs sont OPTIONNELS côté pilotage
 
 Le centre de pilotage et le registre sont deux serveurs déployés
@@ -2862,3 +2905,141 @@ nouveaux champs : chaque section se tait au lieu de faire planter un
 écran qui marchait très bien avant.
 
 Test : `tests/logic/fiche-affilie-complete.test.mts`.
+
+## Le brouillon d'une question ne suit PAS le visiteur (retour Adeline, 1er septembre 2026)
+
+"On peut revenir en arrière, ce qui est un plus, mais lorsqu'on le fait
+ça efface les cases suivantes déjà remplies."
+
+**RIEN N'ÉTAIT EFFACÉ EN BASE**, et c'est ce qui rendait le retour
+difficile à croire : `answers` n'est jamais tronqué, aucune ligne de
+code ne coupe le tableau. Ce qui suivait le visiteur, c'était le
+BROUILLON, c'est à dire l'état de SAISIE de la question affichée.
+
+Il vivait dans QUATRE variables globales au composant (`freeTextDraft`,
+`multiOptionsDraft`, `autreTexte`, `autreChoisi`), jamais remises à la
+question courante. Cinq symptômes, un seul défaut :
+
+| Ce qu'elle a vu | Ce qui se passait |
+|---|---|
+| "ça efface les cases suivantes déjà remplies" | le texte tapé en Q3 arrivait pré-rempli en Q4 ; valider ÉCRASAIT la réponse déjà donnée |
+| des cases cochées sans les avoir cochées | la sélection d'un multi-choix restait d'une question à l'autre |
+| revenir puis cliquer décoche tout | le premier clic repartait d'un brouillon VIDE au lieu de la sélection affichée |
+| impossible de tout décocher | l'affichage retombait sur la réponse enregistrée dès que le brouillon était vide |
+| le texte du "Autre" invisible au retour | l'option était surlignée, le champ restait FERMÉ |
+
+**LA CAUSE COMMUNE : la question affichée et l'état de saisie n'étaient
+reliés par rien.** La remise à zéro était recopiée dans les
+gestionnaires de navigation, et il en manquait : la flèche retour vidait
+le texte libre, le swipe AVANT non, et les cases cochées n'étaient
+vidées nulle part.
+
+**Et un commentaire l'annonçait déjà**, posé sur `multiOptionsDraft` :
+"Reset whenever currentQ changes (handled in commitAnswer + an effect
+below)". **Cet effet n'a jamais existé.** Quatrième fois que ce dépôt
+paie une règle écrite en commentaire et démentie par le code (le
+`w-full h-auto` des images de réponse, l'`ADD_ATTR: ["target"]` des
+liens légaux, le "Next décode déjà le segment" du pilotage).
+
+**Règle : `lib/quiz/brouillonReponse.ts` décide, et UN SEUL effet
+applique.** `brouillonPourQuestion(reponse, autreIdx)` rend les quatre
+champs de saisie depuis la réponse de la QUESTION COURANTE ; l'effet
+tourne sur `[currentQ, step, quiz, resumed]`. Plus aucune remise à zéro
+dans un gestionnaire de navigation : c'est ce qui en oubliait un.
+
+**Et le brouillon est le SEUL à décider de l'affichage.** Les deux
+replis du genre `brouillon.length > 0 ? brouillon : réponse
+enregistrée` sont SUPPRIMÉS, pas assouplis : **un brouillon vide est une
+intention, pas une absence.** C'est ce repli qui rendait "tout décocher"
+et "effacer mon texte" impossibles.
+
+`answers` est volontairement HORS des dépendances de l'effet : valider
+une réponse le modifie, et relancer l'effet là remettrait le brouillon
+de la question qu'on vient de quitter. `resumed` y est, pour le seul cas
+où la reprise d'un brouillon local ne change pas l'index.
+
+**Le filet de captures ne pouvait rien voir** : il photographie un écran
+au repos, et ce bug ne vit que dans l'enchaînement des gestes. Le
+garde-fou est `tests/logic/brouillon-question.test.mts`, vérifié en
+rejouant la version d'avant (il rougit).
+
+Le module quiz de Tiquiz est jumeau : la correction y vit aussi.
+
+## Le menu sous une réponse dit le NOM du profil (retour Christian, 1er septembre 2026)
+
+"Les différents résultats n'apparaissent pas sous les réponses. Seuls
+apparaissent « Résultat 1, Résultat 2 » etc."
+
+Il avait raison, et le menu ne POUVAIT rien afficher d'autre : les deux
+sélecteurs posés sous chaque réponse de l'éditeur jetaient le profil et
+n'en gardaient que le rang.
+
+```
+editResults.map((_, ri) => <option>…Résultat {ri + 1}</option>)
+                  ^^^ le profil, ignoré
+```
+
+Aucun titre, si bien écrit soit-il, ne pouvait apparaître. Sur un quiz à
+six profils, "Résultat 4" ne dit rien : la créatrice branche ses
+réponses au hasard, ou remonte vérifier l'ordre à chaque clic. C'est le
+geste le plus répété de tout l'éditeur.
+
+**LA RÈGLE EXISTAIT DÉJÀ, recopiée à la main quatre fois dans le MÊME
+fichier** (`stripHtml(extractResultLabel(cleanPlaceholdersForLabel(t)))`
+plus un repli). Deux endroits ne l'ont jamais eue. Une règle recopiée
+finit toujours par en oublier un : c'est le `mx-auto` du sous-titre, les
+images de réponse, les réseaux de partage, la sixième fois.
+
+**Règle : `lib/quiz/resultLabel.ts`, `resultChoiceLabel(titre,
+secours)`, et personne ne recompose.** Les trois étapes comptent et
+l'ordre aussi : placeholders interpolés à VIDE (sinon le menu affiche
+"Bonjour {name}, tu es le..."), puis `extractResultLabel` (retire le
+", tu es le·la" et les marques inclusives), puis `stripHtml` (un
+`<option>` ne rend pas de HTML, il montrerait les balises).
+
+**`secours` est OBLIGATOIRE.** Un profil encore sans titre doit rester
+choisissable : une entrée vide dans un menu est pire que "Résultat 3".
+
+**Trouvé au passage, et c'est propre à ce dépôt : trois replis étaient
+écrits EN FRANÇAIS DANS LE CODE** (`` `Résultat ${ri + 1}` ``), dans les
+alertes de cohérence et l'aide des étiquettes. Une créatrice espagnole
+ou arabe lisait "Résultat 4". La clé `quizDetail.previewResult` existe
+maintenant dans les 7 langues.
+
+**Exception assumée :** `titleForVisual` compose les deux mêmes
+fonctions pour le titre d'une IMAGE générée, sans repli et avec sa
+propre capitalisation. Ce n'est pas un libellé d'interface, et le
+confondre casserait la génération d'images. Le test vise la composition
+SUIVIE D'UN REPLI, pas la composition elle-même.
+
+Test : `tests/logic/nom-du-profil.test.mts`. Le module quiz de Tiquiz est
+jumeau : la correction y vit aussi.
+
+### Et un projet qui n'est pas à vous ne téléporte plus personne
+
+Béné, en essayant d'ouvrir le quiz de Christian : "je n'arrive pas à
+accéder à ses quiz, je ne sais pas pourquoi, et pire : ça me redirige
+directement vers mon dashboard et pas vers une page 'ce quiz n'est pas
+disponible'."
+
+On DISAIT bien quelque chose, un toast, mais `router.push("/dashboard")`
+partait dans la foulée : elle changeait d'écran avant d'avoir lu la
+raison, et se retrouvait sur son tableau de bord sans savoir pourquoi.
+Un toast qui accompagne une navigation n'est pas un message, c'est un
+reflet.
+
+**Règle : les quatre éditeurs affichent un ÉCRAN** (titre, phrase, et
+UNE sortie nommée qui passe par `projectBackHref`, donc la hiérarchie et
+jamais l'historique). Plus aucune redirection sur un chargement qui
+échoue. Seul le mode EMBED garde le toast : il n'a pas de tableau de
+bord où retourner.
+
+**On ne distingue pas "supprimé" de "pas à toi", et c'est voulu** : la
+route répond 404 dans les deux cas pour ne pas révéler qu'un projet
+existe. La phrase dit donc les deux possibilités, plus la seule chose
+qui inquiète vraiment : rien n'a été modifié.
+
+**Trouvé au passage** : deux de ces quatre écrans affichaient
+`toast.error("Quiz not found")`, écrit en dur EN ANGLAIS dans une
+interface qui existe en 7 langues. Les clés `unavailableTitle` et
+`unavailableBody` sont posées dans les 7 fichiers.

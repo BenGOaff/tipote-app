@@ -495,6 +495,9 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   }, [markContextSeen]);
 
   const [loading, setLoading] = useState(true);
+  // Le projet n'existe pas, ou il n'est pas à ce compte. On l'AFFICHE,
+  // on ne renvoie plus la personne ailleurs sans un mot.
+  const [indisponible, setIndisponible] = useState(false);
   const [quiz, setQuiz] = useState<QuizData | null>(null);
   const [leads, setLeads] = useState<QuizLead[]>([]);
 
@@ -916,7 +919,9 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
         fetch(`/api/quiz/${quizId}`).then((r) => r.json()),
         fetch(`/api/profile`).then((r) => r.json()).catch(() => null),
       ]);
-      if (!quizRes?.ok || !quizRes.quiz) { toast.error("Quiz not found"); router.push("/dashboard"); return; }
+      // Le message etait ecrit en dur en anglais, dans une interface qui
+      // existe en 7 langues. Il vit maintenant dans les fichiers de langue.
+      if (!quizRes?.ok || !quizRes.quiz) { setIndisponible(true); return; }
       const q: QuizData = { ...quizRes.quiz, questions: quizRes.quiz.questions ?? [], results: quizRes.quiz.results ?? [] };
       // Tipote stores the primary color as brand_color_base on business_profiles.
       // Map it to brand_color_primary so the rest of this component (Tiquiz-native) works unchanged.
@@ -1608,6 +1613,32 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
     </div>
   );
+
+  // UN REFUS N'EST PAS UNE PANNE, ET IL NE TÉLÉPORTE PERSONNE
+  // (retour Béné, 1er septembre 2026) : "je n'arrive pas à accéder à ses
+  // quiz, je ne sais pas pourquoi, et pire : ça me redirige directement
+  // vers mon dashboard et pas vers une page 'ce quiz n'est pas
+  // disponible'."
+  //
+  // On disait bien quelque chose, un toast, mais la redirection partait
+  // dans la foulée : elle changeait d'écran avant d'avoir lu la raison,
+  // et se retrouvait sur son tableau de bord sans savoir pourquoi. Un
+  // écran qui explique et propose UNE sortie nommée coûte un clic ; une
+  // téléportation coûte le diagnostic (règle du `ok: false`, 3 août, et
+  // de la flèche retour qui suit la hiérarchie, 1er août).
+  if (indisponible) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <div className="max-w-md text-center space-y-4">
+          <h1 className="text-xl font-semibold">{t("unavailableTitle")}</h1>
+          <p className="text-sm text-muted-foreground">{t("unavailableBody")}</p>
+          <Button asChild>
+            <Link href={projectBackHref("surveyEditor")}>{t("backToProjects")}</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
   if (!quiz) return null;
   const pc = primaryColor;
 

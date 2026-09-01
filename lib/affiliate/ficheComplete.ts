@@ -63,8 +63,10 @@ export interface RecompenseAffilie {
  * Béné croirait. C'est le défaut sorti sept fois dans ces dépôts : deux
  * endroits qui calculent la même chose finissent par se contredire.
  *
- * `filleuls` sert uniquement à annoncer la MARCHE SUIVANTE, qui est une
- * projection et pas un montant dû.
+ * `filleulsPayants` sert uniquement à annoncer la MARCHE SUIVANTE, qui
+ * est une projection et pas un montant dû. **Un compte gratuit n'y
+ * compte pas** : c'est la règle de Béné, et c'est déjà ce que fait
+ * `cron/recompense-affilies`, qui décide vraiment.
  */
 export function construireRecompense(args: {
   choix: unknown;
@@ -73,7 +75,20 @@ export function construireRecompense(args: {
   /** Le taux négocié, qui passe devant tout le reste. */
   tauxNegociePct: unknown;
   remiseStockePct: unknown;
-  filleuls: number;
+  /**
+   * LES FILLEULS QUI PAIENT, ET EUX SEULS.
+   *
+   * Le nom est explicite exprès. J'ai passé ici le nombre TOTAL de
+   * filleuls le 31 août, et l'écran a annoncé à Béné "encore 4 filleuls
+   * et il passe à 50 %" en comptant des comptes gratuits. Sa réponse :
+   * "tu veux que je paye des gens qui ne me rapportent rien ?"
+   *
+   * Un paramètre qui s'appelle `filleuls` accepte silencieusement le
+   * mauvais nombre. Celui-ci ne peut plus être rempli au hasard : c'est
+   * la seule protection qui survit au prochain qui touchera au fichier
+   * (règle du 1er août).
+   */
+  filleulsPayants: number;
 }): RecompenseAffilie {
   const choix: ChoixRecompense =
     String(args.choix ?? "").trim().toLowerCase() === "abonnement" ? "abonnement" : "commissions";
@@ -89,7 +104,7 @@ export function construireRecompense(args: {
     : Number.isFinite(stocke) && stocke > 0
       ? stocke
       : choix === "commissions"
-        ? tauxCommissionPct(args.filleuls)
+        ? tauxCommissionPct(args.filleulsPayants)
         : COMMISSION_BASE_PCT;
 
   const remiseStockee = Number(args.remiseStockePct);
@@ -97,7 +112,7 @@ export function construireRecompense(args: {
     choix === "abonnement"
       ? Number.isFinite(remiseStockee) && remiseStockee > 0
         ? remiseStockee
-        : remiseAbonnementPct(args.filleuls)
+        : remiseAbonnementPct(args.filleulsPayants)
       : 0;
 
   // LA MARCHE SUIVANTE DÉPEND DU CHOIX, et c'est un PARAMÈTRE de
@@ -105,7 +120,7 @@ export function construireRecompense(args: {
   // qui a pris la remise sur son abonnement serait faux dans les deux
   // sens (règle du 1er août : quand un cas a deux mécaniques, la
   // mécanique se dit, elle ne se devine pas).
-  const marche = prochaineMarche(choix, args.filleuls);
+  const marche = prochaineMarche(choix, args.filleulsPayants);
   return {
     choix,
     tauxPct,

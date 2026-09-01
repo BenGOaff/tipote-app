@@ -55,6 +55,7 @@ import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { interpolateText, extractResultLabel } from "@/lib/quizPersonalization";
+import { resultChoiceLabel } from "@/lib/quiz/resultLabel";
 import { type TieConflict } from "@/lib/quizTieAnalysis";
 import { tieBreakMode } from "@/lib/quiz/profileWinner";
 import { analyzeOptionSupply, analyzeProfileGaps, analyzeResultCoverage, analyzeResultTies, attributionMode } from "@/lib/quizCoherence";
@@ -656,6 +657,9 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   }, [markContextSeen]);
 
   const [loading, setLoading] = useState(true);
+  // Le projet n'existe pas, ou il n'est pas à ce compte. On l'AFFICHE,
+  // on ne renvoie plus la personne ailleurs sans un mot.
+  const [indisponible, setIndisponible] = useState(false);
   const [quiz, setQuiz] = useState<QuizData | null>(null);
   // Mode "scoring" : vrai quiz note (points par option + tranches de score).
   const isScoring = quiz?.mode === "scoring";
@@ -1534,7 +1538,9 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
         fetch(`/api/quiz/${quizId}`).then((r) => r.json()),
         fetch(`/api/profile`).then((r) => r.json()).catch(() => null),
       ]);
-      if (!quizRes?.ok || !quizRes.quiz) { toast.error("Quiz not found"); router.push("/dashboard"); return; }
+      // Le message etait ecrit en dur en anglais, dans une interface qui
+      // existe en 7 langues. Il vit maintenant dans les fichiers de langue.
+      if (!quizRes?.ok || !quizRes.quiz) { setIndisponible(true); return; }
       const q: QuizData = { ...quizRes.quiz, questions: quizRes.quiz.questions ?? [], results: quizRes.quiz.results ?? [] };
       // Tipote stores the primary color as brand_color_base on business_profiles.
       // Map it to brand_color_primary so the rest of this component (Tiquiz-native) works unchanged.
@@ -3035,6 +3041,32 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
     </div>
   );
+
+  // UN REFUS N'EST PAS UNE PANNE, ET IL NE TÉLÉPORTE PERSONNE
+  // (retour Béné, 1er septembre 2026) : "je n'arrive pas à accéder à ses
+  // quiz, je ne sais pas pourquoi, et pire : ça me redirige directement
+  // vers mon dashboard et pas vers une page 'ce quiz n'est pas
+  // disponible'."
+  //
+  // On disait bien quelque chose, un toast, mais la redirection partait
+  // dans la foulée : elle changeait d'écran avant d'avoir lu la raison,
+  // et se retrouvait sur son tableau de bord sans savoir pourquoi. Un
+  // écran qui explique et propose UNE sortie nommée coûte un clic ; une
+  // téléportation coûte le diagnostic (règle du `ok: false`, 3 août, et
+  // de la flèche retour qui suit la hiérarchie, 1er août).
+  if (indisponible) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <div className="max-w-md text-center space-y-4">
+          <h1 className="text-xl font-semibold">{t("unavailableTitle")}</h1>
+          <p className="text-sm text-muted-foreground">{t("unavailableBody")}</p>
+          <Button asChild>
+            <Link href={projectBackHref("quizEditor")}>{t("backToProjects")}</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
   if (!quiz) return null;
   const pc = primaryColor;
   // Logo finalement affiché côté visiteur — même résolution que
@@ -3282,7 +3314,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                           key={`r-${i}`}
                           id={`r-${i}`}
                           index={i}
-                          label={stripHtml(extractResultLabel(cleanPlaceholdersForLabel(r.title))) || t("emptyResult")}
+                          label={resultChoiceLabel(r.title, t("emptyResult"))}
                           onClick={() => scrollToSection(`r-${i}`)}
                           onRemove={() => removeResult(i)}
                           canDelete={editResults.length > 1}
@@ -4897,7 +4929,10 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                                       />
                                       <span className="text-xs" style={{ color: `${pc}99` }}>point(s) au</span>
                                       <select value={opt.result_index} onChange={(e) => updateOptResult(qi, oi, Number(e.target.value))} className="text-xs border rounded px-1.5 py-0.5 bg-background font-medium cursor-pointer" style={{ color: pc }}>
-                                        {editResults.map((_, ri) => <option key={ri} value={ri}>Résultat {ri + 1}</option>)}
+                                        {/* Le NOM du profil, jamais son rang (retour Christian, 1er sept
+                                            2026) : ce menu jetait le profil et n'affichait
+                                            que "Résultat 1, Résultat 2". */}
+                                        {editResults.map((r2, ri) => <option key={ri} value={ri}>{resultChoiceLabel(r2?.title, t("previewResult", { n: ri + 1 }))}</option>)}
                                       </select>
                                     </div>
                                   )}
@@ -5119,7 +5154,10 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                                   />
                                   <span className="text-xs" style={{ color: `${pc}99` }}>point(s) au</span>
                                   <select value={opt.result_index} onChange={(e) => updateOptResult(qi, oi, Number(e.target.value))} className="text-xs border rounded px-1.5 py-0.5 bg-background font-medium cursor-pointer" style={{ color: pc }}>
-                                    {editResults.map((_, ri) => <option key={ri} value={ri}>Résultat {ri + 1}</option>)}
+                                    {/* Le NOM du profil, jamais son rang (retour Christian, 1er sept
+                                            2026) : ce menu jetait le profil et n'affichait
+                                            que "Résultat 1, Résultat 2". */}
+                                        {editResults.map((r2, ri) => <option key={ri} value={ri}>{resultChoiceLabel(r2?.title, t("previewResult", { n: ri + 1 }))}</option>)}
                                   </select>
                                 </div>
                               )}
@@ -5495,7 +5533,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     <ul className="mt-2.5 space-y-1.5 text-xs">
                       {tieAnalysis.conflicts.map((c: TieConflict, i: number) => {
                         const titles = c.resultIndices
-                          .map((ri) => stripHtml(extractResultLabel(cleanPlaceholdersForLabel(editResults[ri]?.title))) || `Résultat ${ri + 1}`)
+                          .map((ri) => resultChoiceLabel(editResults[ri]?.title, t("previewResult", { n: ri + 1 })))
                           .join(" ↔ ");
                         const path = c.answers
                           .map((oi, qi) => {
@@ -5594,7 +5632,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                           return <li key={i}>{t("trancheGapItem", { from: issue.from, to: issue.to })}</li>;
                         }
                         const nameOf = (ri2: number) =>
-                          stripHtml(extractResultLabel(cleanPlaceholdersForLabel(editResults[ri2]?.title))) || `Résultat ${ri2 + 1}`;
+                          resultChoiceLabel(editResults[ri2]?.title, t("previewResult", { n: ri2 + 1 }));
                         return (
                           <li key={i}>
                             {t("trancheOverlapItem", { a: nameOf(issue.a), b: nameOf(issue.b), from: issue.from, to: issue.to })}
@@ -5972,7 +6010,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                           markdown) puis extractResultLabel (vire le ", tu
                           es le·la" + les `·xx` inclusifs) pour ne garder
                           que le label court "Solopreneur Invisible". */}
-                      <p className="text-[11px] text-muted-foreground mb-2">{t("previewResultTagHint", { title: stripHtml(extractResultLabel(cleanPlaceholdersForLabel(r.title))) || `Résultat ${ri + 1}` })}</p>
+                      <p className="text-[11px] text-muted-foreground mb-2">{t("previewResultTagHint", { title: resultChoiceLabel(r.title, t("previewResult", { n: ri + 1 })) })}</p>
                       {/* Multi-tags par profil (Gwenn 12 juillet 2026).
                           On ecrit sio_tag_names ET sio_tag_name (1er
                           element) pour la compat descendante. */}
