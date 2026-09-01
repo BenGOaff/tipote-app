@@ -124,7 +124,7 @@ export function construireFilleuls(args: {
       masque: masquerEmail(email),
       jour,
       // Le canal qu'il a écrit passe devant la provenance déduite : il
-      // reconnaît son étiquette, pas un nom de domaine.
+      // reconnaît son tag, pas un nom de domaine.
       origine: String(c.channel ?? "").trim() || String(c.source ?? "").trim() || null,
       etat,
       commissionsCents: vente?.cents ?? 0,

@@ -2423,7 +2423,7 @@ Sur un téléphone, on voit les choses **l'une en dessous de l'autre**. Sur un o
 
 **2. En haut, tu vois 3 petits boutons :** 📱 Mobile / 📱 Tablette / 🖥️ Ordinateur. Clique sur celui qui correspond à l'écran que tu veux **personnaliser**.
 
-**3. Déplace tes blocs dans la barre de gauche** (glisser-déposer ou flèches ↑ ↓). Une petite étiquette bleue t'indique en temps réel **"Tu modifies l'ordre mobile"** ou **"Tu modifies l'ordre ordinateur"**.
+**3. Déplace tes blocs dans la barre de gauche** (glisser-déposer ou flèches ↑ ↓). Une petite tag bleue t'indique en temps réel **"Tu modifies l'ordre mobile"** ou **"Tu modifies l'ordre ordinateur"**.
 
 ### Exemple concret
 
@@ -2463,7 +2463,7 @@ Imagine une page avec 3 blocs :
 - ✅ Pour voir le rendu exact, clique sur 📱 Mobile en haut
 - ⚠️ Si tu veux que les deux ordres restent identiques, ne touche à rien : par défaut ils sont alignés
 
-> **Astuce :** si tu te sens perdue, regarde toujours l'étiquette bleue au-dessus de ta liste de blocs. Elle te dit quel ordre tu es en train de modifier.`,
+> **Astuce :** si tu te sens perdue, regarde toujours le tag bleue au-dessus de ta liste de blocs. Elle te dit quel ordre tu es en train de modifier.`,
       en: `## Mobile and desktop can have different orders
 
 On a phone, things stack **one below the other**. On a desktop, there's more space. Tipote lets you set a **different order for each screen** without breaking anything.

@@ -1968,7 +1968,7 @@ exactement comme avant.
 où notre inscription gratuite créera elle aussi le contact chez
 Systeme.io" : ce jour est arrivé le 25 août. `https://tiquiz.fr/signup`
 fait les trois choses d'un coup, le compte, le rattachement À VIE, et le
-contact chez Systeme.io avec son étiquette `tiquiz-free` (`poserTagPlan`
+contact chez Systeme.io avec son tag `tiquiz-free` (`poserTagPlan`
 crée le contact quand il n'existe pas).
 
 🚨 **J'AI ÉCRIT ICI QUE SES SÉQUENCES NE PARTAIENT PAS. LA MESURE ÉTAIT
@@ -1976,7 +1976,7 @@ INVALIDE (corrigé le 31 août au soir).**
 
 Ce que l'API de Systeme.io rend : 51 règles, toutes déclenchées sur
 `form_subscribed`, aucune sur `tag_added`. J'en ai conclu que poser une
-étiquette ne déclenchait rien.
+tag ne déclenchait rien.
 
 **Béné a envoyé la capture d'une règle « Tag "newsletter" ajouté ->
 S'abonner à la campagne Pépites 365 », active dans son tableau de
@@ -1993,10 +1993,10 @@ abonner un contact à une campagne, j'en ai déduit qu'elle ne pouvait
 pas non plus me MONTRER une règle qui le fait. **Un outil qui ne sait
 pas FAIRE quelque chose ne sait pas forcément le VOIR non plus.**
 
-**Ce qui est établi :** au moins une règle par étiquette existe et
+**Ce qui est établi :** au moins une règle par tag existe et
 abonne à une campagne, donc poser un tag PEUT tout déclencher.
 
-**Ce qui reste inconnu :** si `tiquiz-free` et les étiquettes de vente
+**Ce qui reste inconnu :** si `tiquiz-free` et les tags de vente
 ont la leur. Ça ne se vérifie QUE dans son tableau de bord
 (https://systeme.io/dashboard/automation-rules), jamais par cette API.
 Ne plus rien affirmer ici sur la foi de cet outil.
@@ -2478,7 +2478,7 @@ l'autre, sans une seule ligne d'erreur pour dire pourquoi.
 
 **Règle : `lireAffilieesParPaquets` lit par 100, et une erreur ARRÊTE
 tout.** Rendre ce qu'on a lu fabriquerait un lot partiel qui a l'air
-complet, et les manquants y seraient étiquetés "inconnues". "Je n'ai pas
+complet, et les manquants y seraient taggés "inconnues". "Je n'ai pas
 pu regarder" et "il n'y a rien" sont deux réponses différentes (règle du
 23 août).
 
@@ -3026,7 +3026,7 @@ choisissable : une entrée vide dans un menu est pire que "Résultat 3".
 
 **Trouvé au passage, et c'est propre à ce dépôt : trois replis étaient
 écrits EN FRANÇAIS DANS LE CODE** (`` `Résultat ${ri + 1}` ``), dans les
-alertes de cohérence et l'aide des étiquettes. Une créatrice espagnole
+alertes de cohérence et l'aide des tags. Une créatrice espagnole
 ou arabe lisait "Résultat 4". La clé `quizDetail.previewResult` existe
 maintenant dans les 7 langues.
 
@@ -3250,3 +3250,36 @@ d'un caractère : une URL avec `?`, un `style="color:red"`, `12:30`,
 
 Test : les 7 cas ajoutés à `tests/logic/french-typography.test.mts`,
 vérifiés en rejouant la détection d'avant (5 rougissent).
+
+## ON DIT TAG, JAMAIS ÉTIQUETTE (Béné, 1er septembre 2026)
+
+"Ne dis jamais étiquette, nulle part, on parle bien de tag en français
+aussi. Supprime tout ce que tu appelles étiquette partout pour dire tag,
+et mets tags bordel !"
+
+**La raison est produit, pas stylistique : c'est le mot que Systeme.io
+affiche.** Son menu CRM en français dit "Tag". Une consigne qui dit
+"étiquette" envoie la créatrice chercher un mot qui n'existe pas sur son
+écran, au moment précis où elle suit une marche à suivre clic par clic.
+
+**Et ça vaut par LANGUE, pas dans l'absolu.** Vérifié sur ses captures du
+tableau de bord Systeme.io :
+
+| Langue | Ce que Systeme.io affiche | Ce qu'on écrit |
+|---|---|---|
+| français, italien, portugais, anglais | Tag | **tag** |
+| **espagnol** | Etiquetas | **etiqueta** |
+
+L'espagnol est la seule exception, et elle est OBLIGATOIRE : y écrire
+"tag" rendrait la consigne fausse, puisque le bouton qu'elle doit
+cliquer s'appelle "Etiqueta añadida". L'arabe n'a pas été vérifié.
+
+**La nuance à ne pas rater : "étiquette" au sens LIBELLÉ n'est pas un
+tag.** Le libellé min/max d'une échelle, le "conversion label" de Google
+Ads, le mot affiché à la place d'un score : ce ne sont pas des tags
+Systeme.io. On y écrit **libellé**, pas "tag", sinon on rend le texte
+faux dans l'autre sens.
+
+Ça couvre aussi le CODE : un fichier `etiquetteVente.ts` et une fonction
+`poserEtiquetteAcheteur` disaient le mot interdit. Renommés en
+`tagVente.ts` et `poserTagAcheteur`.

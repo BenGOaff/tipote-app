@@ -509,7 +509,7 @@ function TrafficSection({
                 <>
                   {reading.directShare}% de ton trafic arrive sans provenance, ce
                   qui est normal quand tu publies sur mobile : les applications
-                  ne la transmettent pas. Pour y voir clair, ajoute une étiquette
+                  ne la transmettent pas. Pour y voir clair, ajoute un tag
                   à tes liens (par exemple ton-lien?utm_source=instagram) et tu
                   verras chaque publication séparément.
                 </>

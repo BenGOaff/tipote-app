@@ -11,7 +11,7 @@
 // -- DEUX COLONNES, PAS UNE, ET LA DISTINCTION EST TOUT ----------------
 //
 // La PROVENANCE est déduite du referrer (`resolveClickSource`). Elle
-// existe même quand l'affilié n'a rien étiqueté, donc personne ne se
+// existe même quand l'affilié n'a rien taggé, donc personne ne se
 // retrouve devant un écran vide parce qu'il n'y a pas pensé. C'est ce
 // qui répond à "YouTube ou LinkedIn ?".
 //
@@ -61,7 +61,7 @@ export interface Provenance {
   totaux: { clics: number; visiteurs: number };
   /** Déduite du referrer. Toujours renseignée. */
   parSource: GroupeProvenance[];
-  /** Écrite par l'affilié. Vide tant qu'il n'étiquette rien. */
+  /** Écrite par l'affilié. Vide tant qu'il n'tag rien. */
   parCanal: GroupeProvenance[];
   /** Clics dont on ne peut pas dire s'ils viennent de la même personne. */
   sansEmpreinte: number;

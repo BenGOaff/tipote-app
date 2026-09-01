@@ -357,7 +357,7 @@ export async function approuverCommissionsMures(
  *
  * **Une erreur ARRÊTE tout et le dit.** Rendre ce qu'on a lu
  * fabriquerait un lot partiel qui a l'air complet, et les manquants y
- * seraient étiquetés « inconnues ».
+ * seraient taggés « inconnues ».
  */
 const PAQUET_AFFILIEES = 100;
 

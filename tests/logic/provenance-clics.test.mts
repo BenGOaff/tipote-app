@@ -71,14 +71,14 @@ test("le canal est compté À CÔTÉ de la provenance, pas à la place", () => {
   assert.deepEqual(v.parCanal.map((c) => c.cle).sort(), ["newsletter", "video-12", "video-30"]);
 });
 
-test("celui qui n'étiquette rien n'a pas d'écran vide", () => {
+test("celui qui n'tag rien n'a pas d'écran vide", () => {
   const v = construireProvenance([clic("linkedin", null, "a"), clic("email", null, "b")]);
   assert.equal(v.parCanal.length, 0);
   assert.equal(v.parSource.length, 2);
 });
 
 test("une provenance absente est nommée `direct`, jamais laissée vide", () => {
-  // Une ligne sans étiquette dans un tableau se lit comme une panne.
+  // Une ligne sans tag dans un tableau se lit comme une panne.
   const v = construireProvenance([clic(null, null, "a"), clic("", null, "b")]);
   assert.deepEqual(v.parSource.map((s) => s.cle), ["direct"]);
   assert.equal(v.parSource[0].clics, 2);

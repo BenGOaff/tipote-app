@@ -305,7 +305,7 @@ export const FR: AffiliateDict = {
     provenance_body: "La provenance est détectée toute seule à partir du site d'où vient le visiteur. Le canal, c'est toi qui l'écris, en ajoutant `?c=` à ton lien (par exemple `?c=newsletter`), pour ce qui ne laisse aucune trace : un email, un lien en bio, un QR code.",
     provenance_sources: "Provenance",
     provenance_canaux: "Tes canaux",
-    provenance_canaux_vide: "Tu n'as encore étiqueté aucun lien. Ajoute `?sc=youtube` à la fin de ton lien et compare ce que chaque canal t'apporte.",
+    provenance_canaux_vide: "Tu n'as encore nommé aucun canal. Ajoute `?sc=youtube` à la fin de ton lien et compare ce que chaque canal t'apporte.",
     lien_de_base: "Lien de base",
     lien_de_base_badge: "par défaut",
     destination_retiree: "Cette destination n'est plus proposée. Le lien redirige toujours, et ses chiffres restent comptés ici.",

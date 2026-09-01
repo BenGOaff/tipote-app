@@ -63,7 +63,7 @@ export default function CourbeAffilie({
     { cle: "ventes" as const, couleur: COULEURS.ventes, nom: libelles.ventes },
   ];
 
-  // Un jour sur N en étiquette : au delà, les dates se chevauchent et
+  // Un jour sur N en tag : au delà, les dates se chevauchent et
   // aucune n'est lisible. Le premier et le dernier sont toujours là,
   // ce sont eux qui bornent la lecture.
   const pas = Math.max(1, Math.ceil(points.length / 8));

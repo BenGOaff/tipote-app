@@ -59,7 +59,7 @@ create table if not exists public.affiliate_links (
   sa text not null references public.affiliates(sa) on update cascade on delete cascade,
   -- slug de `affiliate_link_destinations` (atelier, tiquiz_main, ...)
   destination text not null,
-  -- étiquette libre posée par l'affilié : youtube, newsletter, story-mardi
+  -- tag libre posée par l'affilié : youtube, newsletter, story-mardi
   channel text,
   short_code text not null,
   clicks_count integer not null default 0,
@@ -76,10 +76,10 @@ create unique index if not exists affiliate_links_sa_dest_channel_idx
 
 -- 4. D'où vient le clic ---------------------------------------------------
 --
--- `channel`  : l'étiquette CHOISIE par l'affilié (il compare ce qui marche)
+-- `channel`  : le tag CHOISIE par l'affilié (il compare ce qui marche)
 -- `source`   : la provenance DÉDUITE du referrer (youtube, instagram,
 --              webmail, recherche...). Elle existe même quand il n'a rien
---              étiqueté, donc personne ne se retrouve devant un écran vide
+--              taggé, donc personne ne se retrouve devant un écran vide
 --              parce qu'il n'y a pas pensé.
 
 alter table public.affiliate_clicks

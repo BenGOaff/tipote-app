@@ -15,7 +15,7 @@
 //
 // -- LA CAUSE ----------------------------------------------------------
 //
-// Recharts réserve la largeur des étiquettes dans `YAxis width` (60 par
+// Recharts réserve la largeur des tags dans `YAxis width` (60 par
 // défaut). Nos graphiques rognaient cette place DEUX fois :
 //
 //     <AreaChart margin={{ left: -16 }}>   // on décale tout vers la gauche
@@ -49,7 +49,7 @@
 // `margin.left` négatif dans tout le repo.
 
 /**
- * Largeur (px) à réserver à gauche pour que la PLUS GRANDE étiquette
+ * Largeur (px) à réserver à gauche pour que la PLUS GRANDE tag
  * s'affiche en entier.
  *
  * @param maxValue la plus grande valeur tracée, toutes séries confondues
