@@ -2905,3 +2905,62 @@ nouveaux champs : chaque section se tait au lieu de faire planter un
 écran qui marchait très bien avant.
 
 Test : `tests/logic/fiche-affilie-complete.test.mts`.
+
+## Le brouillon d'une question ne suit PAS le visiteur (retour Adeline, 1er septembre 2026)
+
+"On peut revenir en arrière, ce qui est un plus, mais lorsqu'on le fait
+ça efface les cases suivantes déjà remplies."
+
+**RIEN N'ÉTAIT EFFACÉ EN BASE**, et c'est ce qui rendait le retour
+difficile à croire : `answers` n'est jamais tronqué, aucune ligne de
+code ne coupe le tableau. Ce qui suivait le visiteur, c'était le
+BROUILLON, c'est à dire l'état de SAISIE de la question affichée.
+
+Il vivait dans QUATRE variables globales au composant (`freeTextDraft`,
+`multiOptionsDraft`, `autreTexte`, `autreChoisi`), jamais remises à la
+question courante. Cinq symptômes, un seul défaut :
+
+| Ce qu'elle a vu | Ce qui se passait |
+|---|---|
+| "ça efface les cases suivantes déjà remplies" | le texte tapé en Q3 arrivait pré-rempli en Q4 ; valider ÉCRASAIT la réponse déjà donnée |
+| des cases cochées sans les avoir cochées | la sélection d'un multi-choix restait d'une question à l'autre |
+| revenir puis cliquer décoche tout | le premier clic repartait d'un brouillon VIDE au lieu de la sélection affichée |
+| impossible de tout décocher | l'affichage retombait sur la réponse enregistrée dès que le brouillon était vide |
+| le texte du "Autre" invisible au retour | l'option était surlignée, le champ restait FERMÉ |
+
+**LA CAUSE COMMUNE : la question affichée et l'état de saisie n'étaient
+reliés par rien.** La remise à zéro était recopiée dans les
+gestionnaires de navigation, et il en manquait : la flèche retour vidait
+le texte libre, le swipe AVANT non, et les cases cochées n'étaient
+vidées nulle part.
+
+**Et un commentaire l'annonçait déjà**, posé sur `multiOptionsDraft` :
+"Reset whenever currentQ changes (handled in commitAnswer + an effect
+below)". **Cet effet n'a jamais existé.** Quatrième fois que ce dépôt
+paie une règle écrite en commentaire et démentie par le code (le
+`w-full h-auto` des images de réponse, l'`ADD_ATTR: ["target"]` des
+liens légaux, le "Next décode déjà le segment" du pilotage).
+
+**Règle : `lib/quiz/brouillonReponse.ts` décide, et UN SEUL effet
+applique.** `brouillonPourQuestion(reponse, autreIdx)` rend les quatre
+champs de saisie depuis la réponse de la QUESTION COURANTE ; l'effet
+tourne sur `[currentQ, step, quiz, resumed]`. Plus aucune remise à zéro
+dans un gestionnaire de navigation : c'est ce qui en oubliait un.
+
+**Et le brouillon est le SEUL à décider de l'affichage.** Les deux
+replis du genre `brouillon.length > 0 ? brouillon : réponse
+enregistrée` sont SUPPRIMÉS, pas assouplis : **un brouillon vide est une
+intention, pas une absence.** C'est ce repli qui rendait "tout décocher"
+et "effacer mon texte" impossibles.
+
+`answers` est volontairement HORS des dépendances de l'effet : valider
+une réponse le modifie, et relancer l'effet là remettrait le brouillon
+de la question qu'on vient de quitter. `resumed` y est, pour le seul cas
+où la reprise d'un brouillon local ne change pas l'index.
+
+**Le filet de captures ne pouvait rien voir** : il photographie un écran
+au repos, et ce bug ne vit que dans l'enchaînement des gestes. Le
+garde-fou est `tests/logic/brouillon-question.test.mts`, vérifié en
+rejouant la version d'avant (il rougit).
+
+Le module quiz de Tiquiz est jumeau : la correction y vit aussi.
