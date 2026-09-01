@@ -21,7 +21,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft, ArrowUp, Copy, Eye, CheckCircle, Share2,
   Loader2, Plus, Trash2, Monitor, Smartphone, Pencil, X, Save, GripVertical,
-  Sparkles, TrendingUp, Star, MessageCircle, Wand2, ImagePlus, Menu, Crop, Settings2,
+  Sparkles, TrendingUp, Star, MessageCircle, Wand2, ImagePlus, Menu, Crop, Settings2, Workflow,
 } from "lucide-react";
 import { SurveyTrends } from "@/components/quiz/SurveyTrends";
 import { SurveyResponsesTable } from "@/components/quiz/SurveyResponsesTable";
@@ -48,6 +48,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { SioTagPicker } from "@/components/ui/sio-tag-picker";
+import { AutomatisationPanel } from "@/components/quiz/AutomatisationPanel";
 import { SioTagsProvider } from "@/components/ui/sio-tags-provider";
 import { RichTextEdit } from "@/components/ui/rich-text-edit";
 import { interpolateText } from "@/lib/quizPersonalization";
@@ -547,7 +548,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   void editResults; void setEditResults;
 
   // Editor state
-  const [mainTab, setMainTab] = useState<"create" | "share" | "trends">("create");
+  const [mainTab, setMainTab] = useState<"create" | "share" | "automation" | "trends">("create");
   // Sous-vue de l'onglet Tendances : agrégat (Synthèse) ou tableau par
   // répondant (Réponses, style Typeform / Tally).
   const [trendsView, setTrendsView] = useState<"summary" | "responses">("responses"); // sondage: onglet "Reponses" ouvre sur le tableau (retour Christelle)
@@ -1690,9 +1691,9 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
           <span className="font-semibold text-sm truncate max-w-[160px] sm:max-w-[200px]">{title || "Mon quiz"}</span>
         </div>
         <nav className="hidden sm:flex items-center bg-muted rounded-lg p-0.5">
-          {(["create","share","trends"] as const).map(tab => (
+          {(["create","share","automation","trends"] as const).map(tab => (
             <button key={tab} onClick={() => setMainTab(tab)} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${mainTab === tab ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
-              {tab === "create" ? <><Pencil className="w-3.5 h-3.5 inline mr-1.5" />{t("tabCreate")}</> : tab === "share" ? <><Share2 className="w-3.5 h-3.5 inline mr-1.5" />{t("tabShare")}</> : <><TrendingUp className="w-3.5 h-3.5 inline mr-1.5" />{t("tabTrendsSurvey")}</>}
+              {tab === "create" ? <><Pencil className="w-3.5 h-3.5 inline mr-1.5" />{t("tabCreate")}</> : tab === "share" ? <><Share2 className="w-3.5 h-3.5 inline mr-1.5" />{t("tabShare")}</> : tab === "automation" ? <><Workflow className="w-3.5 h-3.5 inline mr-1.5" />{t("tabAutomation")}</> : <><TrendingUp className="w-3.5 h-3.5 inline mr-1.5" />{t("tabTrendsSurvey")}</>}
             </button>
           ))}
         </nav>
@@ -1749,9 +1750,9 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
           (absente sur téléphone) → on la réaffiche pleine largeur sous l'en-tête
           pour atteindre Partager (le lien) + Tendances. < sm seulement. */}
       <nav className="sm:hidden flex items-stretch border-b shrink-0 bg-background z-10">
-        {(["create","share","trends"] as const).map(tab => (
+        {(["create","share","automation","trends"] as const).map(tab => (
           <button key={tab} onClick={() => setMainTab(tab)} className={`flex-1 px-2 py-2.5 text-sm font-medium transition-colors inline-flex items-center justify-center gap-1.5 ${mainTab === tab ? "text-foreground border-b-2 border-primary" : "text-muted-foreground"}`}>
-            {tab === "create" ? <><Pencil className="w-3.5 h-3.5" />{t("tabCreate")}</> : tab === "share" ? <><Share2 className="w-3.5 h-3.5" />{t("tabShare")}</> : <><TrendingUp className="w-3.5 h-3.5" />{t("tabTrendsSurvey")}</>}
+            {tab === "create" ? <><Pencil className="w-3.5 h-3.5" />{t("tabCreate")}</> : tab === "share" ? <><Share2 className="w-3.5 h-3.5" />{t("tabShare")}</> : tab === "automation" ? <><Workflow className="w-3.5 h-3.5" />{t("tabAutomation")}</> : <><TrendingUp className="w-3.5 h-3.5" />{t("tabTrendsSurvey")}</>}
           </button>
         ))}
       </nav>
@@ -2861,6 +2862,23 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
 
       {/* TRENDS TAB — replaces the quiz "results analytics" tab. Aggregates
           lead.answers per question with a type-aware visualisation. */}
+      {/* Un sondage n'a pas de profil : ce sont le tag de capture et
+          les tags par RÉPONSE qui taguent, et le plan ne montre que
+          ceux là. Le panneau construit son plan lui même (il est dans
+          `SioTagsProvider`, donc il sait si une clé répond). */}
+      {mainTab === "automation" && (
+        <AutomatisationPanel
+          quiz={{
+            mode: "survey",
+            locale: quiz?.locale ?? null,
+            sio_capture_tag: (quiz as { sio_capture_tag?: string | null } | null)?.sio_capture_tag ?? null,
+            sio_share_tag_name: sioShareTagName,
+          }}
+          resultats={editResults}
+          questions={editQuestions}
+        />
+      )}
+
       {mainTab === "trends" && (
         <div className="flex-1 overflow-y-auto p-6">
           <div className="max-w-5xl mx-auto">

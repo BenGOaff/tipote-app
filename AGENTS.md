@@ -3318,3 +3318,51 @@ grep -rnE "(une|nouvelle|cette|aucune|toute) tags?|tags? (créée|posée|manquan
 ```
 
 Zéro ligne, sinon on a laissé une phrase cassée derrière soi.
+
+## L'onglet Automatiser, porté de Tiquiz (1er septembre 2026)
+
+Béné : "tu as bien porté tout Tiquiz sur les quiz de Tipote ? Tout est
+strictement identique ? De la liste des quiz projets à l'éditeur,
+jusqu'aux résultats ?"
+
+**Non, et l'audit a nommé les écarts.** L'éditeur, lui, était déjà
+presque identique : mêmes onglets de colonne, mêmes trois groupes de
+réglages, mêmes analyses. Il manquait l'onglet **Automatiser**, qui vit
+maintenant ici aussi (`lib/automatisation/planSysteme.ts`,
+`components/quiz/AutomatisationPanel.tsx`, 7 langues).
+
+**CE QU'IL RÉPARE :** Tipote pose des tags sur le contact Systeme.io,
+mais poser un tag ne déclenche RIEN tant qu'aucune règle ne l'écoute, et
+ces règles se créent à la main dans leur tableau de bord. Une créatrice
+met son quiz en ligne, capte 40 adresses, et il ne se passe rien.
+
+**UNE SEULE PHRASE DIFFÈRE DE TIQUIZ, ET C'EST VOULU.** Tipote n'a pas
+de clé Systeme.io par quiz : la table `sio_api_keys` n'existe pas ici,
+la clé vit dans `business_profiles`, pour tout le compte. `manqueCle`
+renvoie donc vers Réglages > Connexions, et non vers un réglage du quiz.
+Recopier la phrase de Tiquiz enverrait la créatrice chercher un écran
+qui n'existe pas.
+
+**Le panneau construit son plan LUI MÊME**, parce qu'il est le seul à
+être DANS `SioTagsProvider` : c'est le provider qui sait si une clé
+répond vraiment (il a demandé les tags). Le déduire d'une colonne est
+exactement le bug corrigé chez Tiquiz le même jour.
+
+### CE QUI RESTE DIFFÉRENT ENTRE LES DEUX, ET QUI N'EST PAS UN OUBLI
+
+1. **La liste des projets.** Tiquiz a une page dédiée aux quiz
+   (`/quizzes`) ; Tipote a un hub à dossiers (`/contents`) qui mélange
+   posts, quiz, tunnels et popquiz. Ce n'est pas un composant à copier :
+   c'est une décision de produit, et elle appartient à Béné.
+2. **La clé Systeme.io par quiz** (le cas du freelance qui envoie les
+   leads d'UN quiz chez son client). Elle demande une table et un écran :
+   à faire seulement si une créatrice Tipote le demande.
+3. 🚨 **LE CTA PAR DÉFAUT DE LA PAGE DE RÉSULTAT.** Béné, 25 août :
+   "on vire le CTA par défaut : il faut remplir pour chaque profil point
+   barre. Si rien = pas de CTA." **C'est fait dans Tiquiz, PAS ici** :
+   `PublicQuizClient` fait encore `resultProfile?.cta_url ||
+   quiz.cta_url`. Le porter demande la MÊME migration que là bas, et
+   dans le même ordre : recopier d'abord l'adresse du quiz dans chaque
+   profil qui n'en a pas, PUIS retirer le repli. L'inverse ferait
+   DISPARAÎTRE le bouton de tout quiz en ligne dont les profils n'ont
+   pas leur propre adresse, sur la page qui vend.

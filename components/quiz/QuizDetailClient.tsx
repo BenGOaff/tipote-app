@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { TipoteStudioButton } from "@/components/visual-studio/TipoteStudioButton";
 import { GifPickerButton } from "@/components/quiz/GifPicker";
 import { ImageCropDialog } from "@/components/quiz/ImageCropDialog";
+import { AutomatisationPanel } from "@/components/quiz/AutomatisationPanel";
 import { SettingsSection } from "@/components/quiz/SettingsSection";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -23,7 +24,7 @@ import {
   ArrowLeft, ArrowUp, Copy, Eye, CheckCircle, Share2,
   Loader2, Plus, Trash2, Monitor, Smartphone, Pencil, X, Save, GripVertical,
   Gift, Sparkles, Shuffle, ChevronUp, ChevronDown, Wand2, ImagePlus, Menu, Crop, Star, Settings2, AlertCircle,
-  Link2,
+  Link2, Workflow,
 } from "lucide-react";
 import QuizResultsAnalytics from "@/components/quiz/QuizResultsAnalytics";
 import QuizInsightsPanel from "@/components/quiz/QuizInsightsPanel";
@@ -792,7 +793,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const [editResults, setEditResults] = useState<QuizResult[]>([]);
 
   // Editor state
-  const [mainTab, setMainTab] = useState<"create" | "share" | "results">("create");
+  const [mainTab, setMainTab] = useState<"create" | "share" | "automation" | "results">("create");
   const [leftTab, setLeftTab] = useState<"edition" | "design" | "settings">("edition");
   // Sidebar : ouverte par défaut sur desktop, fermée sur mobile pour
   // laisser le preview occuper tout l'écran (pattern aligné sur
@@ -3162,9 +3163,9 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           <span className="font-semibold text-sm truncate max-w-[160px] sm:max-w-[200px]">{title || "Mon quiz"}</span>
         </div>
         <nav className="hidden sm:flex items-center bg-muted rounded-lg p-0.5">
-          {(["create","share","results"] as const).map(tab => (
+          {(["create","share","automation","results"] as const).map(tab => (
             <button key={tab} onClick={() => setMainTab(tab)} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${mainTab === tab ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
-              {tab === "create" ? <><Pencil className="w-3.5 h-3.5 inline mr-1.5" />{t("tabCreate")}</> : tab === "share" ? <><Share2 className="w-3.5 h-3.5 inline mr-1.5" />{t("tabShare")}</> : <><Eye className="w-3.5 h-3.5 inline mr-1.5" />{t("tabResults")}</>}
+              {tab === "create" ? <><Pencil className="w-3.5 h-3.5 inline mr-1.5" />{t("tabCreate")}</> : tab === "share" ? <><Share2 className="w-3.5 h-3.5 inline mr-1.5" />{t("tabShare")}</> : tab === "automation" ? <><Workflow className="w-3.5 h-3.5 inline mr-1.5" />{t("tabAutomation")}</> : <><Eye className="w-3.5 h-3.5 inline mr-1.5" />{t("tabResults")}</>}
             </button>
           ))}
         </nav>
@@ -3223,9 +3224,9 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           (absente sur téléphone) → on la réaffiche pleine largeur sous l'en-tête
           pour atteindre Partager (le lien) + Résultats. < sm seulement. */}
       <nav className="sm:hidden flex items-stretch border-b shrink-0 bg-background z-10">
-        {(["create","share","results"] as const).map(tab => (
+        {(["create","share","automation","results"] as const).map(tab => (
           <button key={tab} onClick={() => setMainTab(tab)} className={`flex-1 px-2 py-2.5 text-sm font-medium transition-colors inline-flex items-center justify-center gap-1.5 ${mainTab === tab ? "text-foreground border-b-2 border-primary" : "text-muted-foreground"}`}>
-            {tab === "create" ? <><Pencil className="w-3.5 h-3.5" />{t("tabCreate")}</> : tab === "share" ? <><Share2 className="w-3.5 h-3.5" />{t("tabShare")}</> : <><Eye className="w-3.5 h-3.5" />{t("tabResults")}</>}
+            {tab === "create" ? <><Pencil className="w-3.5 h-3.5" />{t("tabCreate")}</> : tab === "share" ? <><Share2 className="w-3.5 h-3.5" />{t("tabShare")}</> : tab === "automation" ? <><Workflow className="w-3.5 h-3.5" />{t("tabAutomation")}</> : <><Eye className="w-3.5 h-3.5" />{t("tabResults")}</>}
           </button>
         ))}
       </nav>
@@ -6468,6 +6469,25 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       )}
 
       {/* RESULTS TAB */}
+      {/* Le panneau CONSTRUIT son plan : il est DANS `SioTagsProvider`,
+          donc lui seul sait si une clé Systeme.io répond vraiment. */}
+      {mainTab === "automation" && (
+        <AutomatisationPanel
+          quiz={{
+            mode: quiz?.mode ?? null,
+            locale: quiz?.locale ?? null,
+            sio_capture_tag: (quiz as { sio_capture_tag?: string | null } | null)?.sio_capture_tag ?? null,
+            sio_share_tag_name: sioShareTagName,
+            sio_score_tags: sioScoreTags,
+            scoring_axes: scoringAxesEdit,
+            score_labels: scoreLabelsEdit,
+            virality_enabled: viralityEnabled,
+          }}
+          resultats={editResults}
+          questions={editQuestions}
+        />
+      )}
+
       {mainTab === "results" && (
         <div className="flex-1 overflow-y-auto p-6">
           <div className="max-w-5xl mx-auto">

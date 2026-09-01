@@ -4792,7 +4792,8 @@
     "settingsGroupResultats": "Result page",
     "settingsGroupResultatsHint": "What the visitor sees once they have their profile.",
     "settingsGroupGestion": "Quiz management",
-    "settingsGroupGestionHint": "Interface language, and closing the quiz."
+    "settingsGroupGestionHint": "Interface language, and closing the quiz.",
+    "tabAutomation": "Automate"
   },
   "contentStrategy": {
     "title": "Content strategy",
@@ -7697,5 +7698,54 @@
     "createError": "The link could not be created.",
     "updateError": "The change could not be saved.",
     "button": "Give a copy of the quiz"
+  },
+  "automatisation": {
+    "titre": "Automate what happens after the quiz, in Systeme.io",
+    "intro": "Tiquiz adds a tag to the Systeme.io contact of everyone who answers. Here are the rules to create for THIS quiz so those tags actually do something.",
+    "pourquoi": "Worth knowing: adding a tag triggers nothing on its own. Without the matching rule, the person is tagged and receives nothing.",
+    "ouvrirSysteme": "Open my Systeme.io automations",
+    "manqueCle": "No Systeme.io key is linked to this account. Until then, no contact is created and no tag is applied. Go to Settings, Connections tab, to add your key.",
+    "manqueTagProfil": "The \"{profil}\" profile has no tag. People who get it will not be recognisable anywhere in Systeme.io.",
+    "manqueTagCapture": "This survey has no capture tag: nobody will be tagged when they answer.",
+    "manqueTagPartage": "You offer a sharing bonus, but no tag marks the people who share. You will not be able to send them the bonus automatically.",
+    "videTitre": "Nothing to automate yet",
+    "videTexte": "Add a Systeme.io tag to your result profiles, in the Create tab. The steps will appear here.",
+    "noteFin": "Tag names must match exactly, character for character. Click one to copy it.",
+    "copyTag": "Copy the tag",
+    "copyError": "Could not copy. The tag is: {tag}",
+    "recetteTitre": "The recipe, the same for every tag",
+    "recetteAide": "Three clicks in Systeme.io, to repeat once per tag in the list below.",
+    "recette1": "Create a workflow and give it the tag's name.",
+    "recette2": "Trigger: \"Tag added\", then pick that tag.",
+    "recette3": "Action: \"Subscribe to an email campaign\", then pick the campaign to send.",
+    "actionAutre": "Here, pick the \"Send an email\" action instead: the one that delivers your bonus.",
+    "profilSansNom": "Result {n}",
+    "tagSansContexte": "Everyone who answers",
+    "groupe": {
+      "profils": {
+        "titre": "Your result profiles",
+        "aide": "The tag is applied as soon as a visitor gets this profile."
+      },
+      "partage": {
+        "titre": "Your share bonus",
+        "aide": "The tag is applied when a visitor shares your quiz."
+      },
+      "capture-sondage": {
+        "titre": "Answers to your survey",
+        "aide": "The tag is applied to everyone who answers."
+      },
+      "reponses-sondage": {
+        "titre": "The answers you tagged",
+        "aide": "The tag is applied when a visitor picks that answer."
+      },
+      "score": {
+        "titre": "Score bands",
+        "aide": "The tag depends on the score: create one rule per band you want to handle."
+      },
+      "acces-automatique": {
+        "titre": "Nothing to create for these profiles",
+        "aide": "You linked a course or a community. Tiquiz opens access on its own, and one more rule would open it twice."
+      }
+    }
   }
 }

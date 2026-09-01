@@ -4792,7 +4792,8 @@
     "settingsGroupResultats": "Página de resultado",
     "settingsGroupResultatsHint": "O que o visitante vê depois de obter o seu perfil.",
     "settingsGroupGestion": "Gestão do quiz",
-    "settingsGroupGestionHint": "O idioma da interface, e o fecho do quiz."
+    "settingsGroupGestionHint": "O idioma da interface, e o fecho do quiz.",
+    "tabAutomation": "Automatizar"
   },
   "contentStrategy": {
     "title": "Estratégia de conteúdo",
@@ -7697,5 +7698,54 @@
     "createError": "Não foi possível criar o link.",
     "updateError": "Não foi possível guardar a alteração.",
     "button": "Dar uma cópia do quiz"
+  },
+  "automatisation": {
+    "titre": "Automatizar o depois do quiz, no Systeme.io",
+    "intro": "O Tiquiz adiciona um tag ao contacto Systeme.io de quem responde. Aqui estão as regras a criar para ESTE quiz, para que esses tags façam mesmo alguma coisa.",
+    "pourquoi": "A saber: adicionar um tag não desencadeia nada sozinho. Sem a regra correspondente, a pessoa recebe o tag e mais nada.",
+    "ouvrirSysteme": "Abrir as minhas automações Systeme.io",
+    "manqueCle": "Nenhuma chave Systeme.io está ligada a esta conta. Enquanto for assim, nenhum contacto é criado e nenhuma tag é aplicada. Vai a Definições, separador Ligações, para ligar a tua chave.",
+    "manqueTagProfil": "O perfil \"{profil}\" não tem tag. Quem o obtiver não será reconhecível em lado nenhum no Systeme.io.",
+    "manqueTagCapture": "Este questionário não tem tag de captura: ninguém receberá um tag ao responder.",
+    "manqueTagPartage": "Ofereces um bónus de partilha, mas nenhum tag marca quem partilha. Não poderás enviar-lhes o bónus automaticamente.",
+    "videTitre": "Nada para automatizar por agora",
+    "videTexte": "Adiciona um tag Systeme.io aos teus perfis de resultado, no separador Criar. Os passos aparecerão aqui.",
+    "noteFin": "Os nomes dos tags têm de coincidir caráter a caráter. Clica para os copiar.",
+    "copyTag": "Copiar o tag",
+    "copyError": "Não foi possível copiar. O tag é: {tag}",
+    "recetteTitre": "A receita, a mesma para cada tag",
+    "recetteAide": "Três cliques no Systeme.io, a repetir uma vez por cada tag da lista abaixo.",
+    "recette1": "Cria um workflow e dá-lhe o nome da tag.",
+    "recette2": "Gatilho: \"Tag adicionada\", depois escolhe essa tag.",
+    "recette3": "Ação: \"Subscrever uma campanha de emails\", depois escolhe a campanha a enviar.",
+    "actionAutre": "Aqui, escolhe antes a ação \"Enviar um email\": o que entrega o teu bónus.",
+    "profilSansNom": "Perfil {n}",
+    "tagSansContexte": "Todas as pessoas que respondem",
+    "groupe": {
+      "profils": {
+        "titre": "Os teus perfis de resultado",
+        "aide": "A tag é aplicada assim que o visitante obtém este perfil."
+      },
+      "partage": {
+        "titre": "O teu bónus de partilha",
+        "aide": "A tag é aplicada quando o visitante partilha o teu quiz."
+      },
+      "capture-sondage": {
+        "titre": "As respostas ao teu inquérito",
+        "aide": "A tag é aplicada a todas as pessoas que respondem."
+      },
+      "reponses-sondage": {
+        "titre": "As respostas que marcaste",
+        "aide": "A tag é aplicada quando o visitante escolhe essa resposta."
+      },
+      "score": {
+        "titre": "Os intervalos de pontuação",
+        "aide": "A tag depende da pontuação: cria uma regra por cada intervalo que queiras tratar."
+      },
+      "acces-automatique": {
+        "titre": "Nada a criar para estes perfis",
+        "aide": "Ligaste uma formação ou uma comunidade. O Tiquiz abre o acesso sozinho, e uma regra a mais abri-lo-ia duas vezes."
+      }
+    }
   }
 }

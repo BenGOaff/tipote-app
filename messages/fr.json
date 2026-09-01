@@ -4792,7 +4792,8 @@
     "settingsGroupResultats": "Page de résultat",
     "settingsGroupResultatsHint": "Ce que le visiteur voit une fois son profil obtenu.",
     "settingsGroupGestion": "Gestion du quiz",
-    "settingsGroupGestionHint": "La langue de l'interface, et la fermeture du quiz."
+    "settingsGroupGestionHint": "La langue de l'interface, et la fermeture du quiz.",
+    "tabAutomation": "Automatiser"
   },
   "contentStrategy": {
     "title": "Stratégie de contenu",
@@ -7697,5 +7698,54 @@
     "createError": "Le lien n'a pas pu être créé.",
     "updateError": "Le changement n'a pas pu être enregistré.",
     "button": "Donner une copie du quiz"
+  },
+  "automatisation": {
+    "titre": "Automatiser l'après-quiz dans Systeme.io",
+    "intro": "Tiquiz pose un tag sur le contact Systeme.io de chaque personne qui répond. Voici, pour CE quiz, les règles à créer pour que ces tags déclenchent vraiment quelque chose.",
+    "pourquoi": "À savoir : poser un tag ne déclenche rien tout seul. Sans la règle correspondante, la personne reçoit bien son tag et rien d'autre.",
+    "ouvrirSysteme": "Ouvrir mes automatisations Systeme.io",
+    "manqueCle": "Aucune clé Systeme.io n'est reliée à ce compte. Tant que c'est le cas, aucun contact n'est créé et aucun tag n'est posé. Va dans Réglages, onglet Connexions, pour brancher ta clé.",
+    "manqueTagProfil": "Le profil \"{profil}\" n'a pas de tag. Les personnes qui l'obtiennent ne seront reconnaissables nulle part dans Systeme.io.",
+    "manqueTagCapture": "Ce sondage n'a pas de tag de capture : personne ne recevra de tag en répondant.",
+    "manqueTagPartage": "Tu proposes un bonus de partage, mais aucun tag ne marque ceux qui partagent. Tu ne pourras pas leur envoyer le bonus automatiquement.",
+    "videTitre": "Rien à automatiser pour l'instant",
+    "videTexte": "Ajoute un tag Systeme.io à tes profils de résultat, dans l'onglet Créer. La marche à suivre s'affichera ici.",
+    "noteFin": "Les noms de tags doivent être identiques au caractère près. Clique dessus pour les copier.",
+    "copyTag": "Copier le tag",
+    "copyError": "Copie impossible. Le tag est : {tag}",
+    "recetteTitre": "La recette, la même pour chaque tag",
+    "recetteAide": "Trois clics dans Systeme.io, à refaire une fois par tag de la liste ci-dessous.",
+    "recette1": "Crée un workflow et donne-lui le nom du tag.",
+    "recette2": "Déclencheur : \"Tag ajouté\", puis choisis ce tag.",
+    "recette3": "Action : \"S'abonner à une campagne d'emails\", puis choisis la campagne à envoyer.",
+    "actionAutre": "Ici, choisis plutôt l'action \"Envoyer un email\" : celui qui livre ton bonus.",
+    "profilSansNom": "Profil {n}",
+    "tagSansContexte": "Tous les répondants",
+    "groupe": {
+      "profils": {
+        "titre": "Tes profils de résultat",
+        "aide": "Le tag est posé dès que le visiteur obtient ce profil."
+      },
+      "partage": {
+        "titre": "Ton bonus de partage",
+        "aide": "Le tag est posé quand le visiteur partage ton quiz."
+      },
+      "capture-sondage": {
+        "titre": "Les réponses à ton sondage",
+        "aide": "Le tag est posé sur toute personne qui répond."
+      },
+      "reponses-sondage": {
+        "titre": "Les réponses que tu as taguées",
+        "aide": "Le tag est posé quand le visiteur choisit cette réponse."
+      },
+      "score": {
+        "titre": "Les tranches de score",
+        "aide": "Le tag dépend du score obtenu : crée une règle par tranche que tu veux traiter."
+      },
+      "acces-automatique": {
+        "titre": "Rien à créer pour ces profils",
+        "aide": "Tu as relié une formation ou une communauté. Tiquiz ouvre l'accès tout seul, et une règle de plus l'ouvrirait deux fois."
+      }
+    }
   }
 }
