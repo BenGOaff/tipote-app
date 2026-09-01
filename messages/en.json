@@ -16,7 +16,8 @@
     "widgets": "Widgets",
     "webinars": "Live events",
     "support": "Help",
-    "becomeAffiliate": "Become an affiliate"
+    "becomeAffiliate": "Become an affiliate",
+    "generators": "Generators"
   },
   "sidebar": {
     "tagline": "Your smart companion",
@@ -7752,6 +7753,117 @@
         "titre": "Nothing to create for these profiles",
         "aide": "You linked a course or a community. Tiquiz opens access on its own, and one more rule would open it twice."
       }
+    }
+  },
+  "generateurs": {
+    "titre": "Generators",
+    "intro": "Your quiz already knows what it talks about, who it talks to, and in which tone. These three generators start from there to write what comes next.",
+    "cartes": {
+      "bonus": {
+        "titre": "The bonus given at the end",
+        "resume": "A short deliverable, handed over automatically, that extends the result and leads to your offer.",
+        "quoi": "You get the full bonus written out, a step by step guide to build and deliver it, and the texts for the bonus screen."
+      },
+      "emails": {
+        "titre": "The email sequence after the quiz",
+        "resume": "The emails sent to someone who just got one specific profile.",
+        "quoi": "You get a complete sequence, written for ONE profile, subject lines included, ready to paste into your campaign."
+      },
+      "promo": {
+        "titre": "The content that gets your quiz taken",
+        "resume": "The emails and posts that make people want to answer, without selling anything.",
+        "quoi": "You get invitation emails and posts for your social feeds, with your quiz link."
+      }
+    },
+    "verrou": {
+      "badge": "For paid accounts",
+      "corps": "Generators are included from the first paid tier. Your work and your quizzes stay exactly as they are: you simply unlock these three tools.",
+      "cta": "See the plans"
+    },
+    "retour": "Back to the generators",
+    "etapes": {
+      "projet": "1. The project",
+      "profil": "2. The profile",
+      "offre": "The offer it leads to",
+      "pistes": "The angles",
+      "contenus": "The content"
+    },
+    "projet": {
+      "aide": "Everything else comes from it: its title, its promise, its tone, its profiles.",
+      "aucun": "None of your projects can be used with this generator yet.",
+      "aucunCta": "Create a quiz",
+      "questions": "{count} questions",
+      "bloque": {
+        "sondage": "This is a survey: it has no result profile to extend.",
+        "profils-vides": "Its result profiles are still empty: fill them in first.",
+        "quiz-vide": "This project has no question yet."
+      }
+    },
+    "profil": {
+      "aide": "The sequence starts from this profile's tag. It must not be sendable to any other one.",
+      "sansTitre": "Profile {rang}"
+    },
+    "offre": {
+      "aide": "This is the one thing your quiz cannot know. Without it, the content would lead nowhere.",
+      "promesse": "What your offer promises",
+      "promessePlaceholder": "A 6 week program to build a funnel that sells without pushing",
+      "format": "Its form",
+      "formats": {
+        "formation": "An online course",
+        "accompagnement": "Coaching or one to one support",
+        "prestation": "A done for you service",
+        "outil": "A tool or software",
+        "produit": "A physical product",
+        "abonnement": "A subscription",
+        "groupe": "A group program"
+      },
+      "prix": "Its price",
+      "prixPlaceholder": "497 EUR",
+      "prixAide": "Optional. If left empty, no price is written anywhere."
+    },
+    "pistes": {
+      "lancer": "Suggest three angles",
+      "relancer": "Suggest three other angles",
+      "encours": "Writing three angles",
+      "aide": "Pick one. Nothing is produced until you do.",
+      "recommandee": "Recommended",
+      "choisir": "Go with this one",
+      "choisie": "Chosen angle",
+      "changer": "Change angle",
+      "morceaux": "{count} pieces to write"
+    },
+    "production": {
+      "lancer": "Write the content",
+      "encours": "In progress: {fait} of {total}",
+      "refaire": "Rewrite this piece",
+      "copier": "Copy",
+      "copie": "Copied",
+      "brut": "See the text to copy",
+      "rendu": "Back to the preview",
+      "tronque": "This piece was cut off before the end. Rewrite it, it usually works on the second try.",
+      "vide": "Nothing has been written yet."
+    },
+    "blocs": {
+      "contenu": "The full bonus",
+      "guide": "How to build and deliver it",
+      "remise": "The texts that hand it over",
+      "email": "Email {index}",
+      "post": "Post {index}"
+    },
+    "erreurs": {
+      "busy": "The AI servers are saturated right now. Wait a minute and try again, nothing is lost.",
+      "too_long": "Writing ran out of time and stopped. Try again, it usually works on the second attempt.",
+      "refused": "The request was refused. It is not on your side: tell us and we will check the server log.",
+      "unreachable": "The writing service could not be reached. Check your connection, then try again.",
+      "empty": "The answer came back empty. Try again, it is usually fine the second time.",
+      "unreadable": "The answer came back in an unreadable format. Try again, it is usually fine the second time.",
+      "rate_limited": "You have generated a lot in the last few minutes. Come back in a moment, everything is kept.",
+      "not_configured": "Writing is unavailable right now. We have been notified.",
+      "plan_required": "Generators are included from the first paid tier.",
+      "offre_manquante": "First describe what your offer promises.",
+      "profil_manquant": "Pick a profile first.",
+      "not_found": "This project is no longer available. It may have been deleted, or it does not belong to you. Nothing was changed.",
+      "generic": "That did not go through. Try again, the rest of your work is kept."
     }
   }
 }

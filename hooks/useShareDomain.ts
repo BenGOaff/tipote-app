@@ -28,6 +28,7 @@
 // briefly relative.
 
 import { useCallback, useEffect, useState } from "react";
+import { urlPubliqueProjet } from "@/lib/quiz/urlPublique";
 
 /** The 3 prefixed public-content namespaces in Tipote. Used to decide
  *  the URL shape on the main host (where the prefix is required to
@@ -117,13 +118,19 @@ export function useShareDomain(): UseShareDomain {
   const isCustomDomain =
     !!shareDomain && !!mainHost && shareDomain !== mainHost;
 
+  // LA RÈGLE VIT DANS `lib/quiz/urlPublique.ts`, et pas ici : les
+  // générateurs de contenu la lisent aussi, côté serveur, pour mettre
+  // cette adresse dans des emails et des posts. Deux écritures de la
+  // même règle finissent toujours par donner deux adresses.
   const buildPublicUrl = useCallback(
-    (kind: PublicContentKind, slug: string, suffix = "") => {
-      if (!shareOrigin) return `/${slug}${suffix}`;
-      return isCustomDomain
-        ? `${shareOrigin}/${slug}${suffix}`
-        : `${shareOrigin}/${kind}/${slug}${suffix}`;
-    },
+    (kind: PublicContentKind, slug: string, suffix = "") =>
+      urlPubliqueProjet({
+        origine: shareOrigin,
+        kind,
+        segment: slug,
+        surDomainePerso: isCustomDomain,
+        suffixe: suffix,
+      }),
     [shareOrigin, isCustomDomain],
   );
 

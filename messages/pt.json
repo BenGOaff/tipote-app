@@ -16,7 +16,8 @@
     "widgets": "Widgets",
     "webinars": "Eventos ao vivo",
     "support": "Ajuda",
-    "becomeAffiliate": "Torna-te afiliado"
+    "becomeAffiliate": "Torna-te afiliado",
+    "generators": "Geradores"
   },
   "sidebar": {
     "tagline": "O teu companheiro inteligente",
@@ -7752,6 +7753,117 @@
         "titre": "Nada a criar para estes perfis",
         "aide": "Ligaste uma formação ou uma comunidade. O Tiquiz abre o acesso sozinho, e uma regra a mais abri-lo-ia duas vezes."
       }
+    }
+  },
+  "generateurs": {
+    "titre": "Geradores",
+    "intro": "O teu quiz já sabe do que fala, a quem fala e com que tom. Estes três geradores partem daí para escrever o que vem a seguir.",
+    "cartes": {
+      "bonus": {
+        "titre": "O bónus oferecido no fim",
+        "resume": "Um conteúdo curto, entregue automaticamente, que prolonga o resultado e leva à tua oferta.",
+        "quoi": "Recebes o bónus escrito na íntegra, o guia para o criares e entregares, e os textos do ecrã de bónus."
+      },
+      "emails": {
+        "titre": "A sequência de emails depois do quiz",
+        "resume": "Os emails enviados a quem acabou de obter um perfil específico.",
+        "quoi": "Recebes uma sequência completa, escrita para UM perfil, assunto incluído, pronta a colar na tua campanha."
+      },
+      "promo": {
+        "titre": "Os conteúdos para fazerem o teu quiz",
+        "resume": "Os emails e as publicações que dão vontade de responder, sem vender nada.",
+        "quoi": "Recebes emails de convite e publicações para as tuas redes, com o link do teu quiz."
+      }
+    },
+    "verrou": {
+      "badge": "Reservado às contas pagas",
+      "corps": "Os geradores estão incluídos a partir do primeiro plano pago. O teu trabalho e os teus quizzes não mudam: só desbloqueias estas três ferramentas.",
+      "cta": "Ver os planos"
+    },
+    "retour": "Voltar aos geradores",
+    "etapes": {
+      "projet": "1. O projeto",
+      "profil": "2. O perfil",
+      "offre": "A oferta a que leva",
+      "pistes": "As propostas",
+      "contenus": "Os conteúdos"
+    },
+    "projet": {
+      "aide": "Todo o resto vem dele: o título, a promessa, o tom, os perfis.",
+      "aucun": "Nenhum dos teus projetos serve ainda para este gerador.",
+      "aucunCta": "Criar um quiz",
+      "questions": "{count} perguntas",
+      "bloque": {
+        "sondage": "É um inquérito: não tem perfil de resultado para prolongar.",
+        "profils-vides": "Os perfis de resultado ainda estão vazios: preenche-os primeiro.",
+        "quiz-vide": "Este projeto ainda não tem nenhuma pergunta."
+      }
+    },
+    "profil": {
+      "aide": "A sequência parte da tag deste perfil. Não deve poder ser enviada a outro.",
+      "sansTitre": "Perfil {rang}"
+    },
+    "offre": {
+      "aide": "É a única coisa que o teu quiz não pode saber. Sem ela, o conteúdo não levaria a lado nenhum.",
+      "promesse": "O que a tua oferta promete",
+      "promessePlaceholder": "Um acompanhamento de 6 semanas para construir um funil que vende sem forçar",
+      "format": "A sua forma",
+      "formats": {
+        "formation": "Uma formação online",
+        "accompagnement": "Um acompanhamento ou coaching",
+        "prestation": "Um serviço feito por ti",
+        "outil": "Uma ferramenta ou software",
+        "produit": "Um produto físico",
+        "abonnement": "Uma subscrição",
+        "groupe": "Um programa em grupo"
+      },
+      "prix": "O seu preço",
+      "prixPlaceholder": "497 EUR",
+      "prixAide": "Facultativo. Se ficar vazio, nenhum preço é escrito em lado nenhum."
+    },
+    "pistes": {
+      "lancer": "Propor três propostas",
+      "relancer": "Propor outras três propostas",
+      "encours": "A escrever três propostas",
+      "aide": "Escolhe uma. Nada é produzido enquanto não escolheres.",
+      "recommandee": "Aconselhada",
+      "choisir": "Seguir com esta",
+      "choisie": "Proposta escolhida",
+      "changer": "Mudar de proposta",
+      "morceaux": "{count} conteúdos por escrever"
+    },
+    "production": {
+      "lancer": "Escrever os conteúdos",
+      "encours": "Em curso: {fait} de {total}",
+      "refaire": "Reescrever este conteúdo",
+      "copier": "Copiar",
+      "copie": "Copiado",
+      "brut": "Ver o texto a copiar",
+      "rendu": "Voltar à pré-visualização",
+      "tronque": "Este conteúdo foi cortado antes do fim. Reescreve-o, costuma resultar à segunda tentativa.",
+      "vide": "Ainda não foi escrito nada."
+    },
+    "blocs": {
+      "contenu": "O bónus, na íntegra",
+      "guide": "Como criá-lo e entregá-lo",
+      "remise": "Os textos que o entregam",
+      "email": "Email {index}",
+      "post": "Publicação {index}"
+    },
+    "erreurs": {
+      "busy": "Os servidores da IA estão saturados neste momento. Espera um minuto e tenta de novo, nada se perde.",
+      "too_long": "A escrita ultrapassou o tempo disponível e parou. Tenta de novo, costuma resultar à segunda.",
+      "refused": "O pedido foi recusado. Não é do teu lado: avisa-nos e vemos o registo do servidor.",
+      "unreachable": "Não foi possível contactar o serviço de escrita. Verifica a tua ligação e tenta de novo.",
+      "empty": "A resposta chegou vazia. Tenta de novo, costuma correr bem à segunda.",
+      "unreadable": "A resposta chegou num formato ilegível. Tenta de novo, costuma correr bem à segunda.",
+      "rate_limited": "Geraste muito nos últimos minutos. Volta daqui a pouco, está tudo guardado.",
+      "not_configured": "A escrita não está disponível neste momento. Já fomos avisados.",
+      "plan_required": "Os geradores estão incluídos a partir do primeiro plano pago.",
+      "offre_manquante": "Descreve primeiro o que a tua oferta promete.",
+      "profil_manquant": "Escolhe primeiro um perfil.",
+      "not_found": "Este projeto já não está disponível. Pode ter sido eliminado, ou não te pertence. Nada foi alterado.",
+      "generic": "Não resultou. Tenta de novo, o resto do teu trabalho está guardado."
     }
   }
 }

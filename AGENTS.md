@@ -3388,3 +3388,61 @@ LIGNE d'un quiz et ses boutons qui ont été alignés, pas la navigation.
 - **La clé Systeme.io par quiz** (le freelance qui envoie les leads d'UN
   quiz chez son client). Elle demande une table et un écran : à faire
   seulement si une créatrice Tipote le demande.
+
+## Les trois générateurs de contenu, portés de Tiquiz (1er septembre 2026)
+
+Béné : "ok vas y pour les générateurs. Fais ça bien, pas à l'arrache
+comme pour l'onglet automatisation. Tu as déjà l'essentiel dans
+l'Atelier, faut refaire pareil mais adapté pour Tiquiz et les quiz de
+Tipote."
+
+Le bonus post-quiz, la séquence d'emails post-quiz, les contenus de
+promotion. **Le détail des décisions vit dans l'`AGENTS.md` de TIQUIZ**
+(le socle caché, les deux étapes, l'index recalculé, le lien qui ne
+sort que là où il doit apparaître). Les modules sont les MÊMES des deux
+côtés, à l'octet près : `lib/generateurs/*`, `lib/prompts/generateurs/*`,
+`lib/aiFailure.ts`, `lib/quiz/urlPublique.ts`. Toute évolution se porte
+des deux côtés.
+
+### CE QUI DIFFÈRE ICI, ET C'EST À TRANCHER PAR BÉNÉ
+
+**1. LE PALIER.** Sa phrase parle des "membres +", qui sont le
+vocabulaire de Tiquiz. Tipote n'a pas de palier PLUS : ses paliers sont
+`free / basic / pro / elite / beta`, et il n'est pas encore en vente. On
+gate donc sur `getPlanLimits(plan).analyseStatistiques`, c'est à dire
+EXACTEMENT le palier qui ouvre déjà l'analyse IA des statistiques :
+gratuit exclu, tout ce qui est payant inclus. **C'est une hypothèse
+posée, pas une décision d'elle** : si elle veut les réserver à `pro` ou
+`elite`, c'est une ligne à changer.
+
+**2. LES CRÉDITS IA.** Tipote en a, Tiquiz non. Les générateurs n'en
+consomment AUCUN aujourd'hui. Une génération complète, c'est un appel
+de pistes plus jusqu'à huit morceaux : si elle veut les décompter, il
+faut décider ce que vaut un morceau, et le dire à l'écran AVANT de
+lancer. On ne l'a pas inventé.
+
+**3. DEUX TABLES AU LIEU D'UNE.** Le palier vit dans `profiles`, la
+forme d'adresse par défaut dans `business_profiles`. Les demander dans
+le même `select` ferait échouer la requête ENTIÈRE sur une colonne
+inconnue, donc répondre "introuvable" sur un quiz qui existe.
+
+**4. LE TOUR GUIDÉ.** L'entrée de sidebar porte un `spotlightId` mais
+AUCUNE phase de tour ne pointe dessus, comme `boost`. C'est le sens qui
+compte : **une phase sans ancre BLOQUE le tour** (drame Gwenn, 10 juin),
+une ancre sans phase ne coûte rien.
+
+### CE QUI EST IDENTIQUE, ET QU'IL NE FAUT PAS "SIMPLIFIER"
+
+- **Le brief est relu CÔTÉ SERVEUR** à chaque appel, jamais envoyé par
+  le client : sinon n'importe qui annonce un autre quiz que le sien.
+- **La route répond 200 avec `ok: false`**, jamais 5xx : Cloudflare
+  remplace le corps d'un 5xx par sa propre page, donc la raison
+  n'arriverait jamais à l'écran (mesuré deux fois le 31 août).
+- **`select("*")` sur `quizzes`**, et c'est délibéré : nommer les
+  colonnes ferait échouer tout le select si une migration n'est pas
+  passée. Rien de cette ligne ne repart vers le navigateur, le brief
+  pioche les champs un par un.
+
+**Endroits à respecter :** `app/api/generateurs/route.ts`,
+`app/generateurs/`, `lib/generateurs/`, `lib/prompts/generateurs/`.
+Test : `tests/logic/generateurs.test.mts` (le MÊME des deux côtés).

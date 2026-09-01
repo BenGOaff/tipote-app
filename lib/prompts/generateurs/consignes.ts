@@ -1,0 +1,298 @@
+// lib/prompts/generateurs/consignes.ts
+//
+// LA PARTIE VARIABLE DU PROMPT : ce qui change d'un générateur, d'une
+// étape et d'un quiz à l'autre.
+//
+// Elle part APRÈS le point de césure du cache (cf. `socle.ts`). L'ordre
+// n'est pas un détail : le cache d'Anthropic est un PRÉFIXE EXACT, donc
+// le stable doit venir AVANT le variable, sinon rien ne s'accroche.
+//
+// -- DEUX ÉTAPES, ET UN SEUL MORCEAU À LA FOIS ------------------------
+//
+// `pistes` rend trois pistes en JSON court. `production` rend UN morceau.
+// Tout demander d'un coup, c'est exactement ce qui a produit le JSON brut
+// affiché à des élèves le 3 août : la réponse coupée en plein milieu,
+// `JSON.parse` qui échoue, et l'écran qui montre notre panne au lieu du
+// livrable.
+//
+// -- UN PROMPT EST DU CODE : IL SE TESTE ------------------------------
+//
+// `tests/logic/generateurs.test.mts` vérifie ce qui compte : la langue
+// est dite, le ton est dit, le gabarit JSON n'a pas de tiret cadratin,
+// et une consigne ne contredit pas une autre.
+
+import type { GenerateurId } from "@/lib/generateurs/catalogue";
+import type { Piece, Piste } from "@/lib/generateurs/blocs";
+import { MAX_PIECES } from "@/lib/generateurs/blocs";
+import type { BriefQuiz, ProfilBrief } from "@/lib/generateurs/briefQuiz";
+import { rendreBriefPourPrompt } from "@/lib/generateurs/briefQuiz";
+import type { Offre } from "@/lib/generateurs/offre";
+import { rendreOffrePourPrompt } from "@/lib/generateurs/offre";
+
+/**
+ * Le nom de la langue, écrit en toutes lettres.
+ *
+ * Un code ISO ne suffit pas : `pt-BR` fait écrire du portugais européen
+ * une fois sur deux, et `ar` fait parfois basculer en anglais. Le
+ * modèle lit une CONSIGNE, pas une locale.
+ */
+const LANGUES: Record<string, string> = {
+  fr: "le français",
+  en: "l'anglais",
+  es: "l'espagnol",
+  it: "l'italien",
+  pt: "le portugais du Portugal",
+  "pt-BR": "le portugais du Brésil",
+  ar: "l'arabe",
+};
+
+export function consigneLangue(locale: string): string {
+  const nom = LANGUES[locale] ?? LANGUES[locale.split("-")[0] ?? ""] ?? null;
+  // UNE LANGUE INCONNUE NE FAIT PAS RETOMBER SUR LE FRANÇAIS. Servir du
+  // français à quelqu'un qui écrit dans une huitième langue "a l'air de
+  // marcher", et c'est pire qu'une erreur (leçon du robot d'aide,
+  // 31 août). On nomme le code, le modèle sait les lire.
+  return `LANGUE : tu écris ENTIÈREMENT en ${nom ?? `la langue de code "${locale}"`}. Chaque titre, chaque phrase, chaque libellé de bouton.`;
+}
+
+/**
+ * Recolle des lignes en laissant tomber les vides en trop.
+ *
+ * Les blocs ci-dessous poussent des lignes conditionnelles (une offre
+ * absente, un profil absent) : sans ça le prompt part avec des trous de
+ * trois lignes, et un modèle lit un trou comme une séparation de
+ * section. C'est cosmétique pour nous, pas pour lui.
+ */
+function recoller(lignes: string[]): string {
+  return lignes
+    .join("\n")
+    .replace(/[ \t]+$/gm, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function consigneTon(b: BriefQuiz): string {
+  return b.adresse === "vous"
+    ? "TON : tu VOUVOIES le lecteur, comme le quiz. Ne bascule jamais sur le tutoiement, pas même dans un titre."
+    : "TON : tu TUTOIES le lecteur, comme le quiz. Ne bascule jamais sur le vouvoiement, pas même dans un titre.";
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// ÉTAPE 1 : les pistes
+// ─────────────────────────────────────────────────────────────────────
+
+/**
+ * Le gabarit JSON des pistes.
+ *
+ * `pieces` n'est demandé QUE là où le nombre est une décision
+ * éditoriale. Pour le bonus, les trois morceaux sont imposés par nous
+ * (cf. `piecesDeLaPiste`) : le laisser décider lui en ferait oublier un
+ * une fois sur trois, et la créatrice se retrouverait avec un bonus
+ * qu'elle ne sait pas livrer.
+ */
+function gabaritPistes(id: GenerateurId): string {
+  const commun = `"titre": "le nom du livrable, tel qu'il sera affiché",
+    "format": "sa forme en deux ou trois mots",
+    "punchline": "une phrase qui donne envie, adressée au lecteur",
+    "pourquoi": "pourquoi cette piste là pour CE quiz, une phrase, adressée à la créatrice"`;
+
+  if (id === "bonus") {
+    return `{
+  "pistes": [
+    { ${commun} }
+  ],
+  "recommandee": 0,
+  "pourquoiRecommandee": "en une phrase, pourquoi celle là plutôt que les deux autres"
+}`;
+  }
+
+  const bloc = id === "emails" ? `"email"` : `"email" ou "post"`;
+  const combien =
+    id === "emails"
+      ? `de 3 à ${MAX_PIECES.emails} emails`
+      : `de 2 à 3 emails ET de 3 à 5 posts, dans cet ordre`;
+
+  return `{
+  "pistes": [
+    {
+      ${commun},
+      "pieces": [
+        { "bloc": ${bloc}, "resume": "en une ligne, ce que CE morceau dit et rien d'autre" }
+      ]
+    }
+  ],
+  "recommandee": 0,
+  "pourquoiRecommandee": "en une phrase, pourquoi celle là plutôt que les deux autres"
+}
+
+Chaque piste porte ${combien}. Les résumés d'une même piste ne se recouvrent pas : si deux d'entre eux pourraient être échangés, la piste est mauvaise.`;
+}
+
+const CONSIGNE_PISTES: Record<GenerateurId, string> = {
+  bonus: `ON TE DEMANDE TROIS PISTES DE BONUS POST-QUIZ.
+
+Le bonus est remis automatiquement par le quiz, à la fin ou après un partage. Il est le MÊME pour tout le monde : le quiz n'en porte qu'un. Propose donc un format qui parle à tous les profils sans être creux, en s'appuyant sur ce qu'ils ont EN COMMUN (le sujet, la situation de départ) plutôt que sur ce qui les sépare.
+
+Les trois pistes doivent être VRAIMENT différentes : trois formats différents, trois angles différents. Trois variations du même document, c'est une seule piste présentée trois fois, et la créatrice le voit tout de suite.
+
+Privilégie ce qui se consomme en moins de dix minutes et se fabrique en moins d'une heure. Un format ambitieux qu'elle n'écrira jamais vaut moins qu'une checklist publiée demain.`,
+
+  emails: `ON TE DEMANDE TROIS PISTES DE SÉQUENCE D'EMAILS POST-QUIZ.
+
+Ces emails partent à quelqu'un qui vient d'obtenir UN profil précis, celui qui t'est donné plus bas. Il t'a laissé son adresse il y a quelques minutes : il attend la suite, mais il ne t'a rien acheté et il ne te doit rien.
+
+Une séquence n'est PAS une suite d'arguments de vente. C'est une suite de services rendus, dont chacun se suffit à lui même, et dont le dernier propose la suite comme une évidence. Le premier email tient la promesse faite à l'écran de résultat ; s'il ne sert à rien, aucun des suivants ne sera ouvert.
+
+Les trois pistes proposent trois PROGRESSIONS différentes, pas trois habillages : par exemple lever les objections une par une, ou dérouler une méthode étape par étape, ou raconter un cas concret jusqu'au résultat. Chacune décide de son propre nombre d'emails.`,
+
+  promo: `ON TE DEMANDE TROIS PISTES DE CAMPAGNE POUR FAIRE PASSER LE QUIZ.
+
+Ces contenus s'adressent à des gens qui n'ont PAS encore répondu, et qui ne connaissent peut être pas la créatrice. Ils ne vendent rien : ils promettent une réponse à une question que la personne se pose déjà sur elle même. La curiosité sur soi est le seul moteur, et il est très puissant.
+
+Le lien du quiz est donné plus bas. Il apparaît une fois par email et une fois par post, jamais deux.
+
+Les trois pistes attaquent par trois entrées différentes : par exemple la situation qui agace, la croyance retournée, ou le résultat qu'on peut nommer. Chacune porte ses emails ET ses posts, et les posts ne sont pas les emails raccourcis : un post se lit dans un fil, sans contexte, et doit tenir debout tout seul.`,
+};
+
+/** Le bloc système VARIABLE de l'étape 1. */
+export function consignePistes(id: GenerateurId, brief: BriefQuiz): string {
+  return [
+    CONSIGNE_PISTES[id],
+    "",
+    consigneLangue(brief.langue),
+    consigneTon(brief),
+    "",
+    "TU RÉPONDS UNIQUEMENT PAR CET OBJET JSON, sans un mot avant ni après, sans bloc de code :",
+    gabaritPistes(id),
+    "",
+    "TROIS pistes, ni plus ni moins. `recommandee` est l'indice de celle que tu conseilles, à partir de 0.",
+  ].join("\n");
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// ÉTAPE 2 : un morceau
+// ─────────────────────────────────────────────────────────────────────
+
+const CONSIGNE_BONUS: Record<string, string> = {
+  contenu: `ÉCRIS LE BONUS LUI MÊME, en entier, prêt à être mis en page.
+
+C'est le livrable que le visiteur reçoit. Il doit pouvoir s'en servir sans rien acheter et sans revenir vers la créatrice. Structure le avec des titres, et termine par UNE page qui amène l'offre : ce qu'elle règle, pour qui, et le premier pas. Pas de argumentaire de vente en dix points.`,
+
+  guide: `ÉCRIS LE MODE D'EMPLOI POUR LA CRÉATRICE : comment fabriquer ce bonus, et comment le livrer.
+
+Tu t'adresses à ELLE, pas au visiteur. Des étapes numérotées, avec les outils qu'elle a déjà. Dis explicitement où le fichier doit finir (un lien public) et où ce lien se colle dans Tiquiz : dans l'écran bonus du quiz, onglet Partager, champ de description du bonus.
+
+Ne propose aucun outil payant, aucun développement, et rien qui lui demande d'intervenir à chaque nouveau visiteur.`,
+
+  remise: `ÉCRIS LES TEXTES QUI REMETTENT LE BONUS.
+
+Trois choses, dans cet ordre, séparées par un titre :
+1. le texte de l'écran bonus du quiz : ce qu'on promet, en trois phrases au maximum ;
+2. le libellé du bouton, entre trois et six mots ;
+3. l'email de remise, objet compris, court, qui donne le lien et une seule chose à faire ensuite.`,
+};
+
+const CONSIGNE_EMAIL_SEQUENCE = `ÉCRIS CET EMAIL LÀ, ET LUI SEUL.
+
+Donne l'OBJET en premier, sur une ligne, précédé de "Objet :". Puis le corps.
+
+L'objet ne raconte pas l'email : il ouvre une boucle. Pas de "Newsletter", pas de nom de marque, pas d'emoji.
+
+Le corps tient en moins de 300 mots. Une seule idée, un seul appel à l'action à la fin. Pas de post-scriptum publicitaire.
+
+Cet email arrive dans une boîte pleine : la première phrase doit se lire dans l'aperçu et donner envie d'ouvrir la deuxième.`;
+
+const CONSIGNE_EMAIL_PROMO = `ÉCRIS CET EMAIL D'INVITATION LÀ, ET LUI SEUL.
+
+Donne l'OBJET en premier, sur une ligne, précédé de "Objet :". Puis le corps.
+
+Il invite à faire le quiz, il ne vend rien. Moins de 250 mots. Le lien du quiz apparaît UNE fois, avec un libellé de bouton de trois à six mots. Annonce la durée, jamais le nombre de questions.`;
+
+const CONSIGNE_POST = `ÉCRIS CE POST LÀ, ET LUI SEUL.
+
+Il se lit dans un fil, sans contexte : la première ligne doit arrêter le pouce. Moins de 150 mots. Aucun jargon.
+
+Le lien du quiz est à la fin, sur sa propre ligne. Termine par au maximum trois mots-dièse, en minuscules, tirés du vocabulaire de la niche. Aucun emoji sauf si le brief en montre.`;
+
+/** Le bloc système VARIABLE de l'étape 2. */
+export function consigneProduction(args: {
+  id: GenerateurId;
+  brief: BriefQuiz;
+  piece: Piece;
+  piste: Piste;
+  profil?: ProfilBrief | null;
+}): string {
+  const { id, brief, piece, piste, profil } = args;
+
+  let quoi: string;
+  if (id === "bonus") {
+    quoi = CONSIGNE_BONUS[piece.bloc] ?? CONSIGNE_BONUS.contenu;
+  } else if (id === "emails") {
+    quoi = CONSIGNE_EMAIL_SEQUENCE;
+  } else {
+    quoi = piece.bloc === "post" ? CONSIGNE_POST : CONSIGNE_EMAIL_PROMO;
+  }
+
+  const l = [quoi, ""];
+
+  if (profil) {
+    l.push(
+      "LE PROFIL POUR LEQUEL TU ÉCRIS, ET LUI SEUL :",
+      `- ${profil.titre || `Profil ${profil.rang}`}`,
+      profil.description ? `- ce que le quiz vient de lui dire : ${profil.description}` : "",
+      "Ce texte ne doit pas pouvoir être envoyé à un autre profil sans être réécrit.",
+      "",
+    );
+  }
+
+  if (brief.urlPublique && (id === "promo" || piece.bloc === "remise")) {
+    l.push(
+      `LE LIEN DU QUIZ, à recopier EXACTEMENT, sans rien y ajouter : ${brief.urlPublique}`,
+      "",
+    );
+  }
+
+  l.push(
+    "LA PISTE CHOISIE PAR LA CRÉATRICE :",
+    `- ${piste.titre}`,
+    piste.format ? `- forme : ${piste.format}` : "",
+    piste.punchline ? `- ce qu'elle promet : ${piste.punchline}` : "",
+    "",
+  );
+
+  if (piece.resume) {
+    l.push(
+      `CE MORCEAU LÀ, ET RIEN D'AUTRE : ${piece.resume}`,
+      "Les autres morceaux de la série sont écrits séparément. N'empiète pas sur eux, et ne les résume pas.",
+      "",
+    );
+  }
+
+  l.push(consigneLangue(brief.langue), consigneTon(brief));
+  return recoller(l);
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Le message utilisateur
+// ─────────────────────────────────────────────────────────────────────
+
+/**
+ * Ce que le modèle reçoit comme message : les FAITS.
+ *
+ * Le brief et l'offre y vivent ensemble, jamais dans le système :
+ * le système dit les règles, le message dit le cas. Mélanger les deux
+ * rend le prompt impossible à relire quand une sortie déçoit.
+ */
+export function messagePourLeModele(args: {
+  brief: BriefQuiz;
+  offre?: Offre | null;
+  demande: string;
+}): string {
+  return recoller([
+    rendreBriefPourPrompt(args.brief),
+    "",
+    rendreOffrePourPrompt(args.offre),
+    "",
+    args.demande,
+  ]);
+}

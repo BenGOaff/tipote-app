@@ -16,7 +16,8 @@
     "widgets": "Widgets",
     "webinars": "Webinarios",
     "support": "Ayuda",
-    "becomeAffiliate": "Hazte afiliado"
+    "becomeAffiliate": "Hazte afiliado",
+    "generators": "Generadores"
   },
   "sidebar": {
     "tagline": "Tu compañero inteligente",
@@ -7752,6 +7753,117 @@
         "titre": "Nada que crear para estos perfiles",
         "aide": "Has vinculado una formación o una comunidad. Tiquiz abre el acceso solo, y una regla más lo abriría dos veces."
       }
+    }
+  },
+  "generateurs": {
+    "titre": "Generadores",
+    "intro": "Tu cuestionario ya sabe de qué habla, a quién y con qué tono. Estos tres generadores parten de ahí para escribir lo que viene después.",
+    "cartes": {
+      "bonus": {
+        "titre": "El bonus que se entrega al final",
+        "resume": "Un recurso corto, entregado automáticamente, que prolonga el resultado y lleva a tu oferta.",
+        "quoi": "Obtienes el bonus escrito entero, el manual para crearlo y entregarlo, y los textos de la pantalla de bonus."
+      },
+      "emails": {
+        "titre": "La secuencia de emails después del cuestionario",
+        "resume": "Los emails enviados a quien acaba de obtener un perfil concreto.",
+        "quoi": "Obtienes una secuencia completa, escrita para UN perfil, asuntos incluidos, lista para pegar en tu campaña."
+      },
+      "promo": {
+        "titre": "Los contenidos para que hagan tu cuestionario",
+        "resume": "Los emails y las publicaciones que dan ganas de responder, sin vender nada.",
+        "quoi": "Obtienes emails de invitación y publicaciones para tus redes, con el enlace de tu cuestionario."
+      }
+    },
+    "verrou": {
+      "badge": "Reservado a las cuentas de pago",
+      "corps": "Los generadores están incluidos desde el primer plan de pago. Tu trabajo y tus cuestionarios no cambian: solo desbloqueas estas tres herramientas.",
+      "cta": "Ver los planes"
+    },
+    "retour": "Volver a los generadores",
+    "etapes": {
+      "projet": "1. El proyecto",
+      "profil": "2. El perfil",
+      "offre": "La oferta a la que lleva",
+      "pistes": "Las propuestas",
+      "contenus": "Los contenidos"
+    },
+    "projet": {
+      "aide": "Todo lo demás sale de él: su título, su promesa, su tono, sus perfiles.",
+      "aucun": "Ninguno de tus proyectos sirve todavía para este generador.",
+      "aucunCta": "Crear un cuestionario",
+      "questions": "{count} preguntas",
+      "bloque": {
+        "sondage": "Es una encuesta: no tiene perfil de resultado que prolongar.",
+        "profils-vides": "Sus perfiles de resultado están vacíos: complétalos primero.",
+        "quiz-vide": "Este proyecto todavía no tiene ninguna pregunta."
+      }
+    },
+    "profil": {
+      "aide": "La secuencia parte de la etiqueta de este perfil. No debe poder enviarse a otro.",
+      "sansTitre": "Perfil {rang}"
+    },
+    "offre": {
+      "aide": "Es lo único que tu cuestionario no puede saber. Sin ello, el contenido no llevaría a ninguna parte.",
+      "promesse": "Lo que promete tu oferta",
+      "promessePlaceholder": "Un acompañamiento de 6 semanas para crear un embudo que venda sin forzar",
+      "format": "Su formato",
+      "formats": {
+        "formation": "Una formación en línea",
+        "accompagnement": "Un acompañamiento o coaching",
+        "prestation": "Un servicio realizado por ti",
+        "outil": "Una herramienta o un software",
+        "produit": "Un producto físico",
+        "abonnement": "Una suscripción",
+        "groupe": "Un programa en grupo"
+      },
+      "prix": "Su precio",
+      "prixPlaceholder": "497 EUR",
+      "prixAide": "Opcional. Si lo dejas vacío, no se escribe ningún precio en ninguna parte."
+    },
+    "pistes": {
+      "lancer": "Proponer tres propuestas",
+      "relancer": "Proponer otras tres propuestas",
+      "encours": "Escribiendo tres propuestas",
+      "aide": "Elige una. No se produce nada mientras no elijas.",
+      "recommandee": "Recomendada",
+      "choisir": "Seguir con esta",
+      "choisie": "Propuesta elegida",
+      "changer": "Cambiar de propuesta",
+      "morceaux": "{count} contenidos por escribir"
+    },
+    "production": {
+      "lancer": "Escribir los contenidos",
+      "encours": "En curso: {fait} de {total}",
+      "refaire": "Reescribir este contenido",
+      "copier": "Copiar",
+      "copie": "Copiado",
+      "brut": "Ver el texto que se copia",
+      "rendu": "Volver a la vista",
+      "tronque": "Este contenido se cortó antes del final. Reescríbelo, suele salir bien al segundo intento.",
+      "vide": "Todavía no se ha escrito nada."
+    },
+    "blocs": {
+      "contenu": "El bonus, entero",
+      "guide": "Cómo crearlo y entregarlo",
+      "remise": "Los textos que lo entregan",
+      "email": "Email {index}",
+      "post": "Publicación {index}"
+    },
+    "erreurs": {
+      "busy": "Los servidores de la IA están saturados ahora mismo. Espera un minuto y vuelve a lanzarlo, no se pierde nada.",
+      "too_long": "La escritura superó el tiempo disponible y se detuvo. Vuelve a lanzarla, suele salir al segundo intento.",
+      "refused": "La petición fue rechazada. No es cosa tuya: avísanos y miramos el registro del servidor.",
+      "unreachable": "No se pudo contactar con el servicio de escritura. Comprueba tu conexión y vuelve a intentarlo.",
+      "empty": "La respuesta llegó vacía. Vuelve a lanzarla, suele salir al segundo intento.",
+      "unreadable": "La respuesta llegó en un formato ilegible. Vuelve a lanzarla, suele salir al segundo intento.",
+      "rate_limited": "Has generado mucho en los últimos minutos. Vuelve dentro de un rato, todo se conserva.",
+      "not_configured": "La escritura no está disponible ahora mismo. Ya estamos avisados.",
+      "plan_required": "Los generadores están incluidos desde el primer plan de pago.",
+      "offre_manquante": "Describe primero lo que promete tu oferta.",
+      "profil_manquant": "Elige primero un perfil.",
+      "not_found": "Este proyecto ya no está disponible. Puede que se haya eliminado, o que no sea tuyo. No se ha modificado nada.",
+      "generic": "No salió. Vuelve a intentarlo, el resto de tu trabajo se conserva."
     }
   }
 }
