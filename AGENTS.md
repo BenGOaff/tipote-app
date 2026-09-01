@@ -3174,3 +3174,52 @@ reprendre au prochain gros passage sur la navigation.
 
 Garde-fou : `tests/logic/didacticiel-hors-du-quiz.test.mts`, vérifié en
 rejouant la version d'avant.
+
+## Une entité HTML sans balise autour (retour Christian, 1er septembre 2026)
+
+Le titre de son 4e résultat revenait de la base ainsi, et s'affichait tel
+quel sur sa page de résultat :
+
+```
+Ce n'est pas parce que tu n'es pas doué...&nbsp ;
+```
+
+**C'était nous.** La typographie française insère une espace devant `;`,
+`?`, `!` et `:`. Elle a donc coupé l'entité `&nbsp;` en deux.
+
+**Le garde-fou existait, et il a été contourné par la DÉTECTION.**
+`applyFrenchTypographyToHtml` découpe correctement sur les balises ET les
+entités ; c'est `applyFrenchTypography` qui choisissait entre les deux
+versions, et sa règle était :
+
+```
+const LOOKS_LIKE_HTML = /<[a-z!/][^>]*>/i;
+```
+
+**Une chaîne peut porter une ENTITÉ sans porter la moindre balise**, et
+c'était exactement son cas. Elle partait donc vers la version texte brut,
+celle qui ne sait pas ce qu'est un `&nbsp;`.
+
+**Règle : on ne choisit plus.** `applyFrenchTypography` passe TOUJOURS par
+le découpage. Sur du texte sans balise ni entité, les deux rendaient déjà
+le même résultat (un seul `fixFragment` sur toute la chaîne) : il n'y
+avait donc rien à arbitrer, seulement une occasion de se tromper. C'est
+la leçon écrite vingt lignes plus haut dans le même fichier ("quand une
+erreur ne coûte rien à commettre et détruit du travail en silence, on
+rend l'erreur IMPOSSIBLE"), appliquée à la détection elle-même.
+`LOOKS_LIKE_HTML` est SUPPRIMÉE, pas laissée sans appelant.
+
+**Et un champ déjà cassé se répare au prochain enregistrement.**
+`reparerEntitesCassees()` recolle `&nbsp<espace>;` avant le découpage :
+une entité coupée en deux ne redevient jamais une entité toute seule, et
+la cliente n'a aucun moyen de savoir d'où sort ce texte. Même geste que
+`applyFieldFontSize`, qui répare un champ abîmé au premier clic (1er
+août).
+
+**LISTE FERMÉE d'entités, et c'est voulu** : `nbsp`, `amp`, `lt`, `gt`,
+`quot`, `apos` et les formes numériques. `M&M ;` est de la prose
+parfaitement légitime, et le recoller réécrirait ce que la cliente a
+écrit.
+
+Test : les 7 cas ajoutés à `tests/logic/french-typography.test.mts`,
+vérifiés en rejouant la détection d'avant (5 rougissent).

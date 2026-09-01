@@ -20,6 +20,7 @@ import {
   applyFrenchTypographyDeep,
   applyFrenchTypographyToHtml,
   isFrenchLocale,
+  reparerEntitesCassees,
 } from "../../lib/frenchTypography.ts";
 
 const NBSP = " ";
@@ -313,4 +314,64 @@ test("aucun chevron dans les libelles francais de l'interface", async () => {
     const trouves = src.split("\n").filter((l) => /[«»]/.test(l));
     assert.deepEqual(trouves, [], `des chevrons sont revenus dans ${rel}`);
   }
+});
+
+// ── L'ENTITÉ CASSÉE DE CHRISTIAN (1er septembre 2026) ────────────────
+//
+// Le titre de son 4e résultat revenait de la base en
+// `Ce n'est pas parce que tu n'es pas doué...&nbsp<nbsp>;`, affiché tel
+// quel sur sa page de résultat.
+//
+// La détection ne cherchait qu'une BALISE. Une chaîne peut porter une
+// ENTITÉ sans porter la moindre balise, et c'était son cas : elle
+// partait vers la version texte brut, qui insérait l'espace du français
+// devant le `;` structurel de `&nbsp;`.
+
+test("une entité SANS balise autour n'est plus cassée", () => {
+  const brut = "Ce n'est pas parce que tu n'es pas doué...&nbsp;";
+  assert.equal(applyFrenchTypography(brut, "fr"), brut);
+});
+
+test("les autres entités sans balise sont protégées aussi", () => {
+  for (const e of ["&amp;", "&lt;", "&gt;", "&quot;", "&#39;", "&#x27;"]) {
+    const brut = `Attention${e}`;
+    assert.equal(applyFrenchTypography(brut, "fr"), brut, e);
+  }
+});
+
+test("le texte VISIBLE garde bien sa règle française", () => {
+  // On ne protège pas tout : ce qui est de la prose se corrige toujours.
+  assert.equal(applyFrenchTypography("Prêt?", "fr"), "Prêt ?");
+  assert.equal(applyFrenchTypography("Bravo!&nbsp;", "fr"), "Bravo !&nbsp;");
+});
+
+test("un champ déjà cassé se répare tout seul au prochain enregistrement", () => {
+  // Une entité coupée en deux ne redevient pas une entité toute seule :
+  // elle reste affichée telle quelle chez la cliente.
+  assert.equal(
+    applyFrenchTypography("doué...&nbsp ;", "fr"),
+    "doué...&nbsp;",
+  );
+  assert.equal(reparerEntitesCassees("a&nbsp ;b"), "a&nbsp;b");
+  assert.equal(reparerEntitesCassees("a&#233 ;b"), "a&#233;b");
+});
+
+test("la réparation ne touche PAS à de la prose qui ressemble à une entité", () => {
+  // "M&M ;" est un texte légitime : le recoller changerait ce que la
+  // cliente a écrit. Liste fermée d'entités connues, et rien d'autre.
+  assert.equal(reparerEntitesCassees("des M&M ;"), "des M&M ;");
+  assert.equal(reparerEntitesCassees("Pierre & Paul ;"), "Pierre & Paul ;");
+});
+
+test("rien de tout ça hors français", () => {
+  assert.equal(applyFrenchTypography("Ready?&nbsp;", "en"), "Ready?&nbsp;");
+});
+
+test("le contenu profond d'un quiz est couvert", () => {
+  const payload = {
+    results: [{ title: "doué...&nbsp;", description: "<p>Alors?&nbsp;</p>" }],
+  };
+  const sortie = applyFrenchTypographyDeep(payload, "fr");
+  assert.equal(sortie.results[0].title, "doué...&nbsp;");
+  assert.equal(sortie.results[0].description, "<p>Alors ?&nbsp;</p>");
 });
