@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
+import { estSurfacePublique } from "@/lib/nav/surfacePublique";
 
 /* ────────────────── Types ────────────────── */
 
@@ -779,7 +780,13 @@ export function CoachWidget() {
     (typeof window !== "undefined" &&
       window.location.hostname.toLowerCase().startsWith("affiliate."));
   const hidden =
-    pathname === "/" || onAffiliate || HIDDEN_PREFIXES.some((p) => pathname.startsWith(p));
+    pathname === "/" ||
+    onAffiliate ||
+    // Le meme verrou que le didacticiel : une liste de prefixes ne voit
+    // pas le domaine perso d'une creatrice, ou le middleware reecrit
+    // vers /s/<slug> et ou le pathname client reste celui du visiteur.
+    estSurfacePublique(pathname, typeof window !== "undefined" ? window.location.hostname : null) ||
+    HIDDEN_PREFIXES.some((p) => pathname.startsWith(p));
   if (hidden) return null;
 
   /* ────────────────── Render ────────────────── */

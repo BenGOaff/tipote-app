@@ -3128,3 +3128,49 @@ contact (mesuré : l'écriture d'un contact n'accepte que des champs et
 une langue). Un contact créé par notre capture d'email affichera donc
 toujours "Affilié : Aucun" tant que la personne n'a pas cliqué le
 bouton.
+
+## Le chrome de l'app ne s'affiche JAMAIS chez un visiteur (Béné, 1er septembre 2026)
+
+En ouvrant le quiz en ligne d'un client : "le didacticiel s'ouvre sur la
+version en ligne du quiz putain !! Le didacticiel ne concerne PAS les
+visiteurs de quiz !!"
+
+L'écran gris du didacticiel Tipote s'ouvrait par dessus le quiz d'une
+cliente, chez SES visiteurs.
+
+**DEUX LISTES D'EXCEPTIONS, ET ELLES NE DISAIENT PAS LA MÊME CHOSE.**
+
+| Widget | Sa liste | "/q/" dedans ? |
+|---|---|---|
+| `CoachWidget` | `["/auth","/onboarding","/strategy/pyramids","/legal","/q/","/p/","/support","/pages"]` | **oui** |
+| `TutorialOverlay` | `["/", "/login", "/auth", "/onboarding"]` | **non** |
+
+Le bouton de chat se cachait donc correctement sur le quiz public, et le
+didacticiel non. Une liste oublie toujours le prochain écran ajouté :
+c'est déjà ce qui avait coûté la fuite sur l'espace affilié (drame
+Gwenn, 8 juin 2026), et c'est le même défaut un cran plus loin.
+
+**ET LE PATHNAME NE SUFFIT PAS.** Sur le domaine perso d'une créatrice,
+le middleware RÉÉCRIT vers `/s/<slug>`, mais le `usePathname()` du
+navigateur rend le chemin que le VISITEUR a tapé (`/mon-quiz`). Un gate
+qui ne regarde que le pathname y est MORT, exactement comme il l'était
+sur `affiliate.tipote.com`. D'où le HOST, passé depuis le root layout :
+nos écrans d'app ne sont servis que sur nos domaines, et le portier du
+middleware répond 404 à tout le reste sur un domaine perso.
+
+**Règle : `lib/nav/surfacePublique.ts` décide, et les deux widgets
+l'appellent.** `estSurfacePublique(pathname, hostname)`. Le coût d'une
+erreur est ASYMÉTRIQUE, et c'est ce qui tranche le sens du repli : un
+host à nous pris pour un domaine perso masque un didacticiel, un domaine
+perso pris pour le nôtre affiche un écran d'admin chez les visiteurs
+d'une cliente.
+
+**LA VRAIE CORRECTION EST STRUCTURELLE, ET TIQUIZ L'A DÉJÀ.** Là-bas ces
+widgets sont montés dans `AppShell`, qui n'enveloppe que les pages
+authentifiées, avec le commentaire qui va avec : "le viewer public d'un
+quiz ne doit jamais le voir". Ici ils vivent dans le layout RACINE, donc
+sur toutes les pages, et chacun se défend ensuite comme il peut. À
+reprendre au prochain gros passage sur la navigation.
+
+Garde-fou : `tests/logic/didacticiel-hors-du-quiz.test.mts`, vérifié en
+rejouant la version d'avant.

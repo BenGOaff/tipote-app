@@ -35,6 +35,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // path /affiliate, le gate pathname prend le relais.
   const hostHeader = (await headers()).get("host") ?? "";
   const isAffiliateHost = hostHeader.toLowerCase().startsWith("affiliate.");
+  // Le host COMPLET part aussi vers Providers : sur le domaine perso
+  // d'une créatrice, le middleware réécrit vers /s/<slug> et le
+  // `usePathname()` du navigateur rend le chemin que le VISITEUR a tapé.
+  // Un gate qui ne regarde que le pathname y est donc mort, exactement
+  // comme il l'était sur affiliate.tipote.com.
 
   return (
     // suppressHydrationWarning : next-themes ajoute la classe `.dark`
@@ -65,7 +70,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className="font-sans antialiased">
         <HotjarTracker />
         <NextIntlClientProvider locale={locale} messages={messages}>
-          <Providers isAffiliateHost={isAffiliateHost}>
+          <Providers isAffiliateHost={isAffiliateHost} host={hostHeader}>
             {/* Bandeau "trial Tipote actif" si user affilié en trial.
                 Server component qui retourne null si pas applicable. */}
             <AffiliateTrialBanner />
