@@ -28,6 +28,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { customDomainsEnabled, normaliseHost } from "@/lib/customDomains";
+import { echapperMotifLike } from "@/lib/db/motifLike";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -56,7 +57,7 @@ export async function GET(req: NextRequest) {
   const { data } = await supabaseAdmin
     .from("custom_domains")
     .select("id, status")
-    .ilike("hostname", hostname)
+    .ilike("hostname", echapperMotifLike(hostname))
     .maybeSingle();
 
   if (!data || data.status !== "verified") {

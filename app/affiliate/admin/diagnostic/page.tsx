@@ -22,6 +22,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 // La forme vit dans lib/affiliate/saFormat.ts, et nulle part ailleurs.
 // Elle etait recopiee ici : c'est ainsi que commence une divergence.
 import { SA_RE } from "@/lib/affiliate/saFormat";
+import { echapperMotifLike } from "@/lib/db/motifLike";
 
 export const dynamic = "force-dynamic";
 
@@ -48,7 +49,7 @@ async function lireAffiliee(
 ): Promise<AffiliateRow | null> {
   const requete = (cols: string) => {
     const q = supabaseAdmin.from("affiliates").select(cols);
-    return par === "sa" ? q.eq("sa", valeur) : q.ilike("email", valeur);
+    return par === "sa" ? q.eq("sa", valeur) : q.ilike("email", echapperMotifLike(valeur));
   };
   const { data, error } = await requete(COLS_NEW).maybeSingle();
   if (!error) return (data as unknown as AffiliateRow | null) ?? null;

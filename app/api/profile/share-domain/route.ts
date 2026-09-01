@@ -27,6 +27,7 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { upsertByProject } from "@/lib/projects/upsertByProject";
+import { echapperMotifLike } from "@/lib/db/motifLike";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -136,7 +137,7 @@ export async function PATCH(req: NextRequest) {
       .eq("user_id", user.id)
       .eq("project_id", projectId)
       .eq("status", "verified")
-      .ilike("hostname", domain)
+      .ilike("hostname", echapperMotifLike(domain))
       .maybeSingle();
     if (!match) {
       return NextResponse.json(

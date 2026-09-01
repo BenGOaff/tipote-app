@@ -53,6 +53,7 @@ import { stripHtml } from "@/lib/richText";
 import { toShareLine } from "@/lib/quiz/shareText";
 import { interpolateText } from "@/lib/quizPersonalization";
 import { buildCanonicalUrl, fetchOwnerBranding } from "@/lib/publicUrl";
+import { echapperMotifLike } from "@/lib/db/motifLike";
 
 export const dynamic = "force-dynamic";
 
@@ -83,7 +84,7 @@ async function resolveCustomDomainScope(): Promise<{ userId: string; projectId: 
   const { data } = await supabaseAdmin
     .from("custom_domains")
     .select("user_id, project_id")
-    .ilike("hostname", host)
+    .ilike("hostname", echapperMotifLike(host))
     .eq("status", "verified")
     .maybeSingle();
   const userId = (data as { user_id?: string } | null)?.user_id;
@@ -112,7 +113,7 @@ async function resolve(slug: string, userId: string, projectId: string): Promise
     .select("id, title, introduction, og_image_url, og_description, share_message, locale, meta_pixel_id, ga4_measurement_id, google_ads_conversion_id")
     .eq("user_id", userId)
     .eq("project_id", projectId)
-    .ilike("slug", slug)
+    .ilike("slug", echapperMotifLike(slug))
     .eq("status", "active")
     .maybeSingle();
   if (quiz) return { kind: "quiz", meta: quiz };
@@ -132,7 +133,7 @@ async function resolve(slug: string, userId: string, projectId: string): Promise
     .eq("project_id", projectId)
     .eq("is_published", true);
   const { data: pqRow } = await (
-    UUID_RE.test(slug) ? pqGate.eq("id", slug) : pqGate.ilike("slug", slug)
+    UUID_RE.test(slug) ? pqGate.eq("id", slug) : pqGate.ilike("slug", echapperMotifLike(slug))
   ).maybeSingle();
   if (pqRow) {
     const popquiz = await fetchPublishedPopquiz(slug);
@@ -146,7 +147,7 @@ async function resolve(slug: string, userId: string, projectId: string): Promise
     .select("title, meta_title, meta_description, og_image_url, facebook_pixel_id, google_tag_id")
     .eq("user_id", userId)
     .eq("project_id", projectId)
-    .ilike("slug", slug)
+    .ilike("slug", echapperMotifLike(slug))
     .eq("status", "published")
     .maybeSingle();
   if (page) return { kind: "page", meta: page };

@@ -44,6 +44,7 @@ import {
   validerCodeReduction,
   type CodeReductionRow,
 } from "@/lib/affiliate/codeReduction";
+import { echapperMotifLike } from "@/lib/db/motifLike";
 
 const COLS = "code, sa, percent_off, produits, expires_at, enabled";
 const COLS_NEW = `${COLS}, kind, duration, duration_months, free_days, percent_by_product, starts_at`;
@@ -90,7 +91,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   if (parRef || SA_RE.test(sa)) {
     const requete = supabaseAdmin.from("affiliates").select("sa");
     const { data, error } = await (parRef
-      ? requete.ilike("ref", ref)
+      ? requete.ilike("ref", echapperMotifLike(ref))
       : requete.eq("sa", sa)
     ).maybeSingle();
     if (error) {
@@ -107,7 +108,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // déploiement en avance sur la migration ferait payer le prix plein
     // à tout le monde, en silence.
     .select(COLS_NEW)
-    .ilike("code", code)
+    .ilike("code", echapperMotifLike(code))
     .maybeSingle();
 
   const ligneFinale = errCode
@@ -115,7 +116,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         await supabaseAdmin
           .from("affiliate_discount_codes")
           .select(COLS)
-          .ilike("code", code)
+          .ilike("code", echapperMotifLike(code))
           .maybeSingle()
       )
     : { data: ligne, error: null };

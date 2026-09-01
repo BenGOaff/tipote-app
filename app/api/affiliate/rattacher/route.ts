@@ -32,6 +32,7 @@ import { timingSafeEqual } from "node:crypto";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { REF_MIN_LENGTH, sanitizeRef } from "@/lib/affiliate/ref";
 import { SA_RE } from "@/lib/affiliate/saFormat";
+import { echapperMotifLike } from "@/lib/db/motifLike";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -54,7 +55,7 @@ async function saDepuisRef(brut: string | null | undefined): Promise<string | nu
   if (ref.length < REF_MIN_LENGTH) return null;
 
   const { data: direct } = await supabaseAdmin
-    .from("affiliates").select("sa").ilike("ref", ref).maybeSingle();
+    .from("affiliates").select("sa").ilike("ref", echapperMotifLike(ref)).maybeSingle();
   if (direct) return (direct as { sa: string }).sa;
 
   // Un affilié qui change de code garde ses anciens liens : ils vivent

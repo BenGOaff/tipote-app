@@ -19,6 +19,7 @@
 
 import { headers } from "next/headers";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { echapperMotifLike } from "@/lib/db/motifLike";
 
 export async function buildCanonicalUrl(path: string): Promise<string | null> {
   const h = await headers();
@@ -84,7 +85,7 @@ export async function fetchOwnerBranding(
       .from("custom_domains")
       .select("hostname, favicon_url, project_id")
       .eq("user_id", userId)
-      .ilike("hostname", host)
+      .ilike("hostname", echapperMotifLike(host))
       .eq("status", "verified")
       .maybeSingle();
     cd = (data ?? null) as CdRow | null;

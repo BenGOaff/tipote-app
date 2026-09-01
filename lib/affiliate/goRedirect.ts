@@ -30,6 +30,7 @@ import { getLinkPath, type LinkDestinationSlug } from "@/lib/affiliate/linkDesti
 import { resolveClickSource, sanitizeChannel } from "@/lib/affiliate/clickSource";
 import { sanitizeRef, shortCodeFrom } from "@/lib/affiliate/ref";
 import { VISIT_COOKIE, VISIT_COOKIE_MAX_AGE_SECONDS, serializeVisit } from "@/lib/affiliate/visitCookie";
+import { echapperMotifLike } from "@/lib/db/motifLike";
 
 /** Destination servie quand le lien n'en nomme aucune. */
 export const DEFAULT_DESTINATION: LinkDestinationSlug = "tiquiz_main";
@@ -72,7 +73,7 @@ export async function resolveAffiliateByRef(rawRef: string): Promise<ResolvedAff
   const { data: direct } = await supabaseAdmin
     .from("affiliates")
     .select("sa, ref, locale, status")
-    .ilike("ref", ref)
+    .ilike("ref", echapperMotifLike(ref))
     .maybeSingle();
 
   const trouve = direct as { sa: string; ref: string; locale: string | null; status: string } | null;

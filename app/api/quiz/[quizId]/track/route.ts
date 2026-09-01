@@ -42,6 +42,7 @@ import { isBot } from "@/lib/userAgent";
 import { randomUUID } from "node:crypto";
 import { logBusinessEvent } from "@/lib/businessEvents";
 import { sanitizeVisitMeta } from "@/lib/quiz/trafficSource";
+import { echapperMotifLike } from "@/lib/db/motifLike";
 
 export const dynamic = "force-dynamic";
 
@@ -82,7 +83,7 @@ async function resolveQuizIdFromSlugOrId(slugOrId: string): Promise<string | nul
   const { data } = await supabaseAdmin
     .from("quizzes")
     .select("id")
-    .ilike("slug", needle)
+    .ilike("slug", echapperMotifLike(needle))
     .eq("status", "active")
     .maybeSingle();
   return data?.id ?? null;

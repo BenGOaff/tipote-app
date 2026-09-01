@@ -37,13 +37,14 @@ import "server-only";
 
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { REF_MIN_LENGTH, sanitizeRef, shortCodeFrom, suggestRef } from "@/lib/affiliate/ref";
+import { echapperMotifLike } from "@/lib/db/motifLike";
 
 /** Le code est-il libre pour cette affiliée ? */
 async function libre(ref: string, sa: string): Promise<boolean> {
   const { data: actuel } = await supabaseAdmin
     .from("affiliates")
     .select("sa")
-    .ilike("ref", ref)
+    .ilike("ref", echapperMotifLike(ref))
     .maybeSingle();
   if (actuel && (actuel as { sa: string }).sa !== sa) return false;
 

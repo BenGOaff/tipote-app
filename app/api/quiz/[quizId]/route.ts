@@ -19,6 +19,7 @@ import { computeLockedLeadIds, redactLockedLead, type LeadLike } from "@/lib/lea
 import { isPaidPlan } from "@/lib/planLimits";
 import { fetchAllRows } from "@/lib/db/fetchAllRows";
 import { normalizeScoringAxes, scoreDisplayMode } from "@/lib/quizScoring";
+import { echapperMotifLike } from "@/lib/db/motifLike";
 
 export const dynamic = "force-dynamic";
 
@@ -380,7 +381,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         const { data: conflict } = await supabase
           .from("quizzes")
           .select("id")
-          .ilike("slug", cleaned)
+          .ilike("slug", echapperMotifLike(cleaned))
           .neq("id", quizId)
           .limit(1)
           .maybeSingle();

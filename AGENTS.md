@@ -2776,6 +2776,30 @@ et il doit alors être explicite.
 Test : `tests/logic/email-pas-un-motif.test.mts`, vérifié en rejouant la
 version d'avant.
 
+### Et ce n'était pas que l'adresse email (1er septembre 2026)
+
+La passe du 31 août n'a couvert que les recherches de COMPTE. Le même
+joker vivait sur `ref`, `slug`, `hostname` et `code`, tous lus dans une
+URL publique. **29 fichiers ici, 18 côté Tiquiz.**
+
+Les deux qui coûtent le plus :
+
+- **`?ref=jocelyn_` pouvait désigner une AUTRE affiliée**, donc créditer
+  quelqu'un qui n'a rien fait. C'est de l'argent, sur le chemin exact
+  qu'on venait de vérifier pour Maurice (`clic`, `rattacher`,
+  `proprietaire`, `ref`, `code-reduction`).
+- **`/q/mon_quiz` pouvait servir le quiz d'une AUTRE créatrice**, ou
+  n'en servir aucun : deux lignes trouvées font échouer `maybeSingle`,
+  donc un 404 sur un quiz qui existe et qui tourne peut être en
+  publicité.
+
+**Le garde-fou BALAIE tout le dépôt, il ne surveille plus une liste de
+fichiers.** Une liste oublie le prochain fichier écrit, et c'est
+exactement comme ça que ces 47 endroits sont arrivés : la règle était
+posée, la liste ne les nommait pas. Vérifié en rejouant la version
+d'avant (le test rougit).
+
+
 ## "Qui a envoyé qui" : l'inscription gratuite n'apparaissait nulle part (31 août 2026)
 
 Béné : "j'ai testé le ref de Nina : je ne suis pas taguée comme étant
