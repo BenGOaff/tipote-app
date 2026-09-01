@@ -3221,5 +3221,32 @@ août).
 parfaitement légitime, et le recoller réécrirait ce que la cliente a
 écrit.
 
+### Et ce qui est déjà cassé en base s'affiche juste, sans migration
+
+Béné, en lisant la première correction : "ce genre de souci on l'a eu
+mille fois et il revient toujours, il faut vraiment le corriger et s'en
+débarrasser définitivement, j'en ai marre de corriger toujours les mêmes
+choses."
+
+Corriger à l'ENREGISTREMENT ne suffisait pas : le texte abîmé est DÉJÀ en
+base chez des clientes. Il aurait fallu que chacune rouvre et
+ré-enregistre chaque champ, un par un, pour faire disparaître un texte
+qu'elle n'a jamais tapé.
+
+**`sanitizeRichText` et `stripHtml` réparent donc au PASSAGE.** Tout ce
+qui s'affiche est juste, immédiatement, sans toucher à une seule ligne de
+la base et sans migration. La base garde sa valeur abîmée jusqu'au
+prochain enregistrement du champ, qui la recolle pour de bon.
+
+**Et le vrai invariant est l'IDEMPOTENCE.** Une règle qui INSÈRE une
+espace tourne à CHAQUE enregistrement : si sa sortie n'est pas un point
+fixe, le texte dérive un peu plus à chaque sauvegarde et personne ne voit
+rien avant que ce soit illisible. C'est ça, "il revient toujours". Le
+test l'exige maintenant sur une batterie de cas (deux fois ET trois fois,
+parce qu'un cycle de période 2 passerait un test qui n'applique que deux
+fois), plus une liste de chaînes techniques qui ne doivent pas bouger
+d'un caractère : une URL avec `?`, un `style="color:red"`, `12:30`,
+`&nbsp;`, `&amp;`, `&#233;`.
+
 Test : les 7 cas ajoutés à `tests/logic/french-typography.test.mts`,
 vérifiés en rejouant la détection d'avant (5 rougissent).
