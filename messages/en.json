@@ -7668,7 +7668,8 @@
     "extract_failed": "Reading the file failed. Try again, or export your document as .docx or .txt."
   },
   "partageQuiz": {
-    "title": "Share this quiz",
+    "title": "Give a copy of this quiz",
+    "notPublicLink": "This is NOT the link people use to take the quiz: that one is in the Share tab of the editor. This link installs a copy of the quiz in someone else's account.",
     "intro": "One link, one click, and the quiz is installed in their account, with its texts, images and points.",
     "whatTravels": "The content travels: titles, questions, answers, points, profiles, images, colours and layout. What identifies you stays with you: your Systeme.io tags, your tracking pixels and your button URLs. They see this written out at install time, and the quiz arrives as a draft.",
     "labelField": "Who is it for? (optional)",
@@ -7689,6 +7690,6 @@
     "loadError": "Could not load the share links.",
     "createError": "The link could not be created.",
     "updateError": "The change could not be saved.",
-    "button": "Share this quiz"
+    "button": "Give a copy of the quiz"
   }
 }

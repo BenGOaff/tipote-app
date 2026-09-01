@@ -33,6 +33,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { SA_RE } from "@/lib/affiliate/saFormat";
 import { REF_MIN_LENGTH, sanitizeRef } from "@/lib/affiliate/ref";
 import { prenomPublic } from "@/lib/affiliate/nomPublic";
+import { echapperMotifLike } from "@/lib/db/motifLike";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -74,7 +75,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const requete = supabaseAdmin.from("affiliates").select("sa, email, status, display_name");
   const { data, error } = await (parRef
-    ? requete.ilike("ref", ref)
+    ? requete.ilike("ref", echapperMotifLike(ref))
     : requete.eq("sa", sa)
   ).maybeSingle();
 

@@ -27,6 +27,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getAffiliateSession } from "@/lib/affiliate/session";
 import { canSeeAffiliatePreview } from "@/lib/affiliate/preview";
 import { refError, sanitizeRef } from "@/lib/affiliate/ref";
+import { echapperMotifLike } from "@/lib/db/motifLike";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,7 +37,7 @@ async function estPris(ref: string, sa: string): Promise<boolean> {
   const { data: actuel } = await supabaseAdmin
     .from("affiliates")
     .select("sa")
-    .ilike("ref", ref)
+    .ilike("ref", echapperMotifLike(ref))
     .maybeSingle();
   if (actuel && (actuel as { sa: string }).sa !== sa) return true;
 

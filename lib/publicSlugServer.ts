@@ -16,6 +16,7 @@
 // imports the constants from publicSlug.ts but never the lookup.
 
 import { supabaseAdmin } from "./supabaseAdmin";
+import { echapperMotifLike } from "@/lib/db/motifLike";
 
 /**
  * Checks whether ANY OTHER content type owned by this user inside
@@ -45,7 +46,7 @@ export async function findCrossTypeSlugConflict(
       .select("id")
       .eq("user_id", userId)
       .eq("project_id", projectId)
-      .ilike("slug", lower)
+      .ilike("slug", echapperMotifLike(lower))
       .limit(1)
       .maybeSingle();
     if (data) return "quiz";
@@ -57,7 +58,7 @@ export async function findCrossTypeSlugConflict(
       .select("id")
       .eq("user_id", userId)
       .eq("project_id", projectId)
-      .ilike("slug", lower)
+      .ilike("slug", echapperMotifLike(lower))
       .limit(1)
       .maybeSingle();
     if (data) return "popquiz";
@@ -69,7 +70,7 @@ export async function findCrossTypeSlugConflict(
       .select("id")
       .eq("user_id", userId)
       .eq("project_id", projectId)
-      .ilike("slug", lower)
+      .ilike("slug", echapperMotifLike(lower))
       .limit(1)
       .maybeSingle();
     if (data) return "hosted_page";

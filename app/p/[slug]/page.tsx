@@ -12,6 +12,7 @@ import { TrackingPixels } from "@/components/tracking/TrackingPixels";
 import { resolveEffectivePixels } from "@/lib/effectivePixels";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { buildCanonicalUrl, fetchOwnerBranding } from "@/lib/publicUrl";
+import { echapperMotifLike } from "@/lib/db/motifLike";
 
 // Force dynamic rendering so published pages are always fresh.
 export const dynamic = "force-dynamic";
@@ -28,7 +29,7 @@ async function resolveCustomDomainScope(): Promise<{ userId: string; projectId: 
   const { data } = await supabaseAdmin
     .from("custom_domains")
     .select("user_id, project_id")
-    .ilike("hostname", host)
+    .ilike("hostname", echapperMotifLike(host))
     .eq("status", "verified")
     .maybeSingle();
   const userId = (data as { user_id?: string } | null)?.user_id;

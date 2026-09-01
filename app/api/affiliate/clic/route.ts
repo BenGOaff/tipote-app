@@ -37,6 +37,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { recordClick } from "@/lib/affiliate/goRedirect";
 import { REF_MIN_LENGTH, sanitizeRef } from "@/lib/affiliate/ref";
 import { sanitizeChannel } from "@/lib/affiliate/clickSource";
+import { echapperMotifLike } from "@/lib/db/motifLike";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -76,7 +77,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const { data } = await supabaseAdmin
       .from("affiliates")
       .select("sa, status")
-      .ilike("ref", ref)
+      .ilike("ref", echapperMotifLike(ref))
       .maybeSingle();
     const aff = data as { sa: string; status: string | null } | null;
     if (!aff) {

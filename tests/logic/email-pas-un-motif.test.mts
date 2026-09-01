@@ -66,3 +66,68 @@ test("aucune recherche de compte ne passe une adresse BRUTE a ilike", () => {
     assert.match(src, /echapperMotifLike/, `${f} n'appelle pas l'echappement`);
   }
 });
+
+// ── ET PAS SEULEMENT L'ADRESSE EMAIL (1er septembre 2026) ────────────
+//
+// La passe du 31 août n'avait couvert que les recherches de COMPTE. Le
+// même joker vivait sur `ref`, `slug`, `hostname` et `code`, tous lus
+// dans une URL publique :
+//
+//   - `?ref=jocelyn_` pouvait désigner une AUTRE affiliée, donc créditer
+//     quelqu'un d'autre. C'est de l'argent, et c'est le pire des deux ;
+//   - `/q/mon_quiz` pouvait servir le quiz d'une autre créatrice, ou
+//     n'en servir aucun (deux lignes trouvées font échouer `maybeSingle`,
+//     donc un 404 sur un quiz qui existe).
+//
+// Le balayage porte sur TOUT le dépôt, pas sur une liste de fichiers :
+// une liste oublie le prochain fichier écrit, et c'est exactement
+// comment celui-ci est arrivé.
+
+test("aucune valeur externe n'est passée BRUTE à ilike, nulle part", async () => {
+  const { readdir } = await import("node:fs/promises");
+  const { join } = await import("node:path");
+
+  const COLONNES = ["ref", "slug", "hostname", "code", "email"];
+  const nu = new RegExp(
+    `\\.ilike\\(\\s*"(${COLONNES.join("|")})"\\s*,\\s*(?!echapperMotifLike)([A-Za-z_$][\\w.$]*)\\s*\\)`,
+    "g",
+  );
+
+  const fautifs: string[] = [];
+  async function parcourir(dossier: string) {
+    let entrees;
+    try {
+      entrees = await readdir(dossier, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const e of entrees) {
+      const chemin = join(dossier, e.name);
+      if (e.isDirectory()) {
+        if (e.name === "node_modules" || e.name === ".next") continue;
+        await parcourir(chemin);
+        continue;
+      }
+      if (!/\.tsx?$/.test(e.name)) continue;
+      const src = readFileSync(chemin, "utf8");
+      if (!src.includes(".ilike(")) continue;
+      // On ignore les lignes de commentaire : le fichier qui EXPLIQUE la
+      // règle en montre forcément la version fautive.
+      const code = src
+        .split("\n")
+        .filter((l) => !l.trim().startsWith("//") && !l.trim().startsWith("*"))
+        .join("\n");
+      for (const m of code.matchAll(nu)) {
+        fautifs.push(`${chemin} -> .ilike("${m[1]}", ${m[2]})`);
+      }
+    }
+  }
+  await parcourir("app");
+  await parcourir("lib");
+
+  assert.deepEqual(
+    fautifs,
+    [],
+    "une valeur reçue de l'extérieur part brute dans un LIKE :\n" + fautifs.join("\n"),
+  );
+});

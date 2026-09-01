@@ -65,7 +65,7 @@ async function trouverAffiliee(body: Record<string, unknown>): Promise<string | 
 
   const req = supabaseAdmin.from("affiliates").select("sa");
   let q;
-  if (ref.length >= REF_MIN_LENGTH) q = req.ilike("ref", ref);
+  if (ref.length >= REF_MIN_LENGTH) q = req.ilike("ref", echapperMotifLike(ref));
   else if (SA_RE.test(sa)) q = req.eq("sa", sa);
   else if (email.includes("@")) q = req.ilike("email", echapperMotifLike(email));
   else return null;

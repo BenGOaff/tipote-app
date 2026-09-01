@@ -25,6 +25,7 @@ import {
   resolveCommissionRate,
   type CommissionBase,
 } from "@/lib/affiliate/commission";
+import { echapperMotifLike } from "@/lib/db/motifLike";
 
 
 // LE TAUX VIENT DE `commission.ts`, ET DE NULLE PART AILLEURS.
@@ -191,7 +192,7 @@ async function saDepuisRef(brut: string | null | undefined): Promise<string | nu
   const { data: direct, error } = await supabaseAdmin
     .from("affiliates")
     .select("sa")
-    .ilike("ref", ref)
+    .ilike("ref", echapperMotifLike(ref))
     .maybeSingle();
   if (error) {
     // On ne se tait pas : c'est de l'argent dû à quelqu'un.

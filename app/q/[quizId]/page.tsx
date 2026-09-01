@@ -21,6 +21,7 @@ import { stripHtml } from "@/lib/richText";
 import { toShareLine } from "@/lib/quiz/shareText";
 import { interpolateText } from "@/lib/quizPersonalization";
 import { buildCanonicalUrl, fetchOwnerBranding } from "@/lib/publicUrl";
+import { echapperMotifLike } from "@/lib/db/motifLike";
 
 const CUSTOM_HOST_HEADER = "x-tipote-custom-host";
 
@@ -31,7 +32,7 @@ async function resolveCustomDomainScope(): Promise<{ userId: string; projectId: 
   const { data } = await supabaseAdmin
     .from("custom_domains")
     .select("user_id, project_id")
-    .ilike("hostname", host)
+    .ilike("hostname", echapperMotifLike(host))
     .eq("status", "verified")
     .maybeSingle();
   const userId = (data as { user_id?: string } | null)?.user_id;
@@ -84,7 +85,7 @@ export async function generateMetadata({ params, searchParams }: RouteContext): 
       .eq("status", "active");
     const { data } = await (UUID_RE.test(param)
       ? base.eq("id", param).maybeSingle()
-      : base.ilike("slug", param).maybeSingle());
+      : base.ilike("slug", echapperMotifLike(param)).maybeSingle());
 
     if (!data) return {};
 
@@ -234,7 +235,7 @@ export default async function PublicQuizPage({ params, searchParams }: RouteCont
       .eq("status", "active");
     const { data } = await (UUID_RE.test(quizId)
       ? base.eq("id", quizId).maybeSingle()
-      : base.ilike("slug", quizId).maybeSingle());
+      : base.ilike("slug", echapperMotifLike(quizId)).maybeSingle());
     const row = data as { user_id?: string; project_id?: string | null } | null;
     if (!row || row.user_id !== scope.userId || row.project_id !== scope.projectId) {
       notFound();
@@ -250,7 +251,7 @@ export default async function PublicQuizPage({ params, searchParams }: RouteCont
     .eq("status", "active");
   const { data: full } = await (UUID_RE.test(quizId)
     ? fullDataBase.eq("id", quizId).maybeSingle()
-    : fullDataBase.ilike("slug", quizId).maybeSingle());
+    : fullDataBase.ilike("slug", echapperMotifLike(quizId)).maybeSingle());
   const fullQuiz = full as
     | {
         id: string;

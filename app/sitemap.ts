@@ -11,6 +11,7 @@ import type { MetadataRoute } from "next";
 import { headers } from "next/headers";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { resolvePublicUrl } from "@/lib/authLinks";
+import { echapperMotifLike } from "@/lib/db/motifLike";
 
 const CUSTOM_HOST_HEADER = "x-tipote-custom-host";
 
@@ -30,7 +31,7 @@ async function buildCustomDomainSitemap(host: string): Promise<MetadataRoute.Sit
   const { data: cd } = await supabaseAdmin
     .from("custom_domains")
     .select("user_id, project_id")
-    .ilike("hostname", host)
+    .ilike("hostname", echapperMotifLike(host))
     .eq("status", "verified")
     .maybeSingle();
   const row = cd as { user_id?: string; project_id?: string | null } | null;

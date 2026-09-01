@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { sanitizeSlug } from "@/lib/quizBranding";
+import { echapperMotifLike } from "@/lib/db/motifLike";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,7 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     const { data } = await supabase
       .from("quizzes")
       .select("id")
-      .ilike("slug", cleaned)
+      .ilike("slug", echapperMotifLike(cleaned))
       .neq("id", quizId)
       .maybeSingle();
 
