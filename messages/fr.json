@@ -4786,7 +4786,13 @@
     "introStartRefus_capture-avant": "Impossible ici : ton sondage demande l'email avant les questions, donc la première question ne peut pas passer devant. Le bouton reste affiché.",
     "introStartRefus_aucune-question": "Impossible pour l'instant : ce quiz n'a aucune question. Le bouton reste affiché.",
     "introStartRefus_rien-a-demander": "Impossible ici : tu ne demandes ni le prénom ni le genre. Active l'un des deux, ou garde le bouton.",
-    "introStartStatsNotice": "Ce quiz démarre sur une question : l'écran d'accueil ET la question 1 ne font qu'un. Le nombre de démarrages compte donc les visiteurs qui ont RÉPONDU à la première question. Avant ce réglage, il comptait les clics sur le bouton : les deux périodes ne se comparent pas."
+    "introStartStatsNotice": "Ce quiz démarre sur une question : l'écran d'accueil ET la question 1 ne font qu'un. Le nombre de démarrages compte donc les visiteurs qui ont RÉPONDU à la première question. Avant ce réglage, il comptait les clics sur le bouton : les deux périodes ne se comparent pas.",
+    "settingsGroupCapture": "Capture des coordonnées",
+    "settingsGroupCaptureHint": "Ce que tu demandes au visiteur, et à quel moment.",
+    "settingsGroupResultats": "Page de résultat",
+    "settingsGroupResultatsHint": "Ce que le visiteur voit une fois son profil obtenu.",
+    "settingsGroupGestion": "Gestion du quiz",
+    "settingsGroupGestionHint": "La langue de l'interface, et la fermeture du quiz."
   },
   "contentStrategy": {
     "title": "Stratégie de contenu",

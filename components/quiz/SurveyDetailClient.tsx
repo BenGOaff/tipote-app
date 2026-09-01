@@ -76,7 +76,6 @@ import { answerImageRender } from "@/lib/quiz/answerImage";
 import { stripHtml } from "@/lib/richText";
 import { alignBlockMarginClass, alignJustifyClass, alignTextClass, resolveBlockAlign } from "@/lib/quiz/textAlign";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
-import { useTutorial } from "@/hooks/useTutorial";
 // SidebarProvider / AppSidebar intentionally NOT imported — the survey
 // WYSIWYG editor is fullscreen, mirroring QuizDetailClient.
 import {
@@ -481,18 +480,6 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   const t = useTranslations("quizDetail");
   const tc = useTranslations("common");
   const st = useTranslations("survey");
-  const { hasSeenContext, markContextSeen, tutorialOptOut } = useTutorial();
-  const [showOnboarding, setShowOnboarding] = useState(false);
-  useEffect(() => {
-    if (tutorialOptOut) return;
-    if (hasSeenContext("first_quiz_editor_visit")) return;
-    const timer = setTimeout(() => setShowOnboarding(true), 600);
-    return () => clearTimeout(timer);
-  }, [hasSeenContext, tutorialOptOut]);
-  const dismissOnboarding = useCallback(() => {
-    markContextSeen("first_quiz_editor_visit");
-    setShowOnboarding(false);
-  }, [markContextSeen]);
 
   const [loading, setLoading] = useState(true);
   // Le projet n'existe pas, ou il n'est pas à ce compte. On l'AFFICHE,
@@ -1660,24 +1647,21 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       />
       <div className="h-screen flex w-full overflow-hidden">
         <main className="flex-1 flex flex-col bg-background min-w-0 overflow-hidden">
-      {/* First-visit onboarding banner */}
-      {showOnboarding && (
-        <div className="shrink-0 border-b bg-gradient-to-r from-primary/10 via-primary/5 to-transparent px-4 py-3">
-          <div className="flex items-start gap-3 max-w-5xl mx-auto">
-            <div className="flex-1 min-w-0 space-y-1.5">
-              <h3 className="text-sm font-semibold">{t("onboardingTitle")}</h3>
-              <ul className="text-xs text-muted-foreground leading-relaxed space-y-0.5 list-disc pl-5">
-                <li>{t("onboardingPoint1")}</li>
-                <li>{t("onboardingPoint2")}</li>
-                <li>{t("onboardingPoint3")}</li>
-              </ul>
-            </div>
-            <Button size="sm" variant="outline" onClick={dismissOnboarding}>
-              {t("onboardingDismiss")}
-            </Button>
-          </div>
-        </div>
-      )}
+      {/* LE BANDEAU DE BIENVENUE A ÉTÉ RETIRÉ (Béné, 1er septembre 2026).
+          "Qu'est-ce que ça fout là ??"
+
+          Il n'existait que dans Tipote, jamais dans Tiquiz, alors que
+          les deux éditeurs sont jumeaux. Il poussait tout l'écran vers
+          le bas au premier chargement, et il expliquait la barre
+          latérale, c'est à dire la partie de l'éditeur qui n'est
+          justement pas encore alignée sur celle de Tiquiz.
+
+          Et il revenait à chaque fois : `markContextSeen` écrit dans le
+          `localStorage`, donc une fenêtre privée, un autre appareil ou
+          un nettoyage de cookies le ramène en entier.
+
+          Le didacticiel, lui, reste : il se lance à la demande depuis le
+          bouton d'aide. */}
 
       {/* TOP BAR */}
       <header className="flex items-center justify-between px-4 py-2 border-b shrink-0 bg-background z-10">

@@ -4786,7 +4786,13 @@
     "introStartRefus_capture-avant": "Aqui não é possível: o teu inquérito pede o email antes das perguntas, por isso a primeira pergunta não pode vir à frente. O botão fica.",
     "introStartRefus_aucune-question": "Ainda não é possível: este quiz não tem nenhuma pergunta. O botão fica.",
     "introStartRefus_rien-a-demander": "Aqui não é possível: não pedes nem o primeiro nome nem o género. Ativa um dos dois, ou mantém o botão.",
-    "introStartStatsNotice": "Este quiz começa numa pergunta: o ecrã inicial E a pergunta 1 são um só. Os inícios contam então quem RESPONDEU à primeira pergunta. Antes contavam os cliques no botão: os dois períodos não se comparam."
+    "introStartStatsNotice": "Este quiz começa numa pergunta: o ecrã inicial E a pergunta 1 são um só. Os inícios contam então quem RESPONDEU à primeira pergunta. Antes contavam os cliques no botão: os dois períodos não se comparam.",
+    "settingsGroupCapture": "Dados de contacto",
+    "settingsGroupCaptureHint": "O que pedes ao visitante, e em que momento.",
+    "settingsGroupResultats": "Página de resultado",
+    "settingsGroupResultatsHint": "O que o visitante vê depois de obter o seu perfil.",
+    "settingsGroupGestion": "Gestão do quiz",
+    "settingsGroupGestionHint": "O idioma da interface, e o fecho do quiz."
   },
   "contentStrategy": {
     "title": "Estratégia de conteúdo",

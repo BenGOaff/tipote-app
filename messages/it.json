@@ -4786,7 +4786,13 @@
     "introStartRefus_capture-avant": "Qui non si può: il tuo sondaggio chiede l'email prima delle domande, quindi la prima domanda non può passare davanti. Il pulsante resta.",
     "introStartRefus_aucune-question": "Per ora non si può: questo quiz non ha nessuna domanda. Il pulsante resta.",
     "introStartRefus_rien-a-demander": "Qui non si può: non chiedi né il nome né il genere. Attivane uno, oppure tieni il pulsante.",
-    "introStartStatsNotice": "Questo quiz parte da una domanda: la schermata iniziale E la domanda 1 sono la stessa. Gli avvii contano quindi chi ha RISPOSTO alla prima domanda. Prima contavano i clic sul pulsante: i due periodi non si confrontano."
+    "introStartStatsNotice": "Questo quiz parte da una domanda: la schermata iniziale E la domanda 1 sono la stessa. Gli avvii contano quindi chi ha RISPOSTO alla prima domanda. Prima contavano i clic sul pulsante: i due periodi non si confrontano.",
+    "settingsGroupCapture": "Dati di contatto",
+    "settingsGroupCaptureHint": "Cosa chiedi al visitatore, e in quale momento.",
+    "settingsGroupResultats": "Pagina del risultato",
+    "settingsGroupResultatsHint": "Cosa vede il visitatore una volta ottenuto il suo profilo.",
+    "settingsGroupGestion": "Gestione del quiz",
+    "settingsGroupGestionHint": "La lingua dell'interfaccia, e la chiusura del quiz."
   },
   "contentStrategy": {
     "title": "Strategia di contenuto",

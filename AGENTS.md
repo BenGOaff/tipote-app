@@ -1996,14 +1996,29 @@ pas FAIRE quelque chose ne sait pas forcément le VOIR non plus.**
 **Ce qui est établi :** au moins une règle par tag existe et
 abonne à une campagne, donc poser un tag PEUT tout déclencher.
 
-**Ce qui reste inconnu :** si `tiquiz-free` et les tags de vente
-ont la leur. Ça ne se vérifie QUE dans son tableau de bord
-(https://systeme.io/dashboard/automation-rules), jamais par cette API.
-Ne plus rien affirmer ici sur la foi de cet outil.
+**TRANCHÉ LE 1er SEPTEMBRE, ET C'EST OUI.** Béné : "c'est ok côté
+systeme io note le quelque part, le signup ajoute le tag tiquiz free, et
+de mon côté j'ai un workflow qui envoie la campagne tiquiz free."
 
-**Et c'est pour ça qu'on ne bascule PAS le bouton d'essai gratuit de la
-page de vente** (`SALES_LINKS_LEFT_ALONE` chez Tiquiz) : leur optin est
-aujourd'hui le seul chemin qui déclenche vraiment la séquence.
+| Le tag | Sa règle | Qui le pose |
+|---|---|---|
+| `tiquiz-free` | -> campagne **Tiquiz free** | `tiquiz.fr/signup` |
+| `tiquiz-clients` | -> campagne **Tiquiz abonnement** | toute vente encaissée par nous |
+
+`tiquiz.fr/signup` envoie donc bien sa séquence. Et le PALIER ne
+déclenche rien : sa règle écoute `tiquiz-clients`, pas
+`tiquiz-mensuel`. Le détail vit dans l'AGENTS.md de Tiquiz, qui pose les
+deux tags.
+
+**L'API reste aveugle**, re-vérifié le 1er septembre : interrogée sur
+les règles `tag_added`, elle rend zéro, alors que ces deux règles
+tournent. Une règle se vérifie dans son tableau de bord
+(https://systeme.io/dashboard/automation-rules), jamais par cette API.
+
+**On ne bascule toujours PAS le bouton d'essai gratuit de la page de
+vente** (`SALES_LINKS_LEFT_ALONE` chez Tiquiz), et la raison a changé :
+ce n'est plus la séquence email, c'est qu'un basculement se teste, et il
+n'a pas encore été fait.
 
 La chaîne est complète et elle a été vérifiée bout en bout : le `?ref=`
 arrive dans l'URL, le middleware le range dans `tq_ref`, le bon de

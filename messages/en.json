@@ -4786,7 +4786,13 @@
     "introStartRefus_capture-avant": "Not possible here: your survey asks for the email before the questions, so the first question cannot come first. The button stays.",
     "introStartRefus_aucune-question": "Not possible yet: this quiz has no question. The button stays.",
     "introStartRefus_rien-a-demander": "Not possible here: you ask for neither first name nor gender. Turn one on, or keep the button.",
-    "introStartStatsNotice": "This quiz starts on a question: the welcome screen AND question 1 are one screen. Starts therefore count visitors who ANSWERED the first question. Before this setting, they counted button clicks: the two periods are not comparable."
+    "introStartStatsNotice": "This quiz starts on a question: the welcome screen AND question 1 are one screen. Starts therefore count visitors who ANSWERED the first question. Before this setting, they counted button clicks: the two periods are not comparable.",
+    "settingsGroupCapture": "Contact details",
+    "settingsGroupCaptureHint": "What you ask the visitor, and when.",
+    "settingsGroupResultats": "Result page",
+    "settingsGroupResultatsHint": "What the visitor sees once they have their profile.",
+    "settingsGroupGestion": "Quiz management",
+    "settingsGroupGestionHint": "Interface language, and closing the quiz."
   },
   "contentStrategy": {
     "title": "Content strategy",
