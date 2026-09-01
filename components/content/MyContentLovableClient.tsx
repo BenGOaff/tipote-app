@@ -61,6 +61,7 @@ import {
   MessageSquare,
   Clock,
   CheckCircle2,
+  Play,
   Calendar,
   CalendarX,
   ClipboardList,
@@ -100,6 +101,8 @@ type QuizListItem = {
   // counter so the share count is irrelevant for them).
   mode?: "quiz" | "survey" | null;
   views_count: number;
+  starts_count?: number;
+  completions_count?: number;
   shares_count: number;
   leads_count: number;
   created_at: string;
@@ -992,105 +995,151 @@ export default function MyContentLovableClient({
                                       "44 vues pour 276 leads", absurde.
                                       On plancher l'affichage des vues sur
                                       le nombre de leads. */}
-                                  <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                                    <span className="inline-flex items-center gap-1">
-                                      <Eye className="h-3.5 w-3.5" /> {t("ui.viewsCount", { count: Math.max(qz.views_count, qz.leads_count) })}
-                                    </span>
-                                    <span className="inline-flex items-center gap-1">
-                                      <Users className="h-3.5 w-3.5" /> {isSurvey ? t("ui.responsesCount", { count: qz.leads_count }) : t("ui.emailsCount", { count: qz.leads_count })}
-                                    </span>
-                                    {!isSurvey && (
-                                      <span className="inline-flex items-center gap-1">
-                                        <Share2 className="h-3.5 w-3.5" /> {t("ui.sharesCount", { count: qz.shares_count })}
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 shrink-0">
-                                    <MoreVertical className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem asChild>
-                                    <Link href={`/quiz/${qz.id}`}>
-                                      <Edit className="w-4 h-4 mr-2" /> {t("ui.manage")}
-                                    </Link>
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem asChild>
-                                    <Link href={`/quiz/${qz.id}/analytics`}>
-                                      <BarChart3 className="w-4 h-4 mr-2" /> {t("ui.statistics")}
-                                    </Link>
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    disabled={duplicatingId === qz.id}
-                                    onSelect={(e) => {
-                                      // Keep the menu logic out of Radix's default
-                                      // close-then-navigate race: run our async
-                                      // handler explicitly.
-                                      e.preventDefault();
-                                      void handleDuplicateQuiz(qz.id);
-                                    }}
-                                  >
-                                    <CopyPlus className="w-4 h-4 mr-2" /> {t("ui.duplicate")}
-                                  </DropdownMenuItem>
-                                  {/* Partager le quiz a quelqu'un d'AUTRE :
-                                      un lien, un clic, et il l'installe
-                                      chez lui. Le module quiz de Tiquiz
-                                      est jumeau, la meme entree y vit. */}
-                                  <DropdownMenuItem
-                                    onSelect={(e) => {
-                                      e.preventDefault();
-                                      setPartageQuizId(qz.id);
-                                    }}
-                                  >
-                                    {/* DONNER une copie : ni l'icone du lien public
-                                        (Share2), ni celle de "dupliquer pour moi"
-                                        (CopyPlus). Les trois gestes se ressemblaient
-                                        (Christian, 1er septembre 2026). */}
-                                    <Gift className="w-4 h-4 mr-2" /> {tPartage("button")}
-                                  </DropdownMenuItem>
-                                  {isActive && (() => {
-                                    // Gwenn (19 mai 2026) : URL respecte
-                                    // maintenant le slug + custom domain.
-                                    const handle = qz.slug || qz.id;
-                                    const publicUrl = buildPublicUrl("q", handle);
+                                  {/* LA MÊME LIGNE QUE TIQUIZ (Béné, 1er septembre 2026 :
+                                      "je veux juste la même présentation des quiz avec
+                                      les mêmes options"). Démarrés, complétés et taux de
+                                      conversion manquaient : les colonnes existaient
+                                      depuis avril, la liste ne les lisait pas.
+
+                                      Réconciliation de cohérence (Béné 2 juin, retour
+                                      Gwenn) : vues >= démarrés >= complétés >= leads. Si
+                                      le tracking a raté en silence, le compteur
+                                      dénormalisé reste sous le vrai nombre de leads, et
+                                      on affichait "44 vues pour 276 leads", absurde. On
+                                      plancher chaque étage sur le suivant. */}
+                                  {(() => {
+                                    const completions = Math.max(qz.completions_count ?? 0, qz.leads_count);
+                                    const starts = Math.max(qz.starts_count ?? 0, completions);
+                                    const views = Math.max(qz.views_count ?? 0, starts);
+                                    const rate = starts > 0 ? Math.round((qz.leads_count / starts) * 100) : 0;
                                     return (
-                                      <>
-                                        <DropdownMenuItem
-                                          onClick={async () => {
-                                            try {
-                                              await navigator.clipboard.writeText(publicUrl);
-                                              toast({ title: t("ui.linkCopied") });
-                                            } catch {
-                                              // silent
-                                            }
-                                          }}
-                                        >
-                                          <Copy className="w-4 h-4 mr-2" /> {t("ui.copyLink")}
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem asChild>
-                                          <a
-                                            href={publicUrl}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                          >
-                                            <ExternalLink className="w-4 h-4 mr-2" /> {t("ui.viewOnline")}
-                                          </a>
-                                        </DropdownMenuItem>
-                                      </>
+                                      <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                                        <span className="inline-flex items-center gap-1">
+                                          <Eye className="h-3.5 w-3.5" /> {t("ui.viewsCount", { count: views })}
+                                        </span>
+                                        <span className="inline-flex items-center gap-1">
+                                          <Play className="h-3.5 w-3.5" /> {t("ui.startsCount", { count: starts })}
+                                        </span>
+                                        <span className="inline-flex items-center gap-1">
+                                          <CheckCircle2 className="h-3.5 w-3.5" /> {t("ui.completionsCount", { count: completions })}
+                                        </span>
+                                        <span className="inline-flex items-center gap-1">
+                                          <Users className="h-3.5 w-3.5" /> {isSurvey ? t("ui.responsesCount", { count: qz.leads_count }) : t("ui.emailsCount", { count: qz.leads_count })}
+                                        </span>
+                                        {!isSurvey && (
+                                          <span className="inline-flex items-center gap-1">
+                                            <Share2 className="h-3.5 w-3.5" /> {t("ui.sharesCount", { count: qz.shares_count })}
+                                          </span>
+                                        )}
+                                        {rate > 0 && (
+                                          <span className="font-medium text-foreground">
+                                            {t("ui.conversionRate", { rate })}
+                                          </span>
+                                        )}
+                                      </div>
                                     );
                                   })()}
-                                  <DropdownMenuItem
-                                    className="text-destructive"
-                                    onClick={() => setDeleteQuizConfirm(qz)}
-                                  >
-                                    <Trash2 className="w-4 h-4 mr-2" /> {tc("delete")}
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
+                                </div>
+                              </div>
+                              {/* LES BOUTONS SONT VISIBLES, comme dans Tiquiz.
+                                  Béné, 1er septembre 2026 : "je veux juste la même
+                                  présentation des quiz avec les mêmes options comme
+                                  copier le lien, partager le quiz."
+
+                                  Ils étaient tous là, mais derrière un menu à trois
+                                  points : un geste de plus pour chacun, et surtout on
+                                  ne SAIT pas qu'ils existent tant qu'on ne l'a pas
+                                  ouvert. Copier le lien et donner une copie sont les
+                                  deux qu'on répète le plus.
+
+                                  Sur mobile, la rangée passe sous le titre (`flex-wrap`
+                                  sur le conteneur) : six icônes ne tiennent pas à côté
+                                  d'un titre sur un téléphone. */}
+                              {(() => {
+                                const handle = qz.slug || qz.id;
+                                const publicUrl = buildPublicUrl("q", handle);
+                                return (
+                                  <div className="flex items-center gap-0.5 shrink-0">
+                                    {/* Copier le lien : réservé aux quiz EN LIGNE.
+                                        Copier l'adresse d'un brouillon donnerait un
+                                        lien qui répond 404 à qui le reçoit. */}
+                                    {isActive && (
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8"
+                                        title={t("ui.copyLink")}
+                                        onClick={async () => {
+                                          try {
+                                            await navigator.clipboard.writeText(publicUrl);
+                                            toast({ title: t("ui.linkCopied") });
+                                          } catch {
+                                            // Copie refusée par le navigateur : on le
+                                            // DIT, sinon le clic n'a aucun effet visible
+                                            // et on croit le bouton cassé.
+                                            toast({ title: publicUrl });
+                                          }
+                                        }}
+                                      >
+                                        <Copy className="h-4 w-4" />
+                                      </Button>
+                                    )}
+                                    <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                                      <Link href={`/quiz/${qz.id}`} title={t("ui.manage")}>
+                                        <Edit className="h-4 w-4" />
+                                      </Link>
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8"
+                                      disabled={duplicatingId === qz.id}
+                                      title={t("ui.duplicate")}
+                                      onClick={() => void handleDuplicateQuiz(qz.id)}
+                                    >
+                                      <CopyPlus className="h-4 w-4" />
+                                    </Button>
+                                    {/* DONNER une copie : ni l'icône du lien public
+                                        (Copy), ni celle de "dupliquer pour moi"
+                                        (CopyPlus). Les trois gestes se ressemblaient
+                                        (retour Christian, 1er septembre 2026). */}
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8"
+                                      title={tPartage("button")}
+                                      onClick={() => setPartageQuizId(qz.id)}
+                                    >
+                                      <Gift className="h-4 w-4" />
+                                    </Button>
+                                    {/* Stats : la page n'existe pas pour un sondage
+                                        (elle répondrait 404, drame Gwenn du 19 mai). */}
+                                    {!isSurvey && (
+                                      <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                                        <Link href={`/quiz/${qz.id}/analytics`} title={t("ui.statistics")}>
+                                          <BarChart3 className="h-4 w-4" />
+                                        </Link>
+                                      </Button>
+                                    )}
+                                    {isActive && (
+                                      <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                                        <a href={publicUrl} target="_blank" rel="noopener noreferrer" title={t("ui.viewOnline")}>
+                                          <ExternalLink className="h-4 w-4" />
+                                        </a>
+                                      </Button>
+                                    )}
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8"
+                                      title={tc("delete")}
+                                      onClick={() => setDeleteQuizConfirm(qz)}
+                                    >
+                                      <Trash2 className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                  </div>
+                                );
+                              })()}
                             </div>
                           </Card>
                         );

@@ -4786,7 +4786,17 @@
     "introStartRefus_capture-avant": "Aqui não dá: sua pesquisa pede o email antes das perguntas, então a primeira pergunta não pode vir na frente. O botão continua.",
     "introStartRefus_aucune-question": "Ainda não dá: este quiz não tem nenhuma pergunta. O botão continua.",
     "introStartRefus_rien-a-demander": "Aqui não dá: você não pede nem o primeiro nome nem o gênero. Ative um dos dois, ou mantenha o botão.",
-    "introStartStatsNotice": "Este quiz começa em uma pergunta: a tela inicial E a pergunta 1 são a mesma. Os inícios contam então quem RESPONDEU à primeira pergunta. Antes contavam os cliques no botão: os dois períodos não se comparam."
+    "introStartStatsNotice": "Este quiz começa em uma pergunta: a tela inicial E a pergunta 1 são a mesma. Os inícios contam então quem RESPONDEU à primeira pergunta. Antes contavam os cliques no botão: os dois períodos não se comparam.",
+    "settingsGroupCapture": "Dados de contato",
+    "settingsGroupCaptureHint": "O que você pede ao visitante, e em que momento.",
+    "settingsGroupResultats": "Página de resultado",
+    "settingsGroupResultatsHint": "O que o visitante vê depois de obter o perfil dele.",
+    "settingsGroupGestion": "Gerenciamento do quiz",
+    "settingsGroupGestionHint": "O idioma da interface, e o fechamento do quiz.",
+    "tabAutomation": "Automatizar",
+    "ctaReprendreTitre": "Seu botão padrão",
+    "ctaReprendreAide": "{count} perfil(is) ainda mostram seu botão padrão. Agora existe um botão próprio para cada perfil: recupere-o aqui para não perder nada. Os perfis que já têm o deles não são tocados.",
+    "ctaReprendreAction": "Recuperar este botão nesses perfis"
   },
   "contentStrategy": {
     "title": "Estratégia de conteúdo",
@@ -5516,7 +5526,10 @@
       "loadError": "Não foi possível carregar seus conteúdos no momento.",
       "duplicate": "Duplicar",
       "quizDuplicated": "Cópia criada. Você já pode editá-la.",
-      "duplicateFailed": "A duplicação falhou."
+      "duplicateFailed": "A duplicação falhou.",
+      "startsCount": "{count} iniciados",
+      "completionsCount": "{count} concluídos",
+      "conversionRate": "{rate}% taxa de conversão"
     },
     "pageTitle": "Meus Conteúdos"
   },
@@ -7691,5 +7704,54 @@
     "createError": "Não foi possível criar o link.",
     "updateError": "Não foi possível salvar a alteração.",
     "button": "Dar uma cópia do quiz"
+  },
+  "automatisation": {
+    "titre": "Automatizar o depois do quiz, no Systeme.io",
+    "intro": "O Tiquiz adiciona um tag ao contato Systeme.io de quem responde. Aqui estão as regras a criar para ESTE quiz, para que esses tags façam mesmo alguma coisa.",
+    "pourquoi": "A saber: adicionar um tag não desencadeia nada sozinho. Sem a regra correspondente, a pessoa recebe o tag e mais nada.",
+    "ouvrirSysteme": "Abrir minhas automações Systeme.io",
+    "manqueCle": "Nenhuma chave Systeme.io está vinculada a esta conta. Enquanto for assim, nenhum contato é criado e nenhuma tag é aplicada. Vá em Configurações, aba Conexões, para conectar sua chave.",
+    "manqueTagProfil": "O perfil \"{profil}\" não tem tag. Quem o obtiver não será reconhecível em lado nenhum no Systeme.io.",
+    "manqueTagCapture": "Esta pesquisa não tem tag de captura: ninguém receberá um tag ao responder.",
+    "manqueTagPartage": "Ofereces um bónus de partilha, mas nenhum tag marca quem partilha. Não poderás enviar-lhes o bónus automaticamente.",
+    "videTitre": "Nada para automatizar por agora",
+    "videTexte": "Adicione um tag Systeme.io aos seus perfis de resultado, na aba Criar. Os passos aparecerão aqui.",
+    "noteFin": "Os nomes dos tags têm de coincidir caráter a caráter. Clica para os copiar.",
+    "copyTag": "Copiar o tag",
+    "copyError": "Não foi possível copiar. O tag é: {tag}",
+    "recetteTitre": "A receita, a mesma para cada tag",
+    "recetteAide": "Três cliques no Systeme.io, para repetir uma vez por tag da lista abaixo.",
+    "recette1": "Crie um workflow e dê a ele o nome da tag.",
+    "recette2": "Gatilho: \"Tag adicionada\", depois escolha essa tag.",
+    "recette3": "Ação: \"Inscrever em uma campanha de emails\", depois escolha a campanha a enviar.",
+    "actionAutre": "Aqui, escolha a ação \"Enviar um email\": aquele que entrega o seu bônus.",
+    "profilSansNom": "Perfil {n}",
+    "tagSansContexte": "Todas as pessoas que respondem",
+    "groupe": {
+      "profils": {
+        "titre": "Seus perfis de resultado",
+        "aide": "A tag é aplicada assim que o visitante obtém esse perfil."
+      },
+      "partage": {
+        "titre": "Seu bônus de compartilhamento",
+        "aide": "A tag é aplicada quando o visitante compartilha seu quiz."
+      },
+      "capture-sondage": {
+        "titre": "As respostas da sua pesquisa",
+        "aide": "A tag é aplicada a todas as pessoas que respondem."
+      },
+      "reponses-sondage": {
+        "titre": "As respostas que você marcou",
+        "aide": "A tag é aplicada quando o visitante escolhe essa resposta."
+      },
+      "score": {
+        "titre": "As faixas de pontuação",
+        "aide": "A tag depende da pontuação: crie uma regra por faixa que você quiser tratar."
+      },
+      "acces-automatique": {
+        "titre": "Nada a criar para esses perfis",
+        "aide": "Você vinculou um curso ou uma comunidade. O Tiquiz abre o acesso sozinho, e uma regra a mais abriria duas vezes."
+      }
+    }
   }
 }

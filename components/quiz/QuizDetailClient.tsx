@@ -12,6 +12,9 @@ import { Button } from "@/components/ui/button";
 import { TipoteStudioButton } from "@/components/visual-studio/TipoteStudioButton";
 import { GifPickerButton } from "@/components/quiz/GifPicker";
 import { ImageCropDialog } from "@/components/quiz/ImageCropDialog";
+import { AutomatisationPanel } from "@/components/quiz/AutomatisationPanel";
+import { profilsSansCta } from "@/lib/quiz/resultCta";
+import { SettingsSection } from "@/components/quiz/SettingsSection";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,7 +25,7 @@ import {
   ArrowLeft, ArrowUp, Copy, Eye, CheckCircle, Share2,
   Loader2, Plus, Trash2, Monitor, Smartphone, Pencil, X, Save, GripVertical,
   Gift, Sparkles, Shuffle, ChevronUp, ChevronDown, Wand2, ImagePlus, Menu, Crop, Star, Settings2, AlertCircle,
-  Link2,
+  Link2, Workflow,
 } from "lucide-react";
 import QuizResultsAnalytics from "@/components/quiz/QuizResultsAnalytics";
 import QuizInsightsPanel from "@/components/quiz/QuizInsightsPanel";
@@ -131,7 +134,6 @@ import { stripHtml } from "@/lib/richText";
 import { isPixelFieldValid } from "@/lib/clientPixels";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { SUPPORTED_LOCALES, LOCALE_LABELS } from "@/i18n/config";
-import { useTutorial } from "@/hooks/useTutorial";
 // SidebarProvider / AppSidebar intentionally NOT imported — the WYSIWYG editor
 // is fullscreen so the global sidebar is hidden while editing (same pattern
 // as PageBuilder / hosted-pages editor).
@@ -643,18 +645,6 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const router = useRouter();
   const t = useTranslations("quizDetail");
   const tc = useTranslations("common");
-  const { hasSeenContext, markContextSeen, tutorialOptOut } = useTutorial();
-  const [showOnboarding, setShowOnboarding] = useState(false);
-  useEffect(() => {
-    if (tutorialOptOut) return;
-    if (hasSeenContext("first_quiz_editor_visit")) return;
-    const timer = setTimeout(() => setShowOnboarding(true), 600);
-    return () => clearTimeout(timer);
-  }, [hasSeenContext, tutorialOptOut]);
-  const dismissOnboarding = useCallback(() => {
-    markContextSeen("first_quiz_editor_visit");
-    setShowOnboarding(false);
-  }, [markContextSeen]);
 
   const [loading, setLoading] = useState(true);
   // Le projet n'existe pas, ou il n'est pas à ce compte. On l'AFFICHE,
@@ -804,7 +794,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const [editResults, setEditResults] = useState<QuizResult[]>([]);
 
   // Editor state
-  const [mainTab, setMainTab] = useState<"create" | "share" | "results">("create");
+  const [mainTab, setMainTab] = useState<"create" | "share" | "automation" | "results">("create");
   const [leftTab, setLeftTab] = useState<"edition" | "design" | "settings">("edition");
   // Sidebar : ouverte par défaut sur desktop, fermée sur mobile pour
   // laisser le preview occuper tout l'écran (pattern aligné sur
@@ -3129,24 +3119,21 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       />
       <div className="h-screen flex w-full overflow-hidden">
         <main className="flex-1 flex flex-col bg-background min-w-0 overflow-hidden">
-      {/* First-visit onboarding banner */}
-      {showOnboarding && (
-        <div className="shrink-0 border-b bg-gradient-to-r from-primary/10 via-primary/5 to-transparent px-4 py-3">
-          <div className="flex items-start gap-3 max-w-5xl mx-auto">
-            <div className="flex-1 min-w-0 space-y-1.5">
-              <h3 className="text-sm font-semibold">{t("onboardingTitle")}</h3>
-              <ul className="text-xs text-muted-foreground leading-relaxed space-y-0.5 list-disc pl-5">
-                <li>{t("onboardingPoint1")}</li>
-                <li>{t("onboardingPoint2")}</li>
-                <li>{t("onboardingPoint3")}</li>
-              </ul>
-            </div>
-            <Button size="sm" variant="outline" onClick={dismissOnboarding}>
-              {t("onboardingDismiss")}
-            </Button>
-          </div>
-        </div>
-      )}
+      {/* LE BANDEAU DE BIENVENUE A ÉTÉ RETIRÉ (Béné, 1er septembre 2026).
+          "Qu'est-ce que ça fout là ??"
+
+          Il n'existait que dans Tipote, jamais dans Tiquiz, alors que
+          les deux éditeurs sont jumeaux. Il poussait tout l'écran vers
+          le bas au premier chargement, et il expliquait la barre
+          latérale, c'est à dire la partie de l'éditeur qui n'est
+          justement pas encore alignée sur celle de Tiquiz.
+
+          Et il revenait à chaque fois : `markContextSeen` écrit dans le
+          `localStorage`, donc une fenêtre privée, un autre appareil ou
+          un nettoyage de cookies le ramène en entier.
+
+          Le didacticiel, lui, reste : il se lance à la demande depuis le
+          bouton d'aide. */}
 
       {/* TOP BAR */}
       <header className="flex items-center justify-between px-4 py-2 border-b shrink-0 bg-background z-10">
@@ -3177,9 +3164,9 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           <span className="font-semibold text-sm truncate max-w-[160px] sm:max-w-[200px]">{title || "Mon quiz"}</span>
         </div>
         <nav className="hidden sm:flex items-center bg-muted rounded-lg p-0.5">
-          {(["create","share","results"] as const).map(tab => (
+          {(["create","share","automation","results"] as const).map(tab => (
             <button key={tab} onClick={() => setMainTab(tab)} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${mainTab === tab ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
-              {tab === "create" ? <><Pencil className="w-3.5 h-3.5 inline mr-1.5" />{t("tabCreate")}</> : tab === "share" ? <><Share2 className="w-3.5 h-3.5 inline mr-1.5" />{t("tabShare")}</> : <><Eye className="w-3.5 h-3.5 inline mr-1.5" />{t("tabResults")}</>}
+              {tab === "create" ? <><Pencil className="w-3.5 h-3.5 inline mr-1.5" />{t("tabCreate")}</> : tab === "share" ? <><Share2 className="w-3.5 h-3.5 inline mr-1.5" />{t("tabShare")}</> : tab === "automation" ? <><Workflow className="w-3.5 h-3.5 inline mr-1.5" />{t("tabAutomation")}</> : <><Eye className="w-3.5 h-3.5 inline mr-1.5" />{t("tabResults")}</>}
             </button>
           ))}
         </nav>
@@ -3238,9 +3225,9 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           (absente sur téléphone) → on la réaffiche pleine largeur sous l'en-tête
           pour atteindre Partager (le lien) + Résultats. < sm seulement. */}
       <nav className="sm:hidden flex items-stretch border-b shrink-0 bg-background z-10">
-        {(["create","share","results"] as const).map(tab => (
+        {(["create","share","automation","results"] as const).map(tab => (
           <button key={tab} onClick={() => setMainTab(tab)} className={`flex-1 px-2 py-2.5 text-sm font-medium transition-colors inline-flex items-center justify-center gap-1.5 ${mainTab === tab ? "text-foreground border-b-2 border-primary" : "text-muted-foreground"}`}>
-            {tab === "create" ? <><Pencil className="w-3.5 h-3.5" />{t("tabCreate")}</> : tab === "share" ? <><Share2 className="w-3.5 h-3.5" />{t("tabShare")}</> : <><Eye className="w-3.5 h-3.5" />{t("tabResults")}</>}
+            {tab === "create" ? <><Pencil className="w-3.5 h-3.5" />{t("tabCreate")}</> : tab === "share" ? <><Share2 className="w-3.5 h-3.5" />{t("tabShare")}</> : tab === "automation" ? <><Workflow className="w-3.5 h-3.5" />{t("tabAutomation")}</> : <><Eye className="w-3.5 h-3.5" />{t("tabResults")}</>}
           </button>
         ))}
       </nav>
@@ -3840,70 +3827,27 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                   )}
                 </div>
               </div>)}
-              {leftTab === "settings" && (<div className="space-y-6">
-                {/* ── Fermeture du quiz ── */}
-                <section className="space-y-2.5">
-                  <div>
-                    <h3 className="text-sm font-semibold">{t("closeTitle")}</h3>
-                    <p className="text-[11px] text-muted-foreground leading-snug">{t("closeHint")}</p>
-                  </div>
-                  <label className="flex items-center gap-2 text-sm">
-                    <input type="checkbox" checked={closeEnabled} onChange={(e) => setCloseEnabled(e.target.checked)} className="size-4 accent-primary" />
-                    {t("closeEnableLabel")}
-                  </label>
-                  {closeEnabled && (
-                    <div className="space-y-3 rounded-lg border border-border p-3">
-                      <div className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-1">
-                        {([["message", t("closeActionMessage")], ["redirect", t("closeActionRedirect")]] as const).map(([val, label]) => (
-                          <button key={val} type="button" onClick={() => setCloseAction(val)} className={`rounded-md px-2 py-1 text-xs font-medium transition-colors ${closeAction === val ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}>{label}</button>
-                        ))}
-                      </div>
-                      {closeAction === "redirect" ? (
-                        <div className="space-y-1">
-                          <Label className="text-xs">{t("closeRedirectUrlLabel")}</Label>
-                          <Input value={closeRedirectUrl} onChange={(e) => setCloseRedirectUrl(e.target.value)} placeholder="https://..." />
-                        </div>
-                      ) : (
-                        <div className="space-y-3">
-                          <div className="space-y-1">
-                            <Label className="text-xs">{t("closeMessageLabel")}</Label>
-                            <Textarea value={closeMessage} onChange={(e) => setCloseMessage(e.target.value)} rows={2} placeholder={t("closeMessagePlaceholder")} />
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-xs">{t("closeCtaTextLabel")}</Label>
-                            <Input value={closeCtaText} onChange={(e) => setCloseCtaText(e.target.value)} />
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-xs">{t("closeCtaUrlLabel")}</Label>
-                            <Input value={closeCtaUrl} onChange={(e) => setCloseCtaUrl(e.target.value)} placeholder="https://..." />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </section>
-                {/* ── Langue du quiz (langue du joueur public) ──
-                    Pilote quizzes.locale, qui détermine TOUTE la langue de
-                    l'interface vue par le visiteur (perso, boutons, capture)
-                    via getT(quiz.locale). Sans ce sélecteur, un quiz au
-                    contenu anglais restait en français (retour anglophone). */}
-                <section className="space-y-2">
-                  <div>
-                    <h3 className="text-sm font-semibold">{t("quizLanguageLabel")}</h3>
-                    <p className="text-[11px] text-muted-foreground leading-snug">{t("quizLanguageHint")}</p>
-                  </div>
-                  <select
-                    value={locale}
-                    onChange={(e) => setLocale(e.target.value)}
-                    className="w-full text-sm bg-background border border-input rounded-md px-2 py-1.5 cursor-pointer"
-                    aria-label={t("quizLanguageLabel")}
-                  >
-                    {!locale && <option value="">{t("quizLanguagePick")}</option>}
-                    {SUPPORTED_LOCALES.map((loc) => (
-                      <option key={loc} value={loc}>{LOCALE_LABELS[loc] ?? loc}</option>
-                    ))}
-                  </select>
-                </section>
+              {leftTab === "settings" && (<div className="space-y-3">
+              {/* LA COLONNE DE RÉGLAGES EST GROUPÉE, comme dans Tiquiz.
+
+                  Béné, 25 août 2026 (pour Tiquiz) : "il faudra
+                  retravailler la barre gauche de l'éditeur, pour les
+                  paramètres c'est un gros bordel on a tout empilé au fur
+                  et à mesure et ça ressemble plus à rien." Puis le
+                  1er septembre : "pourquoi la side bar améliorée sur
+                  Tiquiz n'a pas été portée sur Tipote ?"
+
+                  Elle avait raison des deux côtés : la correction n'avait
+                  vécu que chez le jumeau. SEPT blocs étaient empilés ici,
+                  chacun avec son `<h3>` et ses marges, sans rien pour
+                  dire où l'un finit et où l'autre commence.
+
+                  Trois groupes, l'ordre du parcours : ce qu'on demande au
+                  visiteur, ce qu'il voit à l'arrivée, puis la gestion.
+                  Tout est FERMÉ sauf la capture : un écran qui s'ouvre
+                  sur trois titres se lit d'un coup d'oeil, le même écran
+                  déplié est le mur d'avant. */}
+                <SettingsSection titre={t("settingsGroupCapture")} aide={t("settingsGroupCaptureHint")} ouvertParDefaut>
                 {/* ── Formulaire de prise de contact ── */}
                 <section className="space-y-2.5">
                   <div>
@@ -4051,9 +3995,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     </Button>
                   )}
                 </section>
-
-                <Separator />
-
+                </SettingsSection>
+                <SettingsSection titre={t("settingsGroupResultats")} aide={t("settingsGroupResultatsHint")}>
                 {/* ── Options ── */}
                 <section className="space-y-2">
                   <h3 className="text-sm font-semibold">{t("optionsTitle")}</h3>
@@ -4304,6 +4247,155 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                   />
                 </section>
 
+                {viralityEnabled && (
+                  <section className="space-y-3 bg-muted/30 border rounded-xl p-3">
+                    <div>
+                      <h4 className="text-xs font-semibold">{t("bonusShareTitle")}</h4>
+                      <p className="text-[11px] text-muted-foreground leading-snug">{t("bonusShareDesc")}</p>
+                    </div>
+                    <Input value={bonusDescription} onChange={e => setBonusDescription(e.target.value)} placeholder={t("bonusDescriptionPh")} className="text-xs" />
+
+                    {/* Visuel bonus : édité directement dans le preview
+                        (WYSIWYG, miroir de la couverture intro) → dropzone
+                        d'upload + génération IA + GIF + drag-and-drop sur
+                        4 slots + crop. Plus rien à gérer dans la sidebar. */}
+
+                    <div>
+                      <Label className="text-[11px] font-semibold">{t("shareMessageLabel")}</Label>
+                      <p className="text-[10px] text-muted-foreground mb-1.5">{t("shareMessageHint")}</p>
+                      <Textarea value={shareMessage} onChange={e => setShareMessage(e.target.value)} placeholder={t("shareMessagePh", { title: title || "…" })} className="text-xs" rows={2} />
+                    </div>
+
+                    <div>
+                      <Label className="text-[11px] font-semibold">{t("sioShareTagLabel")}</Label>
+                      <p className="text-[10px] text-muted-foreground mb-1.5">{t("sioShareTagHint")}</p>
+                      <SioTagPicker value={sioShareTagName} onChange={setSioShareTagName} />
+                    </div>
+                  </section>
+                )}
+
+                <Separator />
+
+                {/* ── CTA par défaut ── */}
+                <section className="space-y-1.5">
+                  <div>
+                    <h3 className="text-sm font-semibold">{t("defaultCtaTitle")}</h3>
+                    <p className="text-[11px] text-muted-foreground leading-snug">
+                      {t("defaultCtaDesc")}
+                    </p>
+                  </div>
+                  <Input value={ctaText} onChange={e => setCtaText(e.target.value)} placeholder={t("ctaTextPh")} className="text-xs" />
+                  <Input value={ctaUrl} onChange={e => setCtaUrl(e.target.value)} placeholder={t("ctaUrlPh")} className="text-xs" />
+                </section>
+                {/* LA REPRISE, PROPOSÉE ET JAMAIS FAITE EN DOUCE.
+
+                    Le bouton de la page de résultat vient désormais du
+                    PROFIL (Béné, 25 août : "si rien = pas de CTA"). La
+                    migration recopie l'adresse du quiz dans les profils
+                    qui n'en ont pas ; ce bouton rattrape les quiz créés
+                    ou importés entre le déploiement du code et le SQL.
+
+                    "On ne modifie pas les quiz existants MAIS on leur
+                    propose toujours de bénéficier des améliorations."
+                    Un profil qui a DÉJÀ son bouton n'est jamais touché,
+                    champ par champ. */}
+                {(() => {
+                  const aReprendre = profilsSansCta(ctaUrl, editResults);
+                  if (aReprendre === 0) return null;
+                  return (
+                    <section className="space-y-2 rounded-lg border border-amber-500/30 bg-amber-500/5 p-2.5">
+                      <div>
+                        <h3 className="text-sm font-semibold">{t("ctaReprendreTitre")}</h3>
+                        <p className="text-[11px] text-muted-foreground leading-snug">
+                          {t("ctaReprendreAide", { count: aReprendre })}
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="w-full text-xs"
+                        onClick={() => {
+                          setEditResults((prev) =>
+                            prev.map((r) => ({
+                              ...r,
+                              cta_url: String(r.cta_url ?? "").trim() ? r.cta_url : ctaUrl,
+                              cta_text: String(r.cta_text ?? "").trim() ? r.cta_text : ctaText,
+                            })),
+                          );
+                        }}
+                      >
+                        {t("ctaReprendreAction")}
+                      </Button>
+                    </section>
+                  );
+                })()}
+                </SettingsSection>
+                <SettingsSection titre={t("settingsGroupGestion")} aide={t("settingsGroupGestionHint")}>
+                {/* ── Fermeture du quiz ── */}
+                <section className="space-y-2.5">
+                  <div>
+                    <h3 className="text-sm font-semibold">{t("closeTitle")}</h3>
+                    <p className="text-[11px] text-muted-foreground leading-snug">{t("closeHint")}</p>
+                  </div>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={closeEnabled} onChange={(e) => setCloseEnabled(e.target.checked)} className="size-4 accent-primary" />
+                    {t("closeEnableLabel")}
+                  </label>
+                  {closeEnabled && (
+                    <div className="space-y-3 rounded-lg border border-border p-3">
+                      <div className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-1">
+                        {([["message", t("closeActionMessage")], ["redirect", t("closeActionRedirect")]] as const).map(([val, label]) => (
+                          <button key={val} type="button" onClick={() => setCloseAction(val)} className={`rounded-md px-2 py-1 text-xs font-medium transition-colors ${closeAction === val ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}>{label}</button>
+                        ))}
+                      </div>
+                      {closeAction === "redirect" ? (
+                        <div className="space-y-1">
+                          <Label className="text-xs">{t("closeRedirectUrlLabel")}</Label>
+                          <Input value={closeRedirectUrl} onChange={(e) => setCloseRedirectUrl(e.target.value)} placeholder="https://..." />
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          <div className="space-y-1">
+                            <Label className="text-xs">{t("closeMessageLabel")}</Label>
+                            <Textarea value={closeMessage} onChange={(e) => setCloseMessage(e.target.value)} rows={2} placeholder={t("closeMessagePlaceholder")} />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">{t("closeCtaTextLabel")}</Label>
+                            <Input value={closeCtaText} onChange={(e) => setCloseCtaText(e.target.value)} />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">{t("closeCtaUrlLabel")}</Label>
+                            <Input value={closeCtaUrl} onChange={(e) => setCloseCtaUrl(e.target.value)} placeholder="https://..." />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </section>
+                {/* ── Langue du quiz (langue du joueur public) ──
+                    Pilote quizzes.locale, qui détermine TOUTE la langue de
+                    l'interface vue par le visiteur (perso, boutons, capture)
+                    via getT(quiz.locale). Sans ce sélecteur, un quiz au
+                    contenu anglais restait en français (retour anglophone). */}
+                <section className="space-y-2">
+                  <div>
+                    <h3 className="text-sm font-semibold">{t("quizLanguageLabel")}</h3>
+                    <p className="text-[11px] text-muted-foreground leading-snug">{t("quizLanguageHint")}</p>
+                  </div>
+                  <select
+                    value={locale}
+                    onChange={(e) => setLocale(e.target.value)}
+                    className="w-full text-sm bg-background border border-input rounded-md px-2 py-1.5 cursor-pointer"
+                    aria-label={t("quizLanguageLabel")}
+                  >
+                    {!locale && <option value="">{t("quizLanguagePick")}</option>}
+                    {SUPPORTED_LOCALES.map((loc) => (
+                      <option key={loc} value={loc}>{LOCALE_LABELS[loc] ?? loc}</option>
+                    ))}
+                  </select>
+                </section>
+
                 {/* Tracking & Pubs — Phase B (Adeline, 19 mai 2026) */}
                 <section className="space-y-2.5">
                   <div>
@@ -4365,47 +4457,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     </p>
                   </div>
                 </section>
-
-                {viralityEnabled && (
-                  <section className="space-y-3 bg-muted/30 border rounded-xl p-3">
-                    <div>
-                      <h4 className="text-xs font-semibold">{t("bonusShareTitle")}</h4>
-                      <p className="text-[11px] text-muted-foreground leading-snug">{t("bonusShareDesc")}</p>
-                    </div>
-                    <Input value={bonusDescription} onChange={e => setBonusDescription(e.target.value)} placeholder={t("bonusDescriptionPh")} className="text-xs" />
-
-                    {/* Visuel bonus : édité directement dans le preview
-                        (WYSIWYG, miroir de la couverture intro) → dropzone
-                        d'upload + génération IA + GIF + drag-and-drop sur
-                        4 slots + crop. Plus rien à gérer dans la sidebar. */}
-
-                    <div>
-                      <Label className="text-[11px] font-semibold">{t("shareMessageLabel")}</Label>
-                      <p className="text-[10px] text-muted-foreground mb-1.5">{t("shareMessageHint")}</p>
-                      <Textarea value={shareMessage} onChange={e => setShareMessage(e.target.value)} placeholder={t("shareMessagePh", { title: title || "…" })} className="text-xs" rows={2} />
-                    </div>
-
-                    <div>
-                      <Label className="text-[11px] font-semibold">{t("sioShareTagLabel")}</Label>
-                      <p className="text-[10px] text-muted-foreground mb-1.5">{t("sioShareTagHint")}</p>
-                      <SioTagPicker value={sioShareTagName} onChange={setSioShareTagName} />
-                    </div>
-                  </section>
-                )}
-
-                <Separator />
-
-                {/* ── CTA par défaut ── */}
-                <section className="space-y-1.5">
-                  <div>
-                    <h3 className="text-sm font-semibold">{t("defaultCtaTitle")}</h3>
-                    <p className="text-[11px] text-muted-foreground leading-snug">
-                      {t("defaultCtaDesc")}
-                    </p>
-                  </div>
-                  <Input value={ctaText} onChange={e => setCtaText(e.target.value)} placeholder={t("ctaTextPh")} className="text-xs" />
-                  <Input value={ctaUrl} onChange={e => setCtaUrl(e.target.value)} placeholder={t("ctaUrlPh")} className="text-xs" />
-                </section>
+                </SettingsSection>
               </div>)}
             </div>
           </aside>
@@ -6461,6 +6513,25 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       )}
 
       {/* RESULTS TAB */}
+      {/* Le panneau CONSTRUIT son plan : il est DANS `SioTagsProvider`,
+          donc lui seul sait si une clé Systeme.io répond vraiment. */}
+      {mainTab === "automation" && (
+        <AutomatisationPanel
+          quiz={{
+            mode: quiz?.mode ?? null,
+            locale: quiz?.locale ?? null,
+            sio_capture_tag: (quiz as { sio_capture_tag?: string | null } | null)?.sio_capture_tag ?? null,
+            sio_share_tag_name: sioShareTagName,
+            sio_score_tags: sioScoreTags,
+            scoring_axes: scoringAxesEdit,
+            score_labels: scoreLabelsEdit,
+            virality_enabled: viralityEnabled,
+          }}
+          resultats={editResults}
+          questions={editQuestions}
+        />
+      )}
+
       {mainTab === "results" && (
         <div className="flex-1 overflow-y-auto p-6">
           <div className="max-w-5xl mx-auto">

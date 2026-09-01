@@ -21,7 +21,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft, ArrowUp, Copy, Eye, CheckCircle, Share2,
   Loader2, Plus, Trash2, Monitor, Smartphone, Pencil, X, Save, GripVertical,
-  Sparkles, TrendingUp, Star, MessageCircle, Wand2, ImagePlus, Menu, Crop, Settings2,
+  Sparkles, TrendingUp, Star, MessageCircle, Wand2, ImagePlus, Menu, Crop, Settings2, Workflow,
 } from "lucide-react";
 import { SurveyTrends } from "@/components/quiz/SurveyTrends";
 import { SurveyResponsesTable } from "@/components/quiz/SurveyResponsesTable";
@@ -48,6 +48,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { SioTagPicker } from "@/components/ui/sio-tag-picker";
+import { AutomatisationPanel } from "@/components/quiz/AutomatisationPanel";
 import { SioTagsProvider } from "@/components/ui/sio-tags-provider";
 import { RichTextEdit } from "@/components/ui/rich-text-edit";
 import { interpolateText } from "@/lib/quizPersonalization";
@@ -76,7 +77,6 @@ import { answerImageRender } from "@/lib/quiz/answerImage";
 import { stripHtml } from "@/lib/richText";
 import { alignBlockMarginClass, alignJustifyClass, alignTextClass, resolveBlockAlign } from "@/lib/quiz/textAlign";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
-import { useTutorial } from "@/hooks/useTutorial";
 // SidebarProvider / AppSidebar intentionally NOT imported — the survey
 // WYSIWYG editor is fullscreen, mirroring QuizDetailClient.
 import {
@@ -481,18 +481,6 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   const t = useTranslations("quizDetail");
   const tc = useTranslations("common");
   const st = useTranslations("survey");
-  const { hasSeenContext, markContextSeen, tutorialOptOut } = useTutorial();
-  const [showOnboarding, setShowOnboarding] = useState(false);
-  useEffect(() => {
-    if (tutorialOptOut) return;
-    if (hasSeenContext("first_quiz_editor_visit")) return;
-    const timer = setTimeout(() => setShowOnboarding(true), 600);
-    return () => clearTimeout(timer);
-  }, [hasSeenContext, tutorialOptOut]);
-  const dismissOnboarding = useCallback(() => {
-    markContextSeen("first_quiz_editor_visit");
-    setShowOnboarding(false);
-  }, [markContextSeen]);
 
   const [loading, setLoading] = useState(true);
   // Le projet n'existe pas, ou il n'est pas à ce compte. On l'AFFICHE,
@@ -560,7 +548,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   void editResults; void setEditResults;
 
   // Editor state
-  const [mainTab, setMainTab] = useState<"create" | "share" | "trends">("create");
+  const [mainTab, setMainTab] = useState<"create" | "share" | "automation" | "trends">("create");
   // Sous-vue de l'onglet Tendances : agrégat (Synthèse) ou tableau par
   // répondant (Réponses, style Typeform / Tally).
   const [trendsView, setTrendsView] = useState<"summary" | "responses">("responses"); // sondage: onglet "Reponses" ouvre sur le tableau (retour Christelle)
@@ -1660,24 +1648,21 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       />
       <div className="h-screen flex w-full overflow-hidden">
         <main className="flex-1 flex flex-col bg-background min-w-0 overflow-hidden">
-      {/* First-visit onboarding banner */}
-      {showOnboarding && (
-        <div className="shrink-0 border-b bg-gradient-to-r from-primary/10 via-primary/5 to-transparent px-4 py-3">
-          <div className="flex items-start gap-3 max-w-5xl mx-auto">
-            <div className="flex-1 min-w-0 space-y-1.5">
-              <h3 className="text-sm font-semibold">{t("onboardingTitle")}</h3>
-              <ul className="text-xs text-muted-foreground leading-relaxed space-y-0.5 list-disc pl-5">
-                <li>{t("onboardingPoint1")}</li>
-                <li>{t("onboardingPoint2")}</li>
-                <li>{t("onboardingPoint3")}</li>
-              </ul>
-            </div>
-            <Button size="sm" variant="outline" onClick={dismissOnboarding}>
-              {t("onboardingDismiss")}
-            </Button>
-          </div>
-        </div>
-      )}
+      {/* LE BANDEAU DE BIENVENUE A ÉTÉ RETIRÉ (Béné, 1er septembre 2026).
+          "Qu'est-ce que ça fout là ??"
+
+          Il n'existait que dans Tipote, jamais dans Tiquiz, alors que
+          les deux éditeurs sont jumeaux. Il poussait tout l'écran vers
+          le bas au premier chargement, et il expliquait la barre
+          latérale, c'est à dire la partie de l'éditeur qui n'est
+          justement pas encore alignée sur celle de Tiquiz.
+
+          Et il revenait à chaque fois : `markContextSeen` écrit dans le
+          `localStorage`, donc une fenêtre privée, un autre appareil ou
+          un nettoyage de cookies le ramène en entier.
+
+          Le didacticiel, lui, reste : il se lance à la demande depuis le
+          bouton d'aide. */}
 
       {/* TOP BAR */}
       <header className="flex items-center justify-between px-4 py-2 border-b shrink-0 bg-background z-10">
@@ -1706,9 +1691,9 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
           <span className="font-semibold text-sm truncate max-w-[160px] sm:max-w-[200px]">{title || "Mon quiz"}</span>
         </div>
         <nav className="hidden sm:flex items-center bg-muted rounded-lg p-0.5">
-          {(["create","share","trends"] as const).map(tab => (
+          {(["create","share","automation","trends"] as const).map(tab => (
             <button key={tab} onClick={() => setMainTab(tab)} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${mainTab === tab ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
-              {tab === "create" ? <><Pencil className="w-3.5 h-3.5 inline mr-1.5" />{t("tabCreate")}</> : tab === "share" ? <><Share2 className="w-3.5 h-3.5 inline mr-1.5" />{t("tabShare")}</> : <><TrendingUp className="w-3.5 h-3.5 inline mr-1.5" />{t("tabTrendsSurvey")}</>}
+              {tab === "create" ? <><Pencil className="w-3.5 h-3.5 inline mr-1.5" />{t("tabCreate")}</> : tab === "share" ? <><Share2 className="w-3.5 h-3.5 inline mr-1.5" />{t("tabShare")}</> : tab === "automation" ? <><Workflow className="w-3.5 h-3.5 inline mr-1.5" />{t("tabAutomation")}</> : <><TrendingUp className="w-3.5 h-3.5 inline mr-1.5" />{t("tabTrendsSurvey")}</>}
             </button>
           ))}
         </nav>
@@ -1765,9 +1750,9 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
           (absente sur téléphone) → on la réaffiche pleine largeur sous l'en-tête
           pour atteindre Partager (le lien) + Tendances. < sm seulement. */}
       <nav className="sm:hidden flex items-stretch border-b shrink-0 bg-background z-10">
-        {(["create","share","trends"] as const).map(tab => (
+        {(["create","share","automation","trends"] as const).map(tab => (
           <button key={tab} onClick={() => setMainTab(tab)} className={`flex-1 px-2 py-2.5 text-sm font-medium transition-colors inline-flex items-center justify-center gap-1.5 ${mainTab === tab ? "text-foreground border-b-2 border-primary" : "text-muted-foreground"}`}>
-            {tab === "create" ? <><Pencil className="w-3.5 h-3.5" />{t("tabCreate")}</> : tab === "share" ? <><Share2 className="w-3.5 h-3.5" />{t("tabShare")}</> : <><TrendingUp className="w-3.5 h-3.5" />{t("tabTrendsSurvey")}</>}
+            {tab === "create" ? <><Pencil className="w-3.5 h-3.5" />{t("tabCreate")}</> : tab === "share" ? <><Share2 className="w-3.5 h-3.5" />{t("tabShare")}</> : tab === "automation" ? <><Workflow className="w-3.5 h-3.5" />{t("tabAutomation")}</> : <><TrendingUp className="w-3.5 h-3.5" />{t("tabTrendsSurvey")}</>}
           </button>
         ))}
       </nav>
@@ -2877,6 +2862,23 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
 
       {/* TRENDS TAB — replaces the quiz "results analytics" tab. Aggregates
           lead.answers per question with a type-aware visualisation. */}
+      {/* Un sondage n'a pas de profil : ce sont le tag de capture et
+          les tags par RÉPONSE qui taguent, et le plan ne montre que
+          ceux là. Le panneau construit son plan lui même (il est dans
+          `SioTagsProvider`, donc il sait si une clé répond). */}
+      {mainTab === "automation" && (
+        <AutomatisationPanel
+          quiz={{
+            mode: "survey",
+            locale: quiz?.locale ?? null,
+            sio_capture_tag: (quiz as { sio_capture_tag?: string | null } | null)?.sio_capture_tag ?? null,
+            sio_share_tag_name: sioShareTagName,
+          }}
+          resultats={editResults}
+          questions={editQuestions}
+        />
+      )}
+
       {mainTab === "trends" && (
         <div className="flex-1 overflow-y-auto p-6">
           <div className="max-w-5xl mx-auto">

@@ -1996,14 +1996,29 @@ pas FAIRE quelque chose ne sait pas forcément le VOIR non plus.**
 **Ce qui est établi :** au moins une règle par tag existe et
 abonne à une campagne, donc poser un tag PEUT tout déclencher.
 
-**Ce qui reste inconnu :** si `tiquiz-free` et les tags de vente
-ont la leur. Ça ne se vérifie QUE dans son tableau de bord
-(https://systeme.io/dashboard/automation-rules), jamais par cette API.
-Ne plus rien affirmer ici sur la foi de cet outil.
+**TRANCHÉ LE 1er SEPTEMBRE, ET C'EST OUI.** Béné : "c'est ok côté
+systeme io note le quelque part, le signup ajoute le tag tiquiz free, et
+de mon côté j'ai un workflow qui envoie la campagne tiquiz free."
 
-**Et c'est pour ça qu'on ne bascule PAS le bouton d'essai gratuit de la
-page de vente** (`SALES_LINKS_LEFT_ALONE` chez Tiquiz) : leur optin est
-aujourd'hui le seul chemin qui déclenche vraiment la séquence.
+| Le tag | Sa règle | Qui le pose |
+|---|---|---|
+| `tiquiz-free` | -> campagne **Tiquiz free** | `tiquiz.fr/signup` |
+| `tiquiz-clients` | -> campagne **Tiquiz abonnement** | toute vente encaissée par nous |
+
+`tiquiz.fr/signup` envoie donc bien sa séquence. Et le PALIER ne
+déclenche rien : sa règle écoute `tiquiz-clients`, pas
+`tiquiz-mensuel`. Le détail vit dans l'AGENTS.md de Tiquiz, qui pose les
+deux tags.
+
+**L'API reste aveugle**, re-vérifié le 1er septembre : interrogée sur
+les règles `tag_added`, elle rend zéro, alors que ces deux règles
+tournent. Une règle se vérifie dans son tableau de bord
+(https://systeme.io/dashboard/automation-rules), jamais par cette API.
+
+**On ne bascule toujours PAS le bouton d'essai gratuit de la page de
+vente** (`SALES_LINKS_LEFT_ALONE` chez Tiquiz), et la raison a changé :
+ce n'est plus la séquence email, c'est qu'un basculement se teste, et il
+n'a pas encore été fait.
 
 La chaîne est complète et elle a été vérifiée bout en bout : le `?ref=`
 arrive dans l'URL, le middleware le range dans `tq_ref`, le bon de
@@ -3303,3 +3318,73 @@ grep -rnE "(une|nouvelle|cette|aucune|toute) tags?|tags? (créée|posée|manquan
 ```
 
 Zéro ligne, sinon on a laissé une phrase cassée derrière soi.
+
+## L'onglet Automatiser, porté de Tiquiz (1er septembre 2026)
+
+Béné : "tu as bien porté tout Tiquiz sur les quiz de Tipote ? Tout est
+strictement identique ? De la liste des quiz projets à l'éditeur,
+jusqu'aux résultats ?"
+
+**Non, et l'audit a nommé les écarts.** L'éditeur, lui, était déjà
+presque identique : mêmes onglets de colonne, mêmes trois groupes de
+réglages, mêmes analyses. Il manquait l'onglet **Automatiser**, qui vit
+maintenant ici aussi (`lib/automatisation/planSysteme.ts`,
+`components/quiz/AutomatisationPanel.tsx`, 7 langues).
+
+**CE QU'IL RÉPARE :** Tipote pose des tags sur le contact Systeme.io,
+mais poser un tag ne déclenche RIEN tant qu'aucune règle ne l'écoute, et
+ces règles se créent à la main dans leur tableau de bord. Une créatrice
+met son quiz en ligne, capte 40 adresses, et il ne se passe rien.
+
+**UNE SEULE PHRASE DIFFÈRE DE TIQUIZ, ET C'EST VOULU.** Tipote n'a pas
+de clé Systeme.io par quiz : la table `sio_api_keys` n'existe pas ici,
+la clé vit dans `business_profiles`, pour tout le compte. `manqueCle`
+renvoie donc vers Réglages > Connexions, et non vers un réglage du quiz.
+Recopier la phrase de Tiquiz enverrait la créatrice chercher un écran
+qui n'existe pas.
+
+**Le panneau construit son plan LUI MÊME**, parce qu'il est le seul à
+être DANS `SioTagsProvider` : c'est le provider qui sait si une clé
+répond vraiment (il a demandé les tags). Le déduire d'une colonne est
+exactement le bug corrigé chez Tiquiz le même jour.
+
+### CE QUI RESTE DIFFÉRENT ENTRE LES DEUX, ET QUI N'EST PAS UN OUBLI
+
+**Le HUB à dossiers reste**, et c'est sa décision : "je veux juste la
+même présentation des quiz avec les mêmes options." Ce sont donc la
+LIGNE d'un quiz et ses boutons qui ont été alignés, pas la navigation.
+
+1. **La ligne d'un quiz est celle de Tiquiz** (1er septembre). Elle
+   portait trois chiffres, elle en porte six : vues, démarrés,
+   complétés, leads, partages, taux de conversion. `starts_count` et
+   `completions_count` existaient depuis avril (`20260410_quiz_funnel_
+   counters.sql`), la liste ne les SÉLECTIONNAIT pas. Sans elles, pas
+   de taux de conversion, et c'est le seul chiffre qui dit si un quiz
+   travaille.
+   La réconciliation de cohérence est reprise telle quelle (vues >=
+   démarrés >= complétés >= leads) : sans elle, un tracking qui a raté
+   en silence affiche "44 vues pour 276 leads" (retour Gwenn, 2 juin).
+2. **Les six boutons sont VISIBLES**, plus derrière un menu à trois
+   points. Ils y étaient tous, mais un menu coûte un geste de plus par
+   action et, surtout, on ne SAIT pas que l'action existe tant qu'on ne
+   l'a pas ouvert. Copier le lien et donner une copie sont les deux
+   qu'on répète le plus.
+   **Copier le lien et Voir en ligne restent réservés aux quiz ACTIFS** :
+   copier l'adresse d'un brouillon donnerait un lien qui répond 404 à
+   qui le reçoit. La rangée est donc plus courte sur un brouillon, et
+   c'est honnête.
+3. **Le CTA de la page de résultat vient du PROFIL** (porté le
+   1er septembre). Voir `lib/quiz/resultCta.ts` : la mécanique est un
+   PARAMÈTRE (`"profil"` ou `"sondage"`), parce qu'un sondage n'a pas de
+   profil et que `quiz.cta_url` y reste le SEUL bouton qui existe.
+   🚨 **La migration s'applique AVANT le code**, sinon tout quiz en ligne
+   dont les profils n'ont pas leur propre adresse perd son bouton, sur
+   la page qui vend.
+
+### CE QUI RESTE DIFFÉRENT, ET QUI N'EST PAS UN OUBLI
+
+- **La navigation de la liste** : page dédiée chez Tiquiz, hub à
+  dossiers ici. Décision produit, elle appartient à Béné.
+- **La clé Systeme.io par quiz** (le freelance qui envoie les leads d'UN
+  quiz chez son client). Elle demande une table et un écran : à faire
+  seulement si une créatrice Tipote le demande.

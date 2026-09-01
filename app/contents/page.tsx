@@ -157,7 +157,7 @@ export default async function ContentsPage({
   // table with mode='survey'.
   let quizzesQuery = supabase
     .from("quizzes")
-    .select("id, slug, title, status, views_count, shares_count, created_at, mode")
+    .select("id, slug, title, status, views_count, starts_count, completions_count, shares_count, created_at, mode")
     .eq("user_id", session.user.id)
     .order("created_at", { ascending: false });
   if (projectId) quizzesQuery = quizzesQuery.eq("project_id", projectId);
@@ -231,6 +231,11 @@ export default async function ContentsPage({
     status: qz.status ?? "draft",
     mode: (qz.mode === "survey" ? "survey" : "quiz") as "quiz" | "survey",
     views_count: qz.views_count ?? 0,
+    // Démarrés et complétés : les colonnes existaient depuis avril, la
+    // liste ne les lisait pas. Sans elles, pas de taux de conversion,
+    // et c'est le seul chiffre qui dit si un quiz travaille.
+    starts_count: qz.starts_count ?? 0,
+    completions_count: qz.completions_count ?? 0,
     shares_count: qz.shares_count ?? 0,
     leads_count: 0,
     created_at: String(qz.created_at),

@@ -4786,7 +4786,17 @@
     "introStartRefus_capture-avant": "Aquí no se puede: tu encuesta pide el email antes de las preguntas, así que la primera pregunta no puede ir delante. El botón se mantiene.",
     "introStartRefus_aucune-question": "Todavía no se puede: este quiz no tiene ninguna pregunta. El botón se mantiene.",
     "introStartRefus_rien-a-demander": "Aquí no se puede: no pides ni el nombre ni el género. Activa uno de los dos, o deja el botón.",
-    "introStartStatsNotice": "Este quiz empieza con una pregunta: la pantalla de bienvenida Y la pregunta 1 son la misma. Los inicios cuentan por tanto a quienes RESPONDIERON la primera pregunta. Antes contaban los clics en el botón: los dos periodos no se comparan."
+    "introStartStatsNotice": "Este quiz empieza con una pregunta: la pantalla de bienvenida Y la pregunta 1 son la misma. Los inicios cuentan por tanto a quienes RESPONDIERON la primera pregunta. Antes contaban los clics en el botón: los dos periodos no se comparan.",
+    "settingsGroupCapture": "Datos de contacto",
+    "settingsGroupCaptureHint": "Lo que pides al visitante, y en qué momento.",
+    "settingsGroupResultats": "Página de resultado",
+    "settingsGroupResultatsHint": "Lo que ve el visitante una vez tiene su perfil.",
+    "settingsGroupGestion": "Gestión del quiz",
+    "settingsGroupGestionHint": "El idioma de la interfaz, y el cierre del quiz.",
+    "tabAutomation": "Automatizar",
+    "ctaReprendreTitre": "Tu botón por defecto",
+    "ctaReprendreAide": "{count} perfil(es) muestran todavía tu botón por defecto. Ahora hay un botón propio para cada perfil: recupéralo aquí para no perder nada. Los perfiles que ya tienen el suyo no se tocan.",
+    "ctaReprendreAction": "Recuperar este botón en esos perfiles"
   },
   "contentStrategy": {
     "title": "Estrategia de contenido",
@@ -5516,7 +5526,10 @@
       "loadError": "No se han podido cargar tus contenidos por ahora.",
       "duplicate": "Duplicar",
       "quizDuplicated": "Copia creada. Ya puedes editarla.",
-      "duplicateFailed": "La duplicación falló."
+      "duplicateFailed": "La duplicación falló.",
+      "startsCount": "{count} iniciados",
+      "completionsCount": "{count} completados",
+      "conversionRate": "{rate}% tasa de conversión"
     },
     "pageTitle": "Mis Contenidos"
   },
@@ -7691,5 +7704,54 @@
     "createError": "No se pudo crear el enlace.",
     "updateError": "No se pudo guardar el cambio.",
     "button": "Dar una copia del cuestionario"
+  },
+  "automatisation": {
+    "titre": "Automatizar lo que pasa después del cuestionario, en Systeme.io",
+    "intro": "Tiquiz añade una etiqueta al contacto de Systeme.io de cada persona que responde. Estas son las reglas que hay que crear para ESTE cuestionario, para que esas etiquetas hagan algo de verdad.",
+    "pourquoi": "Ojo: añadir una etiqueta no dispara nada por sí solo. Sin la regla correspondiente, la persona queda etiquetada y no recibe nada.",
+    "ouvrirSysteme": "Abrir mis automatizaciones de Systeme.io",
+    "manqueCle": "Ninguna clave Systeme.io está vinculada a esta cuenta. Mientras sea así, no se crea ningún contacto y no se aplica ninguna etiqueta. Ve a Ajustes, pestaña Conexiones, para añadir tu clave.",
+    "manqueTagProfil": "El perfil \"{profil}\" no tiene etiqueta. Las personas que lo obtengan no serán reconocibles en ninguna parte de Systeme.io.",
+    "manqueTagCapture": "Esta encuesta no tiene etiqueta de captura: nadie quedará etiquetado al responder.",
+    "manqueTagPartage": "Ofreces un bonus por compartir, pero ninguna etiqueta marca a quienes comparten. No podrás enviarles el bonus automáticamente.",
+    "videTitre": "Nada que automatizar por ahora",
+    "videTexte": "Añade una etiqueta de Systeme.io a tus perfiles de resultado, en la pestaña Crear. Los pasos aparecerán aquí.",
+    "noteFin": "Los nombres de las etiquetas deben coincidir carácter por carácter. Haz clic para copiarlos.",
+    "copyTag": "Copiar la etiqueta",
+    "copyError": "No se pudo copiar. La etiqueta es: {tag}",
+    "recetteTitre": "La receta, la misma para cada etiqueta",
+    "recetteAide": "Tres clics en Systeme.io, a repetir una vez por etiqueta de la lista de abajo.",
+    "recette1": "Crea un workflow y dale el nombre de la etiqueta.",
+    "recette2": "Disparador: \"Etiqueta añadida\", luego elige esa etiqueta.",
+    "recette3": "Acción: \"Suscribir a una campaña de emails\", luego elige la campaña a enviar.",
+    "actionAutre": "Aquí, elige más bien la acción \"Enviar un email\": el que entrega tu bonus.",
+    "profilSansNom": "Perfil {n}",
+    "tagSansContexte": "Todas las personas que responden",
+    "groupe": {
+      "profils": {
+        "titre": "Tus perfiles de resultado",
+        "aide": "La etiqueta se aplica en cuanto el visitante obtiene este perfil."
+      },
+      "partage": {
+        "titre": "Tu bonus de compartir",
+        "aide": "La etiqueta se aplica cuando el visitante comparte tu quiz."
+      },
+      "capture-sondage": {
+        "titre": "Las respuestas a tu encuesta",
+        "aide": "La etiqueta se aplica a toda persona que responde."
+      },
+      "reponses-sondage": {
+        "titre": "Las respuestas que has etiquetado",
+        "aide": "La etiqueta se aplica cuando el visitante elige esa respuesta."
+      },
+      "score": {
+        "titre": "Los tramos de puntuación",
+        "aide": "La etiqueta depende de la puntuación: crea una regla por tramo que quieras tratar."
+      },
+      "acces-automatique": {
+        "titre": "Nada que crear para estos perfiles",
+        "aide": "Has vinculado una formación o una comunidad. Tiquiz abre el acceso solo, y una regla más lo abriría dos veces."
+      }
+    }
   }
 }
