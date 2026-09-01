@@ -120,7 +120,6 @@ function fixFragment(text: string): string {
  * reconnaître qu'une valeur est du HTML et pas du texte brut. Même motif
  * que `applyFrenchTypographyDeep`, écrit UNE fois pour les deux.
  */
-const LOOKS_LIKE_HTML = /<[a-z!/][^>]*>/i;
 
 /**
  * Texte brut. No-op hors français, pour ne pas abîmer l'anglais,
@@ -156,13 +155,49 @@ export function applyFrenchTypography(
 ): string {
   if (!text) return "";
   if (!isFrenchLocale(locale)) return text;
-  if (LOOKS_LIKE_HTML.test(text)) return applyFrenchTypographyToHtml(text, locale);
-  return fixFragment(text);
+  // ON NE CHOISIT PLUS (retour Christian, 1er septembre 2026).
+  //
+  // Le titre de son 4e resultat etait revenu de la base en
+  // `Ce n'est pas parce que tu n'es pas doue...&nbsp<nbsp>;`, une entite
+  // CASSEE, affichee telle quelle sur sa page de resultat.
+  //
+  // La cause : la detection ne cherchait qu'une BALISE
+  // (`/<[a-z!\/][^>]*>/`). Une chaine peut porter une ENTITE sans porter
+  // la moindre balise, et c'etait son cas. Elle partait donc vers la
+  // version texte brut, qui inserait l'espace du francais devant le `;`
+  // structurel de `&nbsp;`.
+  //
+  // La version HTML ne fait pas cette faute, et sur du texte SANS balise
+  // ni entite elle rend exactement la meme chose (un seul `fixFragment`
+  // sur toute la chaine). Il n'y a donc plus rien a arbitrer : c'est la
+  // lecon deja ecrite vingt lignes plus haut, appliquee a la detection
+  // elle meme.
+  return applyFrenchTypographyToHtml(text, locale);
 }
 
 // Une balise complète, ou une entité HTML. Ce sont les deux zones où la
 // règle ne doit JAMAIS entrer : le `;` d'une entité est structurel, et un
 // attribut peut contenir une URL ou du CSS.
+
+// ── Reparer ce que la version d'avant a casse ────────────────────────
+//
+// Une entite coupee en deux (`&nbsp<nbsp>;`) ne redevient pas une entite
+// toute seule : elle reste affichee telle quelle sur la page de la
+// cliente, et personne ne sait d'ou elle sort. On la recolle donc au
+// prochain enregistrement, comme `applyFieldFontSize` repare un champ
+// deja abime au premier clic sur une taille (1er aout).
+//
+// LISTE FERMEE, et c'est voulu : `&nom<espace>;` en prose ("M&M ;")
+// existe, et le recoller changerait un texte parfaitement legitime. On
+// ne recolle que ce qui EST une entite connue, plus les formes
+// numeriques, qui ne peuvent rien vouloir dire d'autre.
+const ENTITE_CASSEE = /&(nbsp|amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+)[\u00a0\u202f ];/g;
+
+/** PURE. Recolle une entite HTML separee de son `;`. */
+export function reparerEntitesCassees(texte: string): string {
+  return texte.replace(ENTITE_CASSEE, "&$1;");
+}
+
 const TAG_OR_ENTITY = /<[^>]*>|&(?:#\d+|#x[0-9a-fA-F]+|[a-zA-Z][a-zA-Z0-9]*);/g;
 
 /**
@@ -181,6 +216,11 @@ export function applyFrenchTypographyToHtml(
 ): string {
   if (!html) return "";
   if (!isFrenchLocale(locale)) return html;
+
+  // On recolle d'abord ce qu'une version precedente a pu casser, sinon
+  // `&nbsp<nbsp>;` n'est plus reconnu comme une entite et le decoupage
+  // ci-dessous passe a cote.
+  html = reparerEntitesCassees(html);
 
   let out = "";
   let cursor = 0;
@@ -236,12 +276,11 @@ export function applyFrenchTypographyDeep<T>(value: T, locale: string | null | u
 function walk(value: unknown, locale: string | null | undefined, skip: boolean): unknown {
   if (typeof value === "string") {
     if (skip || looksTechnical(value)) return value;
-    // Un fragment HTML se reconnaît à ses balises : sans ce test, on
-    // appliquerait la version texte brut à du HTML, donc aussi aux
-    // attributs.
-    return /<[a-z!/][^>]*>/i.test(value)
-      ? applyFrenchTypographyToHtml(value, locale)
-      : applyFrenchTypography(value, locale);
+    // Plus de test de forme : `applyFrenchTypography` passe TOUJOURS par
+    // le decoupage qui respecte les balises ET les entites. Deviner la
+    // forme d'une chaine etait exactement le defaut qui a casse le
+    // `&nbsp;` de Christian (une entite sans balise autour).
+    return applyFrenchTypography(value, locale);
   }
   if (Array.isArray(value)) return value.map((v) => walk(v, locale, skip));
   if (value && typeof value === "object") {

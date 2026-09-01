@@ -51,6 +51,7 @@ const IMG_WIDTH_RE = /^\d{1,3}(?:\.\d+)?%$|^\d{1,4}px$/i;
 // seul cote donnait une taille choisissable, visible a l'ecran, et jetee
 // en silence a la sauvegarde.
 import { FIELD_FONT_SIZES, FIELD_FS_CLASS } from "./richTextFieldSize.ts";
+import { reparerEntitesCassees } from "@/lib/frenchTypography";
 
 const FIELD_ALLOWED_SIZES = new Set<string>(FIELD_FONT_SIZES);
 
@@ -211,6 +212,17 @@ function convertFontTags(html: string): string {
 
 export function sanitizeRichText(input: string | null | undefined): string {
   if (!input) return "";
+  // ON RÉPARE À L'AFFICHAGE, PAS SEULEMENT À L'ENREGISTREMENT
+  // (Béné, 1er septembre 2026 : "ce genre de souci on l'a eu mille fois
+  // et il revient toujours, j'en ai marre de corriger toujours les mêmes
+  // choses").
+  //
+  // Une entité coupée en deux (`&nbsp<nbsp>;`) est déjà EN BASE chez des
+  // clientes. Ne corriger qu'à l'écriture obligerait chacune à rouvrir et
+  // ré-enregistrer chaque champ abîmé, un par un, pour faire disparaître
+  // un texte qu'elle n'a jamais tapé. Ici, tout ce qui s'affiche est
+  // réparé au passage, sans toucher à une seule ligne de la base.
+  input = reparerEntitesCassees(input);
   installStyleStripperHook();
   const clean = DOMPurify.sanitize(convertFontTags(input), {
     ALLOWED_TAGS,
@@ -237,7 +249,10 @@ export function isSafeUrl(url: string): boolean {
 // alors jamais décodées par le browser.
 export function stripHtml(input: string | null | undefined): string {
   if (!input) return "";
-  return input
+  // Même réparation que dans `sanitizeRichText` : ce chemin sert les
+  // aperçus de partage, les `og:title` et les libellés d'admin, où un
+  // `&nbsp ;` non réparé s'afficherait en toutes lettres.
+  return reparerEntitesCassees(input)
     // UNE FRONTIERE DE BLOC EST UNE ESPACE (Damien, 27 aout 2026). Son
     // titre est `Tu as une expertise ?<div>Qu'est-ce qui...</div>` : deux
     // lignes a l'ecran, et un seul mot une fois les balises retirees,

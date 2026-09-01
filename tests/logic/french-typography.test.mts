@@ -20,6 +20,7 @@ import {
   applyFrenchTypographyDeep,
   applyFrenchTypographyToHtml,
   isFrenchLocale,
+  reparerEntitesCassees,
 } from "../../lib/frenchTypography.ts";
 
 const NBSP = " ";
@@ -313,4 +314,141 @@ test("aucun chevron dans les libelles francais de l'interface", async () => {
     const trouves = src.split("\n").filter((l) => /[«»]/.test(l));
     assert.deepEqual(trouves, [], `des chevrons sont revenus dans ${rel}`);
   }
+});
+
+// ── L'ENTITÉ CASSÉE DE CHRISTIAN (1er septembre 2026) ────────────────
+//
+// Le titre de son 4e résultat revenait de la base en
+// `Ce n'est pas parce que tu n'es pas doué...&nbsp<nbsp>;`, affiché tel
+// quel sur sa page de résultat.
+//
+// La détection ne cherchait qu'une BALISE. Une chaîne peut porter une
+// ENTITÉ sans porter la moindre balise, et c'était son cas : elle
+// partait vers la version texte brut, qui insérait l'espace du français
+// devant le `;` structurel de `&nbsp;`.
+
+test("une entité SANS balise autour n'est plus cassée", () => {
+  const brut = "Ce n'est pas parce que tu n'es pas doué...&nbsp;";
+  assert.equal(applyFrenchTypography(brut, "fr"), brut);
+});
+
+test("les autres entités sans balise sont protégées aussi", () => {
+  for (const e of ["&amp;", "&lt;", "&gt;", "&quot;", "&#39;", "&#x27;"]) {
+    const brut = `Attention${e}`;
+    assert.equal(applyFrenchTypography(brut, "fr"), brut, e);
+  }
+});
+
+test("le texte VISIBLE garde bien sa règle française", () => {
+  // On ne protège pas tout : ce qui est de la prose se corrige toujours.
+  assert.equal(applyFrenchTypography("Prêt?", "fr"), "Prêt ?");
+  assert.equal(applyFrenchTypography("Bravo!&nbsp;", "fr"), "Bravo !&nbsp;");
+});
+
+test("un champ déjà cassé se répare tout seul au prochain enregistrement", () => {
+  // Une entité coupée en deux ne redevient pas une entité toute seule :
+  // elle reste affichée telle quelle chez la cliente.
+  assert.equal(
+    applyFrenchTypography("doué...&nbsp ;", "fr"),
+    "doué...&nbsp;",
+  );
+  assert.equal(reparerEntitesCassees("a&nbsp ;b"), "a&nbsp;b");
+  assert.equal(reparerEntitesCassees("a&#233 ;b"), "a&#233;b");
+});
+
+test("la réparation ne touche PAS à de la prose qui ressemble à une entité", () => {
+  // "M&M ;" est un texte légitime : le recoller changerait ce que la
+  // cliente a écrit. Liste fermée d'entités connues, et rien d'autre.
+  assert.equal(reparerEntitesCassees("des M&M ;"), "des M&M ;");
+  assert.equal(reparerEntitesCassees("Pierre & Paul ;"), "Pierre & Paul ;");
+});
+
+test("rien de tout ça hors français", () => {
+  assert.equal(applyFrenchTypography("Ready?&nbsp;", "en"), "Ready?&nbsp;");
+});
+
+test("le contenu profond d'un quiz est couvert", () => {
+  const payload = {
+    results: [{ title: "doué...&nbsp;", description: "<p>Alors?&nbsp;</p>" }],
+  };
+  const sortie = applyFrenchTypographyDeep(payload, "fr");
+  assert.equal(sortie.results[0].title, "doué...&nbsp;");
+  assert.equal(sortie.results[0].description, "<p>Alors ?&nbsp;</p>");
+});
+
+// ── LA RÈGLE NE DOIT JAMAIS MANGER SA PROPRE SORTIE ──────────────────
+//
+// Béné, 1er septembre 2026 : "ce genre de souci on l'a eu mille fois et
+// il revient toujours, j'en ai marre de corriger toujours les mêmes
+// choses."
+//
+// C'est ça, le vrai invariant. Une règle qui INSÈRE une espace est
+// appliquée à chaque enregistrement : si sa sortie n'est pas un point
+// fixe, le texte dérive un peu plus à chaque sauvegarde, et personne ne
+// voit rien avant que ce soit illisible. On fige donc l'idempotence, et
+// pas seulement les cas connus.
+
+const BATTERIE = [
+  "Prêt ?",
+  "Prêt?",
+  "Bravo !&nbsp;",
+  "Ce n'est pas parce que tu n'es pas doué...&nbsp;",
+  "<p>Alors&nbsp;? On y va&nbsp;!</p>",
+  '<a href="https://exemple.fr/page?x=1&amp;y=2">un lien</a>',
+  '<span style="color:red">rouge</span>',
+  "Rendez-vous à 12:30 ; sans faute.",
+  "Question : que faire ?",
+  "Le taux est de 40 % ; c'est net.",
+  "M&M ;",
+  "&#233; et &#x27; passent",
+];
+
+test("appliquer deux fois donne exactement la même chose", () => {
+  for (const brut of BATTERIE) {
+    const une = applyFrenchTypography(brut, "fr");
+    const deux = applyFrenchTypography(une, "fr");
+    assert.equal(deux, une, `dérive sur : ${brut}`);
+    // Et trois fois, parce qu'un cycle de période 2 passerait le test
+    // ci-dessus sans être stable pour autant.
+    assert.equal(applyFrenchTypography(deux, "fr"), une, `cycle sur : ${brut}`);
+  }
+});
+
+test("ce qui est TECHNIQUE ne bouge pas d'un caractère", () => {
+  // Chacun de ces cas a déjà cassé quelque chose quelque part.
+  const intacts = [
+    '<a href="https://exemple.fr/page?x=1">lien</a>',
+    '<span style="color:red">rouge</span>',
+    "&nbsp;",
+    "&amp;",
+    "&#233;",
+  ];
+  for (const s of intacts) {
+    assert.equal(applyFrenchTypography(s, "fr"), s, s);
+  }
+});
+
+// ── ET CE QUI EST DÉJÀ CASSÉ EN BASE S'AFFICHE JUSTE ─────────────────
+//
+// Corriger à l'enregistrement ne suffit pas : le texte abîmé est DÉJÀ
+// chez des clientes. Sans réparation à l'affichage, chacune devrait
+// rouvrir et ré-enregistrer chaque champ, un par un, pour faire
+// disparaître un texte qu'elle n'a jamais tapé.
+
+test("un titre déjà cassé s'affiche correctement, sans toucher à la base", async () => {
+  const { sanitizeRichText, stripHtml } = await import("../../lib/richText.ts");
+  const casse = "Ce n'est pas parce que tu n'es pas doué...&nbsp ;";
+
+  assert.ok(
+    !sanitizeRichText(casse).includes("&amp;nbsp"),
+    "le rendu riche montre encore l'entité cassée",
+  );
+  assert.ok(
+    !stripHtml(casse).includes("&nbsp"),
+    "l'aperçu de partage montre encore l'entité cassée",
+  );
+});
+
+test("la réparation à l'affichage ne réécrit pas de la prose", () => {
+  assert.equal(reparerEntitesCassees("des M&M ; et voilà"), "des M&M ; et voilà");
 });

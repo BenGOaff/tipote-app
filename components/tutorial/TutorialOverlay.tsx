@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useTutorial } from "@/hooks/useTutorial";
 import { WelcomeModal } from "@/components/tutorial/WelcomeModal";
 import { TourCompleteModal } from "@/components/tutorial/TourCompleteModal";
+import { estSurfacePublique } from "@/lib/nav/surfacePublique";
 
 export function TutorialOverlay() {
   const pathname = usePathname();
@@ -26,10 +27,24 @@ export function TutorialOverlay() {
     (typeof window !== "undefined" &&
       window.location.hostname.toLowerCase().startsWith("affiliate."));
 
+  // DÉFENSE EN PROFONDEUR (retour Béné, 1er septembre 2026) : "le
+  // didacticiel s'ouvre sur la version en ligne du quiz putain !!"
+  //
+  // La liste ci-dessous ne nommait pas "/q/", alors que celle du coach
+  // le faisait : deux listes tenues séparément finissent toujours par ne
+  // plus dire la même chose. Providers ne monte plus ce composant sur
+  // une surface publique ; ce contrôle est le deuxième verrou, celui qui
+  // survit au jour où quelqu'un remontera l'overlay ailleurs.
+  const surfacePublique = estSurfacePublique(
+    pathname,
+    typeof window !== "undefined" ? window.location.hostname : null,
+  );
+
   const isBlockedRoute =
     pathname === "/" ||
     pathname === "/login" ||
     onAffiliate ||
+    surfacePublique ||
     pathname.startsWith("/auth") ||
     pathname.startsWith("/onboarding");
 
