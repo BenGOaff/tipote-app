@@ -54,6 +54,20 @@ import { FORMATS_OFFRE, type FormatOffre } from "@/lib/generateurs/offre";
 import type { Piece, Piste } from "@/lib/generateurs/blocs";
 import { markdownVersHtml } from "@/lib/generateurs/markdown";
 
+/**
+ * LE COMPTEUR DE CRÉDITS, quand l'app en a un.
+ *
+ * `null` chez Tiquiz, qui n'en a pas : ce composant est le MÊME dans les
+ * deux dépôts, et une prop optionnelle vaut mieux que deux écrans qui
+ * divergeraient au premier correctif. Rien de ce bloc ne s'affiche quand
+ * elle est nulle.
+ */
+export interface CreditsAffiches {
+  solde: number;
+  coutPistes: number;
+  coutParBloc: Record<string, number>;
+}
+
 export interface ProjetAffiche {
   id: string;
   titre: string;
@@ -70,13 +84,29 @@ export default function GenerateurClient({
   generateur,
   projets,
   autorise,
+  lienPlans,
+  credits = null,
 }: {
   userEmail: string;
   generateur: GenerateurId;
   projets: ProjetAffiche[];
   autorise: boolean;
+  /** Où mène "Voir les formules" (l'onglet diffère selon le dépôt). */
+  lienPlans: string;
+  credits?: CreditsAffiches | null;
 }) {
   const t = useTranslations("generateurs");
+
+  // LE SOLDE SUIT LES GÉNÉRATIONS, sinon il ment jusqu'au prochain
+  // rechargement : la créatrice lance trois contenus et croit n'avoir
+  // rien payé. Le serveur renvoie ce qu'il a débité, on le retire ici.
+  const [solde, setSolde] = useState<number | null>(credits?.solde ?? null);
+  const coutDe = (bloc: string) => credits?.coutParBloc[bloc] ?? 0;
+  const coutPiste = (p: Piste) => p.pieces.reduce((n, x) => n + coutDe(x.bloc), 0);
+  function retirer(data: { credits?: unknown } | null) {
+    const n = Number(data?.credits ?? 0);
+    if (credits && Number.isFinite(n) && n > 0) setSolde((s) => Math.max(0, (s ?? 0) - n));
+  }
 
   const [projetId, setProjetId] = useState<string>("");
   const [profilIndex, setProfilIndex] = useState<number>(0);
@@ -132,6 +162,7 @@ export default function GenerateurClient({
       "offre_manquante",
       "profil_manquant",
       "not_found",
+      "credits",
     ];
     toast.error(t(`erreurs.${connues.includes(cle) ? cle : "generic"}`));
   }
@@ -163,6 +194,7 @@ export default function GenerateurClient({
         setEtat("repos");
         return;
       }
+      retirer(data);
       setPistes(data.pistes ?? []);
       setRecommandee(Number(data.recommandee ?? 0));
       setPourquoiRecommandee(String(data.pourquoiRecommandee ?? ""));
@@ -195,6 +227,7 @@ export default function GenerateurClient({
         direLErreur(data?.reason);
         return false;
       }
+      retirer(data);
       setContenus((c) => ({
         ...c,
         [cle(piece)]: {
@@ -233,13 +266,20 @@ export default function GenerateurClient({
 
   return (
     <AppShell userEmail={userEmail} headerTitle={t(`cartes.${generateur}.titre`)}>
-      <Link
-        href="/generateurs"
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        {t("retour")}
-      </Link>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Link
+          href="/generateurs"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          {t("retour")}
+        </Link>
+        {credits && solde !== null ? (
+          <span className="text-xs font-semibold text-muted-foreground">
+            {t("credits.solde", { count: solde })}
+          </span>
+        ) : null}
+      </div>
 
       {!autorise ? (
         <div className="rounded-xl border bg-card p-4 flex flex-col sm:flex-row sm:items-center gap-3">
@@ -249,7 +289,7 @@ export default function GenerateurClient({
             <p className="text-sm text-muted-foreground mt-0.5">{t("verrou.corps")}</p>
           </div>
           <Button asChild size="sm" className="shrink-0">
-            <Link href="/settings?tab=billing">{t("verrou.cta")}</Link>
+            <Link href={lienPlans}>{t("verrou.cta")}</Link>
           </Button>
         </div>
       ) : null}
@@ -423,6 +463,16 @@ export default function GenerateurClient({
             </Button>
           </div>
 
+          {/* LE COÛT SE DIT AVANT DE LANCER, pas après. Et il se redit
+              ici parce que "Proposer trois autres pistes" REFACTURE :
+              une relance gratuite en apparence est la meilleure façon
+              de vider un compteur sans comprendre pourquoi. */}
+          {credits ? (
+            <p className="text-xs text-muted-foreground">
+              {t("credits.coutPistes", { count: credits.coutPistes })}
+            </p>
+          ) : null}
+
           {pistes.length > 0 ? (
             <div className="grid gap-3 lg:grid-cols-3 items-start">
               {pistes.map((p, i) => (
@@ -447,6 +497,17 @@ export default function GenerateurClient({
                   ) : null}
                   <p className="text-[11px] text-muted-foreground mt-auto pt-2 border-t">
                     {t("pistes.morceaux", { count: p.pieces.length })}
+                    {credits ? (
+                      <>
+                        {" "}
+                        {/* LE TOTAL, pas le prix d'un morceau : annoncer
+                            l'unité, c'est laisser découvrir l'addition
+                            en cours de route. */}
+                        <span className="font-semibold">
+                          {t("credits.cout", { count: coutPiste(p) })}
+                        </span>
+                      </>
+                    ) : null}
                   </p>
                   <Button
                     size="sm"

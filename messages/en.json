@@ -7863,7 +7863,14 @@
       "offre_manquante": "First describe what your offer promises.",
       "profil_manquant": "Pick a profile first.",
       "not_found": "This project is no longer available. It may have been deleted, or it does not belong to you. Nothing was changed.",
-      "generic": "That did not go through. Try again, the rest of your work is kept."
+      "generic": "That did not go through. Try again, the rest of your work is kept.",
+      "credits": "You do not have enough credits for this piece. Top up your credits, everything already written is kept."
+    },
+    "credits": {
+      "solde": "{count, plural, one {# credit left} other {# credits left}}",
+      "cout": "{count, plural, one {# credit} other {# credits}}",
+      "coutPistes": "Asking for angles costs {count, plural, one {# credit} other {# credits}}, every time.",
+      "environ": "about {count, plural, one {# credit} other {# credits}}"
     }
   }
 }

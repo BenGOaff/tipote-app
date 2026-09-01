@@ -7,18 +7,23 @@
 // pour les membres + et les beta/lifetime, ça doit être visible pour les
 // membres gratuits et sans plus. On doit le faire bien."
 //
-// -- LE PALIER N'EST PAS LE MÊME QUE CHEZ TIQUIZ, ET C'EST À TRANCHER --
+// -- CHEZ TIPOTE : TOUT COMPTE PAYANT, ET ÇA CONSOMME DES CRÉDITS ------
 //
-// Sa phrase parle des plans "PLUS", qui sont le vocabulaire de Tiquiz.
-// Tipote n'en a pas : ses paliers sont free / basic / pro / elite / beta,
-// et il n'est pas encore en vente. On gate donc sur `analyseStatistiques`,
-// c'est à dire EXACTEMENT le palier qui ouvre déjà l'analyse IA des
-// statistiques : gratuit exclu, tout ce qui est payant inclus.
+// Béné a tranché le 1er septembre : "dispo pour tout le monde qui paye,
+// mais consomme des crédits."
 //
-// Deux choses restent à décider par Béné, pas par le code :
-//   - si les générateurs doivent consommer des CRÉDITS IA (Tipote en a,
-//     Tiquiz non). Ils n'en consomment aucun aujourd'hui ;
-//   - si elle veut les réserver à un palier plus haut (pro, elite).
+// Le gate est donc `isPaidPlan`, et pas une fonctionnalité de palier :
+// c'est littéralement ce qu'elle dit, et cette fonction est PERMISSIVE
+// par construction (tout ce qui n'est pas `free` passe), donc un palier
+// ajouté en base demain n'enferme personne dehors par accident.
+//
+// Le barème vit dans `lib/generateurs/credits.ts`, avec le calcul qui
+// l'a produit. Deux règles ici :
+//   - ON VÉRIFIE LE SOLDE AVANT D'APPELER ANTHROPIC. L'inverse, c'est
+//     payer un appel pour refuser ensuite.
+//   - ON DÉBITE APRÈS LE SUCCÈS. Débiter d'avance, c'est facturer une
+//     génération qui n'a rien rendu, et c'est le genre d'écart qu'une
+//     cliente ne pardonne pas sur un compteur.
 //
 // -- CE QUE LE CLIENT N'ENVOIE PAS, ET C'EST L'ESSENTIEL --------------
 //
@@ -58,7 +63,9 @@ import {
   type AiFailure,
 } from "@/lib/aiFailure";
 import { resolveAppUrl } from "@/lib/authLinks";
-import { getPlanLimits, isPaidPlan } from "@/lib/planLimits";
+import { isPaidPlan } from "@/lib/planLimits";
+import { consumeCredits, ensureUserCredits } from "@/lib/credits";
+import { COUT_PISTES, coutMorceau } from "@/lib/generateurs/credits";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -179,11 +186,8 @@ export async function POST(req: NextRequest) {
       .maybeSingle(),
   ]);
   const plan = (profil as { plan?: string | null } | null)?.plan ?? null;
-  if (!getPlanLimits(plan).analyseStatistiques) {
-    return NextResponse.json(
-      { ok: false, reason: "plan_required", showUpsell: !isPaidPlan(plan) },
-      { status: 403 },
-    );
+  if (!isPaidPlan(plan)) {
+    return NextResponse.json({ ok: false, reason: "plan_required" }, { status: 403 });
   }
 
   // ── LA LIMITE ──
@@ -412,8 +416,43 @@ export async function POST(req: NextRequest) {
     return out;
   }
 
+  // ── LES CRÉDITS ──
+  //
+  // On VÉRIFIE avant d'appeler Anthropic, on DÉBITE après le succès.
+  // Entre les deux, rien n'est réservé : deux onglets ouverts peuvent
+  // donc passer le contrôle et débiter deux fois. C'est assumé, et c'est
+  // le bon sens de l'erreur : une réservation qu'un plantage laisserait
+  // en place retirerait des crédits pour une génération qui n'a jamais
+  // eu lieu, et personne ne saurait les rendre.
+  async function soldeSuffisant(cout: number): Promise<boolean> {
+    try {
+      const solde = await ensureUserCredits(user!.id);
+      return solde.total_remaining >= cout;
+    } catch (err) {
+      // On ne BLOQUE PAS sur une panne du compteur : elle a payé son
+      // abonnement, et lui refuser l'outil parce qu'une table ne répond
+      // pas serait la punir d'une panne qui n'est pas la sienne. Ça crie
+      // dans le journal.
+      console.error("[generateurs] lecture des credits impossible :", err);
+      return true;
+    }
+  }
+
+  async function debiter(cout: number, contexte: Record<string, unknown>) {
+    try {
+      await consumeCredits(user!.id, cout, { feature: "generateurs", ...contexte });
+    } catch (err) {
+      // Le contenu est déjà écrit et il part à l'écran : un débit raté
+      // ne le retient pas. On perd quelques crédits, pas un livrable.
+      console.error("[generateurs] debit impossible :", err);
+    }
+  }
+
   // ── ÉTAPE 1 : les pistes ──
   if (input.step === "pistes") {
+    if (!(await soldeSuffisant(COUT_PISTES))) {
+      return refus("credits", { requis: COUT_PISTES });
+    }
     const out = await appeler(
       consignePistes(id, brief),
       messagePourLeModele({
@@ -433,7 +472,8 @@ export async function POST(req: NextRequest) {
       console.error("[generateurs] pistes illisibles :", out.texte.slice(0, 1500));
       return refus("unreadable");
     }
-    return NextResponse.json({ ok: true, ...pistes });
+    await debiter(COUT_PISTES, { step: "pistes", generateur: id, quiz_id: input.quizId });
+    return NextResponse.json({ ok: true, ...pistes, credits: COUT_PISTES });
   }
 
   // ── ÉTAPE 2 : un morceau ──
@@ -443,6 +483,9 @@ export async function POST(req: NextRequest) {
   };
   const piece = piste.pieces[input.pieceIndex];
   if (!piece) return refus("piece_inconnue");
+
+  const cout = coutMorceau(piece.bloc);
+  if (!(await soldeSuffisant(cout))) return refus("credits", { requis: cout });
 
   // Le bonus est le plus long des trois ; les emails et les posts
   // tiennent largement en dessous, et un budget trop large ne rend pas
@@ -460,10 +503,18 @@ export async function POST(req: NextRequest) {
   );
   if (!out.ok) return refus(out.failure);
 
+  await debiter(cout, {
+    step: "produire",
+    generateur: id,
+    quiz_id: input.quizId,
+    bloc: piece.bloc,
+  });
+
   return NextResponse.json({
     ok: true,
     bloc: piece.bloc,
     index: piece.index,
+    credits: cout,
     markdown: sanitizeAiText(out.texte),
     // Un texte coupé à la limite reste utilisable : on le rend, mais on
     // le DIT. En silence, c'est une créatrice qui publie un contenu qui

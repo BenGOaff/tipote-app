@@ -7863,7 +7863,14 @@
       "offre_manquante": "Descreva antes o que sua oferta promete.",
       "profil_manquant": "Escolha antes um perfil.",
       "not_found": "Este projeto não está mais disponível. Pode ter sido excluído, ou não é seu. Nada foi alterado.",
-      "generic": "Não deu certo. Tente de novo, o resto do seu trabalho está guardado."
+      "generic": "Não deu certo. Tente de novo, o resto do seu trabalho está guardado.",
+      "credits": "Faltam créditos para este conteúdo. Recarregue seus créditos, tudo o que já foi escrito fica guardado."
+    },
+    "credits": {
+      "solde": "{count, plural, one {resta # crédito} other {restam # créditos}}",
+      "cout": "{count, plural, one {# crédito} other {# créditos}}",
+      "coutPistes": "Pedir propostas custa {count, plural, one {# crédito} other {# créditos}}, a cada vez.",
+      "environ": "cerca de {count, plural, one {# crédito} other {# créditos}}"
     }
   }
 }

@@ -3404,29 +3404,83 @@ côtés, à l'octet près : `lib/generateurs/*`, `lib/prompts/generateurs/*`,
 `lib/aiFailure.ts`, `lib/quiz/urlPublique.ts`. Toute évolution se porte
 des deux côtés.
 
-### CE QUI DIFFÈRE ICI, ET C'EST À TRANCHER PAR BÉNÉ
+### CE QUI DIFFÈRE ICI
 
-**1. LE PALIER.** Sa phrase parle des "membres +", qui sont le
-vocabulaire de Tiquiz. Tipote n'a pas de palier PLUS : ses paliers sont
-`free / basic / pro / elite / beta`, et il n'est pas encore en vente. On
-gate donc sur `getPlanLimits(plan).analyseStatistiques`, c'est à dire
-EXACTEMENT le palier qui ouvre déjà l'analyse IA des statistiques :
-gratuit exclu, tout ce qui est payant inclus. **C'est une hypothèse
-posée, pas une décision d'elle** : si elle veut les réserver à `pro` ou
-`elite`, c'est une ligne à changer.
+**1. TOUT COMPTE PAYANT, ET ÇA CONSOMME DES CRÉDITS.** Tranché par Béné
+le 1er septembre : "dispo pour tout le monde qui paye, mais consomme des
+crédits. Calcule le nombre cohérent de crédits vis à vis de la
+consommation estimée de tokens pour chaque appel."
 
-**2. LES CRÉDITS IA.** Tipote en a, Tiquiz non. Les générateurs n'en
-consomment AUCUN aujourd'hui. Une génération complète, c'est un appel
-de pistes plus jusqu'à huit morceaux : si elle veut les décompter, il
-faut décider ce que vaut un morceau, et le dire à l'écran AVANT de
-lancer. On ne l'a pas inventé.
+Le gate est donc `isPaidPlan`, littéralement ce qu'elle dit, et cette
+fonction est PERMISSIVE par construction (tout ce qui n'est pas `free`
+passe) : un palier ajouté en base demain n'enferme personne dehors.
 
-**3. DEUX TABLES AU LIEU D'UNE.** Le palier vit dans `profiles`, la
+**2. LE BARÈME, ET COMMENT IL A ÉTÉ TROUVÉ.** Il vit dans
+`lib/generateurs/credits.ts`, avec le calcul complet. Il n'a PAS été
+inventé : on a relevé celui qui existe déjà dans ce dépôt, puis vérifié
+qu'il tenait au regard des tokens.
+
+| ce qu'on écrit | crédits | pourquoi ce chiffre là |
+|---|---|---|
+| les 3 pistes | 1 | ~700 tokens de sortie, comme une analyse IA |
+| le bonus entier | 4 | ~4000 tokens : c'est le tarif d'un article de blog, et c'est le même travail |
+| le mode d'emploi | 1 | ~1200 tokens, comme une analyse |
+| les textes de remise | 1 | ~900 tokens |
+| un email | 1 | **le prix d'un email écrit dans "Créer"** |
+| un post | 0,5 | deux fois plus court qu'un email ; 0,5 existe déjà (chat d'idée, variantes genrées) |
+
+Ce qui donne **7 crédits pour un bonus complet, 6 pour une séquence de
+5 emails, 6 pour une campagne de 3 emails et 4 posts**, c'est à dire
+l'ordre de grandeur d'un quiz généré (6). C'est le bon repère : on écrit
+tout ce qui vient APRÈS le quiz, ça ne doit pas coûter plus cher que le
+quiz.
+
+**LE CALAGE, pour le prochain qui touchera au barème.** Sonnet coûte
+3 $ le million de tokens en entrée et 15 $ en sortie. Trois points de
+référence indépendants de ce dépôt, pris à leur longueur RÉELLE et non à
+leur plafond, donnent tous la même unité : un post (~0,012 $) vaut 1
+crédit, un article (~0,055 $) en vaut 4, un quiz généré (~0,084 $) en
+vaut 6. **1 crédit vaut donc environ 0,013 $.**
+
+**MAIS L'ARGUMENT QUI TRANCHE EST PRODUIT, PAS COMPTABLE :** un email
+généré dans "Créer" coûte 1 crédit, donc un email de séquence coûte
+1 crédit. Plus cher ici, et la créatrice les écrit un par un dans
+l'autre écran ; moins cher, et c'est "Créer" qui devient le mauvais
+chemin. Un même livrable, un même prix, quel que soit l'endroit d'où on
+le demande. Le calcul en tokens CONFIRME, il ne décide pas.
+
+**3. LES DEUX RÈGLES DU DÉBIT, à ne pas inverser.**
+- **On vérifie le solde AVANT d'appeler Anthropic.** L'inverse, c'est
+  payer un appel pour refuser ensuite.
+- **On débite APRÈS le succès.** Débiter d'avance, c'est facturer une
+  génération qui n'a rien rendu, et c'est le genre d'écart qu'une
+  cliente ne pardonne pas sur un compteur.
+
+Rien n'est réservé entre les deux : deux onglets peuvent donc passer le
+contrôle et débiter deux fois. C'est ASSUMÉ, et c'est le bon sens de
+l'erreur : une réservation qu'un plantage laisserait en place retirerait
+des crédits pour une génération qui n'a jamais eu lieu, et personne ne
+saurait les rendre.
+
+**Une panne du COMPTEUR ne bloque pas la génération** : elle a payé son
+abonnement, et lui refuser l'outil parce qu'une table ne répond pas
+serait la punir d'une panne qui n'est pas la sienne. Ça crie dans le
+journal.
+
+**4. LE COÛT SE DIT AVANT DE LANCER.** Le solde en haut de l'écran, le
+prix des pistes sous le bouton (parce que "Proposer trois autres pistes"
+REFACTURE, et une relance gratuite en apparence est la meilleure façon
+de vider un compteur sans comprendre pourquoi), et le TOTAL sur chaque
+carte de piste, jamais le prix d'un morceau : annoncer l'unité, c'est
+laisser découvrir l'addition en cours de route. Le solde affiché suit
+les générations, sinon il ment jusqu'au prochain rechargement.
+
+**5. DEUX TABLES AU LIEU D'UNE.** Le palier vit dans `profiles`, la
 forme d'adresse par défaut dans `business_profiles`. Les demander dans
 le même `select` ferait échouer la requête ENTIÈRE sur une colonne
 inconnue, donc répondre "introuvable" sur un quiz qui existe.
 
-**4. LE TOUR GUIDÉ.** L'entrée de sidebar porte un `spotlightId` mais
+**6. LE TOUR GUIDÉ.** L'entrée de sidebar porte un `spotlightId` mais
 AUCUNE phase de tour ne pointe dessus, comme `boost`. C'est le sens qui
 compte : **une phase sans ancre BLOQUE le tour** (drame Gwenn, 10 juin),
 une ancre sans phase ne coûte rien.
@@ -3445,4 +3499,14 @@ une ancre sans phase ne coûte rien.
 
 **Endroits à respecter :** `app/api/generateurs/route.ts`,
 `app/generateurs/`, `lib/generateurs/`, `lib/prompts/generateurs/`.
-Test : `tests/logic/generateurs.test.mts` (le MÊME des deux côtés).
+Tests : `tests/logic/generateurs.test.mts` (le MÊME des deux côtés) et
+`tests/logic/generateurs-credits.test.mts` (ICI seulement).
+
+**`lib/generateurs/credits.ts` ne se porte PAS dans Tiquiz.** Il n'y a
+pas de crédits là bas, et un module mort est un piège que le prochain
+passage rebranche en croyant réparer (leçon de `simuler()`, 31 août).
+Les DEUX écrans, eux, sont identiques à l'octet près dans les deux
+dépôts : le compteur y est une PROP optionnelle, nulle chez Tiquiz. Le
+lien "Voir les formules" aussi, parce que l'onglet ne porte pas le même
+nom des deux côtés (`billing` ici, `account` là bas) et qu'un lien
+recopié en dur finirait par envoyer quelqu'un sur un onglet inexistant.

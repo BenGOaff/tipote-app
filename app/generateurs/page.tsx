@@ -18,7 +18,9 @@ import { getTranslations } from "next-intl/server";
 
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { getPlanLimits } from "@/lib/planLimits";
+import { isPaidPlan } from "@/lib/planLimits";
+import { ensureUserCredits } from "@/lib/credits";
+import { COUT_INDICATIF } from "@/lib/generateurs/credits";
 import GenerateursClient from "./GenerateursClient";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -40,14 +42,33 @@ export default async function GenerateursPage() {
     .maybeSingle();
   const plan = (profil as { plan?: string | null } | null)?.plan ?? null;
 
+  // "Dispo pour tout le monde qui paye, mais consomme des crédits"
+  // (Béné, 1er septembre). `isPaidPlan` est littéralement ça, et il est
+  // permissif : un palier ajouté en base demain n'enferme personne
+  // dehors par accident.
+  const autorise = isPaidPlan(plan);
+
+  // LE SOLDE N'EST LU QUE POUR CEUX QUI PEUVENT S'EN SERVIR. L'afficher
+  // à un compte gratuit annoncerait un compteur qui ne sert à rien, et
+  // ferait croire que c'est LUI qui bloque.
+  //
+  // Une panne du compteur ne coûte que l'affichage du solde : l'écran
+  // se tait au lieu de refuser l'entrée.
+  const credits = autorise
+    ? await ensureUserCredits(user.id)
+        .then((s) => ({ solde: s.total_remaining, couts: COUT_INDICATIF }))
+        .catch((err) => {
+          console.error("[generateurs] solde illisible :", err);
+          return null;
+        })
+    : null;
+
   return (
-    // LE PALIER : `analyseStatistiques`, c'est à dire celui qui ouvre
-    // déjà l'analyse IA. Tipote n'a pas de palier "PLUS" (le vocabulaire
-    // de la demande de Béné vient de Tiquiz) : à retrancher avec elle si
-    // elle veut le réserver plus haut.
     <GenerateursClient
       userEmail={user.email ?? ""}
-      autorise={getPlanLimits(plan).analyseStatistiques}
+      autorise={autorise}
+      lienPlans="/settings?tab=billing"
+      credits={credits}
     />
   );
 }

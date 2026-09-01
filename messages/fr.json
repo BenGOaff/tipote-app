@@ -7863,7 +7863,14 @@
       "offre_manquante": "Décris d'abord ce que ton offre promet.",
       "profil_manquant": "Choisis d'abord un profil.",
       "not_found": "Ce projet n'est plus disponible. Il a peut être été supprimé, ou il ne t'appartient pas. Rien n'a été modifié.",
-      "generic": "Ça n'a pas abouti. Relance, le reste de ton travail est gardé."
+      "generic": "Ça n'a pas abouti. Relance, le reste de ton travail est gardé.",
+      "credits": "Il te manque des crédits pour ce contenu. Recharge tes crédits, tout ce qui est déjà écrit est gardé."
+    },
+    "credits": {
+      "solde": "{count, plural, one {# crédit restant} other {# crédits restants}}",
+      "cout": "{count, plural, one {# crédit} other {# crédits}}",
+      "coutPistes": "Proposer des pistes coûte {count, plural, one {# crédit} other {# crédits}}, à chaque fois.",
+      "environ": "environ {count, plural, one {# crédit} other {# crédits}}"
     }
   }
 }

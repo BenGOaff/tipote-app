@@ -20,7 +20,9 @@ import { getTranslations } from "next-intl/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
-import { getPlanLimits } from "@/lib/planLimits";
+import { isPaidPlan } from "@/lib/planLimits";
+import { ensureUserCredits } from "@/lib/credits";
+import { COUT_PAR_BLOC, COUT_PISTES } from "@/lib/generateurs/credits";
 import { GENERATEURS, type GenerateurId } from "@/lib/generateurs/catalogue";
 import { resultChoiceLabel } from "@/lib/quiz/resultLabel";
 import { stripHtml } from "@/lib/richText";
@@ -111,6 +113,24 @@ export default async function GenerateurPage({
     compteQuestions.set(q.quiz_id, (compteQuestions.get(q.quiz_id) ?? 0) + 1);
   }
 
+  // "Dispo pour tout le monde qui paye, mais consomme des crédits."
+  // Le solde n'est lu que pour ceux qui peuvent s'en servir, et une
+  // panne du compteur ne coûte que son affichage : la page se tait au
+  // lieu de refuser l'entrée à quelqu'un qui a payé son abonnement.
+  const autorise = isPaidPlan(plan);
+  const credits = autorise
+    ? await ensureUserCredits(user.id)
+        .then((s) => ({
+          solde: s.total_remaining,
+          coutPistes: COUT_PISTES,
+          coutParBloc: COUT_PAR_BLOC as Record<string, number>,
+        }))
+        .catch((err) => {
+          console.error("[generateurs] solde illisible :", err);
+          return null;
+        })
+    : null;
+
   const projets: ProjetAffiche[] = lignes.map((q) => ({
     id: q.id,
     titre: stripHtml(String(q.title ?? "")).trim(),
@@ -125,7 +145,9 @@ export default async function GenerateurPage({
       userEmail={user.email ?? ""}
       generateur={id}
       projets={projets}
-      autorise={getPlanLimits(plan).analyseStatistiques}
+      autorise={autorise}
+      lienPlans="/settings?tab=billing"
+      credits={credits}
     />
   );
 }
