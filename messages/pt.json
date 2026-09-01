@@ -7668,7 +7668,8 @@
     "extract_failed": "A leitura do ficheiro falhou. Tente novamente ou exporte o seu documento como .docx ou .txt."
   },
   "partageQuiz": {
-    "title": "Partilhar este quiz",
+    "title": "Dar uma cópia deste quiz",
+    "notPublicLink": "Este NÃO é o link para responder ao quiz: esse está no separador Partilhar do editor. Este link instala uma cópia do quiz na conta de outra pessoa.",
     "intro": "Um link, um clique, e o quiz fica instalado na conta da pessoa, com os textos, as imagens e os pontos.",
     "whatTravels": "O conteúdo viaja: títulos, perguntas, respostas, pontos, perfis, imagens, cores e disposição. O que o identifica fica consigo: as suas tags Systeme.io, os seus pixels de seguimento e os endereços dos seus botões. A pessoa vê isto escrito na instalação, e o quiz chega como rascunho.",
     "labelField": "Para quem? (opcional)",
@@ -7689,6 +7690,6 @@
     "loadError": "Não foi possível ler os links de partilha.",
     "createError": "Não foi possível criar o link.",
     "updateError": "Não foi possível guardar a alteração.",
-    "button": "Partilhar este quiz"
+    "button": "Dar uma cópia do quiz"
   }
 }

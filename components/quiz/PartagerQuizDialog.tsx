@@ -145,6 +145,15 @@ export function PartagerQuizDialog({
           <DialogDescription>{t("intro")}</DialogDescription>
         </DialogHeader>
 
+        {/* LA PHRASE QUI MANQUAIT (retour Christian, 1er septembre 2026).
+            Deux liens portaient le même mot et la même icône : celui qui
+            fait PASSER le quiz, et celui qui en INSTALLE UNE COPIE chez
+            quelqu'un d'autre. Le contraste se dit AVANT le bouton, pas
+            dans un paragraphe qu'on lit après avoir copié. */}
+        <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm">
+          {t("notPublicLink")}
+        </div>
+
         <div className="rounded-lg border bg-muted/40 p-3 text-sm text-muted-foreground">
           {t("whatTravels")}
         </div>

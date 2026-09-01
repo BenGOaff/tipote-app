@@ -78,8 +78,7 @@ import {
   Loader2,
   BarChart3,
   PlayCircle,
-  type LucideIcon,
-} from "lucide-react";
+  type LucideIcon, Gift } from "lucide-react";
 
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -1047,7 +1046,11 @@ export default function MyContentLovableClient({
                                       setPartageQuizId(qz.id);
                                     }}
                                   >
-                                    <Share2 className="w-4 h-4 mr-2" /> {tPartage("button")}
+                                    {/* DONNER une copie : ni l'icone du lien public
+                                        (Share2), ni celle de "dupliquer pour moi"
+                                        (CopyPlus). Les trois gestes se ressemblaient
+                                        (Christian, 1er septembre 2026). */}
+                                    <Gift className="w-4 h-4 mr-2" /> {tPartage("button")}
                                   </DropdownMenuItem>
                                   {isActive && (() => {
                                     // Gwenn (19 mai 2026) : URL respecte

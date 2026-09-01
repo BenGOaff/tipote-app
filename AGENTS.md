@@ -3043,3 +3043,64 @@ qui inquiète vraiment : rien n'a été modifié.
 `toast.error("Quiz not found")`, écrit en dur EN ANGLAIS dans une
 interface qui existe en 7 langues. Les clés `unavailableTitle` et
 `unavailableBody` sont posées dans les 7 fichiers.
+
+## Deux liens, le même mot, deux gestes opposés (retour Christian, 1er septembre 2026)
+
+Béné : "est-ce que c'est bien expliqué, la différence entre le lien de
+partage pour FAIRE le quiz et celui pour COPIER le quiz dans son compte ?"
+
+Non, et l'écran faisait tout pour les confondre :
+
+| Le geste | Où | Comment il s'appelait |
+|---|---|---|
+| donner le lien pour RÉPONDRE au quiz | onglet de l'éditeur | "Partager", icône `Share2` |
+| donner une COPIE du quiz à quelqu'un | carte de Mes projets | "Partager ce quiz", icône `Share2` |
+| se dupliquer le quiz à soi même | carte de Mes projets | "Dupliquer", icône `CopyPlus` |
+
+**Même mot, même icône, et le deuxième est le seul qui donne son
+travail.** Un créateur qui colle ce lien à son audience installe son
+quiz dans le compte de chaque personne qui clique. Le texte du panneau
+était juste et complet, mais il fallait l'ouvrir pour le découvrir :
+l'entrée, elle, disait le contraire.
+
+**Règle : le geste se nomme par son VERBE, pas par sa famille.**
+"Donner une copie du quiz", icône `Gift`, distincte des deux autres. Et
+la première ligne du panneau pose le contraste AVANT le bouton
+(`partageQuiz.notPublicLink`, 7 langues) : "ce n'est PAS le lien pour
+faire passer le quiz, celui-là est dans l'onglet Partager de l'éditeur".
+
+**Trois gestes voisins ne peuvent pas porter deux icônes.** Le premier
+jet remplaçait `Share2` par `CopyPlus`... qui est déjà l'icône de
+"Dupliquer". On déplaçait la collision au lieu de la retirer.
+
+## Vérifier que le bouton du quiz porte bien l'identifiant (Béné, 1er septembre 2026)
+
+"On peut vérifier que l'url du CTA du quiz se voit bien attribuer l'id
+de l'affilié au bon format ? Il faut récupérer l'id dans l'url
+(`?sa=sa...`) et l'ajouter à l'url du CTA."
+
+```bash
+npm run check:cta-affilie -- "https://app.tipote.com/q/mon-quiz?sa=sa0007..."
+```
+
+Il va chercher le VRAI quiz sur le serveur et imprime l'adresse que
+portera chaque bouton (fin de quiz, chaque profil, quiz fermé). Il
+appelle les MÊMES fonctions que le viewer (`lireAffiliateDuQuiz` puis
+`attacherAffiliate`) : un script qui réécrirait la règle finirait par
+dire le contraire de ce que le visiteur voit, c'est le défaut sorti six
+fois dans ces dépôts.
+
+**LE PIÈGE QU'IL EXISTE POUR ATTRAPER : un `sa` mal formé est jeté SANS
+BRUIT.** C'est voulu, cette valeur finit dans un versement. Mais à
+l'écran rien ne le montre : le bouton mène quelque part, il ne porte
+simplement rien. Le script dit la longueur reçue et la forme attendue
+("sa" + 20 à 80 caractères hexadécimaux, `lib/affiliate/saFormat.ts`).
+
+**Ce qu'il ne peut PAS vérifier, et il le dit :** la deuxième moitié
+appartient au vendeur. Systeme.io pose SON cookie quand le visiteur
+atterrit sur SA page ; nous, on ne fait que coller l'identifiant sur le
+bouton. Et leur API n'expose AUCUN moyen d'assigner un affilié à un
+contact (mesuré : l'écriture d'un contact n'accepte que des champs et
+une langue). Un contact créé par notre capture d'email affichera donc
+toujours "Affilié : Aucun" tant que la personne n'a pas cliqué le
+bouton.
