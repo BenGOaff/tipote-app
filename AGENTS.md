@@ -3014,3 +3014,32 @@ SUIVIE D'UN REPLI, pas la composition elle-même.
 
 Test : `tests/logic/nom-du-profil.test.mts`. Le module quiz de Tiquiz est
 jumeau : la correction y vit aussi.
+
+### Et un projet qui n'est pas à vous ne téléporte plus personne
+
+Béné, en essayant d'ouvrir le quiz de Christian : "je n'arrive pas à
+accéder à ses quiz, je ne sais pas pourquoi, et pire : ça me redirige
+directement vers mon dashboard et pas vers une page 'ce quiz n'est pas
+disponible'."
+
+On DISAIT bien quelque chose, un toast, mais `router.push("/dashboard")`
+partait dans la foulée : elle changeait d'écran avant d'avoir lu la
+raison, et se retrouvait sur son tableau de bord sans savoir pourquoi.
+Un toast qui accompagne une navigation n'est pas un message, c'est un
+reflet.
+
+**Règle : les quatre éditeurs affichent un ÉCRAN** (titre, phrase, et
+UNE sortie nommée qui passe par `projectBackHref`, donc la hiérarchie et
+jamais l'historique). Plus aucune redirection sur un chargement qui
+échoue. Seul le mode EMBED garde le toast : il n'a pas de tableau de
+bord où retourner.
+
+**On ne distingue pas "supprimé" de "pas à toi", et c'est voulu** : la
+route répond 404 dans les deux cas pour ne pas révéler qu'un projet
+existe. La phrase dit donc les deux possibilités, plus la seule chose
+qui inquiète vraiment : rien n'a été modifié.
+
+**Trouvé au passage** : deux de ces quatre écrans affichaient
+`toast.error("Quiz not found")`, écrit en dur EN ANGLAIS dans une
+interface qui existe en 7 langues. Les clés `unavailableTitle` et
+`unavailableBody` sont posées dans les 7 fichiers.

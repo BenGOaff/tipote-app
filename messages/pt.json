@@ -4731,6 +4731,8 @@
     "addOption": "Adicionar uma opção",
     "backToEditorAria": "Voltar ao editor",
     "backToProjects": "Os meus conteúdos",
+    "unavailableTitle": "Este projeto não está disponível",
+    "unavailableBody": "Pode ter sido eliminado, ou pertence a outra conta. Nada foi alterado.",
     "openEditor": "Editar",
     "distributionByResult": "Distribuição por resultado",
     "optionHideResponseCounts": "Ocultar o número de respostas",
