@@ -4318,6 +4318,7 @@
     "subtabSettings": "الإعدادات",
     "resultsSection": "النتائج",
     "emptyResult": "نتيجة فارغة",
+    "previewResult": "النتيجة {n}",
     "previewResultTagHint": "ستضاف هذه العلامة إلى الزائر الذي حصل على نتيجة « {title} ».",
     "resultAddImage": "إضافة صورة",
     "resultAddImageHint": "ستضاف الصورة في أعلى الوصف. يمكنك أيضًا سحب وإفلات ملف في أي مكان داخل منطقة النص.",

@@ -4318,6 +4318,7 @@
     "subtabSettings": "Definições",
     "resultsSection": "Resultados",
     "emptyResult": "Resultado vazio",
+    "previewResult": "Resultado {n}",
     "previewResultTagHint": "Esta tag será adicionada ao visitante que obtiver o resultado « {title} ».",
     "resultAddImage": "Adicionar imagem",
     "resultAddImageHint": "A imagem será adicionada no topo da descrição. Também pode arrastar e largar um ficheiro em qualquer lugar da área de texto.",

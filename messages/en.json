@@ -4318,6 +4318,7 @@
     "subtabSettings": "Settings",
     "resultsSection": "Results",
     "emptyResult": "Empty result",
+    "previewResult": "Result {n}",
     "previewResultTagHint": "This tag will be added to the lead who got the « {title} » result.",
     "resultAddImage": "Add an image",
     "resultAddImageHint": "The image will be added at the top of the description. You can also drag-and-drop a file anywhere in the text area.",

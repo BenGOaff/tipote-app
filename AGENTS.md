@@ -2964,3 +2964,53 @@ garde-fou est `tests/logic/brouillon-question.test.mts`, vérifié en
 rejouant la version d'avant (il rougit).
 
 Le module quiz de Tiquiz est jumeau : la correction y vit aussi.
+
+## Le menu sous une réponse dit le NOM du profil (retour Christian, 1er septembre 2026)
+
+"Les différents résultats n'apparaissent pas sous les réponses. Seuls
+apparaissent « Résultat 1, Résultat 2 » etc."
+
+Il avait raison, et le menu ne POUVAIT rien afficher d'autre : les deux
+sélecteurs posés sous chaque réponse de l'éditeur jetaient le profil et
+n'en gardaient que le rang.
+
+```
+editResults.map((_, ri) => <option>…Résultat {ri + 1}</option>)
+                  ^^^ le profil, ignoré
+```
+
+Aucun titre, si bien écrit soit-il, ne pouvait apparaître. Sur un quiz à
+six profils, "Résultat 4" ne dit rien : la créatrice branche ses
+réponses au hasard, ou remonte vérifier l'ordre à chaque clic. C'est le
+geste le plus répété de tout l'éditeur.
+
+**LA RÈGLE EXISTAIT DÉJÀ, recopiée à la main quatre fois dans le MÊME
+fichier** (`stripHtml(extractResultLabel(cleanPlaceholdersForLabel(t)))`
+plus un repli). Deux endroits ne l'ont jamais eue. Une règle recopiée
+finit toujours par en oublier un : c'est le `mx-auto` du sous-titre, les
+images de réponse, les réseaux de partage, la sixième fois.
+
+**Règle : `lib/quiz/resultLabel.ts`, `resultChoiceLabel(titre,
+secours)`, et personne ne recompose.** Les trois étapes comptent et
+l'ordre aussi : placeholders interpolés à VIDE (sinon le menu affiche
+"Bonjour {name}, tu es le..."), puis `extractResultLabel` (retire le
+", tu es le·la" et les marques inclusives), puis `stripHtml` (un
+`<option>` ne rend pas de HTML, il montrerait les balises).
+
+**`secours` est OBLIGATOIRE.** Un profil encore sans titre doit rester
+choisissable : une entrée vide dans un menu est pire que "Résultat 3".
+
+**Trouvé au passage, et c'est propre à ce dépôt : trois replis étaient
+écrits EN FRANÇAIS DANS LE CODE** (`` `Résultat ${ri + 1}` ``), dans les
+alertes de cohérence et l'aide des étiquettes. Une créatrice espagnole
+ou arabe lisait "Résultat 4". La clé `quizDetail.previewResult` existe
+maintenant dans les 7 langues.
+
+**Exception assumée :** `titleForVisual` compose les deux mêmes
+fonctions pour le titre d'une IMAGE générée, sans repli et avec sa
+propre capitalisation. Ce n'est pas un libellé d'interface, et le
+confondre casserait la génération d'images. Le test vise la composition
+SUIVIE D'UN REPLI, pas la composition elle-même.
+
+Test : `tests/logic/nom-du-profil.test.mts`. Le module quiz de Tiquiz est
+jumeau : la correction y vit aussi.

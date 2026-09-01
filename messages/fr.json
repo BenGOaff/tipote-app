@@ -4318,6 +4318,7 @@
     "subtabSettings": "Paramètres",
     "resultsSection": "Résultats",
     "emptyResult": "Résultat vide",
+    "previewResult": "Résultat {n}",
     "previewResultTagHint": "Ce tag sera ajouté au visiteur qui a obtenu le résultat \"{title}\".",
     "resultAddImage": "Ajouter une image",
     "resultAddImageHint": "L'image sera ajoutée en haut de la description. Tu peux aussi drag-and-drop un fichier n'importe où dans la zone de texte.",
