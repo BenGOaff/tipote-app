@@ -59,11 +59,11 @@ const EXACT_DOMAINS: ReadonlyArray<readonly [string, ClickSource]> = [
 ];
 
 /**
- * Marques reconnues sur une ÉTIQUETTE du nom d'hôte.
+ * Marques reconnues sur un SEGMENT du nom d'hôte.
  *
  * `pinterest` couvre pinterest.com, pinterest.fr et n'importe quel autre
  * suffixe, sans qu'on ait à les énumérer. Et comme la comparaison porte
- * sur un tag entière, aucun mot ne peut se cacher à l'intérieur
+ * sur un segment entier, aucun mot ne peut se cacher à l'intérieur
  * d'un autre.
  */
 const LABELS: ReadonlyArray<readonly [string, ClickSource]> = [
@@ -116,21 +116,21 @@ export function resolveClickSource(referrer: string | null | undefined): ClickSo
   }
   if (!hote) return "web";
 
-  const etiquettes = hote.split(".");
+  const segments = hote.split(".");
 
   // 1. La boîte mail d'abord : `mail.google.com` est un email, pas une
   //    recherche. Cette règle DOIT passer avant les marques.
-  if (MAILBOX_PREFIXES.has(etiquettes[0])) return "email";
+  if (MAILBOX_PREFIXES.has(segments[0])) return "email";
 
   // 2. Les domaines courts, sur la frontière d'un nom d'hôte.
   for (const [domaine, source] of EXACT_DOMAINS) {
     if (hote === domaine || hote.endsWith(`.${domaine}`)) return source;
   }
 
-  // 3. Les marques, sur un tag entière : aucun mot ne peut se
+  // 3. Les marques, sur un segment entier : aucun mot ne peut se
   //    cacher à l'intérieur d'un autre.
   for (const [label, source] of LABELS) {
-    if (etiquettes.includes(label)) return source;
+    if (segments.includes(label)) return source;
   }
 
   return "web";

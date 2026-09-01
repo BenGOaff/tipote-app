@@ -46,7 +46,7 @@ export const VISIT_COOKIE_MAX_AGE_SECONDS = 90 * 24 * 60 * 60;
 export type VisitCookie = {
   /** Le code public de l'affilié. */
   ref: string;
-  /** Le tag posée par l'affilié, si son lien en portait une. */
+  /** Le canal posé par l'affilié, si son lien en portait un. */
   channel: string | null;
   /** Le lien exact emprunté, pour rattacher la vente au bon lien. */
   linkId: string | null;

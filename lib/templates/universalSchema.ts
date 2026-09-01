@@ -213,7 +213,7 @@ const CAPTURE_FIELDS: UniversalField[] = [
     minItems: 3,
     maxItems: 5,
     subFields: [
-      { key: "label", label: "Tag (JOUR 1, ÉTAPE 1, etc.)", maxLength: 20 },
+      { key: "label", label: "Libellé (JOUR 1, ÉTAPE 1, etc.)", maxLength: 20 },
       { key: "title", label: "Titre de l'étape", maxLength: 80 },
       { key: "description", label: "Description courte (1 phrase)", maxLength: 150 },
     ],
@@ -510,7 +510,7 @@ const SALES_FIELDS: UniversalField[] = [
     minItems: 3,
     maxItems: 7,
     subFields: [
-      { key: "label", label: "Tag (MODULE 1, ÉTAPE 1, etc.)", maxLength: 20 },
+      { key: "label", label: "Libellé (MODULE 1, ÉTAPE 1, etc.)", maxLength: 20 },
       { key: "title", label: "Titre du module/étape", maxLength: 80 },
       { key: "description", label: "Description en 1-2 phrases", maxLength: 200 },
     ],
@@ -910,7 +910,7 @@ const SHOWCASE_FIELDS: UniversalField[] = [
     minItems: 3,
     maxItems: 5,
     subFields: [
-      { key: "label", label: "Tag (ÉTAPE 1, etc.)", maxLength: 20 },
+      { key: "label", label: "Libellé (ÉTAPE 1, etc.)", maxLength: 20 },
       { key: "title", label: "Titre", maxLength: 80 },
       { key: "description", label: "Description", maxLength: 200 },
     ],

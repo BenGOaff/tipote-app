@@ -1300,7 +1300,7 @@ export default function PublicQuizClient({
     [firstName, gender, scoreCtx],
   );
 
-  // Tag courte pour les résultats AUTRES que celui du visiteur
+  // Libellé court pour les résultats AUTRES que celui du visiteur
   // (card "Répartition complète"). Pas de prénom, pas de "tu es le·la"
   // en préfixe, pas de marqueurs inclusifs — juste le nom du profil.
   // Cf. retour Adeline (17 mai 2026).
@@ -4578,7 +4578,7 @@ export default function PublicQuizClient({
                       <li key={r.id ?? i} className="space-y-1.5">
                         <div className="flex items-center justify-between gap-3 text-sm">
                           {/* TOUS les résultats du breakdown affichent
-                              juste le tag courte du profil, sans
+                              juste le libellé court du profil, sans
                               prénom, sans marqueurs inclusifs. La phrase
                               personnalisée complète reste sur le GROS
                               résultat en pleine page. Le profil dominant

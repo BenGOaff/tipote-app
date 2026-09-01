@@ -1975,7 +1975,7 @@ crée le contact quand il n'existe pas).
 INVALIDE (corrigé le 31 août au soir).**
 
 Ce que l'API de Systeme.io rend : 51 règles, toutes déclenchées sur
-`form_subscribed`, aucune sur `tag_added`. J'en ai conclu que poser une
+`form_subscribed`, aucune sur `tag_added`. J'en ai conclu que poser un
 tag ne déclenchait rien.
 
 **Béné a envoyé la capture d'une règle « Tag "newsletter" ajouté ->
@@ -3283,3 +3283,23 @@ faux dans l'autre sens.
 Ça couvre aussi le CODE : un fichier `etiquetteVente.ts` et une fonction
 `poserEtiquetteAcheteur` disaient le mot interdit. Renommés en
 `tagVente.ts` et `poserTagAcheteur`.
+
+**ET LA FAUTE QUE J'AI FAITE EN L'APPLIQUANT, qui vaut plus que la
+règle :** j'ai remplacé le mot partout d'un coup, sans relire les
+phrases. "Étiquette" est féminin, "tag" est masculin : le dépôt s'est
+retrouvé avec "un tag posée", "le tag exacte", "de le tag", "aucune tag
+manquante". Et là où le mot voulait dire LIBELLÉ, le texte est devenu
+faux : la largeur d'un axe de graphique "réserve la largeur des tags",
+l'orientation EXIF d'une photo devenait "un tag tourne-moi de 90
+degrés". Réparé le jour même, mais le geste était mauvais.
+
+**Un remplacement de mot n'est pas une opération mécanique.** Un mot
+porte un GENRE (donc des accords à refaire) et un SENS (donc des
+endroits où il ne s'applique pas). Le contrôle à faire après, et pas
+avant :
+
+```bash
+grep -rnE "(une|nouvelle|cette|aucune|toute) tags?|tags? (créée|posée|manquante|exacte|courte|ancienne|inconnue)|de le tag" . --exclude-dir=node_modules
+```
+
+Zéro ligne, sinon on a laissé une phrase cassée derrière soi.
