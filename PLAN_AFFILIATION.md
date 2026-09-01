@@ -238,11 +238,11 @@ peut cesser de compter sans prévenir personne.
 
 Deux sources, l'une choisie, l'autre gratuite.
 
-- **Le canal, écrit par l'affilié** : il crée ses propres étiquettes
+- **Le canal, écrit par l'affilié** : il crée ses propres tags
   (`youtube`, `newsletter`, `insta`, `story-mardi`) et génère un lien par
-  étiquette. C'est ce qui lui permet de comparer ce qui marche.
+  tag. C'est ce qui lui permet de comparer ce qui marche.
 - **La provenance, déduite du referrer** : YouTube, Instagram, un
-  webmail, un site. Elle est là même quand il n'a rien étiqueté, donc
+  webmail, un site. Elle est là même quand il n'a rien taggé, donc
   personne ne se retrouve avec un écran vide parce qu'il n'a pas pensé à
   taguer.
 

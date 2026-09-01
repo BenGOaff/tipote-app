@@ -38,7 +38,7 @@ test("un partage Instagram est reconnu", () => {
   assert.equal(m.source, "instagram");
 });
 
-test("l'étiquette posée par la créatrice gagne sur le referrer", () => {
+test("le tag posé par la créatrice gagne sur le referrer", () => {
   // Elle sait mieux que nous d'où part SON lien, et c'est la seule
   // façon de distinguer deux publications sur le même réseau.
   const m = classifyTraffic({

@@ -97,7 +97,7 @@ function hostOf(url: string): string {
  * Classe une visite.
  *
  * Ordre de décision, et il compte :
- * 1. `utm_source` s'il est là. C'est la créatrice qui a étiqueté SON
+ * 1. `utm_source` s'il est là. C'est la créatrice qui a taggé SON
  *    lien : elle sait mieux que nous d'où il part, et c'est la seule
  *    manière de distinguer deux publications sur le même réseau.
  * 2. le referrer, si on peut en tirer un hôte différent du nôtre.

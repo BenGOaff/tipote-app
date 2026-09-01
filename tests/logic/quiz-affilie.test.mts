@@ -109,7 +109,7 @@ test("une URL illisible est rendue telle quelle", () => {
   assert.equal(attacherAffiliate("http://[oups", a), "http://[oups");
 });
 
-test("l'étiquette des statistiques dit le canal avant le code", () => {
+test("le tag des statistiques dit le canal avant le code", () => {
   // Quand l'affilié a pris la peine d'écrire ?c=youtube, c'est cette
   // réponse là qu'il est venu chercher.
   assert.equal(

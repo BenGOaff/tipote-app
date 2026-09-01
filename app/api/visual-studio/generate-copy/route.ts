@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
     let kicker = String(parsed.kicker ?? "").trim().slice(0, 40);
     // Garde-fou : on jette les rubriques plates et sans valeur (Béné : "prix
     // saas n'a rien à faire sur un visuel"). Mieux vaut PAS de pilule qu'une
-    // étiquette que personne ne lit.
+    // tag que personne ne lit.
     const BLAND_KICKERS = new Set([
       "prix", "tarif", "tarifs", "tarification", "comparatif", "comparaison",
       "saas", "marketing", "produit", "offre", "promo", "pricing", "price",

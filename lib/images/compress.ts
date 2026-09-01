@@ -19,8 +19,8 @@
 // -- L'ORIENTATION EXIF N'EST PAS UN DÉTAIL ---------------------------
 //
 // Une photo prise au téléphone est très souvent stockée à l'horizontale
-// avec une étiquette "tourne-moi de 90 degrés". Le navigateur applique
-// l'étiquette à l'affichage, mais un canvas dessine les pixels BRUTS.
+// avec un tag "tourne-moi de 90 degrés". Le navigateur applique
+// le tag à l'affichage, mais un canvas dessine les pixels BRUTS.
 // Sans `imageOrientation: "from-image"`, toutes les photos verticales
 // prises au téléphone repartiraient couchées, et la créatrice
 // conclurait que la fonction a cassé ses images.

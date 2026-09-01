@@ -141,7 +141,7 @@ INTERDIT dans ces textes : "il est temps de", "tu mérites", "libère ton potent
 
 1. LE MIROIR -> "title" + "description"
    Tu lui redis où il en est, avec SES mots. Il se reconnaît, donc il continue à lire.
-   - "title" : le nom du profil. Court, incarné, valorisant même quand la situation ne l'est pas. Jamais un jugement ("Le Mauvais Vendeur"), jamais une étiquette froide ("Profil 2").
+   - "title" : le nom du profil. Court, incarné, valorisant même quand la situation ne l'est pas. Jamais un jugement ("Le Mauvais Vendeur"), jamais un tag froide ("Profil 2").
    - "description" : 4 à 6 phrases. Sa situation décrite si précisément qu'il se dit "c'est exactement ça" : ce qu'il fait, ce qu'il évite, ce qu'il se répète. Aucune solution ici, aucun conseil : uniquement le miroir.
 
 2. LA CAUSE -> "insight_heading" + "insight"

@@ -2628,7 +2628,7 @@ function CanadaFields({
     status === "travailleur_autonome_ca" || status === "entreprise_individuelle_ca";
   const isImmatricule = status === "entreprise_individuelle_ca";
 
-  // Étiquette de la taxe affichée à l'user selon la province choisie.
+  // Libellé de la taxe affichée à l'user selon la province choisie.
   const taxLabel = (() => {
     if (taxRegime === "tps_tvq") return t("caTaxRegimeQQ");
     if (taxRegime === "tvh") return t("caTaxRegimeTvh");

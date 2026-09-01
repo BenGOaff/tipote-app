@@ -429,7 +429,7 @@ test("TOUTES les destinations mènent chez nous, sans aucune exception", () => {
 test("l'inscription gratuite passe par NOTRE page", () => {
   // C'est la seule qui fait les trois choses : le compte, le
   // rattachement à vie, et le contact chez Systeme.io avec son
-  // étiquette (donc la séquence email part comme avant).
+  // tag (donc la séquence email part comme avant).
   const gratuit = seedDestinations().find((d) => d.slug === "tiquiz_free");
   assert.equal(gratuit?.path, "https://tiquiz.fr/signup");
 });

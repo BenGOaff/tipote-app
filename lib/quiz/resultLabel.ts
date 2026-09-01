@@ -42,7 +42,7 @@ import { stripHtml } from "@/lib/richText";
 
 /**
  * Le nom court d'un profil, tel qu'on le montre à la CRÉATRICE
- * (menus de l'éditeur, alertes de cohérence, aide des étiquettes).
+ * (menus de l'éditeur, alertes de cohérence, aide des tags).
  *
  * PURE. `secours` est OBLIGATOIRE : un profil dont le titre est encore
  * vide doit rester choisissable, donc il lui faut un libellé, et c'est

@@ -10,7 +10,7 @@
 // AUTRE nombre.
 //
 // La cause : `margin={{ left: -16 }}` combiné à `<YAxis width={32} />`.
-// Il restait 16 px pour écrire une étiquette alignée à droite, donc
+// Il restait 16 px pour écrire un tag alignée à droite, donc
 // c'est son DÉBUT qui sortait du cadre.
 //
 // Et c'était écrit quatre fois, avec quatre valeurs différentes
@@ -25,7 +25,7 @@ import path from "node:path";
 
 import { maxSeriesValue, yAxisWidth } from "../../lib/charts/yAxis.ts";
 
-/** Largeur du texte d'une étiquette, MESURÉE dans Chromium sur la pile
+/** Largeur du texte d'un tag, MESURÉE dans Chromium sur la pile
  *  de polices de l'app (0.636 x la taille de police par chiffre). */
 function largeurTexte(label: string, fontSize: number): number {
   return label.length * fontSize * 0.64;
