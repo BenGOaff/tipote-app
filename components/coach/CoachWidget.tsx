@@ -167,7 +167,22 @@ const QUICK_REPLY_KEYS = [
 
 const THREADS: CoachThread[] = ["general", "strategy", "sales", "content", "mindset"];
 
-const HIDDEN_PREFIXES = ["/auth", "/onboarding", "/strategy/pyramids", "/legal", "/q/", "/p/", "/support", "/pages"];
+// LES ÉCRANS DE L'APP OÙ LE COACH N'A RIEN À FAIRE.
+//
+// Cette liste ne parle PLUS des surfaces publiques : c'est
+// `estSurfacePublique` qui les décide, et depuis le 2 septembre elle le
+// fait dans le bon sens (le chrome ne s'affiche QUE sur les écrans de
+// l'app, tout le reste est public par défaut).
+//
+// Elle contenait `/q/`, `/p/`, `/support`, `/legal`, `/auth` et
+// `/onboarding`, c'est à dire une TROISIÈME liste des mêmes chemins. Et
+// c'est exactement de là que vient le défaut que Béné a vu deux jours de
+// suite : trois listes tenues séparément finissent toujours par ne plus
+// dire la même chose, et celle qui se trompe est celle qu'on oublie.
+//
+// Il ne reste ici que ce qui lui est propre : deux écrans de l'app où
+// le bouton gêne.
+const HIDDEN_PREFIXES = ["/strategy/pyramids", "/pages"];
 
 /* ────────────────── Top-Left Resize Hook ────────────────── */
 
