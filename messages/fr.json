@@ -7871,6 +7871,67 @@
       "cout": "{count, plural, one {# crédit} other {# crédits}}",
       "coutPistes": "Proposer des pistes coûte {count, plural, one {# crédit} other {# crédits}}, à chaque fois.",
       "environ": "environ {count, plural, one {# crédit} other {# crédits}}"
+    },
+    "accueil": {
+      "creerTitre": "Générer de nouveaux contenus",
+      "creerResume": "Le bonus qui suit ton quiz, la séquence d'emails de chaque profil, ou les posts qui le font tourner.",
+      "creerCta": "Choisir un générateur",
+      "mesContenusTitre": "Mes contenus générés",
+      "mesContenusCompte": "{count, plural, one {# contenu déjà écrit} other {# contenus déjà écrits}}",
+      "mesContenusVide": "Rien pour l'instant. Ce que tu génères se range ici tout seul.",
+      "mesContenusCta": "Ouvrir ma bibliothèque",
+      "retour": "Retour aux générateurs"
+    },
+    "bibliotheque": {
+      "titre": "Mes contenus générés",
+      "compte": "{count, plural, =0 {aucun contenu} one {# contenu} other {# contenus}}",
+      "videBloc": "Tu n'as encore rien généré ici.",
+      "enEcrireUn": "En écrire un",
+      "sansTitre": "Sans titre",
+      "morceaux": "{count, plural, one {# morceau} other {# morceaux}}",
+      "copier": "Tout copier",
+      "supprimer": "Supprimer",
+      "tronques": "{count, plural, one {# morceau a été coupé en route} other {# morceaux ont été coupés en route}}",
+      "erreurLecture": "Impossible de lire ta bibliothèque pour le moment. Tes contenus ne sont pas perdus, réessaie dans un instant."
+    },
+    "temps": {
+      "sonResultat": "Son résultat",
+      "unConseil": "Un conseil qu'il peut appliquer",
+      "ceQuiLeRetient": "Ce qui le retient",
+      "tonOffre": "Ton offre, ou un rendez-vous",
+      "resterEnContact": "Rester en contact",
+      "annonce": "L'annonce à ta liste",
+      "relance": "La relance",
+      "partenaire": "Le message à un partenaire",
+      "curiosite": "La question qui accroche",
+      "erreurFrequente": "L'erreur la plus fréquente",
+      "coulisses": "Les coulisses",
+      "appelDirect": "L'appel direct"
+    },
+    "parcours": {
+      "projet": "Le projet",
+      "reglages": "Les réglages",
+      "pistes": "Les pistes",
+      "contenus": "Les contenus",
+      "precedent": "Précédent",
+      "suivant": "Suivant",
+      "choisirPiste": "Choisis d'abord une piste : c'est elle qui dit ce qu'on écrit.",
+      "retourPistes": "Revenir aux pistes",
+      "manque": {
+        "projet": "Choisis un projet pour continuer.",
+        "reglages": "Remplis ce qui manque pour continuer.",
+        "pistes": "Lance les pistes, puis choisis-en une."
+      },
+      "lancer": {
+        "bonus": "Le bonus, son mode d'emploi et les textes qui le remettent.",
+        "emails": "Cinq emails, écrits pour ce profil, dans l'ordre où ils partent.",
+        "promo": "Trois emails et quatre publications pour faire tourner ton quiz."
+      },
+      "lancerCta": {
+        "bonus": "Écrire le bonus",
+        "emails": "Écrire la séquence",
+        "promo": "Écrire mes contenus de promo"
+      }
     }
   }
 }

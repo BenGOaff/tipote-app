@@ -1,9 +1,13 @@
 // app/generateurs/page.tsx
 //
-// LES TROIS CARTES. Béné, 1er septembre 2026 : "sur une page
-// générateurs, l'user choisit quel générateur il veut utiliser
-// (3 cartes cliquables). Ensuite un nouvel onglet s'ouvre, l'user
-// choisit le quiz pour lequel il veut créer, comme sur l'Atelier."
+// L'ACCUEIL : retrouver, ou créer. Béné, 2 septembre 2026 : "ajoute une
+// étape avec le choix -> 'mes contenus générés' > 3 blocs pour classer
+// les 3 types de contenus générés OU 'générer de nouveaux contenus' >
+// 3 générateurs."
+//
+// Le compteur de contenus est lu avec le repli du store : "je n'ai pas
+// pu regarder" et "il n'y a rien" sont deux réponses différentes, donc
+// une erreur de lecture affiche la carte SANS compteur, jamais "0".
 //
 // LE PLAN EST LU ICI, CÔTÉ SERVEUR, et passé à l'écran. "Ça doit être
 // visible pour les membres gratuits et sans plus, s'ils veulent s'en
@@ -21,6 +25,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { isPaidPlan } from "@/lib/planLimits";
 import { ensureUserCredits } from "@/lib/credits";
 import { COUT_INDICATIF } from "@/lib/generateurs/credits";
+import { lireContenus } from "@/lib/generateurs/contenusStore";
 import GenerateursClient from "./GenerateursClient";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -63,12 +68,15 @@ export default async function GenerateursPage() {
         })
     : null;
 
+  const { contenus, erreur } = await lireContenus(user.id);
+
   return (
     <GenerateursClient
       userEmail={user.email ?? ""}
       autorise={autorise}
       lienPlans="/settings?tab=billing"
       credits={credits}
+      nbContenus={erreur ? 0 : contenus.length}
     />
   );
 }

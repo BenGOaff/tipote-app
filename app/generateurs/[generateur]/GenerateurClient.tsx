@@ -51,6 +51,14 @@ import {
   type GenerateurId,
 } from "@/lib/generateurs/catalogue";
 import { FORMATS_OFFRE, type FormatOffre } from "@/lib/generateurs/offre";
+import { passeParLesPistes, planFixe } from "@/lib/generateurs/sequences";
+import {
+  etapesDuParcours,
+  peutAvancer,
+  precedente,
+  suivante,
+  type Etape,
+} from "@/lib/generateurs/parcours";
 import type { Piece, Piste } from "@/lib/generateurs/blocs";
 import { markdownVersHtml } from "@/lib/generateurs/markdown";
 
@@ -143,6 +151,23 @@ export default function GenerateurClient({
     !blocage &&
     (!veutOffre || promesse.trim().length > 0) &&
     (!veutProfil || Boolean(projet?.profils[profilIndex]));
+
+  // ── LE PARCOURS ──
+  //
+  // Une étape à la fois, comme le labo de l'Atelier. Les étapes elles
+  // mêmes dépendent du générateur : la promo ne demande ni profil ni
+  // offre, et seuls les BONUS passent par des pistes (`sequences.ts`).
+  const parcours = useMemo(() => etapesDuParcours(generateur), [generateur]);
+  const [etape, setEtape] = useState<Etape>(parcours[0]!);
+  const etatParcours = {
+    projetPret: Boolean(projet) && !blocage,
+    profilPret: !veutProfil || Boolean(projet?.profils[profilIndex]),
+    offrePrete: !veutOffre || promesse.trim().length > 0,
+    pistesPretes: pistes.length > 0,
+  };
+  const avant = precedente(generateur, etape);
+  const apres = suivante(generateur, etape);
+  const peutPasser = peutAvancer(etape, etatParcours);
 
   /** Le serveur dit la RAISON, l'écran dit comment la dire. */
   function direLErreur(reason: unknown) {
@@ -244,8 +269,34 @@ export default function GenerateurClient({
     }
   }
 
+  /**
+   * ÉCRIRE SANS PISTE : la séquence est fixe (emails, promo).
+   *
+   * Béné, 2 septembre 2026 : "le générateur d'emails ne génère pas 'des
+   * pistes' mais des emails putain t'as fait n'imp." Le serveur ignore
+   * ce qu'on lui déclare et rend le plan de `sequences.ts` ; on
+   * construit donc ici la même liste, pour que l'écran sache combien de
+   * morceaux annoncer AVANT de lancer.
+   */
+  function pisteDuPlanFixe(): Piste {
+    const plan = planFixe(generateur) ?? [];
+    const compteurs = new Map<string, number>();
+    return {
+      titre: "",
+      format: "",
+      punchline: "",
+      pourquoi: "",
+      pieces: plan.map((temps) => {
+        const n = (compteurs.get(temps.bloc) ?? 0) + 1;
+        compteurs.set(temps.bloc, n);
+        return { bloc: temps.bloc, index: n, resume: temps.intention, cle: temps.cle };
+      }),
+    };
+  }
+
   async function toutEcrire(piste: Piste) {
     setChoisie(piste);
+    setEtape("contenus");
     setEtat("production");
     setContenus({});
     // EN SÉRIE, jamais en parallèle : trois appels simultanés sur un
@@ -294,7 +345,40 @@ export default function GenerateurClient({
         </div>
       ) : null}
 
+      {/* ── LE FIL DES ÉTAPES ──
+          Il dit où on en est ET où on va. Une étape déjà franchie se
+          reclique : revenir en arrière doit être aussi facile que
+          d'avancer, sinon on recommence tout pour corriger un mot. */}
+      <ol className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+        {parcours.map((e, i) => {
+          const rang = parcours.indexOf(etape);
+          const franchie = i < rang;
+          const active = e === etape;
+          return (
+            <li key={e} className="flex items-center gap-2">
+              {i > 0 ? <span className="text-muted-foreground/50">›</span> : null}
+              <button
+                type="button"
+                disabled={!franchie && !active}
+                onClick={() => setEtape(e)}
+                className={
+                  active
+                    ? "font-bold text-foreground"
+                    : franchie
+                      ? "text-primary hover:underline"
+                      : "text-muted-foreground/60 cursor-default"
+                }
+                aria-current={active ? "step" : undefined}
+              >
+                {i + 1}. {t(`parcours.${e}`)}
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+
       {/* ── 1. LE PROJET ── */}
+      {etape === "projet" ? (
       <section className="rounded-xl border bg-card p-5 space-y-3">
         <div>
           <h2 className="font-display font-bold text-sm">{t("etapes.projet")}</h2>
@@ -351,9 +435,10 @@ export default function GenerateurClient({
           </div>
         )}
       </section>
+      ) : null}
 
       {/* ── 2. LE PROFIL ── */}
-      {projet && !blocage && veutProfil ? (
+      {etape === "reglages" && projet && !blocage && veutProfil ? (
         <section className="rounded-xl border bg-card p-5 space-y-3">
           <div>
             <h2 className="font-display font-bold text-sm">{t("etapes.profil")}</h2>
@@ -389,7 +474,7 @@ export default function GenerateurClient({
       ) : null}
 
       {/* ── L'OFFRE ── */}
-      {projet && !blocage && veutOffre ? (
+      {etape === "reglages" && projet && !blocage && veutOffre ? (
         <section className="rounded-xl border bg-card p-5 space-y-4">
           <div>
             <h2 className="font-display font-bold text-sm">{t("etapes.offre")}</h2>
@@ -437,8 +522,8 @@ export default function GenerateurClient({
         </section>
       ) : null}
 
-      {/* ── LES PISTES ── */}
-      {projet && !blocage ? (
+      {/* ── LES PISTES ── (le BONUS seulement : voir `sequences.ts`) */}
+      {etape === "pistes" && projet && !blocage ? (
         <section className="rounded-xl border bg-card p-5 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
@@ -529,7 +614,47 @@ export default function GenerateurClient({
       ) : null}
 
       {/* ── LES CONTENUS ── */}
-      {choisie ? (
+      {/* Le BONUS arrive ici en ayant DÉJÀ choisi sa piste : ce bloc de
+          lancement est celui des générateurs à séquence fixe. */}
+      {etape === "contenus" && !choisie && !passeParLesPistes(generateur) ? (
+        <section className="rounded-xl border bg-card p-5 space-y-4">
+          <div>
+            <h2 className="font-display font-bold text-sm">{t("etapes.contenus")}</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {t(`parcours.lancer.${generateur}`)}
+            </p>
+          </div>
+          {/* LE COÛT SE DIT AVANT DE LANCER, jamais après. */}
+          {credits ? (
+            <p className="text-xs font-semibold text-muted-foreground">
+              {t("credits.cout", { count: coutPiste(pisteDuPlanFixe()) })}
+            </p>
+          ) : null}
+          <Button
+            onClick={() => void toutEcrire(pisteDuPlanFixe())}
+            disabled={!autorise || !pretPourPistes || etat === "production" || Boolean(enCours)}
+          >
+            {etat === "production" ? (
+              <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+            ) : (
+              <Sparkles className="h-4 w-4 mr-1.5" />
+            )}
+            {t(`parcours.lancerCta.${generateur}`)}
+          </Button>
+        </section>
+      ) : null}
+
+      {etape === "contenus" && !choisie && passeParLesPistes(generateur) ? (
+        <section className="rounded-xl border bg-card p-5 space-y-3">
+          <p className="text-sm text-muted-foreground">{t("parcours.choisirPiste")}</p>
+          <Button variant="outline" size="sm" onClick={() => setEtape("pistes")}>
+            <ArrowLeft className="h-4 w-4 mr-1.5" />
+            {t("parcours.retourPistes")}
+          </Button>
+        </section>
+      ) : null}
+
+      {etape === "contenus" && choisie ? (
         <section className="space-y-3">
           <div className="flex items-center justify-between gap-3">
             <h2 className="font-display font-bold text-sm">{t("etapes.contenus")}</h2>
@@ -544,8 +669,16 @@ export default function GenerateurClient({
           {choisie.pieces.map((piece, i) => (
             <CarteContenu
               key={cle(piece)}
-              titre={t(`blocs.${piece.bloc}`, { index: piece.index })}
-              resume={piece.resume}
+              // LE RÔLE TRADUIT, jamais l'intention brute : sur un plan
+              // fixe, `resume` porte la consigne envoyée au modèle, et
+              // elle est en français dans un écran qui existe en 7
+              // langues (c'est le "Résultat 4" du 1er septembre).
+              titre={
+                piece.cle
+                  ? `${piece.index}. ${t(`temps.${piece.cle}`)}`
+                  : t(`blocs.${piece.bloc}`, { index: piece.index })
+              }
+              resume={piece.cle ? "" : piece.resume}
               contenu={contenus[cle(piece)] ?? null}
               enCours={enCours === cle(piece)}
               onRefaire={() => void ecrireUn(choisie, i)}
@@ -553,6 +686,38 @@ export default function GenerateurClient({
             />
           ))}
         </section>
+      ) : null}
+      {/* ── AVANCER, OU REVENIR ──
+          Une étape qui ne peut pas être franchie le DIT, elle ne se
+          contente pas d'un bouton gris : sans la raison, on cherche ce
+          qu'on a mal fait (règle du 22 août, "un bouton absent se
+          justifie sur la ligne"). */}
+      {etape !== "contenus" ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+          {avant ? (
+            <Button variant="ghost" size="sm" onClick={() => setEtape(avant)}>
+              <ArrowLeft className="h-4 w-4 mr-1.5" />
+              {t("parcours.precedent")}
+            </Button>
+          ) : (
+            <span />
+          )}
+          <div className="flex items-center gap-3">
+            {!peutPasser ? (
+              <span className="text-xs text-muted-foreground">
+                {t(`parcours.manque.${etape}`)}
+              </span>
+            ) : null}
+            {/* Sur l'étape des pistes, on avance en CHOISISSANT une
+                piste : un bouton "Suivant" à côté mènerait à un écran
+                de contenus sans rien à écrire. */}
+            {apres && etape !== "pistes" ? (
+              <Button size="sm" disabled={!peutPasser} onClick={() => setEtape(apres)}>
+                {t("parcours.suivant")}
+              </Button>
+            ) : null}
+          </div>
+        </div>
       ) : null}
     </AppShell>
   );

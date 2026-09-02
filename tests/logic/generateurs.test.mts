@@ -14,6 +14,14 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 
+import { QUIZ_LANGUAGES } from "@/lib/quizLanguages";
+import {
+  SEQUENCE_EMAILS,
+  SEQUENCE_PROMO,
+  planFixe,
+  passeParLesPistes,
+} from "@/lib/generateurs/sequences";
+
 import {
   GENERATEURS,
   blocageGenerateur,
@@ -256,49 +264,82 @@ describe("Les morceaux à produire, un par un", () => {
     );
   });
 
-  test("l'index est RECALCULÉ, jamais recopié du modèle", () => {
-    // Il rend parfois deux "email 1", ou saute de 1 à 3. Une
-    // numérotation à trou fait écrire deux fois le même email et en
-    // oublier un autre, en silence.
-    const pieces = piecesDeLaPiste("emails", [
-      { bloc: "email", index: 1, resume: "a" },
-      { bloc: "email", index: 1, resume: "b" },
-      { bloc: "email", index: 7, resume: "c" },
-    ]);
-    assert.deepEqual(
-      pieces.map((p) => p.index),
-      [1, 2, 3],
-    );
+  test("le générateur d'emails écrit des EMAILS, pas des pistes", () => {
+    // Béné, 2 septembre 2026 : "le générateur d'emails ne génère pas
+    // 'des pistes' mais des emails putain t'as fait n'imp." J'avais fait
+    // passer les TROIS générateurs par l'étape des pistes, alors qu'elle
+    // ne veut dire quelque chose que pour le bonus (une CRÉATION à
+    // choisir). Une séquence post-quiz a des temps fixes : elle se
+    // déroule, elle ne se choisit pas.
+    assert.equal(passeParLesPistes("bonus"), true);
+    assert.equal(passeParLesPistes("emails"), false);
+    assert.equal(passeParLesPistes("promo"), false);
   });
 
-  test("un bloc qui n'appartient pas au générateur est écarté", () => {
+  test("la séquence est FIXE, et ce que le modèle propose est ignoré", () => {
+    // Même en lui envoyant n'importe quoi, on obtient les cinq temps.
     const pieces = piecesDeLaPiste("emails", [
-      { bloc: "email", resume: "a" },
-      { bloc: "post", resume: "b" },
-      { bloc: "contenu", resume: "c" },
+      { bloc: "post", index: 9, resume: "n'importe quoi" },
+      { bloc: "contenu", index: 1, resume: "et encore autre chose" },
     ]);
+    assert.equal(pieces.length, SEQUENCE_EMAILS.length);
     assert.deepEqual(
-      pieces.map((p) => p.bloc),
-      ["email"],
+      pieces.map((p) => p.index),
+      [1, 2, 3, 4, 5],
     );
+    assert.ok(pieces.every((p) => p.bloc === "email"), "un temps n'est pas un email");
+  });
+
+  test("chaque temps porte SON intention, sinon le modèle réécrit le premier", () => {
+    const pieces = piecesDeLaPiste("emails", []);
+    const intentions = new Set(pieces.map((p) => p.resume));
+    assert.equal(intentions.size, pieces.length, "deux temps portent la même intention");
+    for (const p of pieces) {
+      assert.ok(p.resume.length > 40, "une intention trop courte ne distingue rien");
+      assert.ok(p.cle, "un temps sans clé ne peut pas être traduit");
+    }
+  });
+
+  test("un SEUL email de la séquence vend, et c'est le quatrième", () => {
+    // C'est ce qui rend les trois premiers credibles. Porté de
+    // l'Atelier, où les cinq temps sont enseignés dans la formation.
+    const vendeurs = SEQUENCE_EMAILS.filter((t) => /appel à l'action commercial/i.test(t.intention));
+    assert.equal(vendeurs.length, 1);
+    assert.equal(SEQUENCE_EMAILS.indexOf(vendeurs[0]), 3);
   });
 
   test("la promo numérote ses emails et ses posts SÉPARÉMENT", () => {
-    const pieces = piecesDeLaPiste("promo", [
-      { bloc: "email", resume: "e1" },
-      { bloc: "email", resume: "e2" },
-      { bloc: "post", resume: "p1" },
-      { bloc: "post", resume: "p2" },
-    ]);
-    assert.deepEqual(
-      pieces.map((p) => `${p.bloc}${p.index}`),
-      ["email1", "email2", "post1", "post2"],
-    );
+    const pieces = piecesDeLaPiste("promo", []);
+    const emails = pieces.filter((p) => p.bloc === "email").map((p) => p.index);
+    const posts = pieces.filter((p) => p.bloc === "post").map((p) => p.index);
+    assert.deepEqual(emails, [1, 2, 3]);
+    assert.deepEqual(posts, [1, 2, 3, 4]);
   });
 
-  test("un modèle qui déborde est borné", () => {
-    const trop = Array.from({ length: 30 }, () => ({ bloc: "email", resume: "x" }));
-    assert.equal(piecesDeLaPiste("emails", trop).length, MAX_PIECES.emails);
+  test("les quatre posts de promo attaquent par quatre angles différents", () => {
+    // Quatre posts qui disent la même chose autrement, c'est un post
+    // publié quatre fois, et l'audience le voit.
+    const posts = SEQUENCE_PROMO.filter((t) => t.bloc === "post");
+    assert.equal(new Set(posts.map((t) => t.cle)).size, posts.length);
+    assert.equal(new Set(posts.map((t) => t.intention)).size, posts.length);
+  });
+
+  test("un plan fixe ne déborde jamais de son plafond", () => {
+    for (const id of ["emails", "promo"] as const) {
+      assert.ok(
+        piecesDeLaPiste(id, []).length <= MAX_PIECES[id],
+        `${id} produit plus de morceaux que son plafond`,
+      );
+    }
+  });
+
+  test("le bonus, lui, garde ses pistes et ses trois blocs", () => {
+    const pieces = piecesDeLaPiste("bonus", []);
+    assert.deepEqual(
+      pieces.map((p) => p.bloc),
+      ["contenu", "guide", "remise"],
+    );
+    assert.equal(planFixe("bonus"), null, "le bonus s'est vu poser un plan fixe");
   });
 
   test("chaque générateur a au moins un bloc, et tous sont connus", () => {
@@ -365,21 +406,40 @@ describe("Le socle des générateurs", () => {
 });
 
 describe("Les consignes de chaque étape", () => {
-  test("la langue est NOMMÉE, jamais laissée en code ISO", () => {
-    // `pt-BR` fait écrire du portugais européen une fois sur deux, et
-    // `ar` fait parfois basculer en anglais.
-    assert.match(consigneLangue("pt-BR"), /Brésil/);
-    assert.match(consigneLangue("ar"), /arabe/);
-    assert.match(consigneLangue("es"), /espagnol/);
+  test("la langue est NOMMÉE, et c'est le catalogue des 100 qui la nomme", () => {
+    // Béné, 2 septembre 2026 : "on doit offrir la même qualité à toutes
+    // les langues prises en charge". J'avais écrit ici une table de SEPT
+    // langues, celles de l'interface : un quiz en japonais sortait avec
+    // "la langue de code ja". `buildLanguageDirective` couvre les 100 du
+    // catalogue, avec le nom natif et les notes régionales.
+    assert.match(consigneLangue("pt-BR"), /Portuguese|Português/);
+    assert.match(consigneLangue("ar"), /Arabic|العربية/);
+    assert.match(consigneLangue("es"), /Spanish|Español/);
+    // Une langue hors interface est servie AUSSI BIEN que les sept.
+    assert.match(consigneLangue("ja"), /Japanese|日本語/);
+    assert.match(consigneLangue("de"), /German|Deutsch/);
+  });
+
+  test("les notes régionales partent avec la langue", () => {
+    // C'est ce qui distingue "ordenador" de "computadora", et c'est ce
+    // que la table à sept entrées ne pouvait pas dire.
+    const avecNotes = QUIZ_LANGUAGES.filter((l) => (l.regionalNotes ?? "").trim().length > 0);
+    assert.ok(avecNotes.length > 0, "le catalogue ne porte plus de notes régionales");
+    for (const l of avecNotes.slice(0, 5)) {
+      assert.ok(
+        consigneLangue(l.code).includes(l.regionalNotes!.slice(0, 30)),
+        `${l.code} perd ses notes régionales en route`,
+      );
+    }
   });
 
   test("une langue inconnue ne retombe PAS sur le français", () => {
-    // Servir du français à quelqu'un qui écrit dans une huitième langue
-    // a l'air de marcher, et c'est pire qu'une erreur (leçon du robot
-    // d'aide, 31 août).
-    const c = consigneLangue("de");
-    assert.ok(!c.includes("français"), c);
-    assert.match(c, /"de"/);
+    // Servir du français à quelqu'un qui écrit dans une langue qu'on ne
+    // connaît pas a l'air de marcher, et c'est pire qu'une erreur
+    // (leçon du robot d'aide, 31 août).
+    const c = consigneLangue("zz-ZZ");
+    assert.ok(!/français|French/i.test(c), c);
+    assert.match(c, /zz-ZZ/);
   });
 
   test("le ton du quiz est imposé, pas redemandé", () => {

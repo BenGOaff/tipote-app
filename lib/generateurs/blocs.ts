@@ -24,6 +24,7 @@
 // payée six fois dans ces dépôts.
 
 import type { GenerateurId } from "@/lib/generateurs/catalogue";
+import { planFixe } from "@/lib/generateurs/sequences";
 
 /** Les morceaux qu'un générateur peut produire. Liste fermée. */
 export const BLOCS = ["contenu", "guide", "remise", "email", "post"] as const;
@@ -70,6 +71,8 @@ export interface Piece {
   /** 1-based, et seulement sur un bloc répété. */
   index: number;
   resume: string;
+  /** La clé i18n du rôle, sur les générateurs à plan fixe. L'écran la traduit. */
+  cle?: string;
 }
 
 /**
@@ -129,6 +132,26 @@ export function piecesDeLaPiste(
       index: i + 1,
       resume: "",
     }));
+  }
+
+  // LES DEUX AUTRES ONT UN PLAN FIXE, ET LE MODÈLE N'EN DÉCIDE RIEN.
+  //
+  // Béné, 2 septembre 2026 : "le générateur d'emails ne génère pas 'des
+  // pistes' mais des emails putain t'as fait n'imp." Une séquence
+  // post-quiz a des temps fixes (voir `sequences.ts`, portés de
+  // l'Atelier) : il n'y a pas de piste à choisir, il y a des emails à
+  // écrire. Ce qui suit était la mécanique du bonus appliquée aux trois.
+  const plan = planFixe(id);
+  if (plan) {
+    const compteursDuPlan = new Map<Bloc, number>();
+    return plan.slice(0, MAX_PIECES[id]).map((temps) => {
+      const n = (compteursDuPlan.get(temps.bloc) ?? 0) + 1;
+      compteursDuPlan.set(temps.bloc, n);
+      // `resume` porte l'INTENTION du temps : c'est elle qui distingue
+      // l'email 2 de l'email 3. Sans elle, le modèle réécrit cinq fois
+      // le premier sous cinq titres.
+      return { bloc: temps.bloc, index: n, resume: temps.intention, cle: temps.cle };
+    });
   }
 
   const compteurs = new Map<Bloc, number>();

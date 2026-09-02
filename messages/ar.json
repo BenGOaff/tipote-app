@@ -7871,6 +7871,67 @@
       "cout": "{count, plural, other {# رصيد}}",
       "coutPistes": "طلب المقترحات يكلف {count, plural, other {# رصيد}}، في كل مرة.",
       "environ": "حوالي {count, plural, other {# رصيد}}"
+    },
+    "accueil": {
+      "creerTitre": "إنشاء محتوى جديد",
+      "creerResume": "المكافأة التي تلي الاختبار، تسلسل الرسائل لكل ملف، أو المنشورات التي تنشره.",
+      "creerCta": "اختيار مولّد",
+      "mesContenusTitre": "المحتوى الذي أنشأته",
+      "mesContenusCompte": "{count, plural, other {# محتوى مكتوب بالفعل}}",
+      "mesContenusVide": "لا شيء بعد. كل ما تنشئه يُحفظ هنا تلقائيا.",
+      "mesContenusCta": "فتح مكتبتي",
+      "retour": "العودة إلى المولّدات"
+    },
+    "bibliotheque": {
+      "titre": "المحتوى الذي أنشأته",
+      "compte": "{count, plural, =0 {لا شيء بعد} other {# عنصر}}",
+      "videBloc": "لم تنشئ شيئا هنا بعد.",
+      "enEcrireUn": "اكتب واحدا",
+      "sansTitre": "بدون عنوان",
+      "morceaux": "{count, plural, other {# جزء}}",
+      "copier": "نسخ الكل",
+      "supprimer": "حذف",
+      "tronques": "{count, plural, other {# جزء تم قطعه}}",
+      "erreurLecture": "تعذّرت قراءة مكتبتك الآن. لم يضع شيء، أعد المحاولة بعد قليل."
+    },
+    "temps": {
+      "sonResultat": "نتيجته",
+      "unConseil": "نصيحة يمكنه تطبيقها",
+      "ceQuiLeRetient": "ما الذي يعيقه",
+      "tonOffre": "عرضك، أو موعد",
+      "resterEnContact": "البقاء على تواصل",
+      "annonce": "الإعلان لقائمتك",
+      "relance": "التذكير",
+      "partenaire": "رسالة إلى شريك",
+      "curiosite": "السؤال الذي يجذب",
+      "erreurFrequente": "الخطأ الأكثر شيوعا",
+      "coulisses": "من وراء الكواليس",
+      "appelDirect": "الدعوة المباشرة"
+    },
+    "parcours": {
+      "projet": "المشروع",
+      "reglages": "الإعدادات",
+      "pistes": "المسارات",
+      "contenus": "المحتويات",
+      "precedent": "السابق",
+      "suivant": "التالي",
+      "choisirPiste": "اختر مسارا أولا: هو الذي يحدد ما سيُكتب.",
+      "retourPistes": "العودة إلى المسارات",
+      "manque": {
+        "projet": "اختر مشروعا للمتابعة.",
+        "reglages": "أكمل ما ينقص للمتابعة.",
+        "pistes": "أطلق المسارات ثم اختر واحدا."
+      },
+      "lancer": {
+        "bonus": "المكافأة، وطريقة إعدادها، والنصوص التي تسلّمها.",
+        "emails": "خمس رسائل مكتوبة لهذا الملف، بالترتيب الذي تُرسل به.",
+        "promo": "ثلاث رسائل وأربعة منشورات لنشر اختبارك."
+      },
+      "lancerCta": {
+        "bonus": "كتابة المكافأة",
+        "emails": "كتابة التسلسل",
+        "promo": "كتابة محتويات النشر"
+      }
     }
   }
 }
