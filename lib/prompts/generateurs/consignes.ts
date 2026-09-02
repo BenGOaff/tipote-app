@@ -21,6 +21,7 @@
 // est dite, le ton est dit, le gabarit JSON n'a pas de tiret cadratin,
 // et une consigne ne contredit pas une autre.
 
+import { buildLanguageDirective } from "@/lib/quizLanguages";
 import type { GenerateurId } from "@/lib/generateurs/catalogue";
 import type { Piece, Piste } from "@/lib/generateurs/blocs";
 import { MAX_PIECES } from "@/lib/generateurs/blocs";
@@ -36,23 +37,26 @@ import { rendreOffrePourPrompt } from "@/lib/generateurs/offre";
  * une fois sur deux, et `ar` fait parfois basculer en anglais. Le
  * modèle lit une CONSIGNE, pas une locale.
  */
-const LANGUES: Record<string, string> = {
-  fr: "le français",
-  en: "l'anglais",
-  es: "l'espagnol",
-  it: "l'italien",
-  pt: "le portugais du Portugal",
-  "pt-BR": "le portugais du Brésil",
-  ar: "l'arabe",
-};
-
 export function consigneLangue(locale: string): string {
-  const nom = LANGUES[locale] ?? LANGUES[locale.split("-")[0] ?? ""] ?? null;
-  // UNE LANGUE INCONNUE NE FAIT PAS RETOMBER SUR LE FRANÇAIS. Servir du
-  // français à quelqu'un qui écrit dans une huitième langue "a l'air de
-  // marcher", et c'est pire qu'une erreur (leçon du robot d'aide,
-  // 31 août). On nomme le code, le modèle sait les lire.
-  return `LANGUE : tu écris ENTIÈREMENT en ${nom ?? `la langue de code "${locale}"`}. Chaque titre, chaque phrase, chaque libellé de bouton.`;
+  // LA LANGUE DU QUIZ, PAS CELLE DE L'INTERFACE, et les 100 du catalogue,
+  // pas les 7 de l'interface.
+  //
+  // Béné, 2 septembre 2026 : "pense au multilangues, on doit offrir la
+  // même qualité à toutes les langues prises en charge et les contenus +
+  // bonus sont générés dans la langue du quiz bien sûr."
+  //
+  // J'avais réécrit ici une table de SEPT langues, celles de
+  // l'interface. Un quiz écrit en japonais ou en swahili en sortait donc
+  // avec `la langue de code "ja"`, quand `buildLanguageDirective`
+  // (`lib/quizLanguages.ts`) existe depuis des mois et rend "Japanese
+  // (日本語)" plus ses NOTES RÉGIONALES ("voiture" vs "char",
+  // "ordenador" vs "computadora"). C'est ce que reçoit déjà la
+  // génération de quiz : deux qualités de consigne pour deux écrans du
+  // même produit, et c'est le générateur qui écrivait moins bien.
+  //
+  // Septième fois que ce dépôt paie une règle recopiée à côté de celle
+  // qui existe.
+  return `LANGUE : tu écris ENTIÈREMENT en ${buildLanguageDirective(locale)}. Chaque titre, chaque phrase, chaque libellé de bouton.`;
 }
 
 /**

@@ -7871,6 +7871,67 @@
       "cout": "{count, plural, one {# crédito} other {# créditos}}",
       "coutPistes": "Pedir propuestas cuesta {count, plural, one {# crédito} other {# créditos}}, cada vez.",
       "environ": "unos {count, plural, one {# crédito} other {# créditos}}"
+    },
+    "accueil": {
+      "creerTitre": "Generar contenidos nuevos",
+      "creerResume": "El bonus que sigue a tu quiz, la secuencia de emails de cada perfil, o las publicaciones que lo hacen circular.",
+      "creerCta": "Elegir un generador",
+      "mesContenusTitre": "Mis contenidos generados",
+      "mesContenusCompte": "{count, plural, one {# contenido ya escrito} other {# contenidos ya escritos}}",
+      "mesContenusVide": "Todavía nada. Lo que generes se guarda aquí solo.",
+      "mesContenusCta": "Abrir mi biblioteca",
+      "retour": "Volver a los generadores"
+    },
+    "bibliotheque": {
+      "titre": "Mis contenidos generados",
+      "compte": "{count, plural, =0 {nada todavía} one {# contenido} other {# contenidos}}",
+      "videBloc": "Aún no has generado nada aquí.",
+      "enEcrireUn": "Escribir uno",
+      "sansTitre": "Sin título",
+      "morceaux": "{count, plural, one {# parte} other {# partes}}",
+      "copier": "Copiar todo",
+      "supprimer": "Eliminar",
+      "tronques": "{count, plural, one {# parte se cortó} other {# partes se cortaron}}",
+      "erreurLecture": "No se puede leer tu biblioteca ahora mismo. No se pierde nada, inténtalo en un momento."
+    },
+    "temps": {
+      "sonResultat": "Su resultado",
+      "unConseil": "Un consejo que puede aplicar",
+      "ceQuiLeRetient": "Lo que le frena",
+      "tonOffre": "Tu oferta, o una cita",
+      "resterEnContact": "Seguir en contacto",
+      "annonce": "El anuncio a tu lista",
+      "relance": "El recordatorio",
+      "partenaire": "El mensaje a un socio",
+      "curiosite": "La pregunta que engancha",
+      "erreurFrequente": "El error más frecuente",
+      "coulisses": "Entre bastidores",
+      "appelDirect": "La invitación directa"
+    },
+    "parcours": {
+      "projet": "El proyecto",
+      "reglages": "Los ajustes",
+      "pistes": "Las ideas",
+      "contenus": "Los contenidos",
+      "precedent": "Anterior",
+      "suivant": "Siguiente",
+      "choisirPiste": "Elige primero una idea: es ella la que dice qué se escribe.",
+      "retourPistes": "Volver a las ideas",
+      "manque": {
+        "projet": "Elige un proyecto para continuar.",
+        "reglages": "Completa lo que falta para continuar.",
+        "pistes": "Lanza las ideas y elige una."
+      },
+      "lancer": {
+        "bonus": "El bonus, cómo fabricarlo y los textos que lo entregan.",
+        "emails": "Cinco emails, escritos para este perfil, en el orden en que salen.",
+        "promo": "Tres emails y cuatro publicaciones para hacer circular tu quiz."
+      },
+      "lancerCta": {
+        "bonus": "Escribir el bonus",
+        "emails": "Escribir la secuencia",
+        "promo": "Escribir mis contenidos de promoción"
+      }
     }
   }
 }

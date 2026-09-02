@@ -7871,6 +7871,67 @@
       "cout": "{count, plural, one {# credit} other {# credits}}",
       "coutPistes": "Asking for angles costs {count, plural, one {# credit} other {# credits}}, every time.",
       "environ": "about {count, plural, one {# credit} other {# credits}}"
+    },
+    "accueil": {
+      "creerTitre": "Generate new content",
+      "creerResume": "The bonus that follows your quiz, the email sequence for each profile, or the posts that get it moving.",
+      "creerCta": "Pick a generator",
+      "mesContenusTitre": "My generated content",
+      "mesContenusCompte": "{count, plural, one {# piece already written} other {# pieces already written}}",
+      "mesContenusVide": "Nothing yet. Whatever you generate lands here on its own.",
+      "mesContenusCta": "Open my library",
+      "retour": "Back to generators"
+    },
+    "bibliotheque": {
+      "titre": "My generated content",
+      "compte": "{count, plural, =0 {nothing yet} one {# item} other {# items}}",
+      "videBloc": "You haven't generated anything here yet.",
+      "enEcrireUn": "Write one",
+      "sansTitre": "Untitled",
+      "morceaux": "{count, plural, one {# part} other {# parts}}",
+      "copier": "Copy everything",
+      "supprimer": "Delete",
+      "tronques": "{count, plural, one {# part was cut short} other {# parts were cut short}}",
+      "erreurLecture": "Your library can't be read right now. Nothing is lost, try again in a moment."
+    },
+    "temps": {
+      "sonResultat": "Their result",
+      "unConseil": "One tip they can apply",
+      "ceQuiLeRetient": "What holds them back",
+      "tonOffre": "Your offer, or a call",
+      "resterEnContact": "Staying in touch",
+      "annonce": "The announcement to your list",
+      "relance": "The follow-up",
+      "partenaire": "The message to a partner",
+      "curiosite": "The hook question",
+      "erreurFrequente": "The most common mistake",
+      "coulisses": "Behind the scenes",
+      "appelDirect": "The direct ask"
+    },
+    "parcours": {
+      "projet": "The project",
+      "reglages": "Settings",
+      "pistes": "Ideas",
+      "contenus": "Content",
+      "precedent": "Back",
+      "suivant": "Next",
+      "choisirPiste": "Pick an idea first: it decides what gets written.",
+      "retourPistes": "Back to the ideas",
+      "manque": {
+        "projet": "Pick a project to continue.",
+        "reglages": "Fill in what's missing to continue.",
+        "pistes": "Get the ideas, then pick one."
+      },
+      "lancer": {
+        "bonus": "The bonus, how to build it, and the texts that hand it over.",
+        "emails": "Five emails, written for this profile, in the order they go out.",
+        "promo": "Three emails and four posts to get your quiz moving."
+      },
+      "lancerCta": {
+        "bonus": "Write the bonus",
+        "emails": "Write the sequence",
+        "promo": "Write my promo content"
+      }
     }
   }
 }

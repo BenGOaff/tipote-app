@@ -7871,6 +7871,67 @@
       "cout": "{count, plural, one {# credito} other {# crediti}}",
       "coutPistes": "Chiedere delle proposte costa {count, plural, one {# credito} other {# crediti}}, ogni volta.",
       "environ": "circa {count, plural, one {# credito} other {# crediti}}"
+    },
+    "accueil": {
+      "creerTitre": "Generare nuovi contenuti",
+      "creerResume": "Il bonus che segue il tuo quiz, la sequenza di email di ogni profilo, o i post che lo fanno girare.",
+      "creerCta": "Scegli un generatore",
+      "mesContenusTitre": "I miei contenuti generati",
+      "mesContenusCompte": "{count, plural, one {# contenuto già scritto} other {# contenuti già scritti}}",
+      "mesContenusVide": "Ancora niente. Quello che generi finisce qui da solo.",
+      "mesContenusCta": "Apri la mia libreria",
+      "retour": "Torna ai generatori"
+    },
+    "bibliotheque": {
+      "titre": "I miei contenuti generati",
+      "compte": "{count, plural, =0 {ancora niente} one {# contenuto} other {# contenuti}}",
+      "videBloc": "Non hai ancora generato niente qui.",
+      "enEcrireUn": "Scriverne uno",
+      "sansTitre": "Senza titolo",
+      "morceaux": "{count, plural, one {# parte} other {# parti}}",
+      "copier": "Copia tutto",
+      "supprimer": "Elimina",
+      "tronques": "{count, plural, one {# parte è stata troncata} other {# parti sono state troncate}}",
+      "erreurLecture": "Non riesco a leggere la tua libreria adesso. Niente è perso, riprova tra poco."
+    },
+    "temps": {
+      "sonResultat": "Il suo risultato",
+      "unConseil": "Un consiglio che può applicare",
+      "ceQuiLeRetient": "Cosa lo frena",
+      "tonOffre": "La tua offerta, o un appuntamento",
+      "resterEnContact": "Restare in contatto",
+      "annonce": "L'annuncio alla tua lista",
+      "relance": "Il sollecito",
+      "partenaire": "Il messaggio a un partner",
+      "curiosite": "La domanda che aggancia",
+      "erreurFrequente": "L'errore più frequente",
+      "coulisses": "Dietro le quinte",
+      "appelDirect": "L'invito diretto"
+    },
+    "parcours": {
+      "projet": "Il progetto",
+      "reglages": "Le impostazioni",
+      "pistes": "Le piste",
+      "contenus": "I contenuti",
+      "precedent": "Indietro",
+      "suivant": "Avanti",
+      "choisirPiste": "Scegli prima una pista: è lei che dice cosa si scrive.",
+      "retourPistes": "Torna alle piste",
+      "manque": {
+        "projet": "Scegli un progetto per continuare.",
+        "reglages": "Completa quello che manca per continuare.",
+        "pistes": "Lancia le piste, poi scegline una."
+      },
+      "lancer": {
+        "bonus": "Il bonus, come realizzarlo e i testi che lo consegnano.",
+        "emails": "Cinque email, scritte per questo profilo, nell'ordine in cui partono.",
+        "promo": "Tre email e quattro post per far girare il tuo quiz."
+      },
+      "lancerCta": {
+        "bonus": "Scrivere il bonus",
+        "emails": "Scrivere la sequenza",
+        "promo": "Scrivere i miei contenuti di promozione"
+      }
     }
   }
 }
