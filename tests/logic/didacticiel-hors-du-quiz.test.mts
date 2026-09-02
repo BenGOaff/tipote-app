@@ -1,95 +1,152 @@
 // tests/logic/didacticiel-hors-du-quiz.test.mts
 //
-// Béné, 1er septembre 2026, en ouvrant le quiz en ligne d'un client :
-// "le didacticiel s'ouvre sur la version en ligne du quiz putain !! Le
-// didacticiel ne concerne PAS les visiteurs de quiz !!"
+// LE CHROME DE L'APP NE S'AFFICHE JAMAIS CHEZ UN VISITEUR.
 //
-// Elle a raison, et la cause est celle qui revient : DEUX LISTES
-// d'exceptions, tenues séparément, qui ne disaient pas la même chose.
-// Le CoachWidget nommait "/q/", le TutorialOverlay non. L'écran gris du
-// didacticiel s'ouvrait donc par dessus le quiz d'une cliente, chez ses
-// visiteurs.
+// Béné l'a signalé DEUX JOURS DE SUITE, sur deux écrans différents :
+// le 1er septembre sur le quiz public, le 2 sur le centre d'aide. Les
+// deux fois, la cause était une liste d'EXCEPTIONS qui oubliait le
+// dernier écran public ajouté.
 //
-// Et le pathname ne suffisait pas : sur le domaine perso d'une
-// créatrice, le middleware réécrit vers `/s/<slug>` et le
-// `usePathname()` du navigateur rend le chemin que le VISITEUR a tapé.
-// C'est exactement le piège de `affiliate.tipote.com` (8 juin), un cran
-// plus loin.
+// Ce filet ne vérifie donc pas « /support est bien exclu » : il vérifie
+// que le SENS de la règle est le bon, c'est à dire que tout ce qui n'est
+// pas nommé comme un écran d'app est public.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import fs from "node:fs";
+import path from "node:path";
 
-import { estNotreHote, estSurfacePublique } from "../../lib/nav/surfacePublique.ts";
+import {
+  PREFIXES_APP,
+  cheminDeLApp,
+  estNotreHote,
+  estSurfacePublique,
+} from "@/lib/nav/surfacePublique";
 
-// ── Ce qu'elle a vu ──────────────────────────────────────────────────
+// ---------------------------------------------------------------------
+// LE SENS DE LA RÈGLE.
+// ---------------------------------------------------------------------
 
-test("le viewer public d'un quiz est une surface de VISITEUR", () => {
-  assert.equal(estSurfacePublique("/q/chemindepuissance", "app.tipote.com"), true);
-  assert.equal(estSurfacePublique("/q/mon-quiz?x=1", "app.tipote.com"), true);
-});
-
-test("les autres écrans publics aussi", () => {
-  for (const chemin of ["/s/mon-quiz", "/pq/abc", "/p/abc", "/depart/xyz"]) {
-    assert.equal(estSurfacePublique(chemin, "app.tipote.com"), true, chemin);
-  }
-});
-
-test("le tableau de bord et l'éditeur gardent leur didacticiel", () => {
-  for (const chemin of ["/dashboard", "/contents", "/quiz/123", "/quiz/123/analytics", "/settings"]) {
-    assert.equal(estSurfacePublique(chemin, "app.tipote.com"), false, chemin);
-  }
-});
-
-// ── LE PIÈGE DU DOMAINE PERSO ────────────────────────────────────────
-
-test("sur le domaine d'une créatrice, TOUT est public, quel que soit le chemin", () => {
-  // Le middleware y réécrit vers /s/<slug>, mais le navigateur rend le
-  // chemin tapé par le visiteur : le pathname seul ne voit rien.
-  assert.equal(estSurfacePublique("/mon-quiz", "quiz.macliente.fr"), true);
-  assert.equal(estSurfacePublique("/", "quiz.macliente.fr"), true);
-});
-
-test("nos domaines restent les nôtres", () => {
-  for (const h of ["app.tipote.com", "affiliate.tipote.com", "tipote.com", "localhost:3000", "127.0.0.1"]) {
-    assert.equal(estNotreHote(h), true, h);
-  }
-  for (const h of ["quiz.macliente.fr", "mauricemassolin.com", "tipote.com.exemple.fr"]) {
-    assert.equal(estNotreHote(h), false, h);
-  }
-});
-
-test("un host inconnu ne fait RIEN conclure", () => {
-  // Mieux vaut se rabattre sur le chemin que masquer le didacticiel de
-  // tout le monde parce qu'un en-tête manquait.
-  assert.equal(estNotreHote(null), true);
-  assert.equal(estSurfacePublique("/dashboard", null), false);
-  assert.equal(estSurfacePublique("/q/abc", null), true);
-});
-
-// ── Les garde-fous qui empêchent le retour du bug ────────────────────
-
-test("les deux widgets passent par la MÊME règle", () => {
-  for (const f of [
-    "components/tutorial/TutorialOverlay.tsx",
-    "components/coach/CoachWidget.tsx",
-    "components/Providers.tsx",
+test("tout ce qui n'est pas un écran d'app est PUBLIC par défaut", () => {
+  // C'est la correction du 2 septembre. Avant, un écran public non
+  // nommé montrait le didacticiel ; maintenant il ne peut plus.
+  for (const inconnu of [
+    "/support",
+    "/support/comment-creer-un-quiz",
+    "/legal/cgv",
+    "/partage/abc123",
+    "/help/seo",
+    "/depart/xyz",
+    "/un-ecran-public-qui-n-existe-pas-encore",
+    "/",
+    "/login",
   ]) {
-    const src = readFileSync(f, "utf8");
-    assert.match(src, /estSurfacePublique\(/, `${f} ne consulte pas la règle commune`);
+    assert.equal(estSurfacePublique(inconnu, "app.tipote.com"), true, inconnu);
   }
 });
 
-test("Providers ne monte plus le chrome sur une surface publique", () => {
-  const src = readFileSync("components/Providers.tsx", "utf8");
-  assert.match(
-    src,
-    /!isAffiliateSpace\s*&&\s*!surfacePublique/,
-    "le didacticiel et le coach sont remontés sur toutes les pages",
-  );
+test("le centre d'aide, nommément", () => {
+  // "le didacticiel Tipote s'affiche sur le centre d'aide PUTAIN !!"
+  assert.equal(estSurfacePublique("/support", "app.tipote.com"), true);
+  assert.equal(estSurfacePublique("/support", null), true);
+  assert.equal(cheminDeLApp("/support"), false);
 });
 
-test("le root layout passe bien le host, sinon le domaine perso n'est pas vu", () => {
-  const src = readFileSync("app/layout.tsx", "utf8");
-  assert.match(src, /host=\{hostHeader\}/);
+test("le viewer public, nommément", () => {
+  // Le retour de la veille, qui doit rester corrigé.
+  for (const p of ["/q/mon-quiz", "/s/mon-quiz", "/pq/abc", "/p/ma-page"]) {
+    assert.equal(estSurfacePublique(p, "app.tipote.com"), true, p);
+  }
+});
+
+test("les écrans de l'app gardent leur didacticiel", () => {
+  // L'autre moitié : une règle qui masque tout ne sert à rien non plus.
+  for (const p of [
+    "/dashboard",
+    "/contents",
+    "/contents/42",
+    "/quiz/42",
+    "/create/quiz",
+    "/strategy/phase-1",
+    "/settings",
+    "/generateurs/bonus",
+    "/leads",
+  ]) {
+    assert.equal(estSurfacePublique(p, "app.tipote.com"), false, p);
+  }
+});
+
+test("on compare par SEGMENT, jamais par début de chaîne", () => {
+  // `/quizzes-publics` ne doit pas être pris pour `/quiz`.
+  assert.equal(cheminDeLApp("/quiz"), true);
+  assert.equal(cheminDeLApp("/quiz/42"), true);
+  assert.equal(cheminDeLApp("/quizzes-publics"), false);
+  assert.equal(cheminDeLApp("/appartement"), false);
+  assert.equal(cheminDeLApp("/app"), true);
+});
+
+// ---------------------------------------------------------------------
+// LE HOST : le pathname seul est mort sur un domaine perso.
+// ---------------------------------------------------------------------
+
+test("un domaine qui n'est pas le nôtre ne sert que du public", () => {
+  // Sur `exemple.fr`, le middleware réécrit vers `/s/<slug>` mais le
+  // navigateur rend `/mon-quiz`. Sans le host, le gate est mort.
+  assert.equal(estSurfacePublique("/mon-quiz", "exemple.fr"), true);
+  assert.equal(estSurfacePublique("/dashboard", "exemple.fr"), true);
+  assert.equal(estNotreHote("exemple.fr"), false);
+  assert.equal(estNotreHote("app.tipote.com"), true);
+  assert.equal(estNotreHote("affiliate.tipote.com"), true);
+  assert.equal(estNotreHote("localhost:3000"), true);
+});
+
+test("un host inconnu ne fait conclure à RIEN", () => {
+  // Le coût d'une erreur est asymétrique : un host à nous pris pour un
+  // domaine perso masque un didacticiel, un domaine perso pris pour le
+  // nôtre affiche un écran d'admin chez les visiteurs d'une cliente.
+  assert.equal(estNotreHote(null), true);
+  assert.equal(estNotreHote(""), true);
+  assert.equal(estSurfacePublique("/dashboard", null), false);
+});
+
+// ---------------------------------------------------------------------
+// PLUS DE DEUXIÈME LISTE.
+// ---------------------------------------------------------------------
+
+test("le coach ne tient plus sa propre liste de surfaces publiques", () => {
+  // C'est la cause des deux signalements : trois listes des mêmes
+  // chemins, tenues séparément.
+  const src = fs.readFileSync(
+    path.join(process.cwd(), "components/coach/CoachWidget.tsx"),
+    "utf8",
+  );
+  const liste = /const HIDDEN_PREFIXES = \[([^\]]*)\]/.exec(src)?.[1] ?? "";
+  for (const public_ of ["/q/", "/p/", "/support", "/legal", "/auth", "/onboarding"]) {
+    assert.ok(!liste.includes(`"${public_}"`), `le coach renomme « ${public_} » dans sa propre liste`);
+  }
+  assert.ok(src.includes("estSurfacePublique"), "le coach n'appelle plus la règle commune");
+});
+
+test("les deux widgets passent par la MÊME fonction", () => {
+  for (const f of ["components/coach/CoachWidget.tsx", "components/tutorial/TutorialOverlay.tsx"]) {
+    const src = fs.readFileSync(path.join(process.cwd(), f), "utf8");
+    assert.ok(src.includes("estSurfacePublique"), `${f} décide tout seul`);
+  }
+  // Et le montage aussi : le composant qui les rend ne doit pas les
+  // monter du tout sur une surface publique.
+  const prov = fs.readFileSync(path.join(process.cwd(), "components/Providers.tsx"), "utf8");
+  assert.ok(prov.includes("estSurfacePublique"));
+});
+
+test("les écrans protégés du middleware sont tous des écrans d'app", () => {
+  // Les deux listes ne peuvent pas se contredire : un chemin derrière
+  // connexion qui ne serait pas un écran d'app serait un écran sans
+  // didacticiel, sans qu'on comprenne pourquoi.
+  const mid = fs.readFileSync(path.join(process.cwd(), "middleware.ts"), "utf8");
+  const bloc = /const PROTECTED_PREFIXES = \[([\s\S]*?)\];/.exec(mid)?.[1] ?? "";
+  const proteges = [...bloc.matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+  assert.ok(proteges.length >= 15, "la liste du middleware n'a pas été lue");
+  for (const p of proteges) {
+    assert.ok(PREFIXES_APP.includes(p), `${p} est protégé par le middleware mais absent de PREFIXES_APP`);
+  }
 });

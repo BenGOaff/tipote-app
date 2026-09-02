@@ -3180,15 +3180,55 @@ host à nous pris pour un domaine perso masque un didacticiel, un domaine
 perso pris pour le nôtre affiche un écran d'admin chez les visiteurs
 d'une cliente.
 
-**LA VRAIE CORRECTION EST STRUCTURELLE, ET TIQUIZ L'A DÉJÀ.** Là-bas ces
-widgets sont montés dans `AppShell`, qui n'enveloppe que les pages
-authentifiées, avec le commentaire qui va avec : "le viewer public d'un
-quiz ne doit jamais le voir". Ici ils vivent dans le layout RACINE, donc
-sur toutes les pages, et chacun se défend ensuite comme il peut. À
-reprendre au prochain gros passage sur la navigation.
+### ET ÇA A RECOMMENCÉ LE LENDEMAIN, SUR LE CENTRE D'AIDE
+
+Béné, 2 septembre : "le didacticiel Tipote s'affiche sur le centre
+d'aide PUTAIN !! Hier il s'affichait sur les quiz publics, aujourd'hui
+sur le centre d'aide."
+
+**Elle a raison deux fois, et c'était le même défaut.** La correction de
+la veille avait remplacé deux listes par une. C'était mieux, et c'était
+encore la mauvaise FORME : cette liste nommait les surfaces PUBLIQUES,
+donc tout écran public ajouté après elle fuitait. `/support` n'y était
+pas, et il ne pouvait pas y être : le centre d'aide est public depuis le
+23 août, donc il est arrivé APRÈS la liste.
+
+J'avais écrit dans ce fichier même « une liste oublie toujours le
+prochain écran ajouté », et j'ai refait une liste d'exceptions.
+
+**LA CORRECTION : ON INVERSE.** `PREFIXES_APP`
+(`lib/nav/surfacePublique.ts`) nomme les 24 écrans de l'app, relevés
+route par route dans `app/`. Le chrome ne s'affiche QUE là. **Tout le
+reste est public par défaut**, donc un écran public ajouté demain n'a
+plus rien à déclarer.
+
+Le sens de l'erreur devient sûr, et c'est le seul argument qui compte :
+
+| ce qu'on oublie | ce que ça coûte |
+|---|---|
+| un écran d'app | le didacticiel ne s'affiche pas pour la créatrice. Elle le dit, on l'ajoute. |
+| un écran public (l'ancien sens) | l'écran gris s'ouvre chez la cliente d'une cliente. On l'apprend en se faisant engueuler. |
+
+**Et il y avait une TROISIÈME liste**, dans `CoachWidget` :
+`HIDDEN_PREFIXES` renommait `/q/`, `/p/`, `/support`, `/legal`, `/auth`
+et `/onboarding`. Elle ne garde plus que ce qui lui est propre, deux
+écrans de l'app où le bouton gêne. Trois listes tenues séparément
+finissent toujours par ne plus dire la même chose, et celle qui se
+trompe est celle qu'on oublie.
+
+**La comparaison se fait par SEGMENT**, jamais par début de chaîne :
+sinon `/quizzes-publics` serait pris pour `/quiz`.
 
 Garde-fou : `tests/logic/didacticiel-hors-du-quiz.test.mts`, vérifié en
-rejouant la version d'avant.
+rejouant la version d'avant (deux tests rougissent). Il exige aussi que
+les chemins protégés du middleware soient tous des écrans d'app : les
+deux listes ne peuvent plus se contredire.
+
+**Ce qui reste, et Tiquiz l'a déjà :** là-bas ces widgets sont montés
+dans `AppShell`, qui n'enveloppe que les pages authentifiées. Ici ils
+vivent dans le layout RACINE, donc sur toutes les pages, et se défendent
+ensuite. L'inversion rend le défaut sans conséquence, elle ne remplace
+pas ce déplacement. À faire au prochain gros passage sur la navigation.
 
 ## Une entité HTML sans balise autour (retour Christian, 1er septembre 2026)
 
