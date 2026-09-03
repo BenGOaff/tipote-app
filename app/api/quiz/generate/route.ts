@@ -19,6 +19,7 @@ import { copyStyleHint } from "@/lib/visualStudio/copyPatterns";
 import { sanitizeAiQuizPayload } from "@/lib/aiTextSanitizer";
 import { buildClaudeMessageBody } from "@/lib/claudeRequest";
 import { fetchAnthropic } from "@/lib/aiRetry";
+import { echecIa } from "@/lib/ia/echecIa";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -62,10 +63,7 @@ export async function POST(req: NextRequest) {
 
   const apiKey = getClaudeApiKey();
   if (!apiKey) {
-    return NextResponse.json(
-      { ok: false, error: "Clé API Claude manquante côté serveur." },
-      { status: 500 },
-    );
+    return echecIa("not_configured");
   }
 
   try {
@@ -239,10 +237,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "NO_CREDITS" }, { status: 402 });
     }
     console.error("[POST /api/quiz/generate] Pre-validation error:", e);
-    return NextResponse.json(
-      { ok: false, error: e instanceof Error ? e.message : "Unknown error" },
-      { status: 500 },
-    );
+    return echecIa("generic");
   }
 
   // ── Start SSE stream — heartbeats keep the connection alive ────────

@@ -31,6 +31,8 @@ import { LanguageCombobox } from "@/components/quiz/LanguageCombobox";
 import { SURVEY_OBJECTIVES } from "@/lib/prompts/quiz/system";
 import { toast } from "sonner";
 import { asImportFailureReason } from "@/lib/quiz/importFailure";
+import { useEchecIa } from "@/hooks/useEchecIa";
+import { lireEchecIa } from "@/lib/ia/lireEchecIa";
 
 type GeneratedSurvey = Record<string, unknown>;
 
@@ -38,6 +40,7 @@ export default function SurveyFormClient() {
   const t = useTranslations("survey");
   // Meme namespace partage que l'ecran quiz (cf. lib/quiz/importFailure.ts).
   const tImport = useTranslations("importErrors");
+  const direEchec = useEchecIa();
   const router = useRouter();
 
   const [activeTab, setActiveTab] = useState<"ai" | "import" | "manual">("ai");
@@ -249,9 +252,9 @@ export default function SurveyFormClient() {
           locale: aiLocale,
         }),
       });
-      if (!res.ok) {
-        const errText = await res.text().catch(() => "");
-        toast.error(`${t("errAi")}${errText ? ` — ${errText.slice(0, 150)}` : ""}`);
+      const echec = await lireEchecIa(res);
+      if (echec) {
+        toast.error(`${t("errAi")} : ${direEchec(echec.reason)}`);
         return;
       }
       const survey = await consumeSseStream(res);

@@ -94,6 +94,8 @@ import {
 } from "@/lib/quizBranding";
 import { projectBackHref } from "@/lib/nav/projectBack";
 import { televerserAsset } from "@/lib/storage/televerser";
+import { useEchecIa } from "@/hooks/useEchecIa";
+import { lireEchecIa } from "@/lib/ia/lireEchecIa";
 
 // Types
 // Surveys reuse the QuizDetailClient shell but specialise: questions carry a
@@ -481,6 +483,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   const t = useTranslations("quizDetail");
   const tc = useTranslations("common");
   const st = useTranslations("survey");
+  const direEchec = useEchecIa();
 
   const [loading, setLoading] = useState(true);
   // Le projet n'existe pas, ou il n'est pas à ce compte. On l'AFFICHE,
@@ -875,15 +878,19 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       });
       const data = await res.json();
       if (!res.ok || !data?.ok) {
-        toast.error(data?.error ?? data?.message ?? "Erreur IA");
+        // La RAISON, traduite. Avant : `data.error` (une phrase technique
+        // en anglais) puis "Erreur IA", ecrit EN FRANCAIS dans le code,
+        // dans une interface qui existe en 7 langues.
+        toast.error(direEchec(data?.reason));
         return null;
       }
       return Array.isArray(data.proposals) ? data.proposals : null;
     } catch {
-      toast.error("Erreur IA");
+      // On n'a meme pas joint la route : c'est le reseau.
+      toast.error(direEchec("unreachable"));
       return null;
     }
-  }, [quizId]);
+  }, [quizId, direEchec]);
   const aiRewriteTitle = useCallback((p: string) => aiRewrite(p, "title"), [aiRewrite]);
   const aiRewriteIntro = useCallback((p: string) => aiRewrite(p, "intro"), [aiRewrite]);
   const aiRewriteQuestion = useCallback((p: string) => aiRewrite(p, "question"), [aiRewrite]);

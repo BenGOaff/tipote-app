@@ -167,6 +167,8 @@ import {
 import { QuizPanelMedia } from "@/components/quiz/QuizPanelMedia";
 import { PanelMediaEditor } from "@/components/quiz/PanelMediaEditor";
 import { televerserAsset } from "@/lib/storage/televerser";
+import { useEchecIa } from "@/hooks/useEchecIa";
+import { lireEchecIa } from "@/lib/ia/lireEchecIa";
 
 // Types
 // Un quiz (profil ou scoring) peut mélanger des types de questions, comme le
@@ -645,6 +647,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const router = useRouter();
   const t = useTranslations("quizDetail");
   const tc = useTranslations("common");
+  const direEchec = useEchecIa();
 
   const [loading, setLoading] = useState(true);
   // Le projet n'existe pas, ou il n'est pas à ce compte. On l'AFFICHE,
@@ -1377,7 +1380,9 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       });
       const data = await res.json();
       if (!res.ok || !data?.ok) {
-        toast.error(data?.error ?? data?.message ?? t("toastAiError"));
+        // La RAISON, traduite. Avant : `data.error`, une phrase technique en
+        // anglais recopiee telle quelle a l'ecran (3 septembre 2026).
+        toast.error(direEchec(data?.reason));
         return null;
       }
       return Array.isArray(data.proposals) ? data.proposals : null;
@@ -1460,7 +1465,9 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       });
       const data = await res.json();
       if (!res.ok || !data?.ok) {
-        setRebalanceError(data?.error ?? data?.message ?? "Une erreur est survenue.");
+        // "Une erreur est survenue." etait ecrit EN FRANCAIS dans le code,
+        // dans une interface qui existe en 7 langues.
+        setRebalanceError(direEchec(data?.reason));
         return;
       }
       setRebalanceProposal({
@@ -1468,8 +1475,11 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
         additions: Array.isArray(data.additions) ? data.additions : [],
         rationale: typeof data.rationale === "string" ? data.rationale : null,
       });
-    } catch (e: any) {
-      setRebalanceError(e?.message ?? "Une erreur est survenue.");
+    } catch {
+      // On n'a meme pas joint la route : c'est le reseau. `e.message`
+      // etait un message technique, et son repli une phrase francaise
+      // ecrite en dur dans une interface qui existe en 7 langues.
+      setRebalanceError(direEchec("unreachable"));
     } finally {
       setRebalanceLoading(false);
     }

@@ -7933,5 +7933,16 @@
         "promo": "Escrever meus conteúdos de divulgação"
       }
     }
+  },
+  "erreursIa": {
+    "busy": "Os servidores da IA estão sobrecarregados agora. Espere um minuto e tente de novo, nada é perdido.",
+    "too_long": "Passou do tempo disponível e parou. Tente de novo, costuma dar certo na segunda.",
+    "refused": "O pedido foi recusado. Não é do seu lado: avise a gente e vamos ver o que está travando.",
+    "unreachable": "Não foi possível falar com o serviço. Confira sua conexão e tente de novo.",
+    "empty": "A resposta veio vazia. Tente de novo, costuma dar certo na segunda.",
+    "unreadable": "A resposta veio em um formato ilegível. Tente de novo, costuma dar certo na segunda.",
+    "rate_limited": "Você gerou bastante nos últimos minutos. Volte daqui a pouco, seu trabalho fica salvo.",
+    "not_configured": "A IA não está disponível no momento. Já fomos avisados.",
+    "generic": "Não foi concluído. Tente de novo, o resto do seu trabalho fica salvo."
   }
 }

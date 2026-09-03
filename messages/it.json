@@ -7933,5 +7933,16 @@
         "promo": "Scrivere i miei contenuti di promozione"
       }
     }
+  },
+  "erreursIa": {
+    "busy": "I server dell'IA sono saturi in questo momento. Aspetta un minuto e rilancia, non si perde nulla.",
+    "too_long": "Ha superato il tempo disponibile e si è fermato. Rilancia, di solito funziona al secondo tentativo.",
+    "refused": "La richiesta è stata rifiutata. Non dipende da te: segnalacelo e verifichiamo cosa blocca.",
+    "unreachable": "Impossibile raggiungere il servizio. Controlla la connessione, poi rilancia.",
+    "empty": "La risposta è arrivata vuota. Rilancia, di solito va bene la seconda volta.",
+    "unreadable": "La risposta è arrivata in un formato illeggibile. Rilancia, di solito va bene la seconda volta.",
+    "rate_limited": "Hai generato molto negli ultimi minuti. Riprova tra poco, il tuo lavoro è conservato.",
+    "not_configured": "L'IA non è disponibile al momento. Siamo stati avvisati.",
+    "generic": "Non è andata a buon fine. Rilancia, il resto del tuo lavoro è conservato."
   }
 }

@@ -24,6 +24,8 @@ import { QUIZ_OBJECTIVES } from "@/lib/prompts/quiz/system";
 import { LanguageCombobox } from "@/components/quiz/LanguageCombobox";
 import { toast } from "sonner";
 import { asImportFailureReason } from "@/lib/quiz/importFailure";
+import { useEchecIa } from "@/hooks/useEchecIa";
+import { lireEchecIa } from "@/lib/ia/lireEchecIa";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -202,6 +204,7 @@ export default function QuizFormClient() {
   // deux ecrans qui importent un fichier (quiz et sondage) partagent
   // exactement les memes, et les recopier les ferait diverger.
   const tImport = useTranslations("importErrors");
+  const direEchec = useEchecIa();
   const router = useRouter();
 
   // ---- Manual form state ----
@@ -775,14 +778,12 @@ export default function QuizFormClient() {
         }),
       });
 
-      if (!res.ok) {
-        // Non-SSE error (400, 401, 500 before stream starts)
-        let errMsg = t("errSave");
-        try {
-          const err = await res.json();
-          if (err?.error) errMsg = err.error;
-        } catch { /* response wasn't JSON */ }
-        toast.error(errMsg);
+      // Le discriminant est le Content-Type, pas le statut : un echec IA
+      // repond 200 + JSON depuis le 3 septembre, pour que Cloudflare ne
+      // remplace pas sa raison (lib/ia/echecIa.ts).
+      const echec = await lireEchecIa(res);
+      if (echec) {
+        toast.error(direEchec(echec.reason));
         setGenerating(false);
         return;
       }
@@ -966,9 +967,9 @@ export default function QuizFormClient() {
         }),
       });
 
-      if (!res.ok) {
-        const errText = await res.text().catch(() => "");
-        toast.error(errText ? t("errImportPrefix", { msg: errText.slice(0, 150) }) : t("errImport"));
+      const echecImport = await lireEchecIa(res);
+      if (echecImport) {
+        toast.error(t("errImportPrefix", { msg: direEchec(echecImport.reason) }));
         setImporting(false);
         return;
       }
