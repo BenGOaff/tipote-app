@@ -3493,6 +3493,69 @@ Test : le bloc "les pistes : le lancement vit au pied des réglages" de
 `tests/logic/generateurs-parcours.test.mts`, vérifié en rejouant la
 version d'avant (deux tests rougissent).
 
+### PAREIL QUE L'ATELIER, NI PLUS NI MOINS (Béné, 3 septembre 2026)
+
+"Au final je veux exactement la même chose sur l'atelier et sur tiquiz.
+Pareil. Ni plus, ni moins. En visible et en invisible pour les users."
+
+Le passage a été fait geste par geste, en lisant son labo au lieu de
+lire sa liste d'étapes. Ce qui différait, mesuré :
+
+| Le geste | l'Atelier | ici, avant |
+|---|---|---|
+| l'écran de production | une GRILLE de dossiers, un clic ouvre, la flèche remonte | tout empilé |
+| le titre de l'écran | celui de la piste, sa punchline, l'avancement | "Les contenus" |
+| corriger un texte | l'éditeur, sur place | lecture seule |
+| exporter | PDF par bloc | rien |
+| choisir une piste | n'écrit RIEN, chaque dossier a son bouton | écrivait tout d'un coup |
+| la relance | AJOUTE une piste, max 6 | remplaçait les trois |
+
+**Quatre modules sont IMPORTÉS, pas réécrits**, et ils sont identiques à
+l'octet près dans les trois dépôts : `lib/bonus/document.ts`,
+`accents.ts`, `markdownHtml.ts`, `printable.ts`, plus
+`components/BonusDocument.tsx`. Le garde-fou est une commande :
+
+```bash
+cmp lib/bonus/document.ts ../formaquiz/lib/bonus/document.ts
+```
+
+Deux copies d'une même règle finissent toujours par diverger, et ici la
+divergence coûte un PDF qui ne ressemble plus à l'écran.
+
+**LA PREUVE QUE CE N'EST PAS THÉORIQUE, trouvée en portant.** La mise en
+forme en ligne vivait en DEUX exemplaires chez lui, `inline()` dans
+`BonusDocument.tsx` et `inline()` dans `printable.ts`, et le commentaire
+du second annonçait "la MEME mise en forme qu'a l'ecran". **Elles
+avaient déjà divergé** : l'écran n'échappait pas le guillemet double,
+l'impression si. Or c'est une règle de SÉCURITÉ (ce texte vient d'un
+modèle et finit dans un `innerHTML`).
+
+Elle vit maintenant dans `lib/bonus/document.ts`, en un seul exemplaire,
+avec la cible en PARAMÈTRE (`"ecran"` ouvre un onglet, `"impression"`
+non). Et surtout elle est enfin TESTABLE : enfermée dans un `.tsx`, elle
+ne l'était pas, donc rien ne vérifiait qu'un `javascript:` était refusé.
+Les deux tests de l'Atelier qui la surveillaient lisaient sa SOURCE avec
+des regex, donc ils figeaient une écriture et pas un comportement : ils
+APPELLENT la fonction désormais, des deux côtés.
+
+**Ce qui change pour la créatrice, et qu'il faut assumer :** les emails
+et la promo ne s'écrivent plus d'un seul bouton. Chaque morceau a le
+sien, comme les trois blocs du bonus dans l'Atelier. C'est plus de clics
+et c'est le prix de "pareil" ; c'est aussi ce qui évite de facturer sept
+contenus à quelqu'un qui en voulait deux.
+
+🚨 **Fichier SUPPRIMÉ : `lib/generateurs/markdown.ts`.** C'était NOTRE
+rendu, à côté de celui de l'Atelier : le même contenu s'affichait de
+deux façons selon l'écran où on le lisait. La bibliothèque
+(`/generateurs/mes-contenus`) passe par le même rendu que la production.
+Supprimé et pas laissé sans appelant : un module mort est un piège que
+le prochain passage rebranche en croyant réparer.
+
+Test : `tests/logic/generateurs-parcours.test.mts`, bloc "l'écran de
+production suit le labo de l'Atelier", vérifié en rejouant la version
+d'avant (l'édition retirée, le PDF retiré, l'avancement recompté : les
+trois rougissent).
+
 ### 4. LES CONTENUS SE RETROUVENT
 
 "Il faut aussi que les users retrouvent leurs créations dans

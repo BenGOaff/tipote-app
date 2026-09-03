@@ -7831,7 +7831,8 @@
     "pistes": {
       "titre": "Trois pistes, tu en choisis une",
       "lancer": "Proposer trois pistes",
-      "relancer": "Proposer trois autres pistes",
+      "uneDePlus": "Aucune ne me convainc, propose-m'en une autre",
+      "uneDePlusAide": "Une idée de plus, dans un format différent. Celles du dessus restent.",
       "encours": "Trois pistes en cours d'écriture",
       "aide": "Elles sont volontairement différentes. Prends celle qui te ressemble, pas la plus impressionnante.",
       "recommandee": "Conseillée",
@@ -7844,13 +7845,25 @@
     "production": {
       "lancer": "Écrire les contenus",
       "encours": "En cours : {fait} sur {total}",
-      "refaire": "Réécrire ce contenu",
+      "refaire": "Refaire",
       "copier": "Copier",
       "copie": "Copié",
-      "brut": "Voir le texte à copier",
-      "rendu": "Revenir au rendu",
       "tronque": "Ce contenu a été coupé avant la fin. Réécris le, ça passe en général au deuxième essai.",
-      "vide": "Rien n'a encore été écrit."
+      "vide": "Rien n'a encore été écrit.",
+      "aGenerer": "À générer",
+      "pret": "Prêt",
+      "enCoursCourt": "En cours d'écriture",
+      "retourDossiers": "Retour aux dossiers",
+      "generer": "Générer",
+      "modifier": "Modifier",
+      "termine": "Terminé",
+      "pdf": "PDF",
+      "popupBloquee": "Ton navigateur a bloqué la fenêtre. Autorise les fenêtres surgissantes pour cette page.",
+      "avancement": {
+        "rien": "Rien de généré pour l'instant",
+        "partiel": "{faits} sur {total} écrits",
+        "complet": "Tout est écrit"
+      }
     },
     "blocs": {
       "contenu": "Le bonus, en entier",

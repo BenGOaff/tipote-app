@@ -28,13 +28,18 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import {
   ArrowLeft,
+  BookOpen,
   Check,
   Copy,
+  Download,
+  FileText,
   Loader2,
   Lock,
+  Megaphone,
+  Pencil,
   Sparkles,
   AlertTriangle,
-  RefreshCw,
+  Wand2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -59,8 +64,16 @@ import {
   suivante,
   type Etape,
 } from "@/lib/generateurs/parcours";
-import type { Piece, Piste } from "@/lib/generateurs/blocs";
-import { markdownVersHtml } from "@/lib/generateurs/markdown";
+import type { Bloc, Piece, Piste } from "@/lib/generateurs/blocs";
+import { avancement } from "@/lib/generateurs/avancement";
+import { RichTextEdit } from "@/components/ui/rich-text-edit";
+// LES QUATRE MODULES DU LABO DE L'ATELIER, PORTÉS À L'OCTET PRÈS.
+// `cmp` entre les deux dépôts est le garde-fou : deux copies qui
+// divergent, c'est un rendu et un PDF qui ne se ressemblent plus.
+import { parseBonusDoc, hasStructure } from "@/lib/bonus/document";
+import { markdownToEditorHtml, editorHtmlToMarkdown } from "@/lib/bonus/markdownHtml";
+import { buildPrintableHtml } from "@/lib/bonus/printable";
+import { BonusDocument } from "@/components/BonusDocument";
 
 /**
  * LE COMPTEUR DE CRÉDITS, quand l'app en a un.
@@ -84,6 +97,55 @@ export interface ProjetAffiche {
   nbQuestions: number;
   profils: { titre: string; description: string }[];
 }
+
+/**
+ * L'ALLURE D'UN DOSSIER, par bloc.
+ *
+ * Portée de `FOLDERS` dans le labo de l'Atelier : une icône, un fond, et
+ * une encre. Les trois blocs du bonus gardent EXACTEMENT ses couleurs
+ * (indigo, violet, ambre) ; les emails et les posts, qui n'existent pas
+ * là bas, prennent les deux teintes suivantes de la même famille.
+ *
+ * On assume le branding : ces écrans sont notre espace membre, jamais le
+ * quiz public d'une créatrice (c'est la distinction qu'elle a posée le
+ * 5 août, et c'est elle qui décide où les couleurs sont permises).
+ */
+const DOSSIER: Record<Bloc, { icone: typeof BookOpen; encre: string; fond: string }> = {
+  contenu: {
+    icone: FileText,
+    encre: "text-violet-600 dark:text-violet-300",
+    fond: "bg-violet-50 dark:bg-violet-950/40",
+  },
+  guide: {
+    icone: BookOpen,
+    encre: "text-indigo-600 dark:text-indigo-300",
+    fond: "bg-indigo-50 dark:bg-indigo-950/40",
+  },
+  remise: {
+    icone: Megaphone,
+    encre: "text-amber-600 dark:text-amber-300",
+    fond: "bg-amber-50 dark:bg-amber-950/40",
+  },
+  email: {
+    icone: FileText,
+    encre: "text-sky-600 dark:text-sky-300",
+    fond: "bg-sky-50 dark:bg-sky-950/40",
+  },
+  post: {
+    icone: Megaphone,
+    encre: "text-emerald-600 dark:text-emerald-300",
+    fond: "bg-emerald-50 dark:bg-emerald-950/40",
+  },
+};
+
+/**
+ * Le nombre de pistes au delà duquel on n'en propose plus.
+ *
+ * Trois au départ, trois de plus au maximum, comme dans le labo de
+ * l'Atelier. Au delà, une liste ne fait plus choisir : elle paralyse, et
+ * chaque clic supplémentaire coûte une génération.
+ */
+const MAX_PISTES = 6;
 
 type Etat = "repos" | "pistes" | "production";
 
@@ -131,6 +193,14 @@ export default function GenerateurClient({
     {},
   );
   const [enCours, setEnCours] = useState<string | null>(null);
+  // LE DOSSIER OUVERT, ET RIEN D'AUTRE À L'ÉCRAN.
+  // "Ces 3 blocs qui s'enchaînent ça fait beaucoup scroller, on voit mal
+  // la limite entre chacun" (Béné, Atelier, 5 août 2026). `null` = la
+  // grille des dossiers ; une clé = un seul document long affiché.
+  const [ouvert, setOuvert] = useState<string | null>(null);
+  // UN TEXTE GÉNÉRÉ EST UN BROUILLON, PAS UN LIVRABLE : elle corrige sur
+  // place, et le PDF reprend SA version.
+  const [edition, setEdition] = useState<string | null>(null);
 
   const projet = useMemo(
     () => projets.find((p) => p.id === projetId) ?? null,
@@ -253,6 +323,44 @@ export default function GenerateurClient({
     }
   }
 
+  /**
+   * UNE PISTE DE PLUS, ET LES TROIS RESTENT.
+   *
+   * Béné, Atelier, 6 août 2026 : "aucune ne te convainc ?" Le bouton dit
+   * ce qu'il coûte et ce qu'il rend, une idée et pas une nouvelle
+   * fournée. Sans ça, on clique en craignant de perdre les trois qui
+   * sont à l'écran, donc on ne clique pas.
+   */
+  async function unePisteDePlus() {
+    if (pistes.length >= MAX_PISTES || etat === "pistes") return;
+    setEtat("pistes");
+    try {
+      const res = await fetch("/api/generateurs", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          step: "encore",
+          ...corpsCommun(),
+          // CE QU'ELLE A DÉJÀ SOUS LES YEUX : sans ça, on paie une
+          // génération pour un doublon.
+          connues: pistes.map((p) => ({ format: p.format, titre: p.titre })),
+        }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!data?.ok || !data.piste) {
+        direLErreur(data?.reason);
+        setEtat("repos");
+        return;
+      }
+      retirer(data);
+      setPistes((l) => [...l, data.piste as Piste]);
+      setEtat("repos");
+    } catch {
+      direLErreur("unreachable");
+      setEtat("repos");
+    }
+  }
+
   const cle = (p: Piece) => `${p.bloc}-${p.index}`;
 
   async function ecrireUn(piste: Piste, pieceIndex: number): Promise<boolean> {
@@ -317,26 +425,97 @@ export default function GenerateurClient({
     };
   }
 
-  async function toutEcrire(piste: Piste) {
+  /**
+   * CHOISIR UNE PISTE N'ÉCRIT RIEN.
+   *
+   * Le labo de l'Atelier fait exactement ça : choisir mène aux dossiers,
+   * et chaque dossier porte SON bouton "Générer". On écrivait tout d'un
+   * coup, donc on facturait sept contenus à quelqu'un qui en voulait
+   * peut être deux, et on lui imposait deux minutes d'attente avant de
+   * voir quoi que ce soit.
+   */
+  function choisirPiste(piste: Piste) {
     setChoisie(piste);
-    setEtape("contenus");
-    setEtat("production");
     setContenus({});
-    // EN SÉRIE, jamais en parallèle : trois appels simultanés sur un
-    // compte Anthropic, c'est un 429, et deux morceaux sur trois qui
-    // ressortent vides (drame Fabienne, Atelier, 4 août).
-    for (let i = 0; i < piste.pieces.length; i++) {
-      const ok = await ecrireUn(piste, i);
-      // Un morceau qui échoue n'emporte pas les suivants : on continue,
-      // et ce qui est déjà écrit reste à l'écran.
-      if (!ok && i === 0) break;
-    }
-    setEtat("repos");
+    setOuvert(null);
+    setEdition(null);
+    setEtape("contenus");
   }
 
-  const faits = choisie
-    ? choisie.pieces.filter((p) => contenus[cle(p)]).length
-    : 0;
+  /** Le titre d'un morceau, traduit. Jamais l'intention brute. */
+  function titrePiece(piece: Piece): string {
+    // Sur un plan fixe, `resume` porte la consigne envoyée au modèle, et
+    // elle est en français dans un écran qui existe en 7 langues (c'est
+    // le "Résultat 4" du 1er septembre).
+    return piece.cle
+      ? `${piece.index}. ${t(`temps.${piece.cle}`)}`
+      : t(`blocs.${piece.bloc}`, { index: piece.index });
+  }
+
+  /**
+   * LE PDF : une page autonome, imprimée par le navigateur.
+   *
+   * Aucune dépendance ajoutée, exactement comme dans l'Atelier : une
+   * bibliothèque de PDF coûterait un paquet dans le `package-lock`, et
+   * `npm ci` casse en prod si le lock n'est pas commité avec.
+   */
+  function exporterPdf(piece: Piece) {
+    const ecrit = contenus[cle(piece)];
+    if (!ecrit) return;
+    const fen = window.open("", "_blank");
+    if (!fen) {
+      // Une fenêtre bloquée SE DIT : un bouton qui ne fait rien envoie
+      // chercher au mauvais endroit.
+      toast.error(t("production.popupBloquee"));
+      return;
+    }
+    const doc = parseBonusDoc(ecrit.markdown);
+    fen.document.write(
+      buildPrintableHtml(doc, { title: doc.title || titrePiece(piece) }),
+    );
+    fen.document.close();
+    fen.focus();
+  }
+
+  /**
+   * CE QU'ON EST EN TRAIN D'ÉCRIRE.
+   *
+   * Le bonus le tient d'une piste CHOISIE ; les deux autres l'ont d'un
+   * plan fixe, donc rien à choisir et rien à attendre. C'est un
+   * PARAMÈTRE de la mécanique (`passeParLesPistes`), jamais une
+   * déduction de la présence d'une piste : déduire marcherait
+   * aujourd'hui et casserait au premier générateur qui aurait les deux.
+   */
+  const travail: Piste | null = passeParLesPistes(generateur)
+    ? choisie
+    : pisteDuPlanFixe();
+
+  const clesDuTravail = travail ? travail.pieces.map(cle) : [];
+  const av = avancement(clesDuTravail, contenus);
+  const phraseAvancement =
+    av.etat === "rien"
+      ? t("production.avancement.rien")
+      : av.etat === "complet"
+        ? t("production.avancement.complet")
+        : t("production.avancement.partiel", { faits: av.faits, total: av.total });
+
+  const indexOuvert = travail ? travail.pieces.findIndex((x) => cle(x) === ouvert) : -1;
+  const ouvertPiece = indexOuvert >= 0 ? travail!.pieces[indexOuvert]! : null;
+  const contenuOuvert = ouvert ? (contenus[ouvert] ?? null) : null;
+
+  const [copie, setCopie] = useState(false);
+  async function copierOuvert() {
+    if (!contenuOuvert) return;
+    try {
+      await navigator.clipboard.writeText(contenuOuvert.markdown);
+      setCopie(true);
+      setTimeout(() => setCopie(false), 2000);
+    } catch {
+      // Un échec de copie SE DIT : un bouton qui ne fait rien envoie
+      // chercher au mauvais endroit (règle du 1er août sur le partage).
+      toast.error(t("erreurs.generic"));
+    }
+  }
 
   return (
     <AppShell userEmail={userEmail} headerTitle={t(`cartes.${generateur}.titre`)}>
@@ -615,7 +794,7 @@ export default function GenerateurClient({
                     size="sm"
                     variant={choisie?.titre === p.titre ? "default" : "outline"}
                     disabled={!autorise || etat === "production" || Boolean(enCours)}
-                    onClick={() => void toutEcrire(p)}
+                    onClick={() => choisirPiste(p)}
                   >
                     {choisie?.titre === p.titre ? t("pistes.choisie") : t("pistes.choisir")}
                   </Button>
@@ -624,107 +803,223 @@ export default function GenerateurClient({
             </div>
           ) : null}
 
-          {/* LA RELANCE EST SOBRE, ET SON PRIX EST DIT.
-              "Proposer trois autres pistes" REFACTURE : une relance
-              gratuite en apparence est la meilleure façon de vider un
-              compteur sans comprendre pourquoi. */}
-          <div className="flex flex-wrap items-center gap-3 pt-1">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={demanderPistes}
-              disabled={!autorise || !pretPourPistes || etat === "pistes" || Boolean(enCours)}
+          {/* UNE DE PLUS, ET LES TROIS RESTENT. Le bouton dit ce qu'il
+              rend et ce qu'il coûte : une relance gratuite en apparence
+              est la meilleure façon de vider un compteur sans comprendre
+              pourquoi, et une relance qui REMPLACE est un bouton sur
+              lequel on ne clique jamais. */}
+          {pistes.length > 0 && pistes.length < MAX_PISTES ? (
+            <div className="flex flex-col items-start gap-1.5 pt-1">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={unePisteDePlus}
+                disabled={!autorise || !pretPourPistes || etat === "pistes" || Boolean(enCours)}
+              >
+                {etat === "pistes" ? (
+                  <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                ) : (
+                  <Sparkles className="h-4 w-4 mr-1.5" />
+                )}
+                {etat === "pistes" ? t("pistes.encours") : t("pistes.uneDePlus")}
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                {t("pistes.uneDePlusAide")}
+                {credits ? ` ${t("credits.coutPistes", { count: credits.coutPistes })}` : ""}
+              </p>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+
+      {/* ── LES CONTENUS : DES DOSSIERS, PAS UNE PILE ──
+          Béné, Atelier, 5 août 2026 : "ces 3 blocs qui s'enchaînent ça
+          fait beaucoup scroller, on voit mal la limite entre chacun. On
+          peut faire 3 dossiers comme les dossiers quiz / sondages ?"
+          Oui, et c'est le même mécanisme : une grille de cartes, un clic
+          ouvre, une flèche remonte. Un seul contenu long à l'écran. */}
+
+      {etape === "contenus" && travail && ouvert === null ? (
+        <section className="space-y-4">
+          {/* LA FLÈCHE REMONTE D'UN CRAN DE HIÉRARCHIE, jamais dans
+              l'historique : la piste pour le bonus, les réglages pour un
+              plan fixe. Sans elle, l'écran de production est un
+              cul-de-sac, puisque le pied de parcours ne s'y affiche
+              pas. */}
+          {avant ? (
+            <button
+              type="button"
+              onClick={() => setEtape(avant)}
+              className="flex w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
             >
-              {etat === "pistes" ? (
+              <ArrowLeft className="h-4 w-4" />
+              {t(`parcours.${avant}`)}
+            </button>
+          ) : null}
+          <div>
+            {/* LE TITRE DE L'ÉCRAN EST CELUI DE LA PISTE, avec sa
+                punchline et l'avancement dessous : "Les contenus" ne
+                disait ni ce qu'on fabrique, ni ce qu'il reste à faire. */}
+            <h2 className="font-display text-xl font-bold">
+              {travail.titre || t("etapes.contenus")}
+            </h2>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              {[travail.punchline, phraseAvancement].filter(Boolean).join(" . ")}
+            </p>
+          </div>
+
+          <div className="grid items-start gap-4 sm:grid-cols-3">
+            {travail.pieces.map((piece) => {
+              const k = cle(piece);
+              const d = DOSSIER[piece.bloc];
+              const Icone = d.icone;
+              const ecrit = Boolean(contenus[k]);
+              return (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setOuvert(k)}
+                  className="flex h-full flex-col gap-3 rounded-xl border bg-card p-5 text-left transition-colors hover:border-primary/50"
+                >
+                  <span
+                    className={`flex h-11 w-11 items-center justify-center rounded-xl ${d.fond}`}
+                  >
+                    <Icone className={`h-5 w-5 ${d.encre}`} />
+                  </span>
+                  <span className="font-display font-semibold leading-snug text-sm">
+                    {titrePiece(piece)}
+                  </span>
+                  <span className="text-sm text-muted-foreground">
+                    {piece.cle ? t(`temps.${piece.cle}`) : piece.resume}
+                  </span>
+                  <span className="mt-auto pt-1 text-xs font-medium text-muted-foreground">
+                    {enCours === k
+                      ? t("production.enCoursCourt")
+                      : ecrit
+                        ? t("production.pret")
+                        : t("production.aGenerer")}
+                    {!ecrit && credits ? ` . ${t("credits.cout", { count: coutDe(piece.bloc) })}` : ""}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
+
+      {/* ── UN DOSSIER OUVERT : UN SEUL DOCUMENT ── */}
+      {etape === "contenus" && travail && ouvertPiece ? (
+        <section className="space-y-4">
+          <button
+            type="button"
+            onClick={() => {
+              setOuvert(null);
+              setEdition(null);
+            }}
+            className="flex w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            {t("production.retourDossiers")}
+          </button>
+          <div>
+            <h2 className="font-display text-xl font-bold">{titrePiece(ouvertPiece)}</h2>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              {ouvertPiece.cle ? t(`temps.${ouvertPiece.cle}`) : ouvertPiece.resume}
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant={contenuOuvert ? "outline" : "default"}
+              disabled={!autorise || Boolean(enCours)}
+              onClick={() => void ecrireUn(travail!, indexOuvert)}
+            >
+              {enCours === ouvert ? (
                 <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
               ) : (
-                <Sparkles className="h-4 w-4 mr-1.5" />
+                <Wand2 className="h-4 w-4 mr-1.5" />
               )}
-              {etat === "pistes" ? t("pistes.encours") : t("pistes.relancer")}
+              {contenuOuvert ? t("production.refaire") : t("production.generer")}
             </Button>
-            {credits ? (
-              <span className="text-xs text-muted-foreground">
-                {t("credits.coutPistes", { count: credits.coutPistes })}
+            {contenuOuvert ? (
+              <>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setEdition(edition === ouvert ? null : ouvert)}
+                >
+                  {edition === ouvert ? (
+                    <Check className="h-4 w-4 mr-1.5" />
+                  ) : (
+                    <Pencil className="h-4 w-4 mr-1.5" />
+                  )}
+                  {edition === ouvert ? t("production.termine") : t("production.modifier")}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => void copierOuvert()}>
+                  {copie ? (
+                    <Check className="h-4 w-4 mr-1.5" />
+                  ) : (
+                    <Copy className="h-4 w-4 mr-1.5" />
+                  )}
+                  {copie ? t("production.copie") : t("production.copier")}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => exporterPdf(ouvertPiece)}>
+                  <Download className="h-4 w-4 mr-1.5" />
+                  {t("production.pdf")}
+                </Button>
+              </>
+            ) : null}
+            {!contenuOuvert && credits ? (
+              <span className="self-center text-xs text-muted-foreground">
+                {t("credits.cout", { count: coutDe(ouvertPiece.bloc) })}
               </span>
             ) : null}
           </div>
-        </section>
-      ) : null}
 
-      {/* ── LES CONTENUS ── */}
-      {/* Le BONUS arrive ici en ayant DÉJÀ choisi sa piste : ce bloc de
-          lancement est celui des générateurs à séquence fixe. */}
-      {etape === "contenus" && !choisie && !passeParLesPistes(generateur) ? (
-        <section className="rounded-xl border bg-card p-5 space-y-4">
-          <div>
-            <h2 className="font-display font-bold text-sm">{t("etapes.contenus")}</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {t(`parcours.lancer.${generateur}`)}
-            </p>
-          </div>
-          {/* LE COÛT SE DIT AVANT DE LANCER, jamais après. */}
-          {credits ? (
-            <p className="text-xs font-semibold text-muted-foreground">
-              {t("credits.cout", { count: coutPiste(pisteDuPlanFixe()) })}
+          {contenuOuvert?.tronque ? (
+            <p className="text-xs flex items-start gap-1.5 text-amber-700 dark:text-amber-400">
+              <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+              {t("production.tronque")}
             </p>
           ) : null}
-          <Button
-            onClick={() => void toutEcrire(pisteDuPlanFixe())}
-            disabled={!autorise || !pretPourPistes || etat === "production" || Boolean(enCours)}
-          >
-            {etat === "production" ? (
-              <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-            ) : (
-              <Sparkles className="h-4 w-4 mr-1.5" />
-            )}
-            {t(`parcours.lancerCta.${generateur}`)}
-          </Button>
-        </section>
-      ) : null}
 
-      {etape === "contenus" && !choisie && passeParLesPistes(generateur) ? (
-        <section className="rounded-xl border bg-card p-5 space-y-3">
-          <p className="text-sm text-muted-foreground">{t("parcours.choisirPiste")}</p>
-          <Button variant="outline" size="sm" onClick={() => setEtape("pistes")}>
-            <ArrowLeft className="h-4 w-4 mr-1.5" />
-            {t("parcours.retourPistes")}
-          </Button>
-        </section>
-      ) : null}
-
-      {etape === "contenus" && choisie ? (
-        <section className="space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="font-display font-bold text-sm">{t("etapes.contenus")}</h2>
-            {enCours ? (
-              <span className="text-xs text-muted-foreground flex items-center gap-1.5">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                {t("production.encours", { fait: faits, total: choisie.pieces.length })}
-              </span>
-            ) : null}
-          </div>
-
-          {choisie.pieces.map((piece, i) => (
-            <CarteContenu
-              key={cle(piece)}
-              // LE RÔLE TRADUIT, jamais l'intention brute : sur un plan
-              // fixe, `resume` porte la consigne envoyée au modèle, et
-              // elle est en français dans un écran qui existe en 7
-              // langues (c'est le "Résultat 4" du 1er septembre).
-              titre={
-                piece.cle
-                  ? `${piece.index}. ${t(`temps.${piece.cle}`)}`
-                  : t(`blocs.${piece.bloc}`, { index: piece.index })
+          {/* LE MARKDOWN RESTE LA SOURCE DE VÉRITÉ, l'éditeur n'est
+              qu'un pont (`lib/bonus/markdownHtml.ts`) : le rendu et le
+              PDF ne changent pas d'un pixel. */}
+          {contenuOuvert && edition === ouvert ? (
+            <RichTextEdit
+              key={ouvert}
+              value={markdownToEditorHtml(contenuOuvert.markdown)}
+              onChange={(html) =>
+                setContenus((c) => ({
+                  ...c,
+                  [ouvert!]: { markdown: editorHtmlToMarkdown(html), tronque: false },
+                }))
               }
-              resume={piece.cle ? "" : piece.resume}
-              contenu={contenus[cle(piece)] ?? null}
-              enCours={enCours === cle(piece)}
-              onRefaire={() => void ecrireUn(choisie, i)}
-              bloque={!autorise || Boolean(enCours)}
+              className="rounded-xl border bg-card p-5 text-sm leading-relaxed"
             />
-          ))}
+          ) : null}
+
+          {contenuOuvert && edition !== ouvert ? (
+            <RenduGenere markdown={contenuOuvert.markdown} />
+          ) : null}
+
+          {!contenuOuvert ? (
+            <div className="rounded-xl border bg-card p-8 text-center text-sm text-muted-foreground">
+              {enCours === ouvert ? (
+                <span className="inline-flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {t("production.enCoursCourt")}
+                </span>
+              ) : (
+                t("production.vide")
+              )}
+            </div>
+          ) : null}
         </section>
       ) : null}
+
       {/* ── AVANCER, OU REVENIR ──
           Une étape qui ne peut pas être franchie le DIT, elle ne se
           contente pas d'un bouton gris : sans la raison, on cherche ce
@@ -789,93 +1084,27 @@ export default function GenerateurClient({
 }
 
 /**
- * UN MORCEAU. Le rendu s'affiche, le Markdown reste copiable à côté :
- * c'est LUI qu'elle colle dans Systeme.io, pas le HTML.
+ * LE RENDU D'UN DOCUMENT GÉNÉRÉ.
+ *
+ * La STRUCTURE vient de `lib/bonus/document.ts` et les COULEURS de
+ * `lib/bonus/accents.ts`, les deux portés à l'octet près du labo de
+ * l'Atelier. Ce composant ne relit jamais le markdown lui même : c'est
+ * ce qui garantit que le PDF, qui lit les mêmes modules, ressemble à
+ * l'écran.
+ *
+ * Un texte sans aucune section retombe sur un rendu simple : forcer une
+ * carte unique qui contient tout n'apporterait rien.
  */
-function CarteContenu({
-  titre,
-  resume,
-  contenu,
-  enCours,
-  onRefaire,
-  bloque,
-}: {
-  titre: string;
-  resume: string;
-  contenu: { markdown: string; tronque: boolean } | null;
-  enCours: boolean;
-  onRefaire: () => void;
-  bloque: boolean;
-}) {
-  const t = useTranslations("generateurs");
-  const [brut, setBrut] = useState(false);
-  const [copie, setCopie] = useState(false);
-
-  async function copier() {
-    if (!contenu) return;
-    try {
-      await navigator.clipboard.writeText(contenu.markdown);
-      setCopie(true);
-      setTimeout(() => setCopie(false), 2000);
-    } catch {
-      // Un échec de copie SE DIT : un bouton qui ne fait rien envoie
-      // chercher au mauvais endroit (règle du 1er août sur le partage).
-      toast.error(t("erreurs.generic"));
-    }
-  }
-
-  return (
-    <div className="rounded-xl border bg-card p-5 space-y-3">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0">
-          <h3 className="font-semibold text-sm">{titre}</h3>
-          {resume ? <p className="text-xs text-muted-foreground mt-0.5">{resume}</p> : null}
-        </div>
-        {contenu ? (
-          <div className="flex items-center gap-1.5 shrink-0">
-            <Button size="sm" variant="ghost" onClick={() => setBrut((b) => !b)}>
-              {brut ? t("production.rendu") : t("production.brut")}
-            </Button>
-            <Button size="sm" variant="outline" onClick={copier}>
-              {copie ? (
-                <Check className="h-4 w-4 mr-1.5" />
-              ) : (
-                <Copy className="h-4 w-4 mr-1.5" />
-              )}
-              {copie ? t("production.copie") : t("production.copier")}
-            </Button>
-            <Button size="sm" variant="ghost" onClick={onRefaire} disabled={bloque}>
-              <RefreshCw className="h-4 w-4" />
-            </Button>
-          </div>
-        ) : null}
+function RenduGenere({ markdown }: { markdown: string }) {
+  const doc = parseBonusDoc(markdown);
+  if (!hasStructure(doc)) {
+    return (
+      <div className="rounded-xl border bg-card p-5 flex flex-col gap-3 text-[15px] leading-relaxed">
+        {doc.lead.map((b, i) => (
+          <p key={i}>{b.kind === "para" ? b.text : ""}</p>
+        ))}
       </div>
-
-      {contenu?.tronque ? (
-        <p className="text-xs flex items-start gap-1.5 text-amber-700 dark:text-amber-400">
-          <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-          {t("production.tronque")}
-        </p>
-      ) : null}
-
-      {enCours ? (
-        <p className="text-sm text-muted-foreground flex items-center gap-2">
-          <Loader2 className="h-4 w-4 animate-spin" />
-        </p>
-      ) : contenu ? (
-        brut ? (
-          <pre className="text-xs whitespace-pre-wrap break-words bg-muted/50 rounded-lg p-3 max-h-[60vh] overflow-auto">
-            {contenu.markdown}
-          </pre>
-        ) : (
-          <div
-            className="gen-rendu text-sm leading-relaxed space-y-3"
-            dangerouslySetInnerHTML={{ __html: markdownVersHtml(contenu.markdown) }}
-          />
-        )
-      ) : (
-        <p className="text-sm text-muted-foreground">{t("production.vide")}</p>
-      )}
-    </div>
-  );
+    );
+  }
+  return <BonusDocument doc={doc} />;
 }

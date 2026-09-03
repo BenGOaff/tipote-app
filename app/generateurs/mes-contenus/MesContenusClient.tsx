@@ -14,7 +14,8 @@ import { useTranslations } from "next-intl";
 import { ArrowLeft, Gift, Mail, Megaphone, ChevronDown, Copy, Check, Trash2, AlertTriangle } from "lucide-react";
 
 import AppShell from "@/components/AppShell";
-import { markdownVersHtml } from "@/lib/generateurs/markdown";
+import { parseBonusDoc, hasStructure } from "@/lib/bonus/document";
+import { BonusDocument } from "@/components/BonusDocument";
 import {
   etiquetteContenu,
   resumeMorceaux,
@@ -197,18 +198,39 @@ function LigneContenu({
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
                 {m.cle ? t(`temps.${m.cle}`) : t(`blocs.${m.bloc}`)} {m.index}
               </p>
-              <div
-                className="prose prose-sm max-w-none dark:prose-invert"
-                // Le Markdown est rendu par `markdownVersHtml`, qui
-                // ÉCHAPPE tout : ce texte vient d'un modèle, donc
-                // d'ailleurs, et un `href` qui n'est ni http, ni https,
-                // ni mailto n'est jamais rendu cliquable.
-                dangerouslySetInnerHTML={{ __html: markdownVersHtml(m.markdown) }}
-              />
+              {/* LE MÊME RENDU QUE L'ÉCRAN DE PRODUCTION.
+                  Il avait le sien (`markdownVersHtml`) : le même contenu
+                  s'affichait donc de deux façons selon l'écran où on le
+                  lisait, et c'est le défaut sorti six fois dans ces
+                  dépôts. `BonusDocument` n'échappe pas moins : il ne
+                  rend jamais de HTML brut, il peint une structure. */}
+              <RenduGenereLib markdown={m.markdown} />
             </article>
           ))}
         </div>
       ) : null}
     </li>
   );
+}
+
+/**
+ * LE RENDU D'UN MORCEAU RETROUVÉ.
+ *
+ * Le MÊME que sur l'écran de production (`RenduGenere`) : la structure
+ * vient de `lib/bonus/document.ts`, les couleurs de
+ * `lib/bonus/accents.ts`. Deux rendus pour le même contenu, c'est un
+ * écran qui finit par mentir sur ce que l'autre a produit.
+ */
+function RenduGenereLib({ markdown }: { markdown: string }) {
+  const doc = parseBonusDoc(markdown);
+  if (!hasStructure(doc)) {
+    return (
+      <div className="flex flex-col gap-3 text-[15px] leading-relaxed">
+        {doc.lead.map((b, i) => (
+          <p key={i}>{b.kind === "para" ? b.text : ""}</p>
+        ))}
+      </div>
+    );
+  }
+  return <BonusDocument doc={doc} />;
 }

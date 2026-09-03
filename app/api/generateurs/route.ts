@@ -87,6 +87,7 @@ import { construireBriefQuiz, type BriefQuiz } from "@/lib/generateurs/briefQuiz
 import { SOCLE_GENERATEURS } from "@/lib/prompts/generateurs/socle";
 import {
   consignePistes,
+  consigneUnePisteDePlus,
   consigneProduction,
   messagePourLeModele,
 } from "@/lib/prompts/generateurs/consignes";
@@ -129,6 +130,16 @@ const communSchema = {
 
 const schema = z.discriminatedUnion("step", [
   z.object({ step: z.literal("pistes"), ...communSchema }),
+  z.object({
+    // UNE PISTE DE PLUS. `connues` part dans le prompt : une génération
+    // payée pour un doublon de ce qu'elle a déjà sous les yeux serait la
+    // pire dépense possible.
+    step: z.literal("encore"),
+    ...communSchema,
+    connues: z
+      .array(z.object({ format: z.string().max(200), titre: z.string().max(300) }))
+      .max(12),
+  }),
   z.object({
     step: z.literal("produire"),
     ...communSchema,
@@ -493,6 +504,43 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, ...pistes, credits: COUT_PISTES });
   }
 
+  // ── ÉTAPE 1 BIS : une piste de PLUS ──
+  //
+  // Elle s'AJOUTE aux trois, elle ne les remplace pas. Remplacer, c'est
+  // faire cliquer quelqu'un qui craint de perdre ce qu'il a sous les
+  // yeux, donc c'est un bouton sur lequel on ne clique jamais.
+  if (input.step === "encore") {
+    if (!passeParLesPistes(id)) return refus("pas_de_pistes");
+    // ON VÉRIFIE LE SOLDE AVANT D'APPELER ANTHROPIC, et on débite APRÈS
+    // le succès : l'inverse facture une génération qui n'a rien rendu.
+    if (!(await soldeSuffisant(COUT_PISTES))) {
+      return refus("credits", { requis: COUT_PISTES });
+    }
+    const out = await appeler(
+      consigneUnePisteDePlus(id, brief, input.connues),
+      messagePourLeModele({
+        brief,
+        offre,
+        demande: "Propose moi UNE piste de plus, différente des précédentes.",
+      }),
+      // 800 et pas 2200 : on rend une piste, pas trois. Le budget de
+      // sortie est la moitié du levier "limiter la conso", l'autre
+      // moitié étant le déclenchement au clic.
+      800,
+    );
+    if (!out.ok) return refus(out.failure);
+
+    const lues = lirePistes(id, `{"pistes":[${extraireObjet(out.texte)}]}`);
+    const piste = lues?.pistes[0];
+    if (!piste) {
+      // ON N'AFFICHE JAMAIS DE JSON À UNE CRÉATRICE (règle du 3 août).
+      console.error("[generateurs] piste supplementaire illisible :", out.texte.slice(0, 1500));
+      return refus("unreadable");
+    }
+    await debiter(COUT_PISTES, { step: "encore", generateur: id, quiz_id: input.quizId });
+    return NextResponse.json({ ok: true, piste, credits: COUT_PISTES });
+  }
+
   // ── ÉTAPE 2 : un morceau ──
   // Sur un générateur à plan fixe, `piecesDeLaPiste` ignore ce que
   // l'écran déclare et rend la séquence.
@@ -576,18 +624,31 @@ export async function POST(req: NextRequest) {
  * parfois du Markdown malgré la consigne, et une piste jetée pour un
  * accent grave, c'est une génération payée pour rien.
  */
-function lirePistes(
-  id: GenerateurId,
-  brut: string,
-): { pistes: Piste[]; recommandee: number; pourquoiRecommandee: string } | null {
+/**
+ * Le JSON d'une réponse, dégagé de ce qui l'entoure.
+ *
+ * Un modèle enrobe volontiers son objet d'un bloc de code ou d'une
+ * phrase de politesse, malgré la consigne. Ce dégrossissage vivait dans
+ * `lirePistes` ; il est sorti pour que la relance le partage, plutôt que
+ * d'en écrire une deuxième copie qui divergerait.
+ */
+function extraireObjet(brut: string): string {
   let json = brut.trim();
   const fence = json.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  if (fence) json = fence[1].trim();
+  if (fence) json = fence[1]!.trim();
   if (!json.startsWith("{")) {
     const s = json.indexOf("{");
     const e = json.lastIndexOf("}");
     if (s >= 0 && e > s) json = json.slice(s, e + 1);
   }
+  return json;
+}
+
+function lirePistes(
+  id: GenerateurId,
+  brut: string,
+): { pistes: Piste[]; recommandee: number; pourquoiRecommandee: string } | null {
+  const json = extraireObjet(brut);
 
   try {
     const obj = JSON.parse(json) as Record<string, unknown>;

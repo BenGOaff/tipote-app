@@ -7831,7 +7831,8 @@
     "pistes": {
       "titre": "Três propostas, você escolhe uma",
       "lancer": "Propor três propostas",
-      "relancer": "Propor outras três propostas",
+      "uneDePlus": "Nenhuma me convence, proponha outra",
+      "uneDePlusAide": "Mais uma ideia, em outro formato. As de cima ficam.",
       "encours": "Escrevendo três propostas",
       "aide": "Elas são propositalmente diferentes. Escolha a que se parece com você, não a mais impressionante.",
       "recommandee": "Recomendada",
@@ -7844,13 +7845,25 @@
     "production": {
       "lancer": "Escrever os conteúdos",
       "encours": "Em andamento: {fait} de {total}",
-      "refaire": "Reescrever este conteúdo",
+      "refaire": "Refazer",
       "copier": "Copiar",
       "copie": "Copiado",
-      "brut": "Ver o texto para copiar",
-      "rendu": "Voltar para a prévia",
       "tronque": "Este conteúdo foi cortado antes do fim. Reescreva, costuma dar certo na segunda tentativa.",
-      "vide": "Nada foi escrito ainda."
+      "vide": "Nada foi escrito ainda.",
+      "aGenerer": "A gerar",
+      "pret": "Pronto",
+      "enCoursCourt": "Sendo escrito",
+      "retourDossiers": "Voltar às pastas",
+      "generer": "Gerar",
+      "modifier": "Editar",
+      "termine": "Concluído",
+      "pdf": "PDF",
+      "popupBloquee": "Seu navegador bloqueou a janela. Permita as janelas pop-up nesta página.",
+      "avancement": {
+        "rien": "Nada gerado por enquanto",
+        "partiel": "{faits} de {total} escritos",
+        "complet": "Está tudo escrito"
+      }
     },
     "blocs": {
       "contenu": "O bônus, por inteiro",

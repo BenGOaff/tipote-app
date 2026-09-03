@@ -170,10 +170,17 @@ describe("L'écran suit le parcours", () => {
   test("l'intention du modèle n'est JAMAIS affichée telle quelle", () => {
     // Sur un plan fixe, `resume` porte la consigne envoyée au modèle,
     // en français, dans un écran qui existe en 7 langues.
-    assert.ok(
-      src.includes('resume={piece.cle ? "" : piece.resume}'),
-      "l'écran affiche l'intention brute",
-    );
+    // ON VISE LE FAIT, PAS LA FORME : la version d'avant figeait le JSX
+    // au caractère près, donc elle rougissait sur une correction juste.
+    // Un garde-fou qui fige une formulation empêche de la corriger.
+    for (const ligne of src.split("\n")) {
+      if (!/\.resume\b/.test(ligne)) continue;
+      assert.match(
+        ligne,
+        /\.cle \?/,
+        `l'intention brute s'affiche sans garde : ${ligne.trim()}`,
+      );
+    }
     assert.ok(src.includes("t(`temps.${piece.cle}`)"), "le rôle n'est pas traduit");
   });
 
@@ -423,21 +430,32 @@ describe("les pistes : le lancement vit au pied des réglages", () => {
   });
 
   test("l'étape des pistes ne porte AUCUN bouton primaire de lancement", () => {
-    // Le seul bouton de lancement qu'elle garde est la RELANCE, et elle
-    // est en `outline` : sur un écran qui montre déjà trois pistes, un
-    // bouton plein tire l'oeil vers le geste qui refacture.
     const debut = sansCommentaires.indexOf('etape === "pistes" && projet');
     const fin = sansCommentaires.indexOf('etape === "contenus"', debut);
     assert.ok(debut > 0 && fin > debut, "l'étape des pistes a changé de forme");
     const bloc = sansCommentaires.slice(debut, fin);
-
     assert.ok(!bloc.includes('t("pistes.lancer")'), "l'écran vide avec son bouton est revenu");
-    assert.match(
-      bloc,
-      /variant="outline"\s+size="sm"\s+onClick=\{demanderPistes\}/,
-      "la relance n'est plus sobre",
-    );
-    assert.match(bloc, /t\("pistes\.relancer"\)/, "on ne peut plus redemander trois pistes");
+  });
+
+  test("la relance AJOUTE une piste, elle ne remplace pas les trois", () => {
+    // Béné, Atelier, 6 août 2026 : "aucune ne te convainc ?" Une relance
+    // qui remplace est un bouton sur lequel on ne clique jamais, parce
+    // qu'on craint de perdre les trois qui sont à l'écran.
+    const debut = sansCommentaires.indexOf('etape === "pistes" && projet');
+    const bloc = sansCommentaires.slice(debut, sansCommentaires.indexOf('etape === "contenus"', debut));
+    assert.match(bloc, /onClick=\{unePisteDePlus\}/, "la relance ne rend plus une seule piste");
+    assert.ok(!bloc.includes("onClick={demanderPistes}"), "l'écran des pistes relance encore les trois");
+    assert.match(bloc, /pistes\.length < MAX_PISTES/, "rien ne borne le nombre de pistes");
+
+    // Et elle AJOUTE vraiment, dans l'appel : un `setPistes([data.piste])`
+    // remplacerait, et le libellé du bouton mentirait.
+    const fn = sansCommentaires.indexOf("async function unePisteDePlus");
+    assert.ok(fn > 0, "unePisteDePlus a disparu");
+    const corps = sansCommentaires.slice(fn, sansCommentaires.indexOf("\n  }", fn));
+    assert.match(corps, /setPistes\(\(l\) => \[\.\.\.l, data\.piste/, "la relance écrase les pistes");
+    // CE QU'ELLE A DÉJÀ SOUS LES YEUX part dans l'appel : sans ça on
+    // paie une génération pour un doublon.
+    assert.match(corps, /connues:/, "on ne dit plus au modèle ce qu'elle a déjà");
   });
 
   test("le pied des réglages lance les pistes, il ne dit pas Suivant", () => {
@@ -476,6 +494,111 @@ describe("les pistes : le lancement vit au pied des réglages", () => {
         assert.ok((p[cle] ?? "").trim().length > 0, `${loc} : generateurs.pistes.${cle} manque`);
       }
       assert.match(p.recommandation!, /\{rang\}/, `${loc} : la recommandation ne nomme pas la piste`);
+    }
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────
+// L'ÉCRAN DE PRODUCTION : DES DOSSIERS, PAS UNE PILE
+// ─────────────────────────────────────────────────────────────────────
+//
+// Béné, 3 septembre 2026 : "au final je veux exactement la même chose
+// sur l'atelier et sur tiquiz. Pareil. Ni plus, ni moins. En visible et
+// en invisible pour les users."
+//
+// Le labo de l'Atelier montre une GRILLE de dossiers, un clic en ouvre
+// un, la flèche remonte, et le document ouvert s'édite sur place avant
+// de partir en PDF. Ici tout était empilé, en lecture seule, sans
+// export. Ces tests figent les cinq gestes, un par un.
+
+describe("l'écran de production suit le labo de l'Atelier", () => {
+  const ecran = lire("app/generateurs/[generateur]/GenerateurClient.tsx");
+  const src = ecran.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+
+  test("une grille de dossiers, et un seul document ouvert à la fois", () => {
+    assert.match(src, /ouvert === null/, "la grille de dossiers a disparu");
+    assert.match(src, /setOuvert\(k\)/, "un dossier ne s'ouvre plus");
+    assert.match(src, /production\.retourDossiers/, "on ne peut plus remonter aux dossiers");
+    // Une pile de documents longs est exactement ce qu'on retire : le
+    // rendu ne s'affiche que pour la pièce OUVERTE.
+    assert.ok(
+      !/pieces\.map\([\s\S]{0,600}RenduGenere/.test(src),
+      "les contenus sont de nouveau empilés",
+    );
+  });
+
+  test("un texte généré est un BROUILLON : il s'édite sur place", () => {
+    // "On tombe sur le markdown au lieu d'un bel éditeur alors qu'on l'a
+    // partout cet éditeur" (Béné, Atelier, 5 août 2026). Ici l'éditeur
+    // qu'on a partout est `RichTextEdit`, celui de l'éditeur de quiz.
+    assert.match(src, /<RichTextEdit/, "on ne peut plus corriger un texte généré");
+    // LE MARKDOWN RESTE LA SOURCE DE VÉRITÉ : le pont traduit dans les
+    // deux sens, sinon le rendu et le PDF divergeraient de l'écran.
+    assert.match(src, /markdownToEditorHtml\(/, "l'éditeur ne lit plus le markdown");
+    assert.match(src, /editorHtmlToMarkdown\(/, "ce qu'elle écrit ne revient plus en markdown");
+  });
+
+  test("le rendu et le PDF lisent les MÊMES modules", () => {
+    // Repartir du markdown dans le PDF donnerait deux mises en forme qui
+    // finiraient par diverger : c'est le défaut sorti six fois dans ces
+    // dépôts (l'aperçu de l'éditeur contre le viewer).
+    // ON VISE L'APPEL, PAS L'IMPORT : un import qui reste alors que
+    // l'appel a disparu laisserait ce test vert sur un PDF mort.
+    assert.match(src, /parseBonusDoc\(/, "le rendu ne passe plus par le document");
+    assert.match(src, /buildPrintableHtml\(/, "le PDF a disparu");
+    assert.match(src, /production\.popupBloquee/, "une fenêtre bloquée ne se dit plus");
+  });
+
+  test("choisir une piste n'écrit RIEN : chaque dossier a son bouton", () => {
+    const fn = src.indexOf("function choisirPiste");
+    assert.ok(fn > 0, "choisirPiste a disparu");
+    const corps = src.slice(fn, src.indexOf("\n  }", fn));
+    assert.ok(!corps.includes("ecrireUn"), "choisir une piste écrit encore tout d'un coup");
+    assert.match(src, /production\.generer/, "un dossier n'a plus son bouton Générer");
+    assert.match(src, /production\.refaire/, "on ne peut plus refaire un morceau");
+  });
+
+  test("les quatre modules de l'Atelier sont importés, pas réécrits", () => {
+    // Deux copies d'une même règle finissent toujours par diverger, et
+    // ici la divergence coûte un PDF qui ne ressemble plus à l'écran.
+    for (const mod of [
+      "@/lib/bonus/document",
+      "@/lib/bonus/markdownHtml",
+      "@/lib/bonus/printable",
+      "@/components/BonusDocument",
+    ]) {
+      assert.ok(ecran.includes(mod), `${mod} n'est plus importé`);
+    }
+  });
+
+  test("l'avancement se dit sous le titre, et il ne se recompte pas ici", () => {
+    // La règle vit dans `lib/generateurs/avancement.ts`, en fonction
+    // pure : un écran qui recompte finit par annoncer autre chose que ce
+    // que la grille montre.
+    assert.match(src, /avancement\(clesDuTravail, contenus\)/, "l'avancement se recalcule à l'écran");
+    for (const cle of ["rien", "partiel", "complet"]) {
+      assert.match(src, new RegExp(`production\\.avancement\\.${cle}`), `l'état ${cle} ne se dit plus`);
+    }
+  });
+
+  test("les libellés de production existent dans les 7 langues", () => {
+    for (const loc of ["fr", "en", "es", "it", "ar", "pt", "pt-BR"]) {
+      const m = JSON.parse(lire(`messages/${loc}.json`)) as Record<string, never>;
+      const p = (m as Record<string, Record<string, Record<string, string>>>)
+        .generateurs.production;
+      for (const k of [
+        "aGenerer",
+        "pret",
+        "retourDossiers",
+        "generer",
+        "refaire",
+        "modifier",
+        "termine",
+        "pdf",
+        "popupBloquee",
+      ]) {
+        assert.ok((p[k] ?? "").trim().length > 0, `${loc} : generateurs.production.${k} manque`);
+      }
     }
   });
 });

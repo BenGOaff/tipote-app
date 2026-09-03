@@ -7831,7 +7831,8 @@
     "pistes": {
       "titre": "Three directions, you pick one",
       "lancer": "Suggest three angles",
-      "relancer": "Suggest three other angles",
+      "uneDePlus": "None of these convince me, suggest another one",
+      "uneDePlusAide": "One more idea, in a different format. The ones above stay.",
       "encours": "Writing three angles",
       "aide": "They are deliberately different. Take the one that sounds like you, not the most impressive one.",
       "recommandee": "Recommended",
@@ -7844,13 +7845,25 @@
     "production": {
       "lancer": "Write the content",
       "encours": "In progress: {fait} of {total}",
-      "refaire": "Rewrite this piece",
+      "refaire": "Redo",
       "copier": "Copy",
       "copie": "Copied",
-      "brut": "See the text to copy",
-      "rendu": "Back to the preview",
       "tronque": "This piece was cut off before the end. Rewrite it, it usually works on the second try.",
-      "vide": "Nothing has been written yet."
+      "vide": "Nothing has been written yet.",
+      "aGenerer": "To generate",
+      "pret": "Ready",
+      "enCoursCourt": "Being written",
+      "retourDossiers": "Back to folders",
+      "generer": "Generate",
+      "modifier": "Edit",
+      "termine": "Done",
+      "pdf": "PDF",
+      "popupBloquee": "Your browser blocked the window. Allow pop-ups for this page.",
+      "avancement": {
+        "rien": "Nothing generated yet",
+        "partiel": "{faits} of {total} written",
+        "complet": "Everything is written"
+      }
     },
     "blocs": {
       "contenu": "The full bonus",
