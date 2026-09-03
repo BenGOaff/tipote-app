@@ -3496,6 +3496,59 @@ générateur qui écrivait moins bien.
 Test : `tests/logic/generateurs-parcours.test.mts`, dans les deux
 dépôts. Le test de la CLÉ, lui, diffère : Tipote lit trois noms.
 
+### 6. ET LE PROMPT DU BONUS N'ÉTAIT PAS CELUI DE L'ATELIER (3 septembre 2026)
+
+Béné : "t'es sûr d'avoir utilisé les mêmes prompts pour les générateurs
+de bonus et les emails ? Je les trouve moins bien que sur l'Atelier...
+tu utilises bien Claude ? Le meilleur modèle rapport qualité prix ?"
+
+**LE MODÈLE EST HORS DE CAUSE, ET C'EST MESURÉ.** Les trois dépôts
+appellent `resolveAnthropicModel(process.env.ANTHROPIC_MODEL, "sonnet")`,
+donc `claude-sonnet-4-6`, avec la MÊME fonction et la même table. Le
+labo bonus de l'Atelier (`app/api/me/bonus/route.ts`) et les générateurs
+d'ici tournent sur le même modèle : il ne peut pas expliquer un écart.
+
+**LES PROMPTS, EUX, N'ÉTAIENT PAS LES MÊMES.** Seuls les CINQ TEMPS de
+la séquence emails l'étaient (vérifié caractère par caractère entre
+`lib/funnelSequence.ts` et `lib/generateurs/sequences.ts` : cinq
+intentions identiques). Tout le reste est une RÉÉCRITURE, et cette page
+laissait croire l'inverse.
+
+Ce qui manquait, compté dans `socle.ts` + `consignes.ts` avant
+correction, zéro occurrence de chacun :
+
+| Ce qui manquait | Ce que ça coûte |
+|---|---|
+| **les 4 PILIERS d'un bonus qui convertit** (urgence, spécificité, accessibilité, CONTINUITÉ) | rien ne disait au modèle qu'un bonus doit ouvrir un vide que seule l'offre comble. D'où des bonus qui se suffisent à eux mêmes, donc qui ne vendent pas |
+| **le test qui tranche** ("si un concurrent pouvait publier le même texte en changeant son logo") | c'est le critère le plus dur et le seul qui produise du contenu qu'on ne peut pas confondre |
+| **les puces promesses en DEUX temps** (bénéfice + conséquence concrète) | sans lui, le modèle rend un SOMMAIRE. "Un modèle d'email" au lieu de "tu écris ton email du lundi en dix minutes" |
+| **le moment psychologique dans le persona** | le modèle écrivait du contenu de blog, correct, qui ignore que la personne vient de recevoir un résultat sur elle même |
+
+**Les trois premiers viennent de l'Atelier, mot pour mot ou presque**
+(`lib/prompts/bonus.ts` : `FOUR_PILLARS`, `VALUE_CRITERIA`,
+`PROMISE_BULLETS`). Ils ont été écrits là bas, corrigés par les retours
+de vraies élèves, et enseignés dans la formation : les réécrire ici
+donnait deux méthodes pour la même chose, et c'est Tiquiz qui se
+trompait.
+
+**OÙ ILS VIVENT, ET CE N'EST PAS INDIFFÉRENT.** Ce qui vaut pour les
+TROIS générateurs (le test du logo, les puces promesses, le moment
+psychologique) va dans le SOCLE, donc dans le bloc caché : il ne coûte
+presque rien à partir de la deuxième lecture. Les 4 PILIERS sont
+bonus-spécifiques et vivent dans `consignes.ts`, la partie variable :
+dans le socle, ils seraient facturés sur chaque email et chaque post,
+qui n'en ont que faire. Le test l'exige dans les deux sens.
+
+**LA LEÇON, ET ELLE EST SUR MOI :** j'avais écrit ici "les cinq temps
+sont ceux de l'Atelier, mot pour mot", ce qui était vrai, et cette
+phrase a servi de preuve que TOUT venait de l'Atelier, ce qui était
+faux. **Une phrase exacte sur une moitié laisse croire l'autre moitié.**
+C'est la même faute que la mesure des règles d'automatisation : dire ce
+qu'on a vérifié, et dire aussi ce qu'on n'a pas vérifié.
+
+Test : les 4 cas ajoutés à `tests/logic/generateurs.test.mts` (les deux
+dépôts), vérifiés en rejouant la version d'avant : les 4 rougissent.
+
 ## ON DIT TAG, JAMAIS ÉTIQUETTE (Béné, 1er septembre 2026)
 
 "Ne dis jamais étiquette, nulle part, on parle bien de tag en français

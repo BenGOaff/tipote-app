@@ -139,7 +139,13 @@ Le bonus est remis automatiquement par le quiz, à la fin ou après un partage. 
 
 Les trois pistes doivent être VRAIMENT différentes : trois formats différents, trois angles différents. Trois variations du même document, c'est une seule piste présentée trois fois, et la créatrice le voit tout de suite.
 
-Privilégie ce qui se consomme en moins de dix minutes et se fabrique en moins d'une heure. Un format ambitieux qu'elle n'écrira jamais vaut moins qu'une checklist publiée demain.`,
+Privilégie ce qui se consomme en moins de dix minutes et se fabrique en moins d'une heure. Un format ambitieux qu'elle n'écrira jamais vaut moins qu'une checklist publiée demain.
+
+LES 4 PILIERS D'UN BONUS QUI CONVERTIT. Tu les vérifies avant de proposer quoi que ce soit, en silence : ce qui en rate un se remplace, il ne se commente pas.
+- URGENCE : il règle un problème brûlant, celui que le résultat du quiz vient de nommer.
+- SPÉCIFICITÉ : la promesse est précise, et on peut dire si elle est tenue ou non.
+- ACCESSIBILITÉ : il se consomme en moins de 20 minutes, ou il produit un résultat en un clic.
+- CONTINUITÉ : il ouvre un vide que SEULE l'offre payante comble entièrement. Un bonus qui se suffit à lui même ne vend rien, et un bonus qui n'est qu'une bande annonce déçoit. Le bon rend un service réel ET laisse une suite évidente.`,
 
   emails: `ON TE DEMANDE TROIS PISTES DE SÉQUENCE D'EMAILS POST-QUIZ.
 
@@ -180,7 +186,13 @@ export function consignePistes(id: GenerateurId, brief: BriefQuiz): string {
 const CONSIGNE_BONUS: Record<string, string> = {
   contenu: `ÉCRIS LE BONUS LUI MÊME, en entier, prêt à être mis en page.
 
-C'est le livrable que le visiteur reçoit. Il doit pouvoir s'en servir sans rien acheter et sans revenir vers la créatrice. Structure le avec des titres, et termine par UNE page qui amène l'offre : ce qu'elle règle, pour qui, et le premier pas. Pas de argumentaire de vente en dix points.`,
+C'est le livrable que le visiteur reçoit. Il doit pouvoir s'en servir sans rien acheter et sans revenir vers la créatrice. Structure le avec des titres, et termine par UNE page qui amène l'offre : ce qu'elle règle, pour qui, et le premier pas. Pas d'argumentaire de vente en dix points.
+
+LES 4 PILIERS D'UN BONUS QUI CONVERTIT. Tu les vérifies avant de proposer quoi que ce soit, en silence : ce qui en rate un se remplace, il ne se commente pas.
+- URGENCE : il règle un problème brûlant, celui que le résultat du quiz vient de nommer.
+- SPÉCIFICITÉ : la promesse est précise, et on peut dire si elle est tenue ou non.
+- ACCESSIBILITÉ : il se consomme en moins de 20 minutes, ou il produit un résultat en un clic.
+- CONTINUITÉ : il ouvre un vide que SEULE l'offre payante comble entièrement. Un bonus qui se suffit à lui même ne vend rien, et un bonus qui n'est qu'une bande annonce déçoit. Le bon rend un service réel ET laisse une suite évidente.`,
 
   guide: `ÉCRIS LE MODE D'EMPLOI POUR LA CRÉATRICE : comment fabriquer ce bonus, et comment le livrer.
 

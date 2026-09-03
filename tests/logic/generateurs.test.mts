@@ -403,9 +403,53 @@ describe("Le socle des générateurs", () => {
     assert.match(SOCLE_GENERATEURS, /tiret cadratin/i);
     assert.match(SOCLE_GENERATEURS, /FÉMININ/i);
   });
+
+  // -- CE QUI FAIT LA QUALITÉ, ET QUI MANQUAIT (Béné, 3 septembre 2026)
+  //
+  // "T'es sûr d'avoir utilisé les mêmes prompts pour les générateurs de
+  // bonus et les emails ? Je les trouve moins bien que sur l'Atelier."
+  //
+  // Elle avait raison, et c'était mesurable : les cinq temps de la
+  // séquence étaient bien portés mot pour mot, mais le reste du prompt
+  // était une RÉÉCRITURE, et trois blocs de l'Atelier n'y étaient pas du
+  // tout. Ces trois tests les figent : sans eux, la prochaine passe les
+  // reperdrait sans qu'une seule ligne rougisse.
+
+  test("il porte le test qui tranche : le texte d'un concurrent avec un autre logo", () => {
+    assert.match(SOCLE_GENERATEURS, /changeant son logo/i);
+  });
+
+  test("il porte les puces promesses en DEUX temps", () => {
+    assert.match(SOCLE_GENERATEURS, /CONSÉQUENCE CONCRÈTE/i);
+    // Le deuxième temps est ce qui sépare une promesse d'un sommaire.
+    assert.match(SOCLE_GENERATEURS, /table des matières/i);
+  });
+
+  test("il nomme le moment psychologique, pas seulement le métier", () => {
+    // Sans lui, le modèle écrit du contenu de blog : correct, et qui
+    // ignore que la personne vient de recevoir un résultat sur elle même.
+    assert.match(SOCLE_GENERATEURS, /prise de conscience/i);
+  });
 });
 
 describe("Les consignes de chaque étape", () => {
+  test("le bonus reçoit les 4 piliers, et eux seuls les reçoivent", () => {
+    // Portés de l'Atelier (lib/prompts/bonus.ts). Ils sont dans la partie
+    // VARIABLE et pas dans le socle : les coller dans le socle les ferait
+    // payer sur chaque email et chaque post, qui n'en ont que faire.
+    const bonus = consignePistes("bonus", BRIEF_TEST);
+    for (const pilier of ["URGENCE", "SPÉCIFICITÉ", "ACCESSIBILITÉ", "CONTINUITÉ"]) {
+      assert.ok(bonus.includes(pilier), `le pilier ${pilier} a disparu de la consigne bonus`);
+    }
+    // CONTINUITÉ est celui qui fait qu'un bonus VEND : un bonus qui se
+    // suffit à lui même ne mène à rien.
+    assert.match(bonus, /vide que SEULE l'offre payante comble/i);
+    assert.ok(
+      !SOCLE_GENERATEURS.includes("LES 4 PILIERS"),
+      "les piliers sont bonus-spécifiques : ils n'ont rien à faire dans le socle",
+    );
+  });
+
   test("la langue est NOMMÉE, et c'est le catalogue des 100 qui la nomme", () => {
     // Béné, 2 septembre 2026 : "on doit offrir la même qualité à toutes
     // les langues prises en charge". J'avais écrit ici une table de SEPT
