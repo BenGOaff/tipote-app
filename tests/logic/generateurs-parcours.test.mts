@@ -395,6 +395,91 @@ describe("Les séquences fixes", () => {
 // griser sans un mot se lit comme un bug, et la créatrice cherche
 // (règle du 22 août). Une <option> tient sur une ligne, donc la raison
 // y est dite en version COURTE.
+// ─────────────────────────────────────────────────────────────────────
+// ON LANCE DEPUIS LES RÉGLAGES, ON ATTERRIT SUR LES PISTES
+// ─────────────────────────────────────────────────────────────────────
+//
+// Béné, 3 septembre 2026 : "cette étape est inutile : autant générer les
+// trois pistes directement ! Pourquoi t'as pas repris exactement ce
+// qu'on a codé dans l'atelier ?"
+//
+// Elle avait raison, et c'était mesurable : l'étape des pistes s'ouvrait
+// VIDE, avec un titre, une phrase et un bouton. Deux clics pour un seul
+// geste. Le labo de l'Atelier n'a jamais fait ça : son écran de brief
+// finit par "Proposer 3 pistes", et le clic mène à un écran qui MONTRE
+// les trois pistes (`askPistes` puis `setStep("pistes")`).
+
+describe("les pistes : le lancement vit au pied des réglages", () => {
+  const ecran = lire("app/generateurs/[generateur]/GenerateurClient.tsx");
+  const sansCommentaires = ecran
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, "");
+
+  test("obtenir des pistes fait AVANCER, ça ne remplit pas l'écran courant", () => {
+    const debut = sansCommentaires.indexOf("async function demanderPistes");
+    assert.ok(debut > 0, "demanderPistes a disparu");
+    const bloc = sansCommentaires.slice(debut, sansCommentaires.indexOf("\n  }", debut));
+    assert.match(bloc, /setEtape\("pistes"\)/, "on ne bascule plus sur l'étape des pistes");
+  });
+
+  test("l'étape des pistes ne porte AUCUN bouton primaire de lancement", () => {
+    // Le seul bouton de lancement qu'elle garde est la RELANCE, et elle
+    // est en `outline` : sur un écran qui montre déjà trois pistes, un
+    // bouton plein tire l'oeil vers le geste qui refacture.
+    const debut = sansCommentaires.indexOf('etape === "pistes" && projet');
+    const fin = sansCommentaires.indexOf('etape === "contenus"', debut);
+    assert.ok(debut > 0 && fin > debut, "l'étape des pistes a changé de forme");
+    const bloc = sansCommentaires.slice(debut, fin);
+
+    assert.ok(!bloc.includes('t("pistes.lancer")'), "l'écran vide avec son bouton est revenu");
+    assert.match(
+      bloc,
+      /variant="outline"\s+size="sm"\s+onClick=\{demanderPistes\}/,
+      "la relance n'est plus sobre",
+    );
+    assert.match(bloc, /t\("pistes\.relancer"\)/, "on ne peut plus redemander trois pistes");
+  });
+
+  test("le pied des réglages lance les pistes, il ne dit pas Suivant", () => {
+    const debut = sansCommentaires.indexOf('apres === "pistes"');
+    assert.ok(debut > 0, "le pied de parcours ne connaît plus l'étape des pistes");
+    const bloc = sansCommentaires.slice(debut, debut + 1200);
+    assert.match(bloc, /onClick=\{demanderPistes\}/, "le bouton du pied ne lance pas les pistes");
+    assert.match(bloc, /t\("pistes\.lancer"\)/, "le pied ne porte pas le libellé de lancement");
+  });
+
+  test("le coût de la relance est dit, ici comme au pied des réglages", () => {
+    // "Proposer trois autres pistes" REFACTURE. Une relance gratuite en
+    // apparence est la meilleure façon de vider un compteur sans
+    // comprendre pourquoi.
+    const occurrences = sansCommentaires.split('t("credits.coutPistes"').length - 1;
+    assert.equal(occurrences, 2, "le prix des pistes n'est plus dit aux deux endroits");
+  });
+
+  test("la recommandation passe AU DESSUS des cartes", () => {
+    const bloc = sansCommentaires.slice(
+      sansCommentaires.indexOf('etape === "pistes" && projet'),
+      sansCommentaires.indexOf('etape === "contenus"'),
+    );
+    const reco = bloc.indexOf("pourquoiRecommandee");
+    const cartes = bloc.indexOf("pistes.map(");
+    assert.ok(reco > 0 && cartes > 0, "l'écran des pistes a changé de forme");
+    assert.ok(reco < cartes, "la recommandation se lit après les cartes, donc trop tard");
+  });
+
+  test("le titre et la phrase existent dans les 7 langues", () => {
+    for (const loc of ["fr", "en", "es", "it", "ar", "pt", "pt-BR"]) {
+      const m = JSON.parse(lire(`messages/${loc}.json`)) as Record<string, never>;
+      const p = (m as Record<string, Record<string, Record<string, string>>>)
+        .generateurs.pistes;
+      for (const cle of ["titre", "aide", "recommandation"]) {
+        assert.ok((p[cle] ?? "").trim().length > 0, `${loc} : generateurs.pistes.${cle} manque`);
+      }
+      assert.match(p.recommandation!, /\{rang\}/, `${loc} : la recommandation ne nomme pas la piste`);
+    }
+  });
+});
+
 describe("le choix du projet", () => {
   const ecran = lire("app/generateurs/[generateur]/GenerateurClient.tsx");
 

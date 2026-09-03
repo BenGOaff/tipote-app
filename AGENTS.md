@@ -3440,6 +3440,59 @@ Test : le bloc "le choix du projet" de
 `tests/logic/generateurs-parcours.test.mts`, vérifié en rejouant deux
 versions d'avant (la grille remise, la raison retirée).
 
+### ON LANCE DEPUIS LES RÉGLAGES, ON ATTERRIT SUR LES PISTES (3 septembre)
+
+Béné : "cette étape est inutile : autant générer les trois pistes
+directement ! Pourquoi t'as pas repris exactement ce qu'on a codé dans
+l'atelier ? C'est tellement pratique, on l'a déjà testé, amélioré,
+peaufiné. Les prompts, mises en pages, fonctionnement, présentation,
+tout était parfait, pourquoi partir sur autre chose ?"
+
+**Elle a raison sur les deux, et le deuxième reproche est le vrai.**
+
+L'étape des pistes s'ouvrait VIDE : un titre, une phrase, et un bouton
+"Proposer trois pistes". Deux clics pour un seul geste, et un écran qui
+ne sert qu'à porter son propre bouton.
+
+**Le labo de l'Atelier n'a JAMAIS fait ça, et ça se lit en une ligne**
+(`app/(app)/labo-bonus/BonusLabClient.tsx`) : son écran de brief FINIT
+par le bouton "Proposer 3 pistes", et `askPistes` fait
+`setStep("pistes")`. On arrive donc sur un écran qui MONTRE les trois
+pistes. Le mien avait la même liste d'étapes et le bouton du mauvais
+côté de la césure.
+
+| | l'Atelier, depuis le début | ici, avant le 3 septembre |
+|---|---|---|
+| le bouton qui lance | au pied du brief | sur l'écran d'après |
+| l'écran des pistes | montre les trois pistes | vide, avec un bouton |
+| la recommandation | AU DESSUS des cartes | en dessous, donc lue trop tard |
+
+**Les trois sont alignés sur l'Atelier**, ses phrases comprises ("Trois
+pistes, tu en choisis une", "Elles sont volontairement différentes.
+Prends celle qui te ressemble, pas la plus impressionnante.").
+
+**Ce qui NE devait pas se perdre : le prix de la relance.** "Proposer
+trois autres pistes" REFACTURE, et une relance gratuite en apparence est
+la meilleure façon de vider un compteur sans comprendre pourquoi. Le
+bouton de relance reste donc sur l'écran des pistes, en `outline` (sur
+un écran qui montre déjà trois pistes, un bouton plein tire l'oeil vers
+le geste qui coûte), et le coût est dit AUX DEUX endroits : au pied des
+réglages avant de lancer, et à côté de la relance. Le test compte les
+deux occurrences.
+
+**LA LEÇON, ET ELLE EST SUR MOI.** Le module `parcours.ts` porte en
+commentaire "L'Atelier fait l'inverse depuis le début (`library ->
+brief -> pistes -> produce`), et c'est ce qu'elle demande ici". J'avais
+donc lu son parcours, recopié la LISTE des étapes, et réécrit ce qui se
+passe DANS chacune. **Reprendre la structure d'un écran qui marche n'est
+pas la reprendre : ce qui marche est dans le détail des gestes.** Quand
+un écran de l'Atelier fait déjà le travail, on va le LIRE, geste par
+geste, avant d'en écrire un autre.
+
+Test : le bloc "les pistes : le lancement vit au pied des réglages" de
+`tests/logic/generateurs-parcours.test.mts`, vérifié en rejouant la
+version d'avant (deux tests rougissent).
+
 ### 4. LES CONTENUS SE RETROUVENT
 
 "Il faut aussi que les users retrouvent leurs créations dans

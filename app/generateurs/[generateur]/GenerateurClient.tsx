@@ -242,6 +242,11 @@ export default function GenerateurClient({
       setRecommandee(Number(data.recommandee ?? 0));
       setPourquoiRecommandee(String(data.pourquoiRecommandee ?? ""));
       setEtat("repos");
+      // ON LANCE DEPUIS LES RÉGLAGES, ON ATTERRIT SUR LES PISTES.
+      // C'est ce que fait le labo de l'Atelier (`askPistes` puis
+      // `setStep("pistes")`) : l'étape des pistes n'a jamais d'écran
+      // vide avec un bouton, elle MONTRE les trois pistes.
+      setEtape("pistes");
     } catch {
       direLErreur("unreachable");
       setEtat("repos");
@@ -555,36 +560,18 @@ export default function GenerateurClient({
       {/* ── LES PISTES ── (le BONUS seulement : voir `sequences.ts`) */}
       {etape === "pistes" && projet && !blocage ? (
         <section className="rounded-xl border bg-card p-5 space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="font-display font-bold text-sm">{t("etapes.pistes")}</h2>
-              <p className="text-xs text-muted-foreground mt-0.5">{t("pistes.aide")}</p>
-            </div>
-            <Button
-              size="sm"
-              onClick={demanderPistes}
-              disabled={!autorise || !pretPourPistes || etat === "pistes" || Boolean(enCours)}
-            >
-              {etat === "pistes" ? (
-                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-              ) : (
-                <Sparkles className="h-4 w-4 mr-1.5" />
-              )}
-              {etat === "pistes"
-                ? t("pistes.encours")
-                : pistes.length
-                  ? t("pistes.relancer")
-                  : t("pistes.lancer")}
-            </Button>
+          <div>
+            <h2 className="font-display font-bold text-sm">{t("pistes.titre")}</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">{t("pistes.aide")}</p>
           </div>
 
-          {/* LE COÛT SE DIT AVANT DE LANCER, pas après. Et il se redit
-              ici parce que "Proposer trois autres pistes" REFACTURE :
-              une relance gratuite en apparence est la meilleure façon
-              de vider un compteur sans comprendre pourquoi. */}
-          {credits ? (
-            <p className="text-xs text-muted-foreground">
-              {t("credits.coutPistes", { count: credits.coutPistes })}
+          {/* LA RECOMMANDATION PASSE AU DESSUS DES CARTES, comme dans
+              l'Atelier. En dessous, on l'a déjà lue trop tard : elle
+              sert à ORIENTER le choix, pas à le commenter. */}
+          {pistes.length > 0 && pourquoiRecommandee ? (
+            <p className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm">
+              <strong>{t("pistes.recommandation", { rang: recommandee + 1 })}</strong>{" "}
+              {pourquoiRecommandee}
             </p>
           ) : null}
 
@@ -637,9 +624,30 @@ export default function GenerateurClient({
             </div>
           ) : null}
 
-          {pistes.length > 0 && pourquoiRecommandee ? (
-            <p className="text-xs text-muted-foreground">{pourquoiRecommandee}</p>
-          ) : null}
+          {/* LA RELANCE EST SOBRE, ET SON PRIX EST DIT.
+              "Proposer trois autres pistes" REFACTURE : une relance
+              gratuite en apparence est la meilleure façon de vider un
+              compteur sans comprendre pourquoi. */}
+          <div className="flex flex-wrap items-center gap-3 pt-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={demanderPistes}
+              disabled={!autorise || !pretPourPistes || etat === "pistes" || Boolean(enCours)}
+            >
+              {etat === "pistes" ? (
+                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+              ) : (
+                <Sparkles className="h-4 w-4 mr-1.5" />
+              )}
+              {etat === "pistes" ? t("pistes.encours") : t("pistes.relancer")}
+            </Button>
+            {credits ? (
+              <span className="text-xs text-muted-foreground">
+                {t("credits.coutPistes", { count: credits.coutPistes })}
+              </span>
+            ) : null}
+          </div>
         </section>
       ) : null}
 
@@ -738,10 +746,37 @@ export default function GenerateurClient({
                 {t(`parcours.manque.${etape}`)}
               </span>
             ) : null}
-            {/* Sur l'étape des pistes, on avance en CHOISISSANT une
-                piste : un bouton "Suivant" à côté mènerait à un écran
-                de contenus sans rien à écrire. */}
-            {apres && etape !== "pistes" ? (
+            {/* L'ÉTAPE DES PISTES N'A PAS DE BOUTON "SUIVANT" DU TOUT.
+                On y arrive parce qu'on a lancé, on en sort en
+                CHOISISSANT une piste. */}
+            {apres === "pistes" ? (
+              <>
+                {/* LE BOUTON QUI LANCE LES PISTES EST ICI, au pied des
+                    réglages, et pas sur l'écran d'après. Un "Suivant"
+                    qui mène à un écran vide portant un bouton fait
+                    payer DEUX clics pour un seul geste : c'est ce que
+                    Béné a vu le 3 septembre ("cette étape est inutile :
+                    autant générer les trois pistes directement"), et
+                    c'est ce que le labo de l'Atelier n'a jamais fait. */}
+                <Button
+                  size="sm"
+                  disabled={!peutPasser || etat === "pistes" || Boolean(enCours)}
+                  onClick={demanderPistes}
+                >
+                  {etat === "pistes" ? (
+                    <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-4 w-4 mr-1.5" />
+                  )}
+                  {etat === "pistes" ? t("pistes.encours") : t("pistes.lancer")}
+                </Button>
+                {credits ? (
+                  <span className="text-xs text-muted-foreground">
+                    {t("credits.coutPistes", { count: credits.coutPistes })}
+                  </span>
+                ) : null}
+              </>
+            ) : apres && etape !== "pistes" ? (
               <Button size="sm" disabled={!peutPasser} onClick={() => setEtape(apres)}>
                 {t("parcours.suivant")}
               </Button>

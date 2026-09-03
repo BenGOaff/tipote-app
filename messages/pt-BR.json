@@ -7829,11 +7829,13 @@
       "prixAide": "Opcional. Se ficar vazio, nenhum preço é escrito em lugar nenhum."
     },
     "pistes": {
+      "titre": "Três propostas, você escolhe uma",
       "lancer": "Propor três propostas",
       "relancer": "Propor outras três propostas",
       "encours": "Escrevendo três propostas",
-      "aide": "Escolha uma. Nada é produzido enquanto você não escolher.",
+      "aide": "Elas são propositalmente diferentes. Escolha a que se parece com você, não a mais impressionante.",
       "recommandee": "Recomendada",
+      "recommandation": "Minha recomendação: a proposta {rang}.",
       "choisir": "Seguir com esta",
       "choisie": "Proposta escolhida",
       "changer": "Trocar de proposta",
@@ -7927,7 +7929,7 @@
       "manque": {
         "projet": "Escolha um projeto para continuar.",
         "reglages": "Preencha o que falta para continuar.",
-        "pistes": "Gere as ideias e escolha uma."
+        "pistes": "Escolha primeiro uma ideia: é ela que diz o que vai ser escrito."
       },
       "lancer": {
         "bonus": "O bônus, como montar e os textos que entregam ele.",

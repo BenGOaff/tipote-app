@@ -7829,11 +7829,13 @@
       "prixAide": "Optional. If left empty, no price is written anywhere."
     },
     "pistes": {
+      "titre": "Three directions, you pick one",
       "lancer": "Suggest three angles",
       "relancer": "Suggest three other angles",
       "encours": "Writing three angles",
-      "aide": "Pick one. Nothing is produced until you do.",
+      "aide": "They are deliberately different. Take the one that sounds like you, not the most impressive one.",
       "recommandee": "Recommended",
+      "recommandation": "My pick: direction {rang}.",
       "choisir": "Go with this one",
       "choisie": "Chosen angle",
       "changer": "Change angle",
@@ -7927,7 +7929,7 @@
       "manque": {
         "projet": "Pick a project to continue.",
         "reglages": "Fill in what's missing to continue.",
-        "pistes": "Get the ideas, then pick one."
+        "pistes": "Pick an idea first: it decides what gets written."
       },
       "lancer": {
         "bonus": "The bonus, how to build it, and the texts that hand it over.",

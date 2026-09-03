@@ -7829,11 +7829,13 @@
       "prixAide": "Facultatif. S'il est vide, aucun prix n'est écrit nulle part."
     },
     "pistes": {
+      "titre": "Trois pistes, tu en choisis une",
       "lancer": "Proposer trois pistes",
       "relancer": "Proposer trois autres pistes",
       "encours": "Trois pistes en cours d'écriture",
-      "aide": "Choisis en une. Rien n'est produit tant que tu n'as pas choisi.",
+      "aide": "Elles sont volontairement différentes. Prends celle qui te ressemble, pas la plus impressionnante.",
       "recommandee": "Conseillée",
+      "recommandation": "Ma recommandation : la piste {rang}.",
       "choisir": "Partir sur celle ci",
       "choisie": "Piste choisie",
       "changer": "Changer de piste",
@@ -7927,7 +7929,7 @@
       "manque": {
         "projet": "Choisis un projet pour continuer.",
         "reglages": "Remplis ce qui manque pour continuer.",
-        "pistes": "Lance les pistes, puis choisis-en une."
+        "pistes": "Choisis d'abord une piste : c'est elle qui dit ce qu'on écrit."
       },
       "lancer": {
         "bonus": "Le bonus, son mode d'emploi et les textes qui le remettent.",
