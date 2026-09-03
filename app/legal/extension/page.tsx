@@ -12,9 +12,10 @@
 // un jour, on basculera dans le système markdown commun (legal/*.md).
 
 import { Card } from "@/components/ui/card";
+import SansObfuscationEmail from "@/components/legal/SansObfuscationEmail";
 
 export const metadata = {
-  title: "Politique de confidentialité — Extension Tipote",
+  title: "Politique de confidentialité · Extension Tipote",
   description:
     "Quelles données l'extension Chrome Tipote collecte, dans quel but, où elles sont stockées et comment les supprimer.",
 };
@@ -22,8 +23,9 @@ export const metadata = {
 export default function ExtensionPrivacyPage() {
   return (
     <article className="prose prose-sm max-w-none">
+      <SansObfuscationEmail>
       <h1 className="text-2xl font-bold mb-2">
-        Politique de confidentialité — Extension Tipote
+        Politique de confidentialité · Extension Tipote
       </h1>
       <p className="text-xs text-muted-foreground mb-6">
         Dernière mise à jour : 23 mai 2026
@@ -57,17 +59,17 @@ export default function ExtensionPrivacyPage() {
           <ul className="list-disc ml-5 mt-2 space-y-1">
             <li>
               <strong>Ton identifiant LinkedIn (URN)</strong>, ton nom public, ton
-              headline et l&apos;URL de ton profil — pour te rattacher à ton compte Tipote.
+              headline et l&apos;URL de ton profil, pour te rattacher à ton compte Tipote.
             </li>
             <li>
               <strong>L&apos;URN et l&apos;URL des posts que tu publies</strong> sur LinkedIn,
-              ainsi que le début du texte (environ 500 caractères) — uniquement pour
+              ainsi que le début du texte (environ 500 caractères), uniquement pour
               permettre la génération de commentaires IA pertinents par les autres
               membres du pod.
             </li>
             <li>
               <strong>Tes actions d&apos;engagement validées</strong> (like, ton de
-              commentaire choisi, texte final posté) — pour les statistiques de karma
+              commentaire choisi, texte final posté), pour les statistiques de karma
               de ton compte.
             </li>
           </ul>
@@ -165,6 +167,7 @@ export default function ExtensionPrivacyPage() {
           </p>
         </section>
       </Card>
+      </SansObfuscationEmail>
     </article>
   );
 }

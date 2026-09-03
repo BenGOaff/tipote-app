@@ -7,6 +7,7 @@ import { SUPPORTED_LOCALES, DEFAULT_LOCALE } from "@/i18n/config";
 import type { SupportedLocale } from "@/i18n/config";
 import { VALID_SLUGS, type LegalSlug } from "@/lib/legal/types";
 import { getLegalContent } from "@/lib/legal/content";
+import SansObfuscationEmail from "@/components/legal/SansObfuscationEmail";
 
 export function generateStaticParams() {
   return VALID_SLUGS.map((slug) => ({ slug }));
@@ -24,8 +25,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   if (!doc) return {};
 
   return {
-    title: `${doc.title} — Tipote™`,
-    description: `${doc.title} — ETHILIFE SAS`,
+    title: `${doc.title} · Tipote™`,
+    description: `${doc.title} · ETHILIFE SAS`,
   };
 }
 
@@ -49,6 +50,7 @@ export default async function LegalPage({ params }: { params: Promise<{ slug: st
       {doc.lastUpdated && (
         <p className="text-sm text-muted-foreground mb-8">{doc.lastUpdated}</p>
       )}
+      <SansObfuscationEmail>
       <div
         className="legal-content text-foreground text-sm leading-relaxed
           [&_h1]:hidden
@@ -61,6 +63,7 @@ export default async function LegalPage({ params }: { params: Promise<{ slug: st
           [&_a]:text-primary [&_a]:underline"
         dangerouslySetInnerHTML={{ __html: doc.html }}
       />
+      </SansObfuscationEmail>
     </article>
   );
 }
