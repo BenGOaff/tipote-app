@@ -27,6 +27,7 @@ import {
   etapeValide,
 } from "@/lib/generateurs/parcours";
 import { SEQUENCE_EMAILS, SEQUENCE_PROMO, planFixe, passeParLesPistes } from "@/lib/generateurs/sequences";
+import { parseBonusDoc, inline } from "@/lib/bonus/document";
 import {
   classerParGenerateur,
   etiquetteContenu,
@@ -536,6 +537,44 @@ describe("l'écran de production suit le labo de l'Atelier", () => {
     // deux sens, sinon le rendu et le PDF divergeraient de l'écran.
     assert.match(src, /markdownToEditorHtml\(/, "l'éditeur ne lit plus le markdown");
     assert.match(src, /editorHtmlToMarkdown\(/, "ce qu'elle écrit ne revient plus en markdown");
+  });
+
+  test("un contenu SANS titre de section garde sa mise en forme", () => {
+    // Béné, 3 septembre 2026 : "ça ne va pas supprimer ce qui s'écrivait
+    // en markdown ? Les users doivent voir en beau, bien mis en forme."
+    //
+    // Elle avait raison de se méfier. Un repli "pas de section -> rendu
+    // simple" rendait le texte TEL QUEL : le gras ressortait en
+    // `**mot**`, un lien en `[texte](url)`, et une LISTE DISPARAISSAIT.
+    // Un email et un post court n'ont pas de `##`, donc c'était le cas
+    // le plus fréquent ici.
+    //
+    // MESURÉ sur un email réel avant correction : la liste rendait une
+    // chaîne vide, et "**Team Capture**" s'affichait avec ses étoiles.
+    const doc = parseBonusDoc(
+      "Salut,\n\nTu es **Team Capture**.\n\n- un point\n- deux\n\n[le quiz](https://x.fr)",
+    );
+    assert.equal(doc.sections.length, 0, "ce cas doit bien être sans section");
+    assert.deepEqual(
+      doc.lead.map((b) => b.kind),
+      ["para", "para", "list", "para"],
+      "la liste n'est plus lue comme une liste",
+    );
+    // Et le moteur de rendu la met en forme : gras, lien, puces.
+    assert.match(inline("Tu es **Team Capture**.", "ecran"), /<strong>Team Capture<\/strong>/);
+    assert.match(inline("[le quiz](https://x.fr)", "ecran"), /<a href="https:\/\/x\.fr"/);
+
+    // ET LE REPLI NE DOIT PAS REVENIR. Les deux écrans appellent
+    // `BonusDocument` sans condition : il rend `doc.lead` avec le même
+    // moteur que les sections, donc il n'y a rien à replier.
+    for (const f of [
+      "app/generateurs/[generateur]/GenerateurClient.tsx",
+      "app/generateurs/mes-contenus/MesContenusClient.tsx",
+    ]) {
+      const code = lire(f).replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+      assert.ok(!code.includes("hasStructure"), `${f} branche encore sur hasStructure`);
+      assert.match(code, /<BonusDocument doc=\{parseBonusDoc\(markdown\)\} \/>/, f);
+    }
   });
 
   test("le rendu et le PDF lisent les MÊMES modules", () => {

@@ -70,7 +70,7 @@ import { RichTextEdit } from "@/components/ui/rich-text-edit";
 // LES QUATRE MODULES DU LABO DE L'ATELIER, PORTÉS À L'OCTET PRÈS.
 // `cmp` entre les deux dépôts est le garde-fou : deux copies qui
 // divergent, c'est un rendu et un PDF qui ne se ressemblent plus.
-import { parseBonusDoc, hasStructure } from "@/lib/bonus/document";
+import { parseBonusDoc } from "@/lib/bonus/document";
 import { markdownToEditorHtml, editorHtmlToMarkdown } from "@/lib/bonus/markdownHtml";
 import { buildPrintableHtml } from "@/lib/bonus/printable";
 import { BonusDocument } from "@/components/BonusDocument";
@@ -1096,15 +1096,6 @@ export default function GenerateurClient({
  * carte unique qui contient tout n'apporterait rien.
  */
 function RenduGenere({ markdown }: { markdown: string }) {
-  const doc = parseBonusDoc(markdown);
-  if (!hasStructure(doc)) {
-    return (
-      <div className="rounded-xl border bg-card p-5 flex flex-col gap-3 text-[15px] leading-relaxed">
-        {doc.lead.map((b, i) => (
-          <p key={i}>{b.kind === "para" ? b.text : ""}</p>
-        ))}
-      </div>
-    );
-  }
-  return <BonusDocument doc={doc} />;
+  // PAS DE REPLI : voir l'entête ci dessus.
+  return <BonusDocument doc={parseBonusDoc(markdown)} />;
 }

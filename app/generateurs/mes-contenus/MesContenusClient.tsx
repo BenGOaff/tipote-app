@@ -14,7 +14,7 @@ import { useTranslations } from "next-intl";
 import { ArrowLeft, Gift, Mail, Megaphone, ChevronDown, Copy, Check, Trash2, AlertTriangle } from "lucide-react";
 
 import AppShell from "@/components/AppShell";
-import { parseBonusDoc, hasStructure } from "@/lib/bonus/document";
+import { parseBonusDoc } from "@/lib/bonus/document";
 import { BonusDocument } from "@/components/BonusDocument";
 import {
   etiquetteContenu,
@@ -220,17 +220,25 @@ function LigneContenu({
  * vient de `lib/bonus/document.ts`, les couleurs de
  * `lib/bonus/accents.ts`. Deux rendus pour le même contenu, c'est un
  * écran qui finit par mentir sur ce que l'autre a produit.
+ *
+ * -- LE REPLI A ÉTÉ RETIRÉ, ET IL PERDAIT DU CONTENU (3 septembre 2026)
+ *
+ * Béné : "ça ne va pas supprimer ce qui s'écrivait en markdown ? Les
+ * users doivent voir en beau, bien mis en forme."
+ *
+ * Elle avait raison de se méfier, et le trou était plus grave que ça.
+ * Un document sans aucun titre de section passait par un repli qui
+ * rendait `{b.text}` TEL QUEL : le gras ressortait en `**mot**`, un lien
+ * en `[texte](url)`, et une LISTE DISPARAISSAIT complètement (un bloc
+ * qui n'était pas un paragraphe rendait la chaîne vide). Un email et un
+ * post court n'ont pas de `##` : c'était donc le cas le plus fréquent
+ * ici, et le seul qui ne se voyait pas dans l'Atelier.
+ *
+ * `BonusDocument` rend DÉJÀ `doc.lead` avec le même moteur que les
+ * sections (gras, italique, liens, listes, étapes, code), et sans carte
+ * autour. Le repli n'apportait rien, il retirait.
  */
 function RenduGenereLib({ markdown }: { markdown: string }) {
-  const doc = parseBonusDoc(markdown);
-  if (!hasStructure(doc)) {
-    return (
-      <div className="flex flex-col gap-3 text-[15px] leading-relaxed">
-        {doc.lead.map((b, i) => (
-          <p key={i}>{b.kind === "para" ? b.text : ""}</p>
-        ))}
-      </div>
-    );
-  }
-  return <BonusDocument doc={doc} />;
+  // PAS DE REPLI : voir l'entête ci dessus.
+  return <BonusDocument doc={parseBonusDoc(markdown)} />;
 }

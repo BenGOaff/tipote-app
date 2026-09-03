@@ -3556,6 +3556,52 @@ production suit le labo de l'Atelier", vérifié en rejouant la version
 d'avant (l'édition retirée, le PDF retiré, l'avancement recompté : les
 trois rougissent).
 
+### Le repli sans section perdait la mise en forme (même jour)
+
+Béné, en lisant le portage : "ça ne va pas supprimer ce qui s'écrivait
+en markdown ? Les users doivent voir en beau, bien mis en forme comme
+sur l'atelier."
+
+**Elle avait raison de se méfier, et le trou était PLUS grave que ça.**
+
+Le rendu branchait sur `hasStructure(doc)` : un document sans aucun
+titre de section retombait sur un affichage de `{b.text}` TEL QUEL.
+Mesuré sur un email réel :
+
+| ce que le modèle écrit | ce que le repli affichait |
+|---|---|
+| `Tu es **Team Capture**.` | `Tu es **Team Capture**.` |
+| `[le quiz](https://...)` | `[le quiz](https://...)` |
+| `- un point` puis `- deux` | **rien du tout** |
+
+La dernière ligne est la pire : un bloc qui n'était pas un paragraphe
+rendait la chaîne vide, donc la LISTE DISPARAISSAIT de l'écran.
+
+**Et c'était le cas le PLUS FRÉQUENT ici.** Les trois blocs d'un bonus
+portent toujours des `##`, donc ça ne se voyait pas dans l'Atelier. Un
+email et un post court n'en ont pas : les deux générateurs à plan fixe
+tombaient donc systématiquement dans le repli.
+
+**Règle : `BonusDocument` est appelé SANS CONDITION**, sur l'écran de
+production comme dans la bibliothèque. Il rend déjà `doc.lead` avec le
+même moteur que les sections (gras, italique, liens, listes, étapes,
+code) et sans carte autour : le repli n'apportait rien, il retirait.
+
+**Le markdown reste la source de vérité et ne bouge pas d'un octet** :
+c'est lui qui est stocké, lui que l'éditeur relit par le pont, lui que
+le PDF imprime, et lui qu'elle colle dans Systeme.io. Ce qui a changé,
+c'est le RENDU, et il est désormais celui de l'Atelier partout.
+
+**LA LEÇON :** le commentaire du repli disait "un texte sans aucune
+section retombe sur un rendu simple : forcer une carte unique qui
+contient tout n'apporterait rien". La phrase était plausible et fausse,
+puisque `BonusDocument` ne force aucune carte sur le lead. **Un repli se
+juge sur ce qu'il REND, jamais sur ce que son commentaire annonce.**
+
+Test : le cas "un contenu SANS titre de section garde sa mise en forme"
+de `tests/logic/generateurs-parcours.test.mts`, vérifié en rejouant le
+repli d'avant (il rougit).
+
 ### 4. LES CONTENUS SE RETROUVENT
 
 "Il faut aussi que les users retrouvent leurs créations dans

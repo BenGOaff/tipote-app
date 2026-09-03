@@ -188,10 +188,19 @@ function buildBlock(lines: string[]): DocBlock | null {
 }
 
 /**
- * Le document a-t-il assez de structure pour valoir la peine ?
+ * Le document porte-t-il des sections ?
  *
- * Sans section, la mise en forme en cartes n'apporte rien et produirait
- * une carte unique qui contient tout : autant rendre le texte tel quel.
+ * 🚨 LE RENDU NE BRANCHE PLUS SUR CETTE FONCTION, ET NE DOIT PLUS.
+ *
+ * Béné, 3 septembre 2026 : "les users doivent voir en beau, bien mis en
+ * forme." Un repli "pas de section -> rendu simple" a existé jusque là,
+ * et il rendait le texte TEL QUEL : le gras ressortait en `**mot**`, un
+ * lien en `[texte](url)`, et une LISTE DISPARAISSAIT. `BonusDocument`
+ * rend déjà `doc.lead` avec le même moteur que les sections : il n'y a
+ * rien à replier.
+ *
+ * Ce prédicat ne sert plus qu'à DIRE, dans un test, que le parseur
+ * n'invente pas de structure là où il n'y en a pas.
  */
 export function hasStructure(doc: BonusDoc): boolean {
   return doc.sections.length > 0;
