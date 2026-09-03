@@ -118,7 +118,7 @@ export function foldVariants(v: Variants): string {
 export async function POST(req: NextRequest) {
   const apiKey = getClaudeApiKey();
   if (!apiKey) {
-    return NextResponse.json({ ok: false, error: "CLAUDE_API_KEY_MISSING" }, { status: 500 });
+    return NextResponse.json({ ok: false, error: "CLAUDE_API_KEY_MISSING" });
   }
 
   const supabase = await getSupabaseServerClient();
@@ -169,7 +169,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "NO_CREDITS" }, { status: 402 });
     }
     console.error("[quiz/gender-variants] credits error:", e);
-    return NextResponse.json({ ok: false, error: "credits_error" }, { status: 500 });
+    return NextResponse.json({ ok: false, error: "credits_error" });
   }
 
   const { system, user: userPrompt } = buildPrompt(text, locale);
@@ -199,10 +199,10 @@ export async function POST(req: NextRequest) {
     clearTimeout(timer);
     const name = String(fetchErr?.name ?? "");
     if (name === "AbortError") {
-      return NextResponse.json({ ok: false, error: "TIMEOUT" }, { status: 504 });
+      return NextResponse.json({ ok: false, error: "TIMEOUT" });
     }
     console.error("[quiz/gender-variants] fetch error:", fetchErr);
-    return NextResponse.json({ ok: false, error: "FETCH_FAILED" }, { status: 502 });
+    return NextResponse.json({ ok: false, error: "FETCH_FAILED" });
   } finally {
     clearTimeout(timer);
   }
@@ -210,15 +210,18 @@ export async function POST(req: NextRequest) {
   if (!res.ok) {
     const errText = await res.text().catch(() => "");
     console.error("[quiz/gender-variants] Claude error", res.status, errText.slice(0, 500));
-    const status = res.status === 429 ? 429 : 502;
-    return NextResponse.json({ ok: false, error: `CLAUDE_${res.status}` }, { status });
+    // Le 429 reste un 4xx : il passe intact a travers Cloudflare et il dit
+    // la bonne chose. Le reste passe en 200 pour que le CODE arrive.
+    return res.status === 429
+      ? NextResponse.json({ ok: false, error: `CLAUDE_${res.status}` }, { status: 429 })
+      : NextResponse.json({ ok: false, error: `CLAUDE_${res.status}` });
   }
 
   let json: any;
   try {
     json = await res.json();
   } catch {
-    return NextResponse.json({ ok: false, error: "INVALID_CLAUDE_RESPONSE" }, { status: 502 });
+    return NextResponse.json({ ok: false, error: "INVALID_CLAUDE_RESPONSE" });
   }
 
   const raw = Array.isArray(json?.content)
@@ -228,7 +231,7 @@ export async function POST(req: NextRequest) {
   const variants = parseVariants(raw);
   if (!variants) {
     console.error("[quiz/gender-variants] could not parse variants", raw.slice(0, 300));
-    return NextResponse.json({ ok: false, error: "PARSE_FAILED" }, { status: 502 });
+    return NextResponse.json({ ok: false, error: "PARSE_FAILED" });
   }
 
   return NextResponse.json({

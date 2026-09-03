@@ -7933,5 +7933,16 @@
         "promo": "Escrever os meus conteúdos de promoção"
       }
     }
+  },
+  "erreursIa": {
+    "busy": "Os servidores da IA estão saturados neste momento. Espera um minuto e volta a lançar, nada se perde.",
+    "too_long": "Ultrapassou o tempo disponível e parou. Volta a lançar, costuma resultar à segunda tentativa.",
+    "refused": "O pedido foi recusado. Não vem do teu lado: avisa-nos e vamos ver o que está a bloquear.",
+    "unreachable": "Não foi possível contactar o serviço. Verifica a tua ligação e volta a lançar.",
+    "empty": "A resposta chegou vazia. Volta a lançar, costuma correr bem à segunda.",
+    "unreadable": "A resposta chegou num formato ilegível. Volta a lançar, costuma correr bem à segunda.",
+    "rate_limited": "Geraste muito nos últimos minutos. Volta daqui a pouco, o teu trabalho fica guardado.",
+    "not_configured": "A IA não está disponível de momento. Já fomos avisados.",
+    "generic": "Não chegou ao fim. Volta a lançar, o resto do teu trabalho fica guardado."
   }
 }

@@ -7933,5 +7933,16 @@
         "promo": "Write my promo content"
       }
     }
+  },
+  "erreursIa": {
+    "busy": "The AI servers are saturated right now. Wait a minute and try again, nothing is lost.",
+    "too_long": "It ran out of time and stopped. Try again, it usually works on the second attempt.",
+    "refused": "The request was refused. It is not on your side: tell us and we will check what is blocking.",
+    "unreachable": "The service could not be reached. Check your connection, then try again.",
+    "empty": "The answer came back empty. Try again, it is usually fine the second time.",
+    "unreadable": "The answer came back in an unreadable format. Try again, it is usually fine the second time.",
+    "rate_limited": "You have generated a lot in the last few minutes. Come back in a moment, your work is kept.",
+    "not_configured": "The AI is unavailable right now. We have been notified.",
+    "generic": "That did not go through. Try again, the rest of your work is kept."
   }
 }

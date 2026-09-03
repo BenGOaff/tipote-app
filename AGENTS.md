@@ -3759,3 +3759,48 @@ de la route dynamique, c'est à dire les deux lignes que Google AFFICHE.
 Remplacés par `·` pour les séparateurs et par une virgule dans le corps.
 La règle du 7 juin ne vise que le contenu vu par un lecteur : les
 commentaires de ces fichiers gardent les leurs.
+
+## Un 5xx devant un navigateur perd sa raison (3 septembre 2026)
+
+Cloudflare sert nos six domaines et **REMPLACE le corps d'un 5xx** par
+sa propre page (`error code: 502`, en text/plain). Un écran qui lit
+`reason` dans le JSON reçoit alors `undefined` et retombe sur sa phrase
+générique : on aurait écrit la raison pour rien. Mesuré le 31 août côté
+Tiquiz, deux fois le même jour.
+
+En allant corriger les chemins IA de Tiquiz, mesure dans CE dépôt : les
+**5 mêmes routes y portaient les 20 mêmes sorties en 5xx**
+(`/api/quiz/generate`, `rebalance`, `rewrite`, `gender-variants`,
+`idea-chat`). Le module quiz est jumeau, et un garde-fou qui ne protège
+qu'un des jumeaux ne protège personne.
+
+**ET LE DÉFAUT ÉTAIT PIRE QUE LE STATUT.** `/api/quiz/generate`
+renvoyait `{ error: "Clé API Claude manquante côté serveur." }` et le
+client AFFICHAIT ce champ tel quel : une créatrice espagnole lisait une
+phrase française. Trois autres écrans faisaient pareil avec une phrase
+écrite en dur, `"Une erreur est survenue."` et `"Erreur IA"`, dans une
+interface qui existe en 7 langues. C'est la faute des replis
+"Résultat 4" du 1er septembre.
+
+**Règle : `lib/ia/echecIa.ts` répond, `hooks/useEchecIa.ts` traduit.**
+Le serveur rend une RAISON, jamais une phrase. Les 9 raisons vivent dans
+le namespace `erreursIa` des 7 fichiers de `messages/`. Une raison
+inconnue retombe sur `generic`, elle n'affiche JAMAIS sa clé.
+
+**LE DISCRIMINANT EST LE `Content-Type`, PAS LE STATUT**
+(`lib/ia/lireEchecIa.ts`). Ces routes STREAMENT : un flux répond
+`text/event-stream`, un échec `application/json`. Le client testait
+`res.ok` puis lisait `res.body` ; avec un 200 nu il aurait cherché un
+flux qui n'existe pas, donc attendu un quiz qui n'arrive jamais.
+
+**`gender-variants` garde son corps tel quel, et c'est délibéré :** son
+écran affiche déjà une phrase traduite avec le CODE entre parenthèses
+pour le diagnostic (design commenté sur place). Là, seul le statut
+empêchait le code d'arriver.
+
+**Les 4xx RESTENT** : 401, 402 (`NO_CREDITS`), 403, 404 et 429 passent
+intacts à travers Cloudflare et ils disent la bonne chose.
+
+Test : `tests/logic/corps-avale-par-cloudflare.test.mts`, vérifié en
+rejouant deux versions d'avant (les deux rougissent). Le jumeau Tiquiz
+porte le même, étendu à ses 11 chemins.
