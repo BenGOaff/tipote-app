@@ -51,7 +51,7 @@ export default async function LegalLayout({ children }: { children: React.ReactN
       <main className="max-w-4xl mx-auto px-4 py-8">{children}</main>
       <footer className="border-t border-border mt-12">
         <div className="max-w-4xl mx-auto px-4 py-6 text-center text-xs text-muted-foreground">
-          © {new Date().getFullYear()} Tipote™ — ETHILIFE SAS
+          © {new Date().getFullYear()} Tipote™ · ETHILIFE SAS
         </div>
       </footer>
     </div>

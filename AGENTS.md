@@ -3709,3 +3709,53 @@ dépôts : le compteur y est une PROP optionnelle, nulle chez Tiquiz. Le
 lien "Voir les formules" aussi, parce que l'onglet ne porte pas le même
 nom des deux côtés (`billing` ici, `account` là bas) et qu'un lien
 recopié en dur finirait par envoyer quelqu'un sur un onglet inexistant.
+
+
+## Cloudflare masquait les adresses des pages légales (3 septembre 2026)
+
+L'option « Email Address Obfuscation » (Scrape Shield) remplace toute
+adresse email du HTML **SERVI** par
+`<span class="__cf_email__">[email protected]</span>` plus un script qui
+la reconstruit. Un lecteur qui n'exécute pas le JavaScript lit donc une
+politique de confidentialité **sans aucune adresse de contact** : le
+validateur OAuth de Google, un robot d'indexation, un lecteur d'écran en
+mode dégradé.
+
+**MESURÉ le 3 septembre, avec l'agent de Googlebot, en production :**
+
+| | |
+|---|---|
+| `app.tipote.com/legal/privacy` | **5 masquées sur 5** |
+| `app.tipote.com/legal/extension` | 1 |
+| `atelierduquiz.fr/privacy` | 1 |
+| `atelierduquiz.fr/legal` | 1 |
+| `tiquiz.fr/privacy` | 0, corrigé le 2 septembre |
+
+**Tiquiz avait été corrigé SEUL**, et c'est la faute qui compte : un
+garde-fou qui ne protège qu'un des jumeaux ne protège personne. Le
+composant `components/legal/SansObfuscationEmail.tsx` et le test
+`tests/logic/emails-pas-masques.test.mts` vivent maintenant dans les
+trois dépôts.
+
+**Ça ne se voit QUE sur la page rendue**, jamais dans le dépôt : c'est
+un intermédiaire qu'on oublie parce qu'il ne nous appartient pas. Même
+famille que les images en 403 du 31 août, où la configuration était
+juste et adressée au mauvais serveur.
+
+Les deux marqueurs `<!--email_off-->` / `<!--email_on-->` sont la
+directive OFFICIELLE de Cloudflare pour laisser une zone intacte. Ils ne
+changent rien à l'affichage, et ils sont sans effet si l'option est
+désactivée un jour.
+
+**Le test lit la SOURCE, pas la page rendue** : le rendu dépend de
+Cloudflare, qu'aucun runner ne peut interroger. Il fige que l'enveloppe
+est posée, que la raison reste écrite à côté, et **que les écrans
+surveillés portent encore une adresse** : un test qui ne peut plus
+échouer ment.
+
+**Trouvé au passage, et c'était user-visible :** huit tirets cadratins
+vivaient dans les pages légales, dont le `<title>` et la `description`
+de la route dynamique, c'est à dire les deux lignes que Google AFFICHE.
+Remplacés par `·` pour les séparateurs et par une virgule dans le corps.
+La règle du 7 juin ne vise que le contenu vu par un lecteur : les
+commentaires de ces fichiers gardent les leurs.
