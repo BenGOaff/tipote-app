@@ -136,6 +136,24 @@ export default function GenerateurClient({
     () => projets.find((p) => p.id === projetId) ?? null,
     [projets, projetId],
   );
+
+  // CE QUI EST VRAIMENT CHOISISSABLE. `projets.length === 0` ne
+  // distinguait pas "tu n'as aucun projet" de "aucun de tes projets ne
+  // peut servir a ce generateur", alors que la phrase affichee dit la
+  // SECONDE. Avec un menu deroulant, la difference se voit : une liste
+  // ou toutes les options sont grisees est un cul-de-sac muet.
+  const utilisables = useMemo(
+    () =>
+      projets.filter(
+        (p) =>
+          !blocageGenerateur(generateur, {
+            mode: p.mode,
+            profils: p.profils,
+            nbQuestions: p.nbQuestions,
+          }),
+      ),
+    [projets, generateur],
+  );
   const blocage: BlocageGenerateur | null = projet
     ? blocageGenerateur(generateur, {
         mode: projet.mode,
@@ -385,7 +403,18 @@ export default function GenerateurClient({
           <p className="text-xs text-muted-foreground mt-0.5">{t("projet.aide")}</p>
         </div>
 
-        {projets.length === 0 ? (
+        {/* UN MENU DEROULANT, PAS UNE GRILLE DE CARTES (Béné,
+            3 septembre 2026). Une carte par projet donne une page
+            interminable des qu'on en a vingt, et le geste ici est un
+            CHOIX dans une liste, pas une exploration.
+
+            CE QUI NE DOIT PAS SE PERDRE EN CHEMIN : un projet bloqué
+            DIT pourquoi. Le griser sans un mot se lit comme un bug, et
+            la créatrice cherche (règle du 22 août). Une <option> tient
+            sur une ligne, donc la raison y est dite en version COURTE
+            (`projet.bloqueCourt`), la version longue restant celle des
+            écrans qui ont la place. */}
+        {utilisables.length === 0 ? (
           <div className="text-sm text-muted-foreground space-y-2">
             <p>{t("projet.aucun")}</p>
             <Button asChild size="sm" variant="outline">
@@ -393,45 +422,46 @@ export default function GenerateurClient({
             </Button>
           </div>
         ) : (
-          <div className="grid gap-2 sm:grid-cols-2">
-            {projets.map((p) => {
-              const b = blocageGenerateur(generateur, {
-                mode: p.mode,
-                profils: p.profils,
-                nbQuestions: p.nbQuestions,
-              });
-              const actif = p.id === projetId;
-              return (
-                <button
-                  key={p.id}
-                  type="button"
-                  disabled={Boolean(b)}
-                  onClick={() => {
-                    setProjetId(p.id);
-                    setProfilIndex(0);
-                    setPistes([]);
-                    setChoisie(null);
-                    setContenus({});
-                  }}
-                  className={`text-left rounded-lg border p-3 transition-colors ${
-                    b
-                      ? "opacity-60 cursor-not-allowed"
-                      : actif
-                        ? "border-primary bg-primary/5"
-                        : "hover:border-primary/50"
-                  }`}
-                >
-                  <span className="block font-semibold text-sm truncate">
-                    {p.titre || "..."}
-                  </span>
-                  <span className="block text-xs text-muted-foreground mt-0.5">
-                    {/* UN PROJET BLOQUÉ DIT POURQUOI. Le griser sans un
-                        mot se lit comme un bug, et elle cherche. */}
-                    {b ? t(`projet.bloque.${b}`) : t("projet.questions", { count: p.nbQuestions })}
-                  </span>
-                </button>
-              );
-            })}
+          <div className="space-y-2">
+            <select
+              value={projetId}
+              onChange={(e) => {
+                setProjetId(e.target.value);
+                setProfilIndex(0);
+                setPistes([]);
+                setChoisie(null);
+                setContenus({});
+              }}
+              className="w-full h-9 rounded-lg border bg-background border-input px-2 text-sm"
+            >
+              <option value="">{t("projet.choisir")}</option>
+              {projets.map((p) => {
+                const b = blocageGenerateur(generateur, {
+                  mode: p.mode,
+                  profils: p.profils,
+                  nbQuestions: p.nbQuestions,
+                });
+                const titre = p.titre || "...";
+                return (
+                  <option key={p.id} value={p.id} disabled={Boolean(b)}>
+                    {b
+                      ? t("projet.indisponible", {
+                          titre,
+                          raison: t(`projet.bloqueCourt.${b}`),
+                        })
+                      : titre}
+                  </option>
+                );
+              })}
+            </select>
+
+            {/* Ce que la carte disait et que le menu ne peut pas dire :
+                la taille du projet choisi. */}
+            {projet ? (
+              <p className="text-xs text-muted-foreground">
+                {t("projet.questions", { count: projet.nbQuestions })}
+              </p>
+            ) : null}
           </div>
         )}
       </section>

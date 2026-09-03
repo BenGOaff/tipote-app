@@ -3409,6 +3409,37 @@ se contente pas d'un bouton gris.
 en CHOISISSANT une piste. Un bouton à côté mènerait à un écran de
 contenus sans rien à écrire.
 
+### LE PROJET SE CHOISIT DANS UN MENU, PAS DANS UNE GRILLE (3 septembre)
+
+Béné : "générateurs : menu déroulant au lieu des cartes de quiz."
+
+Une carte par projet donne une page interminable dès qu'on en a vingt,
+et le geste ici est un CHOIX dans une liste, pas une exploration. Les
+autres grilles restent (les profils, les pistes, les contenus) : là on
+COMPARE, donc la carte a un sens.
+
+**CE QUI NE DEVAIT PAS SE PERDRE : un projet bloqué DIT pourquoi.** Le
+griser sans un mot se lit comme un bug, et la créatrice cherche (règle
+du 22 août). Une `<option>` tient sur une ligne, donc la raison y est
+dite en version COURTE (`projet.bloqueCourt`, 3 raisons x 7 langues) ;
+la version longue reste celle des écrans qui ont la place.
+
+**Et le cul-de-sac muet a été fermé au passage.** L'écran testait
+`projets.length === 0` pour afficher "aucun de tes projets ne peut
+encore servir à ce générateur" : la phrase parle de ce qui est
+UTILISABLE, le test parlait de ce qui EXISTE. Avec des cartes ça se
+voyait à peine ; avec un menu, une liste dont toutes les options sont
+grisées serait un cul-de-sac sans un mot. `utilisables` filtre donc sur
+`blocageGenerateur`, et c'est lui que l'écran teste.
+
+**Le nombre de questions est passé SOUS le menu** : c'est la seule chose
+que la carte disait et qu'une `<option>` ne peut pas porter.
+
+Les deux écrans restent identiques à l'octet près dans les deux dépôts.
+Test : le bloc "le choix du projet" de
+`tests/logic/generateurs-parcours.test.mts`, vérifié en rejouant deux
+versions d'avant (la grille remise, la raison retirée).
+
 ### 4. LES CONTENUS SE RETROUVENT
 
 "Il faut aussi que les users retrouvent leurs créations dans

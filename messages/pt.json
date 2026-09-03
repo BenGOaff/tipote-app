@@ -7797,6 +7797,13 @@
         "sondage": "É um inquérito: não tem perfil de resultado para prolongar.",
         "profils-vides": "Os perfis de resultado ainda estão vazios: preenche-os primeiro.",
         "quiz-vide": "Este projeto ainda não tem nenhuma pergunta."
+      },
+      "choisir": "Escolhe um projeto",
+      "indisponible": "{titre} (indisponível: {raison})",
+      "bloqueCourt": {
+        "sondage": "é um inquérito",
+        "profils-vides": "perfis vazios",
+        "quiz-vide": "sem perguntas"
       }
     },
     "profil": {

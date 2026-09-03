@@ -385,3 +385,71 @@ describe("Les séquences fixes", () => {
     }
   });
 });
+
+// ── LE CHOIX DU PROJET EST UN MENU DEROULANT (Béné, 3 septembre 2026)
+//
+// Une carte par projet donne une page interminable des qu'on en a vingt,
+// et le geste ici est un CHOIX dans une liste, pas une exploration.
+//
+// CE QUI NE DOIT PAS SE PERDRE : un projet bloqué DIT pourquoi. Le
+// griser sans un mot se lit comme un bug, et la créatrice cherche
+// (règle du 22 août). Une <option> tient sur une ligne, donc la raison
+// y est dite en version COURTE.
+describe("le choix du projet", () => {
+  const ecran = lire("app/generateurs/[generateur]/GenerateurClient.tsx");
+
+  test("c'est un menu déroulant, plus une grille de cartes", () => {
+    // On vise la portion qui rend l'étape projet, pas le fichier entier :
+    // les profils, les pistes et les contenus gardent leurs grilles, et
+    // c'est voulu.
+    const debut = ecran.indexOf('etape === "projet"');
+    const fin = ecran.indexOf('etape === "reglages"', debut);
+    assert.ok(debut > 0 && fin > debut, "l'étape projet a changé de forme");
+    const bloc = ecran.slice(debut, fin);
+
+    assert.match(bloc, /<select/, "le projet ne se choisit pas dans un menu");
+    assert.doesNotMatch(bloc, /grid-cols/, "la grille de cartes est revenue");
+  });
+
+  test("un projet bloqué est grisé ET dit pourquoi", () => {
+    const debut = ecran.indexOf('etape === "projet"');
+    const fin = ecran.indexOf('etape === "reglages"', debut);
+    const bloc = ecran.slice(debut, fin);
+
+    assert.match(bloc, /disabled=\{Boolean\(b\)\}/, "un projet bloqué reste choisissable");
+    assert.match(
+      bloc,
+      /projet\.bloqueCourt\./,
+      "il est grisé sans un mot : ça se lit comme un bug",
+    );
+  });
+
+  test("les 7 langues savent dire les 3 raisons courtes", () => {
+    for (const loc of ["fr", "en", "es", "it", "ar", "pt", "pt-BR"]) {
+      const d = JSON.parse(lire(`messages/${loc}.json`)) as {
+        generateurs?: { projet?: { choisir?: string; indisponible?: string; bloqueCourt?: Record<string, string> } };
+      };
+      const proj = d.generateurs?.projet ?? {};
+      assert.ok(proj.choisir?.trim(), `${loc} : le menu n'a pas de libellé d'attente`);
+      assert.ok(proj.indisponible?.includes("{titre}"), `${loc} : l'option perd le titre du projet`);
+      assert.ok(proj.indisponible?.includes("{raison}"), `${loc} : l'option perd la raison`);
+      for (const r of ["sondage", "profils-vides", "quiz-vide"]) {
+        assert.ok(proj.bloqueCourt?.[r]?.trim(), `${loc} : la raison ${r} n'a pas de version courte`);
+      }
+    }
+  });
+
+  test("le cul-de-sac muet est ferme : tous bloqués se dit", () => {
+    // `projets.length === 0` ne distinguait pas "tu n'as aucun projet" de
+    // "aucun ne peut servir", alors que la phrase affichee dit la SECONDE.
+    // Avec un menu, une liste dont toutes les options sont grisees serait
+    // un cul-de-sac sans un mot.
+    assert.match(ecran, /const utilisables = useMemo/, "rien ne calcule ce qui est choisissable");
+    assert.match(
+      ecran,
+      /utilisables\.length === 0/,
+      "l'ecran teste encore la liste brute au lieu de ce qui est utilisable",
+    );
+  });
+});
+

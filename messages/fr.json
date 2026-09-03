@@ -7797,6 +7797,13 @@
         "sondage": "C'est un sondage : il n'a pas de profil de résultat à prolonger.",
         "profils-vides": "Ses profils de résultat sont encore vides : remplis les d'abord.",
         "quiz-vide": "Ce projet n'a pas encore de question."
+      },
+      "choisir": "Choisis un projet",
+      "indisponible": "{titre} (indisponible : {raison})",
+      "bloqueCourt": {
+        "sondage": "c'est un sondage",
+        "profils-vides": "profils vides",
+        "quiz-vide": "aucune question"
       }
     },
     "profil": {

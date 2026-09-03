@@ -7797,6 +7797,13 @@
         "sondage": "This is a survey: it has no result profile to extend.",
         "profils-vides": "Its result profiles are still empty: fill them in first.",
         "quiz-vide": "This project has no question yet."
+      },
+      "choisir": "Choose a project",
+      "indisponible": "{titre} (unavailable: {raison})",
+      "bloqueCourt": {
+        "sondage": "it is a survey",
+        "profils-vides": "empty profiles",
+        "quiz-vide": "no question"
       }
     },
     "profil": {
