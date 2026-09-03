@@ -3409,6 +3409,199 @@ se contente pas d'un bouton gris.
 en CHOISISSANT une piste. Un bouton à côté mènerait à un écran de
 contenus sans rien à écrire.
 
+### LE PROJET SE CHOISIT DANS UN MENU, PAS DANS UNE GRILLE (3 septembre)
+
+Béné : "générateurs : menu déroulant au lieu des cartes de quiz."
+
+Une carte par projet donne une page interminable dès qu'on en a vingt,
+et le geste ici est un CHOIX dans une liste, pas une exploration. Les
+autres grilles restent (les profils, les pistes, les contenus) : là on
+COMPARE, donc la carte a un sens.
+
+**CE QUI NE DEVAIT PAS SE PERDRE : un projet bloqué DIT pourquoi.** Le
+griser sans un mot se lit comme un bug, et la créatrice cherche (règle
+du 22 août). Une `<option>` tient sur une ligne, donc la raison y est
+dite en version COURTE (`projet.bloqueCourt`, 3 raisons x 7 langues) ;
+la version longue reste celle des écrans qui ont la place.
+
+**Et le cul-de-sac muet a été fermé au passage.** L'écran testait
+`projets.length === 0` pour afficher "aucun de tes projets ne peut
+encore servir à ce générateur" : la phrase parle de ce qui est
+UTILISABLE, le test parlait de ce qui EXISTE. Avec des cartes ça se
+voyait à peine ; avec un menu, une liste dont toutes les options sont
+grisées serait un cul-de-sac sans un mot. `utilisables` filtre donc sur
+`blocageGenerateur`, et c'est lui que l'écran teste.
+
+**Le nombre de questions est passé SOUS le menu** : c'est la seule chose
+que la carte disait et qu'une `<option>` ne peut pas porter.
+
+Les deux écrans restent identiques à l'octet près dans les deux dépôts.
+Test : le bloc "le choix du projet" de
+`tests/logic/generateurs-parcours.test.mts`, vérifié en rejouant deux
+versions d'avant (la grille remise, la raison retirée).
+
+### ON LANCE DEPUIS LES RÉGLAGES, ON ATTERRIT SUR LES PISTES (3 septembre)
+
+Béné : "cette étape est inutile : autant générer les trois pistes
+directement ! Pourquoi t'as pas repris exactement ce qu'on a codé dans
+l'atelier ? C'est tellement pratique, on l'a déjà testé, amélioré,
+peaufiné. Les prompts, mises en pages, fonctionnement, présentation,
+tout était parfait, pourquoi partir sur autre chose ?"
+
+**Elle a raison sur les deux, et le deuxième reproche est le vrai.**
+
+L'étape des pistes s'ouvrait VIDE : un titre, une phrase, et un bouton
+"Proposer trois pistes". Deux clics pour un seul geste, et un écran qui
+ne sert qu'à porter son propre bouton.
+
+**Le labo de l'Atelier n'a JAMAIS fait ça, et ça se lit en une ligne**
+(`app/(app)/labo-bonus/BonusLabClient.tsx`) : son écran de brief FINIT
+par le bouton "Proposer 3 pistes", et `askPistes` fait
+`setStep("pistes")`. On arrive donc sur un écran qui MONTRE les trois
+pistes. Le mien avait la même liste d'étapes et le bouton du mauvais
+côté de la césure.
+
+| | l'Atelier, depuis le début | ici, avant le 3 septembre |
+|---|---|---|
+| le bouton qui lance | au pied du brief | sur l'écran d'après |
+| l'écran des pistes | montre les trois pistes | vide, avec un bouton |
+| la recommandation | AU DESSUS des cartes | en dessous, donc lue trop tard |
+
+**Les trois sont alignés sur l'Atelier**, ses phrases comprises ("Trois
+pistes, tu en choisis une", "Elles sont volontairement différentes.
+Prends celle qui te ressemble, pas la plus impressionnante.").
+
+**Ce qui NE devait pas se perdre : le prix de la relance.** "Proposer
+trois autres pistes" REFACTURE, et une relance gratuite en apparence est
+la meilleure façon de vider un compteur sans comprendre pourquoi. Le
+bouton de relance reste donc sur l'écran des pistes, en `outline` (sur
+un écran qui montre déjà trois pistes, un bouton plein tire l'oeil vers
+le geste qui coûte), et le coût est dit AUX DEUX endroits : au pied des
+réglages avant de lancer, et à côté de la relance. Le test compte les
+deux occurrences.
+
+**LA LEÇON, ET ELLE EST SUR MOI.** Le module `parcours.ts` porte en
+commentaire "L'Atelier fait l'inverse depuis le début (`library ->
+brief -> pistes -> produce`), et c'est ce qu'elle demande ici". J'avais
+donc lu son parcours, recopié la LISTE des étapes, et réécrit ce qui se
+passe DANS chacune. **Reprendre la structure d'un écran qui marche n'est
+pas la reprendre : ce qui marche est dans le détail des gestes.** Quand
+un écran de l'Atelier fait déjà le travail, on va le LIRE, geste par
+geste, avant d'en écrire un autre.
+
+Test : le bloc "les pistes : le lancement vit au pied des réglages" de
+`tests/logic/generateurs-parcours.test.mts`, vérifié en rejouant la
+version d'avant (deux tests rougissent).
+
+### PAREIL QUE L'ATELIER, NI PLUS NI MOINS (Béné, 3 septembre 2026)
+
+"Au final je veux exactement la même chose sur l'atelier et sur tiquiz.
+Pareil. Ni plus, ni moins. En visible et en invisible pour les users."
+
+Le passage a été fait geste par geste, en lisant son labo au lieu de
+lire sa liste d'étapes. Ce qui différait, mesuré :
+
+| Le geste | l'Atelier | ici, avant |
+|---|---|---|
+| l'écran de production | une GRILLE de dossiers, un clic ouvre, la flèche remonte | tout empilé |
+| le titre de l'écran | celui de la piste, sa punchline, l'avancement | "Les contenus" |
+| corriger un texte | l'éditeur, sur place | lecture seule |
+| exporter | PDF par bloc | rien |
+| choisir une piste | n'écrit RIEN, chaque dossier a son bouton | écrivait tout d'un coup |
+| la relance | AJOUTE une piste, max 6 | remplaçait les trois |
+
+**Quatre modules sont IMPORTÉS, pas réécrits**, et ils sont identiques à
+l'octet près dans les trois dépôts : `lib/bonus/document.ts`,
+`accents.ts`, `markdownHtml.ts`, `printable.ts`, plus
+`components/BonusDocument.tsx`. Le garde-fou est une commande :
+
+```bash
+cmp lib/bonus/document.ts ../formaquiz/lib/bonus/document.ts
+```
+
+Deux copies d'une même règle finissent toujours par diverger, et ici la
+divergence coûte un PDF qui ne ressemble plus à l'écran.
+
+**LA PREUVE QUE CE N'EST PAS THÉORIQUE, trouvée en portant.** La mise en
+forme en ligne vivait en DEUX exemplaires chez lui, `inline()` dans
+`BonusDocument.tsx` et `inline()` dans `printable.ts`, et le commentaire
+du second annonçait "la MEME mise en forme qu'a l'ecran". **Elles
+avaient déjà divergé** : l'écran n'échappait pas le guillemet double,
+l'impression si. Or c'est une règle de SÉCURITÉ (ce texte vient d'un
+modèle et finit dans un `innerHTML`).
+
+Elle vit maintenant dans `lib/bonus/document.ts`, en un seul exemplaire,
+avec la cible en PARAMÈTRE (`"ecran"` ouvre un onglet, `"impression"`
+non). Et surtout elle est enfin TESTABLE : enfermée dans un `.tsx`, elle
+ne l'était pas, donc rien ne vérifiait qu'un `javascript:` était refusé.
+Les deux tests de l'Atelier qui la surveillaient lisaient sa SOURCE avec
+des regex, donc ils figeaient une écriture et pas un comportement : ils
+APPELLENT la fonction désormais, des deux côtés.
+
+**Ce qui change pour la créatrice, et qu'il faut assumer :** les emails
+et la promo ne s'écrivent plus d'un seul bouton. Chaque morceau a le
+sien, comme les trois blocs du bonus dans l'Atelier. C'est plus de clics
+et c'est le prix de "pareil" ; c'est aussi ce qui évite de facturer sept
+contenus à quelqu'un qui en voulait deux.
+
+🚨 **Fichier SUPPRIMÉ : `lib/generateurs/markdown.ts`.** C'était NOTRE
+rendu, à côté de celui de l'Atelier : le même contenu s'affichait de
+deux façons selon l'écran où on le lisait. La bibliothèque
+(`/generateurs/mes-contenus`) passe par le même rendu que la production.
+Supprimé et pas laissé sans appelant : un module mort est un piège que
+le prochain passage rebranche en croyant réparer.
+
+Test : `tests/logic/generateurs-parcours.test.mts`, bloc "l'écran de
+production suit le labo de l'Atelier", vérifié en rejouant la version
+d'avant (l'édition retirée, le PDF retiré, l'avancement recompté : les
+trois rougissent).
+
+### Le repli sans section perdait la mise en forme (même jour)
+
+Béné, en lisant le portage : "ça ne va pas supprimer ce qui s'écrivait
+en markdown ? Les users doivent voir en beau, bien mis en forme comme
+sur l'atelier."
+
+**Elle avait raison de se méfier, et le trou était PLUS grave que ça.**
+
+Le rendu branchait sur `hasStructure(doc)` : un document sans aucun
+titre de section retombait sur un affichage de `{b.text}` TEL QUEL.
+Mesuré sur un email réel :
+
+| ce que le modèle écrit | ce que le repli affichait |
+|---|---|
+| `Tu es **Team Capture**.` | `Tu es **Team Capture**.` |
+| `[le quiz](https://...)` | `[le quiz](https://...)` |
+| `- un point` puis `- deux` | **rien du tout** |
+
+La dernière ligne est la pire : un bloc qui n'était pas un paragraphe
+rendait la chaîne vide, donc la LISTE DISPARAISSAIT de l'écran.
+
+**Et c'était le cas le PLUS FRÉQUENT ici.** Les trois blocs d'un bonus
+portent toujours des `##`, donc ça ne se voyait pas dans l'Atelier. Un
+email et un post court n'en ont pas : les deux générateurs à plan fixe
+tombaient donc systématiquement dans le repli.
+
+**Règle : `BonusDocument` est appelé SANS CONDITION**, sur l'écran de
+production comme dans la bibliothèque. Il rend déjà `doc.lead` avec le
+même moteur que les sections (gras, italique, liens, listes, étapes,
+code) et sans carte autour : le repli n'apportait rien, il retirait.
+
+**Le markdown reste la source de vérité et ne bouge pas d'un octet** :
+c'est lui qui est stocké, lui que l'éditeur relit par le pont, lui que
+le PDF imprime, et lui qu'elle colle dans Systeme.io. Ce qui a changé,
+c'est le RENDU, et il est désormais celui de l'Atelier partout.
+
+**LA LEÇON :** le commentaire du repli disait "un texte sans aucune
+section retombe sur un rendu simple : forcer une carte unique qui
+contient tout n'apporterait rien". La phrase était plausible et fausse,
+puisque `BonusDocument` ne force aucune carte sur le lead. **Un repli se
+juge sur ce qu'il REND, jamais sur ce que son commentaire annonce.**
+
+Test : le cas "un contenu SANS titre de section garde sa mise en forme"
+de `tests/logic/generateurs-parcours.test.mts`, vérifié en rejouant le
+repli d'avant (il rougit).
+
 ### 4. LES CONTENUS SE RETROUVENT
 
 "Il faut aussi que les users retrouvent leurs créations dans
@@ -3464,6 +3657,59 @@ générateur qui écrivait moins bien.
 
 Test : `tests/logic/generateurs-parcours.test.mts`, dans les deux
 dépôts. Le test de la CLÉ, lui, diffère : Tipote lit trois noms.
+
+### 6. ET LE PROMPT DU BONUS N'ÉTAIT PAS CELUI DE L'ATELIER (3 septembre 2026)
+
+Béné : "t'es sûr d'avoir utilisé les mêmes prompts pour les générateurs
+de bonus et les emails ? Je les trouve moins bien que sur l'Atelier...
+tu utilises bien Claude ? Le meilleur modèle rapport qualité prix ?"
+
+**LE MODÈLE EST HORS DE CAUSE, ET C'EST MESURÉ.** Les trois dépôts
+appellent `resolveAnthropicModel(process.env.ANTHROPIC_MODEL, "sonnet")`,
+donc `claude-sonnet-4-6`, avec la MÊME fonction et la même table. Le
+labo bonus de l'Atelier (`app/api/me/bonus/route.ts`) et les générateurs
+d'ici tournent sur le même modèle : il ne peut pas expliquer un écart.
+
+**LES PROMPTS, EUX, N'ÉTAIENT PAS LES MÊMES.** Seuls les CINQ TEMPS de
+la séquence emails l'étaient (vérifié caractère par caractère entre
+`lib/funnelSequence.ts` et `lib/generateurs/sequences.ts` : cinq
+intentions identiques). Tout le reste est une RÉÉCRITURE, et cette page
+laissait croire l'inverse.
+
+Ce qui manquait, compté dans `socle.ts` + `consignes.ts` avant
+correction, zéro occurrence de chacun :
+
+| Ce qui manquait | Ce que ça coûte |
+|---|---|
+| **les 4 PILIERS d'un bonus qui convertit** (urgence, spécificité, accessibilité, CONTINUITÉ) | rien ne disait au modèle qu'un bonus doit ouvrir un vide que seule l'offre comble. D'où des bonus qui se suffisent à eux mêmes, donc qui ne vendent pas |
+| **le test qui tranche** ("si un concurrent pouvait publier le même texte en changeant son logo") | c'est le critère le plus dur et le seul qui produise du contenu qu'on ne peut pas confondre |
+| **les puces promesses en DEUX temps** (bénéfice + conséquence concrète) | sans lui, le modèle rend un SOMMAIRE. "Un modèle d'email" au lieu de "tu écris ton email du lundi en dix minutes" |
+| **le moment psychologique dans le persona** | le modèle écrivait du contenu de blog, correct, qui ignore que la personne vient de recevoir un résultat sur elle même |
+
+**Les trois premiers viennent de l'Atelier, mot pour mot ou presque**
+(`lib/prompts/bonus.ts` : `FOUR_PILLARS`, `VALUE_CRITERIA`,
+`PROMISE_BULLETS`). Ils ont été écrits là bas, corrigés par les retours
+de vraies élèves, et enseignés dans la formation : les réécrire ici
+donnait deux méthodes pour la même chose, et c'est Tiquiz qui se
+trompait.
+
+**OÙ ILS VIVENT, ET CE N'EST PAS INDIFFÉRENT.** Ce qui vaut pour les
+TROIS générateurs (le test du logo, les puces promesses, le moment
+psychologique) va dans le SOCLE, donc dans le bloc caché : il ne coûte
+presque rien à partir de la deuxième lecture. Les 4 PILIERS sont
+bonus-spécifiques et vivent dans `consignes.ts`, la partie variable :
+dans le socle, ils seraient facturés sur chaque email et chaque post,
+qui n'en ont que faire. Le test l'exige dans les deux sens.
+
+**LA LEÇON, ET ELLE EST SUR MOI :** j'avais écrit ici "les cinq temps
+sont ceux de l'Atelier, mot pour mot", ce qui était vrai, et cette
+phrase a servi de preuve que TOUT venait de l'Atelier, ce qui était
+faux. **Une phrase exacte sur une moitié laisse croire l'autre moitié.**
+C'est la même faute que la mesure des règles d'automatisation : dire ce
+qu'on a vérifié, et dire aussi ce qu'on n'a pas vérifié.
+
+Test : les 4 cas ajoutés à `tests/logic/generateurs.test.mts` (les deux
+dépôts), vérifiés en rejouant la version d'avant : les 4 rougissent.
 
 ## ON DIT TAG, JAMAIS ÉTIQUETTE (Béné, 1er septembre 2026)
 

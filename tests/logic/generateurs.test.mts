@@ -46,7 +46,7 @@ import {
   messagePourLeModele,
 } from "@/lib/prompts/generateurs/consignes";
 import { urlPubliqueProjet } from "@/lib/quiz/urlPublique";
-import { markdownVersHtml } from "@/lib/generateurs/markdown";
+import { inline, urlSure } from "@/lib/bonus/document";
 
 const QUIZ_OK = {
   mode: "quiz",
@@ -403,9 +403,53 @@ describe("Le socle des générateurs", () => {
     assert.match(SOCLE_GENERATEURS, /tiret cadratin/i);
     assert.match(SOCLE_GENERATEURS, /FÉMININ/i);
   });
+
+  // -- CE QUI FAIT LA QUALITÉ, ET QUI MANQUAIT (Béné, 3 septembre 2026)
+  //
+  // "T'es sûr d'avoir utilisé les mêmes prompts pour les générateurs de
+  // bonus et les emails ? Je les trouve moins bien que sur l'Atelier."
+  //
+  // Elle avait raison, et c'était mesurable : les cinq temps de la
+  // séquence étaient bien portés mot pour mot, mais le reste du prompt
+  // était une RÉÉCRITURE, et trois blocs de l'Atelier n'y étaient pas du
+  // tout. Ces trois tests les figent : sans eux, la prochaine passe les
+  // reperdrait sans qu'une seule ligne rougisse.
+
+  test("il porte le test qui tranche : le texte d'un concurrent avec un autre logo", () => {
+    assert.match(SOCLE_GENERATEURS, /changeant son logo/i);
+  });
+
+  test("il porte les puces promesses en DEUX temps", () => {
+    assert.match(SOCLE_GENERATEURS, /CONSÉQUENCE CONCRÈTE/i);
+    // Le deuxième temps est ce qui sépare une promesse d'un sommaire.
+    assert.match(SOCLE_GENERATEURS, /table des matières/i);
+  });
+
+  test("il nomme le moment psychologique, pas seulement le métier", () => {
+    // Sans lui, le modèle écrit du contenu de blog : correct, et qui
+    // ignore que la personne vient de recevoir un résultat sur elle même.
+    assert.match(SOCLE_GENERATEURS, /prise de conscience/i);
+  });
 });
 
 describe("Les consignes de chaque étape", () => {
+  test("le bonus reçoit les 4 piliers, et eux seuls les reçoivent", () => {
+    // Portés de l'Atelier (lib/prompts/bonus.ts). Ils sont dans la partie
+    // VARIABLE et pas dans le socle : les coller dans le socle les ferait
+    // payer sur chaque email et chaque post, qui n'en ont que faire.
+    const bonus = consignePistes("bonus", BRIEF_TEST);
+    for (const pilier of ["URGENCE", "SPÉCIFICITÉ", "ACCESSIBILITÉ", "CONTINUITÉ"]) {
+      assert.ok(bonus.includes(pilier), `le pilier ${pilier} a disparu de la consigne bonus`);
+    }
+    // CONTINUITÉ est celui qui fait qu'un bonus VEND : un bonus qui se
+    // suffit à lui même ne mène à rien.
+    assert.match(bonus, /vide que SEULE l'offre payante comble/i);
+    assert.ok(
+      !SOCLE_GENERATEURS.includes("LES 4 PILIERS"),
+      "les piliers sont bonus-spécifiques : ils n'ont rien à faire dans le socle",
+    );
+  });
+
   test("la langue est NOMMÉE, et c'est le catalogue des 100 qui la nomme", () => {
     // Béné, 2 septembre 2026 : "on doit offrir la même qualité à toutes
     // les langues prises en charge". J'avais écrit ici une table de SEPT
@@ -561,43 +605,51 @@ describe("L'adresse publique d'un projet", () => {
 // Le contenu s'AFFICHE : on ne montre jamais notre format de travail
 // ─────────────────────────────────────────────────────────────────────
 
-describe("Le rendu du contenu généré", () => {
-  test("titres, gras et listes sont rendus, pas affichés en brut", () => {
-    const html = markdownVersHtml("## Le miroir\n\nUn **mot** en gras.\n\n- un\n- deux");
-    assert.match(html, /<h3>Le miroir<\/h3>/);
-    assert.match(html, /<strong>mot<\/strong>/);
-    assert.match(html, /<li>un<\/li><li>deux<\/li>/);
-    assert.ok(!html.includes("##"), html);
+describe("Le rendu d'un contenu généré", () => {
+  // -- LE MÊME RENDU PARTOUT, ET IL EST TESTABLE ----------------------
+  //
+  // Béné, 3 septembre 2026 : "je veux exactement la même chose sur
+  // l'atelier et sur tiquiz. Pareil. Ni plus, ni moins."
+  //
+  // `markdownVersHtml` était notre rendu à nous, à côté de celui de
+  // l'Atelier : le même contenu s'affichait de deux façons selon l'app
+  // où on le lisait. Il est SUPPRIMÉ, pas laissé sans appelant : un
+  // module mort est un piège que le prochain passage rebranche en
+  // croyant réparer.
+
+  test("le gras, l'italique, le code et les liens sont rendus", () => {
+    for (const cible of ["ecran", "impression"] as const) {
+      assert.match(inline("un **mot** en gras", cible), /<strong>mot<\/strong>/);
+      assert.match(inline("un *mot* en italique", cible), /<em>mot<\/em>/);
+      assert.match(inline("du `code` ici", cible), /<code>code<\/code>/);
+      assert.match(
+        inline("[le quiz](https://quiz.tipote.com/q/x)", cible),
+        /<a href="https:\/\/quiz\.tipote\.com\/q\/x"/,
+      );
+    }
   });
 
-  test("une liste numérotée reste une liste", () => {
-    // Sans ça, "1. ... 2. ..." se recolle sur une seule ligne et le
-    // mode d'emploi devient illisible.
-    const html = markdownVersHtml("1. ouvre le fichier\n2. colle le lien");
-    assert.match(html, /<li>ouvre le fichier<\/li><li>colle le lien<\/li>/);
+  test("un lien écrit par un modèle ne peut pas exécuter de script", () => {
+    // Ce texte vient d'un modèle, donc d'ailleurs, et il finit dans un
+    // `innerHTML`. C'est une règle de SÉCURITÉ.
+    for (const cible of ["ecran", "impression"] as const) {
+      for (const mauvais of ["javascript:alert(1)", "data:text/html,<script>", "vbscript:x"]) {
+        assert.doesNotMatch(inline(`[clique](${mauvais})`, cible), /<a /, mauvais);
+      }
+      const html = inline('Attention <script>alert("x")</script>', cible);
+      assert.doesNotMatch(html, /<script/);
+      assert.match(html, /&lt;script&gt;/);
+      assert.match(inline('il a dit "oui"', cible), /&quot;oui&quot;/);
+    }
+    assert.equal(urlSure("javascript:alert(1)"), null);
+    assert.equal(urlSure("https://quiz.tipote.com"), "https://quiz.tipote.com");
   });
 
-  test("jamais de h1 : le titre du morceau est déjà affiché au dessus", () => {
-    assert.ok(!markdownVersHtml("# Titre").includes("<h1>"));
-  });
-
-  test("le HTML reçu est ÉCHAPPÉ, guillemets compris", () => {
-    // Ce texte vient d'un modèle de langue et finit dans un
-    // dangerouslySetInnerHTML.
-    const html = markdownVersHtml('Attention <script>alert("x")</script>');
-    assert.ok(!html.includes("<script>"), html);
-    assert.match(html, /&lt;script&gt;/);
-  });
-
-  test("un lien javascript: n'est jamais rendu cliquable", () => {
-    const html = markdownVersHtml("[clique](javascript:alert(1))");
-    assert.ok(!html.includes("<a "), html);
-  });
-
-  test("un lien http s'ouvre dans un nouvel onglet", () => {
-    // Règle du 24 août : un lien ne fait jamais quitter la page.
-    const html = markdownVersHtml("[le quiz](https://quiz.tipote.com/q/x)");
-    assert.match(html, /target="_blank"/);
-    assert.match(html, /rel="noopener noreferrer"/);
+  test("à l'écran un lien ouvre un onglet, à l'impression non", () => {
+    // Un visiteur ne doit jamais perdre sa page ; sur une feuille
+    // imprimée, `target` ne veut rien dire. C'est un PARAMÈTRE, pas une
+    // déduction.
+    assert.match(inline("[a](https://x.fr)", "ecran"), /target="_blank" rel="noopener noreferrer"/);
+    assert.doesNotMatch(inline("[a](https://x.fr)", "impression"), /target="_blank"/);
   });
 });

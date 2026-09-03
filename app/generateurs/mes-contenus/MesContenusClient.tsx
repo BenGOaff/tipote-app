@@ -14,7 +14,8 @@ import { useTranslations } from "next-intl";
 import { ArrowLeft, Gift, Mail, Megaphone, ChevronDown, Copy, Check, Trash2, AlertTriangle } from "lucide-react";
 
 import AppShell from "@/components/AppShell";
-import { markdownVersHtml } from "@/lib/generateurs/markdown";
+import { parseBonusDoc } from "@/lib/bonus/document";
+import { BonusDocument } from "@/components/BonusDocument";
 import {
   etiquetteContenu,
   resumeMorceaux,
@@ -197,18 +198,47 @@ function LigneContenu({
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
                 {m.cle ? t(`temps.${m.cle}`) : t(`blocs.${m.bloc}`)} {m.index}
               </p>
-              <div
-                className="prose prose-sm max-w-none dark:prose-invert"
-                // Le Markdown est rendu par `markdownVersHtml`, qui
-                // ÉCHAPPE tout : ce texte vient d'un modèle, donc
-                // d'ailleurs, et un `href` qui n'est ni http, ni https,
-                // ni mailto n'est jamais rendu cliquable.
-                dangerouslySetInnerHTML={{ __html: markdownVersHtml(m.markdown) }}
-              />
+              {/* LE MÊME RENDU QUE L'ÉCRAN DE PRODUCTION.
+                  Il avait le sien (`markdownVersHtml`) : le même contenu
+                  s'affichait donc de deux façons selon l'écran où on le
+                  lisait, et c'est le défaut sorti six fois dans ces
+                  dépôts. `BonusDocument` n'échappe pas moins : il ne
+                  rend jamais de HTML brut, il peint une structure. */}
+              <RenduGenereLib markdown={m.markdown} />
             </article>
           ))}
         </div>
       ) : null}
     </li>
   );
+}
+
+/**
+ * LE RENDU D'UN MORCEAU RETROUVÉ.
+ *
+ * Le MÊME que sur l'écran de production (`RenduGenere`) : la structure
+ * vient de `lib/bonus/document.ts`, les couleurs de
+ * `lib/bonus/accents.ts`. Deux rendus pour le même contenu, c'est un
+ * écran qui finit par mentir sur ce que l'autre a produit.
+ *
+ * -- LE REPLI A ÉTÉ RETIRÉ, ET IL PERDAIT DU CONTENU (3 septembre 2026)
+ *
+ * Béné : "ça ne va pas supprimer ce qui s'écrivait en markdown ? Les
+ * users doivent voir en beau, bien mis en forme."
+ *
+ * Elle avait raison de se méfier, et le trou était plus grave que ça.
+ * Un document sans aucun titre de section passait par un repli qui
+ * rendait `{b.text}` TEL QUEL : le gras ressortait en `**mot**`, un lien
+ * en `[texte](url)`, et une LISTE DISPARAISSAIT complètement (un bloc
+ * qui n'était pas un paragraphe rendait la chaîne vide). Un email et un
+ * post court n'ont pas de `##` : c'était donc le cas le plus fréquent
+ * ici, et le seul qui ne se voyait pas dans l'Atelier.
+ *
+ * `BonusDocument` rend DÉJÀ `doc.lead` avec le même moteur que les
+ * sections (gras, italique, liens, listes, étapes, code), et sans carte
+ * autour. Le repli n'apportait rien, il retirait.
+ */
+function RenduGenereLib({ markdown }: { markdown: string }) {
+  // PAS DE REPLI : voir l'entête ci dessus.
+  return <BonusDocument doc={parseBonusDoc(markdown)} />;
 }

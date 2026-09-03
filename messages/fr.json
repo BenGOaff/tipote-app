@@ -7797,6 +7797,13 @@
         "sondage": "C'est un sondage : il n'a pas de profil de résultat à prolonger.",
         "profils-vides": "Ses profils de résultat sont encore vides : remplis les d'abord.",
         "quiz-vide": "Ce projet n'a pas encore de question."
+      },
+      "choisir": "Choisis un projet",
+      "indisponible": "{titre} (indisponible : {raison})",
+      "bloqueCourt": {
+        "sondage": "c'est un sondage",
+        "profils-vides": "profils vides",
+        "quiz-vide": "aucune question"
       }
     },
     "profil": {
@@ -7822,11 +7829,14 @@
       "prixAide": "Facultatif. S'il est vide, aucun prix n'est écrit nulle part."
     },
     "pistes": {
+      "titre": "Trois pistes, tu en choisis une",
       "lancer": "Proposer trois pistes",
-      "relancer": "Proposer trois autres pistes",
+      "uneDePlus": "Aucune ne me convainc, propose-m'en une autre",
+      "uneDePlusAide": "Une idée de plus, dans un format différent. Celles du dessus restent.",
       "encours": "Trois pistes en cours d'écriture",
-      "aide": "Choisis en une. Rien n'est produit tant que tu n'as pas choisi.",
+      "aide": "Elles sont volontairement différentes. Prends celle qui te ressemble, pas la plus impressionnante.",
       "recommandee": "Conseillée",
+      "recommandation": "Ma recommandation : la piste {rang}.",
       "choisir": "Partir sur celle ci",
       "choisie": "Piste choisie",
       "changer": "Changer de piste",
@@ -7835,13 +7845,25 @@
     "production": {
       "lancer": "Écrire les contenus",
       "encours": "En cours : {fait} sur {total}",
-      "refaire": "Réécrire ce contenu",
+      "refaire": "Refaire",
       "copier": "Copier",
       "copie": "Copié",
-      "brut": "Voir le texte à copier",
-      "rendu": "Revenir au rendu",
       "tronque": "Ce contenu a été coupé avant la fin. Réécris le, ça passe en général au deuxième essai.",
-      "vide": "Rien n'a encore été écrit."
+      "vide": "Rien n'a encore été écrit.",
+      "aGenerer": "À générer",
+      "pret": "Prêt",
+      "enCoursCourt": "En cours d'écriture",
+      "retourDossiers": "Retour aux dossiers",
+      "generer": "Générer",
+      "modifier": "Modifier",
+      "termine": "Terminé",
+      "pdf": "PDF",
+      "popupBloquee": "Ton navigateur a bloqué la fenêtre. Autorise les fenêtres surgissantes pour cette page.",
+      "avancement": {
+        "rien": "Rien de généré pour l'instant",
+        "partiel": "{faits} sur {total} écrits",
+        "complet": "Tout est écrit"
+      }
     },
     "blocs": {
       "contenu": "Le bonus, en entier",
@@ -7920,7 +7942,7 @@
       "manque": {
         "projet": "Choisis un projet pour continuer.",
         "reglages": "Remplis ce qui manque pour continuer.",
-        "pistes": "Lance les pistes, puis choisis-en une."
+        "pistes": "Choisis d'abord une piste : c'est elle qui dit ce qu'on écrit."
       },
       "lancer": {
         "bonus": "Le bonus, son mode d'emploi et les textes qui le remettent.",

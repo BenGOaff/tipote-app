@@ -27,6 +27,7 @@ import {
   etapeValide,
 } from "@/lib/generateurs/parcours";
 import { SEQUENCE_EMAILS, SEQUENCE_PROMO, planFixe, passeParLesPistes } from "@/lib/generateurs/sequences";
+import { parseBonusDoc, inline } from "@/lib/bonus/document";
 import {
   classerParGenerateur,
   etiquetteContenu,
@@ -170,10 +171,17 @@ describe("L'écran suit le parcours", () => {
   test("l'intention du modèle n'est JAMAIS affichée telle quelle", () => {
     // Sur un plan fixe, `resume` porte la consigne envoyée au modèle,
     // en français, dans un écran qui existe en 7 langues.
-    assert.ok(
-      src.includes('resume={piece.cle ? "" : piece.resume}'),
-      "l'écran affiche l'intention brute",
-    );
+    // ON VISE LE FAIT, PAS LA FORME : la version d'avant figeait le JSX
+    // au caractère près, donc elle rougissait sur une correction juste.
+    // Un garde-fou qui fige une formulation empêche de la corriger.
+    for (const ligne of src.split("\n")) {
+      if (!/\.resume\b/.test(ligne)) continue;
+      assert.match(
+        ligne,
+        /\.cle \?/,
+        `l'intention brute s'affiche sans garde : ${ligne.trim()}`,
+      );
+    }
     assert.ok(src.includes("t(`temps.${piece.cle}`)"), "le rôle n'est pas traduit");
   });
 
@@ -385,3 +393,310 @@ describe("Les séquences fixes", () => {
     }
   });
 });
+
+// ── LE CHOIX DU PROJET EST UN MENU DEROULANT (Béné, 3 septembre 2026)
+//
+// Une carte par projet donne une page interminable des qu'on en a vingt,
+// et le geste ici est un CHOIX dans une liste, pas une exploration.
+//
+// CE QUI NE DOIT PAS SE PERDRE : un projet bloqué DIT pourquoi. Le
+// griser sans un mot se lit comme un bug, et la créatrice cherche
+// (règle du 22 août). Une <option> tient sur une ligne, donc la raison
+// y est dite en version COURTE.
+// ─────────────────────────────────────────────────────────────────────
+// ON LANCE DEPUIS LES RÉGLAGES, ON ATTERRIT SUR LES PISTES
+// ─────────────────────────────────────────────────────────────────────
+//
+// Béné, 3 septembre 2026 : "cette étape est inutile : autant générer les
+// trois pistes directement ! Pourquoi t'as pas repris exactement ce
+// qu'on a codé dans l'atelier ?"
+//
+// Elle avait raison, et c'était mesurable : l'étape des pistes s'ouvrait
+// VIDE, avec un titre, une phrase et un bouton. Deux clics pour un seul
+// geste. Le labo de l'Atelier n'a jamais fait ça : son écran de brief
+// finit par "Proposer 3 pistes", et le clic mène à un écran qui MONTRE
+// les trois pistes (`askPistes` puis `setStep("pistes")`).
+
+describe("les pistes : le lancement vit au pied des réglages", () => {
+  const ecran = lire("app/generateurs/[generateur]/GenerateurClient.tsx");
+  const sansCommentaires = ecran
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, "");
+
+  test("obtenir des pistes fait AVANCER, ça ne remplit pas l'écran courant", () => {
+    const debut = sansCommentaires.indexOf("async function demanderPistes");
+    assert.ok(debut > 0, "demanderPistes a disparu");
+    const bloc = sansCommentaires.slice(debut, sansCommentaires.indexOf("\n  }", debut));
+    assert.match(bloc, /setEtape\("pistes"\)/, "on ne bascule plus sur l'étape des pistes");
+  });
+
+  test("l'étape des pistes ne porte AUCUN bouton primaire de lancement", () => {
+    const debut = sansCommentaires.indexOf('etape === "pistes" && projet');
+    const fin = sansCommentaires.indexOf('etape === "contenus"', debut);
+    assert.ok(debut > 0 && fin > debut, "l'étape des pistes a changé de forme");
+    const bloc = sansCommentaires.slice(debut, fin);
+    assert.ok(!bloc.includes('t("pistes.lancer")'), "l'écran vide avec son bouton est revenu");
+  });
+
+  test("la relance AJOUTE une piste, elle ne remplace pas les trois", () => {
+    // Béné, Atelier, 6 août 2026 : "aucune ne te convainc ?" Une relance
+    // qui remplace est un bouton sur lequel on ne clique jamais, parce
+    // qu'on craint de perdre les trois qui sont à l'écran.
+    const debut = sansCommentaires.indexOf('etape === "pistes" && projet');
+    const bloc = sansCommentaires.slice(debut, sansCommentaires.indexOf('etape === "contenus"', debut));
+    assert.match(bloc, /onClick=\{unePisteDePlus\}/, "la relance ne rend plus une seule piste");
+    assert.ok(!bloc.includes("onClick={demanderPistes}"), "l'écran des pistes relance encore les trois");
+    assert.match(bloc, /pistes\.length < MAX_PISTES/, "rien ne borne le nombre de pistes");
+
+    // Et elle AJOUTE vraiment, dans l'appel : un `setPistes([data.piste])`
+    // remplacerait, et le libellé du bouton mentirait.
+    const fn = sansCommentaires.indexOf("async function unePisteDePlus");
+    assert.ok(fn > 0, "unePisteDePlus a disparu");
+    const corps = sansCommentaires.slice(fn, sansCommentaires.indexOf("\n  }", fn));
+    assert.match(corps, /setPistes\(\(l\) => \[\.\.\.l, data\.piste/, "la relance écrase les pistes");
+    // CE QU'ELLE A DÉJÀ SOUS LES YEUX part dans l'appel : sans ça on
+    // paie une génération pour un doublon.
+    assert.match(corps, /connues:/, "on ne dit plus au modèle ce qu'elle a déjà");
+  });
+
+  test("le pied des réglages lance les pistes, il ne dit pas Suivant", () => {
+    const debut = sansCommentaires.indexOf('apres === "pistes"');
+    assert.ok(debut > 0, "le pied de parcours ne connaît plus l'étape des pistes");
+    const bloc = sansCommentaires.slice(debut, debut + 1200);
+    assert.match(bloc, /onClick=\{demanderPistes\}/, "le bouton du pied ne lance pas les pistes");
+    assert.match(bloc, /t\("pistes\.lancer"\)/, "le pied ne porte pas le libellé de lancement");
+  });
+
+  test("le coût de la relance est dit, ici comme au pied des réglages", () => {
+    // "Proposer trois autres pistes" REFACTURE. Une relance gratuite en
+    // apparence est la meilleure façon de vider un compteur sans
+    // comprendre pourquoi.
+    const occurrences = sansCommentaires.split('t("credits.coutPistes"').length - 1;
+    assert.equal(occurrences, 2, "le prix des pistes n'est plus dit aux deux endroits");
+  });
+
+  test("la recommandation passe AU DESSUS des cartes", () => {
+    const bloc = sansCommentaires.slice(
+      sansCommentaires.indexOf('etape === "pistes" && projet'),
+      sansCommentaires.indexOf('etape === "contenus"'),
+    );
+    const reco = bloc.indexOf("pourquoiRecommandee");
+    const cartes = bloc.indexOf("pistes.map(");
+    assert.ok(reco > 0 && cartes > 0, "l'écran des pistes a changé de forme");
+    assert.ok(reco < cartes, "la recommandation se lit après les cartes, donc trop tard");
+  });
+
+  test("le titre et la phrase existent dans les 7 langues", () => {
+    for (const loc of ["fr", "en", "es", "it", "ar", "pt", "pt-BR"]) {
+      const m = JSON.parse(lire(`messages/${loc}.json`)) as Record<string, never>;
+      const p = (m as Record<string, Record<string, Record<string, string>>>)
+        .generateurs.pistes;
+      for (const cle of ["titre", "aide", "recommandation"]) {
+        assert.ok((p[cle] ?? "").trim().length > 0, `${loc} : generateurs.pistes.${cle} manque`);
+      }
+      assert.match(p.recommandation!, /\{rang\}/, `${loc} : la recommandation ne nomme pas la piste`);
+    }
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────
+// L'ÉCRAN DE PRODUCTION : DES DOSSIERS, PAS UNE PILE
+// ─────────────────────────────────────────────────────────────────────
+//
+// Béné, 3 septembre 2026 : "au final je veux exactement la même chose
+// sur l'atelier et sur tiquiz. Pareil. Ni plus, ni moins. En visible et
+// en invisible pour les users."
+//
+// Le labo de l'Atelier montre une GRILLE de dossiers, un clic en ouvre
+// un, la flèche remonte, et le document ouvert s'édite sur place avant
+// de partir en PDF. Ici tout était empilé, en lecture seule, sans
+// export. Ces tests figent les cinq gestes, un par un.
+
+describe("l'écran de production suit le labo de l'Atelier", () => {
+  const ecran = lire("app/generateurs/[generateur]/GenerateurClient.tsx");
+  const src = ecran.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+
+  test("une grille de dossiers, et un seul document ouvert à la fois", () => {
+    assert.match(src, /ouvert === null/, "la grille de dossiers a disparu");
+    assert.match(src, /setOuvert\(k\)/, "un dossier ne s'ouvre plus");
+    assert.match(src, /production\.retourDossiers/, "on ne peut plus remonter aux dossiers");
+    // Une pile de documents longs est exactement ce qu'on retire : le
+    // rendu ne s'affiche que pour la pièce OUVERTE.
+    assert.ok(
+      !/pieces\.map\([\s\S]{0,600}RenduGenere/.test(src),
+      "les contenus sont de nouveau empilés",
+    );
+  });
+
+  test("un texte généré est un BROUILLON : il s'édite sur place", () => {
+    // "On tombe sur le markdown au lieu d'un bel éditeur alors qu'on l'a
+    // partout cet éditeur" (Béné, Atelier, 5 août 2026). Ici l'éditeur
+    // qu'on a partout est `RichTextEdit`, celui de l'éditeur de quiz.
+    assert.match(src, /<RichTextEdit/, "on ne peut plus corriger un texte généré");
+    // LE MARKDOWN RESTE LA SOURCE DE VÉRITÉ : le pont traduit dans les
+    // deux sens, sinon le rendu et le PDF divergeraient de l'écran.
+    assert.match(src, /markdownToEditorHtml\(/, "l'éditeur ne lit plus le markdown");
+    assert.match(src, /editorHtmlToMarkdown\(/, "ce qu'elle écrit ne revient plus en markdown");
+  });
+
+  test("un contenu SANS titre de section garde sa mise en forme", () => {
+    // Béné, 3 septembre 2026 : "ça ne va pas supprimer ce qui s'écrivait
+    // en markdown ? Les users doivent voir en beau, bien mis en forme."
+    //
+    // Elle avait raison de se méfier. Un repli "pas de section -> rendu
+    // simple" rendait le texte TEL QUEL : le gras ressortait en
+    // `**mot**`, un lien en `[texte](url)`, et une LISTE DISPARAISSAIT.
+    // Un email et un post court n'ont pas de `##`, donc c'était le cas
+    // le plus fréquent ici.
+    //
+    // MESURÉ sur un email réel avant correction : la liste rendait une
+    // chaîne vide, et "**Team Capture**" s'affichait avec ses étoiles.
+    const doc = parseBonusDoc(
+      "Salut,\n\nTu es **Team Capture**.\n\n- un point\n- deux\n\n[le quiz](https://x.fr)",
+    );
+    assert.equal(doc.sections.length, 0, "ce cas doit bien être sans section");
+    assert.deepEqual(
+      doc.lead.map((b) => b.kind),
+      ["para", "para", "list", "para"],
+      "la liste n'est plus lue comme une liste",
+    );
+    // Et le moteur de rendu la met en forme : gras, lien, puces.
+    assert.match(inline("Tu es **Team Capture**.", "ecran"), /<strong>Team Capture<\/strong>/);
+    assert.match(inline("[le quiz](https://x.fr)", "ecran"), /<a href="https:\/\/x\.fr"/);
+
+    // ET LE REPLI NE DOIT PAS REVENIR. Les deux écrans appellent
+    // `BonusDocument` sans condition : il rend `doc.lead` avec le même
+    // moteur que les sections, donc il n'y a rien à replier.
+    for (const f of [
+      "app/generateurs/[generateur]/GenerateurClient.tsx",
+      "app/generateurs/mes-contenus/MesContenusClient.tsx",
+    ]) {
+      const code = lire(f).replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+      assert.ok(!code.includes("hasStructure"), `${f} branche encore sur hasStructure`);
+      assert.match(code, /<BonusDocument doc=\{parseBonusDoc\(markdown\)\} \/>/, f);
+    }
+  });
+
+  test("le rendu et le PDF lisent les MÊMES modules", () => {
+    // Repartir du markdown dans le PDF donnerait deux mises en forme qui
+    // finiraient par diverger : c'est le défaut sorti six fois dans ces
+    // dépôts (l'aperçu de l'éditeur contre le viewer).
+    // ON VISE L'APPEL, PAS L'IMPORT : un import qui reste alors que
+    // l'appel a disparu laisserait ce test vert sur un PDF mort.
+    assert.match(src, /parseBonusDoc\(/, "le rendu ne passe plus par le document");
+    assert.match(src, /buildPrintableHtml\(/, "le PDF a disparu");
+    assert.match(src, /production\.popupBloquee/, "une fenêtre bloquée ne se dit plus");
+  });
+
+  test("choisir une piste n'écrit RIEN : chaque dossier a son bouton", () => {
+    const fn = src.indexOf("function choisirPiste");
+    assert.ok(fn > 0, "choisirPiste a disparu");
+    const corps = src.slice(fn, src.indexOf("\n  }", fn));
+    assert.ok(!corps.includes("ecrireUn"), "choisir une piste écrit encore tout d'un coup");
+    assert.match(src, /production\.generer/, "un dossier n'a plus son bouton Générer");
+    assert.match(src, /production\.refaire/, "on ne peut plus refaire un morceau");
+  });
+
+  test("les quatre modules de l'Atelier sont importés, pas réécrits", () => {
+    // Deux copies d'une même règle finissent toujours par diverger, et
+    // ici la divergence coûte un PDF qui ne ressemble plus à l'écran.
+    for (const mod of [
+      "@/lib/bonus/document",
+      "@/lib/bonus/markdownHtml",
+      "@/lib/bonus/printable",
+      "@/components/BonusDocument",
+    ]) {
+      assert.ok(ecran.includes(mod), `${mod} n'est plus importé`);
+    }
+  });
+
+  test("l'avancement se dit sous le titre, et il ne se recompte pas ici", () => {
+    // La règle vit dans `lib/generateurs/avancement.ts`, en fonction
+    // pure : un écran qui recompte finit par annoncer autre chose que ce
+    // que la grille montre.
+    assert.match(src, /avancement\(clesDuTravail, contenus\)/, "l'avancement se recalcule à l'écran");
+    for (const cle of ["rien", "partiel", "complet"]) {
+      assert.match(src, new RegExp(`production\\.avancement\\.${cle}`), `l'état ${cle} ne se dit plus`);
+    }
+  });
+
+  test("les libellés de production existent dans les 7 langues", () => {
+    for (const loc of ["fr", "en", "es", "it", "ar", "pt", "pt-BR"]) {
+      const m = JSON.parse(lire(`messages/${loc}.json`)) as Record<string, never>;
+      const p = (m as Record<string, Record<string, Record<string, string>>>)
+        .generateurs.production;
+      for (const k of [
+        "aGenerer",
+        "pret",
+        "retourDossiers",
+        "generer",
+        "refaire",
+        "modifier",
+        "termine",
+        "pdf",
+        "popupBloquee",
+      ]) {
+        assert.ok((p[k] ?? "").trim().length > 0, `${loc} : generateurs.production.${k} manque`);
+      }
+    }
+  });
+});
+
+describe("le choix du projet", () => {
+  const ecran = lire("app/generateurs/[generateur]/GenerateurClient.tsx");
+
+  test("c'est un menu déroulant, plus une grille de cartes", () => {
+    // On vise la portion qui rend l'étape projet, pas le fichier entier :
+    // les profils, les pistes et les contenus gardent leurs grilles, et
+    // c'est voulu.
+    const debut = ecran.indexOf('etape === "projet"');
+    const fin = ecran.indexOf('etape === "reglages"', debut);
+    assert.ok(debut > 0 && fin > debut, "l'étape projet a changé de forme");
+    const bloc = ecran.slice(debut, fin);
+
+    assert.match(bloc, /<select/, "le projet ne se choisit pas dans un menu");
+    assert.doesNotMatch(bloc, /grid-cols/, "la grille de cartes est revenue");
+  });
+
+  test("un projet bloqué est grisé ET dit pourquoi", () => {
+    const debut = ecran.indexOf('etape === "projet"');
+    const fin = ecran.indexOf('etape === "reglages"', debut);
+    const bloc = ecran.slice(debut, fin);
+
+    assert.match(bloc, /disabled=\{Boolean\(b\)\}/, "un projet bloqué reste choisissable");
+    assert.match(
+      bloc,
+      /projet\.bloqueCourt\./,
+      "il est grisé sans un mot : ça se lit comme un bug",
+    );
+  });
+
+  test("les 7 langues savent dire les 3 raisons courtes", () => {
+    for (const loc of ["fr", "en", "es", "it", "ar", "pt", "pt-BR"]) {
+      const d = JSON.parse(lire(`messages/${loc}.json`)) as {
+        generateurs?: { projet?: { choisir?: string; indisponible?: string; bloqueCourt?: Record<string, string> } };
+      };
+      const proj = d.generateurs?.projet ?? {};
+      assert.ok(proj.choisir?.trim(), `${loc} : le menu n'a pas de libellé d'attente`);
+      assert.ok(proj.indisponible?.includes("{titre}"), `${loc} : l'option perd le titre du projet`);
+      assert.ok(proj.indisponible?.includes("{raison}"), `${loc} : l'option perd la raison`);
+      for (const r of ["sondage", "profils-vides", "quiz-vide"]) {
+        assert.ok(proj.bloqueCourt?.[r]?.trim(), `${loc} : la raison ${r} n'a pas de version courte`);
+      }
+    }
+  });
+
+  test("le cul-de-sac muet est ferme : tous bloqués se dit", () => {
+    // `projets.length === 0` ne distinguait pas "tu n'as aucun projet" de
+    // "aucun ne peut servir", alors que la phrase affichee dit la SECONDE.
+    // Avec un menu, une liste dont toutes les options sont grisees serait
+    // un cul-de-sac sans un mot.
+    assert.match(ecran, /const utilisables = useMemo/, "rien ne calcule ce qui est choisissable");
+    assert.match(
+      ecran,
+      /utilisables\.length === 0/,
+      "l'ecran teste encore la liste brute au lieu de ce qui est utilisable",
+    );
+  });
+});
+

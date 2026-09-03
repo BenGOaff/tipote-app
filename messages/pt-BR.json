@@ -7797,6 +7797,13 @@
         "sondage": "É uma pesquisa: não tem perfil de resultado para prolongar.",
         "profils-vides": "Os perfis de resultado ainda estão vazios: preencha antes.",
         "quiz-vide": "Este projeto ainda não tem nenhuma pergunta."
+      },
+      "choisir": "Escolha um projeto",
+      "indisponible": "{titre} (indisponível: {raison})",
+      "bloqueCourt": {
+        "sondage": "é uma pesquisa",
+        "profils-vides": "perfis vazios",
+        "quiz-vide": "sem perguntas"
       }
     },
     "profil": {
@@ -7822,11 +7829,14 @@
       "prixAide": "Opcional. Se ficar vazio, nenhum preço é escrito em lugar nenhum."
     },
     "pistes": {
+      "titre": "Três propostas, você escolhe uma",
       "lancer": "Propor três propostas",
-      "relancer": "Propor outras três propostas",
+      "uneDePlus": "Nenhuma me convence, proponha outra",
+      "uneDePlusAide": "Mais uma ideia, em outro formato. As de cima ficam.",
       "encours": "Escrevendo três propostas",
-      "aide": "Escolha uma. Nada é produzido enquanto você não escolher.",
+      "aide": "Elas são propositalmente diferentes. Escolha a que se parece com você, não a mais impressionante.",
       "recommandee": "Recomendada",
+      "recommandation": "Minha recomendação: a proposta {rang}.",
       "choisir": "Seguir com esta",
       "choisie": "Proposta escolhida",
       "changer": "Trocar de proposta",
@@ -7835,13 +7845,25 @@
     "production": {
       "lancer": "Escrever os conteúdos",
       "encours": "Em andamento: {fait} de {total}",
-      "refaire": "Reescrever este conteúdo",
+      "refaire": "Refazer",
       "copier": "Copiar",
       "copie": "Copiado",
-      "brut": "Ver o texto para copiar",
-      "rendu": "Voltar para a prévia",
       "tronque": "Este conteúdo foi cortado antes do fim. Reescreva, costuma dar certo na segunda tentativa.",
-      "vide": "Nada foi escrito ainda."
+      "vide": "Nada foi escrito ainda.",
+      "aGenerer": "A gerar",
+      "pret": "Pronto",
+      "enCoursCourt": "Sendo escrito",
+      "retourDossiers": "Voltar às pastas",
+      "generer": "Gerar",
+      "modifier": "Editar",
+      "termine": "Concluído",
+      "pdf": "PDF",
+      "popupBloquee": "Seu navegador bloqueou a janela. Permita as janelas pop-up nesta página.",
+      "avancement": {
+        "rien": "Nada gerado por enquanto",
+        "partiel": "{faits} de {total} escritos",
+        "complet": "Está tudo escrito"
+      }
     },
     "blocs": {
       "contenu": "O bônus, por inteiro",
@@ -7920,7 +7942,7 @@
       "manque": {
         "projet": "Escolha um projeto para continuar.",
         "reglages": "Preencha o que falta para continuar.",
-        "pistes": "Gere as ideias e escolha uma."
+        "pistes": "Escolha primeiro uma ideia: é ela que diz o que vai ser escrito."
       },
       "lancer": {
         "bonus": "O bônus, como montar e os textos que entregam ele.",
