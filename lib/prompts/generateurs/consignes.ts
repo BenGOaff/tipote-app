@@ -21,6 +21,7 @@
 // est dite, le ton est dit, le gabarit JSON n'a pas de tiret cadratin,
 // et une consigne ne contredit pas une autre.
 
+import { consigneDeLongueur, longueurDuMorceau } from "@/lib/generateurs/longueurSortie";
 import { buildLanguageDirective } from "@/lib/quizLanguages";
 import type { GenerateurId } from "@/lib/generateurs/catalogue";
 import type { Piece, Piste } from "@/lib/generateurs/blocs";
@@ -270,7 +271,7 @@ Donne l'OBJET en premier, sur une ligne, précédé de "Objet :". Puis le corps.
 
 L'objet ne raconte pas l'email : il ouvre une boucle. Pas de "Newsletter", pas de nom de marque, pas d'emoji.
 
-Le corps tient en moins de 300 mots. Une seule idée, un seul appel à l'action à la fin. Pas de post-scriptum publicitaire.
+Une seule idée, un seul appel à l'action à la fin. Pas de post-scriptum publicitaire.
 
 Cet email arrive dans une boîte pleine : la première phrase doit se lire dans l'aperçu et donner envie d'ouvrir la deuxième.`;
 
@@ -278,11 +279,11 @@ const CONSIGNE_EMAIL_PROMO = `ÉCRIS CET EMAIL D'INVITATION LÀ, ET LUI SEUL.
 
 Donne l'OBJET en premier, sur une ligne, précédé de "Objet :". Puis le corps.
 
-Il invite à faire le quiz, il ne vend rien. Moins de 250 mots. Le lien du quiz apparaît UNE fois, avec un libellé de bouton de trois à six mots. Annonce la durée, jamais le nombre de questions.`;
+Il invite à faire le quiz, il ne vend rien. Le lien du quiz apparaît UNE fois, avec un libellé de bouton de trois à six mots. Annonce la durée, jamais le nombre de questions.`;
 
 const CONSIGNE_POST = `ÉCRIS CE POST LÀ, ET LUI SEUL.
 
-Il se lit dans un fil, sans contexte : la première ligne doit arrêter le pouce. Moins de 150 mots. Aucun jargon.
+Il se lit dans un fil, sans contexte : la première ligne doit arrêter le pouce. Aucun jargon.
 
 Le lien du quiz est à la fin, sur sa propre ligne. Termine par au maximum trois mots-dièse, en minuscules, tirés du vocabulaire de la niche. Aucun emoji sauf si le brief en montre.`;
 
@@ -299,7 +300,13 @@ export function consigneProduction(args: { id: GenerateurId; piece: Piece }): st
     quoi = piece.bloc === "post" ? CONSIGNE_POST : CONSIGNE_EMAIL_PROMO;
   }
 
-  const l = [quoi, ""];
+  // LA LONGUEUR VIT DANS `longueurSortie.ts`, jamais dans le texte des
+  // consignes : elle y était écrite pour trois blocs sur six, absente
+  // des trois autres, et elle devait rester d'accord avec le plafond
+  // `max_tokens` posé à l'autre bout de la route. Deux endroits qui
+  // disent la longueur finissent toujours par ne plus dire la même
+  // chose, et c'est le plafond qui aurait raison contre le texte.
+  const l = [quoi, "", consigneDeLongueur(longueurDuMorceau(id, piece.bloc)), ""];
 
   // `resume` porte l'INTENTION du temps (l'email 2 n'est pas l'email 3).
   // Il vient de `sequences.ts`, donc il est le MÊME pour tout le monde :

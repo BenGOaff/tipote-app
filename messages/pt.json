@@ -7864,7 +7864,8 @@
       "refaire": "Refazer",
       "copier": "Copiar",
       "copie": "Copiado",
-      "tronque": "Este conteúdo foi cortado antes do fim. Reescreve-o, costuma resultar à segunda tentativa.",
+      "tronque": "Este texto tem continuação. Nada se perde: escreve a continuação, junta-se ao que já está aqui.",
+      "ecrireLaSuite": "Escrever a continuação",
       "vide": "Ainda não foi escrito nada.",
       "aGenerer": "Por gerar",
       "pret": "Pronto",
@@ -7932,7 +7933,7 @@
       "copier": "Copiar tudo",
       "supprimer": "Eliminar",
       "reprendre": "Retomar este conteúdo",
-      "tronques": "{count, plural, one {# parte foi cortada} other {# partes foram cortadas}}",
+      "tronques": "{count, plural, one {# parte tem continuação por escrever} other {# partes têm continuação por escrever}}",
       "erreurLecture": "Não consigo ler a tua biblioteca neste momento. Nada se perde, tenta daqui a pouco.",
       "pasReprenable": "Este conteúdo foi escrito antes de guardarmos as definições: podes lê-lo e copiá-lo, mas não retomá-lo."
     },

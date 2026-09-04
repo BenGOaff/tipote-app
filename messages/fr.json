@@ -7864,7 +7864,8 @@
       "refaire": "Refaire",
       "copier": "Copier",
       "copie": "Copié",
-      "tronque": "Ce contenu a été coupé avant la fin. Réécris le, ça passe en général au deuxième essai.",
+      "tronque": "Ce texte a de la suite. Rien n'est perdu : écris la suite, elle se colle à ce qui est déjà là.",
+      "ecrireLaSuite": "Écrire la suite",
       "vide": "Rien n'a encore été écrit.",
       "aGenerer": "À générer",
       "pret": "Prêt",
@@ -7932,7 +7933,7 @@
       "copier": "Tout copier",
       "supprimer": "Supprimer",
       "reprendre": "Reprendre ce contenu",
-      "tronques": "{count, plural, one {# morceau a été coupé en route} other {# morceaux ont été coupés en route}}",
+      "tronques": "{count, plural, one {# morceau a de la suite à écrire} other {# morceaux ont de la suite à écrire}}",
       "erreurLecture": "Impossible de lire ta bibliothèque pour le moment. Tes contenus ne sont pas perdus, réessaie dans un instant.",
       "pasReprenable": "Ce contenu a été écrit avant qu'on garde les réglages : tu peux le lire et le copier, mais pas le reprendre."
     },

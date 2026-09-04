@@ -7864,7 +7864,8 @@
       "refaire": "Rifai",
       "copier": "Copia",
       "copie": "Copiato",
-      "tronque": "Questo contenuto è stato interrotto prima della fine. Riscrivilo, di solito riesce al secondo tentativo.",
+      "tronque": "Questo testo ha un seguito. Non si perde nulla: scrivi il seguito, si aggiunge a quello che c'è già.",
+      "ecrireLaSuite": "Scrivi il seguito",
       "vide": "Non è ancora stato scritto nulla.",
       "aGenerer": "Da generare",
       "pret": "Pronto",
@@ -7932,7 +7933,7 @@
       "copier": "Copia tutto",
       "supprimer": "Elimina",
       "reprendre": "Riprendi questo contenuto",
-      "tronques": "{count, plural, one {# parte è stata troncata} other {# parti sono state troncate}}",
+      "tronques": "{count, plural, one {# parte ha ancora un seguito da scrivere} other {# parti hanno ancora un seguito da scrivere}}",
       "erreurLecture": "Non riesco a leggere la tua libreria adesso. Niente è perso, riprova tra poco.",
       "pasReprenable": "Questo contenuto è stato scritto prima che salvassimo le impostazioni: puoi leggerlo e copiarlo, ma non riprenderlo."
     },

@@ -123,7 +123,9 @@ Quand on te demande des PISTES, tu réponds UNIQUEMENT par un objet JSON, sans u
 
 Quand on te demande un CONTENU, tu réponds en Markdown simple : des titres avec des dièses, du gras avec des astérisques, des listes avec des traits d'union. Pas de tableau, pas de bloc de code, pas de JSON. Tu ne mets pas de titre de niveau 1 : le titre du document est déjà affiché au dessus.
 
-Tu ne répètes jamais la consigne, tu ne t'excuses pas, tu n'annonces pas ce que tu vas faire.`;
+Tu ne répètes jamais la consigne, tu ne t'excuses pas, tu n'annonces pas ce que tu vas faire.
+
+Tu ne conclus pas non plus sur le travail : pas de "j'espère que ça te convient", pas de "n'hésite pas à adapter", pas de "tu peux bien sûr modifier". Le dernier mot du texte est le dernier mot du contenu.`;
 
 /**
  * LE SOCLE. Identique à l'octet près pour tous les appels de tous les

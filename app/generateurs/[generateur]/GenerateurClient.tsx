@@ -80,6 +80,7 @@ import {
 import { cleMorceau, morceauParProfil } from "@/lib/generateurs/blocs";
 import type { Bloc, Piece, Piste } from "@/lib/generateurs/blocs";
 import { avancement } from "@/lib/generateurs/avancement";
+import { MAX_TRANCHES } from "@/lib/generateurs/longueurSortie";
 import { RichTextEdit } from "@/components/ui/rich-text-edit";
 // LES QUATRE MODULES DU LABO DE L'ATELIER, PORTÉS À L'OCTET PRÈS.
 // `cmp` entre les deux dépôts est le garde-fou : deux copies qui
@@ -498,44 +499,69 @@ export default function GenerateurClient({
   const cle = (p: Piece, profil = profilIndex) =>
     cleMorceau({ generateur, plan, bloc: p.bloc, index: p.index, profil });
 
-  async function ecrireUn(piste: Piste, pieceIndex: number): Promise<boolean> {
+  /**
+   * ÉCRIRE UN MORCEAU, EN ENTIER.
+   *
+   * Béné, 4 septembre 2026 : "rien ne doit tronqué ni annulé : si la
+   * sortie doit faire 20000 mots ben elle en 20000 c'est tout."
+   *
+   * Une requête ne peut pas durer plus de ~85 secondes (Cloudflare), ce
+   * qui borne ce qu'UN appel peut écrire. Ça ne borne pas le CONTENU :
+   * quand le serveur dit qu'il reste de la suite, on la redemande avec
+   * ce qui est déjà écrit, et le texte grandit. Ce qui est écrit n'est
+   * jamais réécrit, donc jamais repayé, et il est déjà enregistré à
+   * chaque tranche : fermer l'onglet au milieu ne perd rien.
+   */
+  async function ecrireUn(
+    piste: Piste,
+    pieceIndex: number,
+    /** Ce qui est déjà écrit, quand on reprend un morceau resté ouvert. */
+    depuis?: string,
+  ): Promise<boolean> {
     const piece = piste.pieces[pieceIndex];
     if (!piece) return false;
     setEnCours(cle(piece));
     try {
-      const res = await fetch("/api/generateurs", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          step: "produire",
-          ...corpsCommun(),
-          piste,
-          pieceIndex,
-          // LE PROFIL PART QUAND LE MORCEAU EN A UN. `corpsCommun` ne
-          // peut pas le savoir : il ne connaît pas le morceau, et sur un
-          // bonus décliné c'est le morceau qui décide (le contenu oui,
-          // le guide et la remise non).
-          ...(parProfil(piece) ? { profilIndex } : {}),
-          // LES PISTES PARTENT POUR ÊTRE ENREGISTRÉES, pas pour le
-          // modèle : sans elles, reprendre un projet depuis la
-          // bibliothèque rouvrirait l'étape des pistes VIDE, donc il
-          // faudrait les repayer pour corriger un mot.
-          ...(pistes.length > 0 ? { pistes } : {}),
-        }),
-      });
-      const data = await res.json().catch(() => null);
-      if (!data?.ok) {
-        direLErreur(data?.reason);
-        return false;
+      let texte = depuis ?? "";
+      for (let tranche = 0; tranche < MAX_TRANCHES; tranche++) {
+        const res = await fetch("/api/generateurs", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            step: "produire",
+            ...corpsCommun(),
+            piste,
+            pieceIndex,
+            // LE PROFIL PART QUAND LE MORCEAU EN A UN. `corpsCommun` ne
+            // peut pas le savoir : il ne connaît pas le morceau, et sur
+            // un bonus décliné c'est le morceau qui décide (le contenu
+            // oui, le guide et la remise non).
+            ...(parProfil(piece) ? { profilIndex } : {}),
+            // LES PISTES PARTENT POUR ÊTRE ENREGISTRÉES, pas pour le
+            // modèle : sans elles, reprendre un projet depuis la
+            // bibliothèque rouvrirait l'étape des pistes VIDE, donc il
+            // faudrait les repayer pour corriger un mot.
+            ...(pistes.length > 0 ? { pistes } : {}),
+            // LA SUITE, quand une tranche n'a pas suffi.
+            ...(texte ? { suiteDe: texte } : {}),
+          }),
+        });
+        const data = await res.json().catch(() => null);
+        if (!data?.ok) {
+          // ON NE JETTE PAS CE QUI EST DÉJÀ ÉCRIT. Une tranche qui
+          // échoue laisse le texte à l'écran et le bouton "Écrire la
+          // suite" : annuler serait perdre ce qu'elle a payé.
+          direLErreur(data?.reason);
+          return Boolean(texte);
+        }
+        // LE COMPTEUR NE BOUGE QU'À LA PREMIÈRE TRANCHE : le serveur ne
+        // débite pas une suite, l'écran ne doit donc pas la décompter.
+        if (!texte) retirer(data);
+        texte = String(data.markdown ?? "");
+        const reste = data.complet === undefined ? Boolean(data.tronque) : !data.complet;
+        setContenus((c) => ({ ...c, [cle(piece)]: { markdown: texte, tronque: reste } }));
+        if (!reste) return true;
       }
-      retirer(data);
-      setContenus((c) => ({
-        ...c,
-        [cle(piece)]: {
-          markdown: String(data.markdown ?? ""),
-          tronque: Boolean(data.tronque),
-        },
-      }));
       return true;
     } catch {
       direLErreur("unreachable");
@@ -1337,11 +1363,32 @@ export default function GenerateurClient({
             ) : null}
           </div>
 
+          {/* IL RESTE DE LA SUITE À ÉCRIRE.
+              Ce n'est plus "on t'a rendu un texte coupé" : l'écran
+              enchaîne les tranches tout seul, et ce bandeau ne sort que
+              quand il en faut encore plus. Il PROPOSE donc le geste, il
+              ne se contente pas de constater : constater, c'est laisser
+              la créatrice avec un demi contenu et rien à cliquer. */}
           {contenuOuvert?.tronque ? (
-            <p className="text-xs flex items-start gap-1.5 text-amber-700 dark:text-amber-400">
-              <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-              {t("production.tronque")}
-            </p>
+            <div className="text-xs flex flex-wrap items-center gap-2 text-amber-700 dark:text-amber-400">
+              <span className="flex items-start gap-1.5">
+                <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                {t("production.tronque")}
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={Boolean(enCours)}
+                onClick={() => void ecrireUn(travail!, indexOuvert, contenuOuvert.markdown)}
+              >
+                {enCours === cleOuverte ? (
+                  <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                ) : (
+                  <Wand2 className="h-4 w-4 mr-1.5" />
+                )}
+                {t("production.ecrireLaSuite")}
+              </Button>
+            </div>
           ) : null}
 
           {/* LE MARKDOWN RESTE LA SOURCE DE VÉRITÉ, l'éditeur n'est
