@@ -7892,6 +7892,7 @@
     "erreurs": {
       "busy": "I server dell'IA sono saturi in questo momento. Aspetta un minuto e riprova, non si perde nulla.",
       "too_long": "La scrittura ha superato il tempo disponibile e si è fermata. Riprova, di solito riesce al secondo tentativo.",
+      "coupe": "Il testo si è fermato prima della fine. Preferiamo non darti nulla piuttosto che un contenuto tagliato a metà: rilancia, di solito alla seconda va bene.",
       "refused": "La richiesta è stata rifiutata. Non dipende da te: segnalacelo e guardiamo il registro del server.",
       "unreachable": "Impossibile raggiungere il servizio di scrittura. Controlla la connessione e riprova.",
       "empty": "La risposta è arrivata vuota. Riprova, di solito al secondo tentativo va bene.",

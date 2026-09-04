@@ -7892,6 +7892,7 @@
     "erreurs": {
       "busy": "Les serveurs de l'IA sont saturés en ce moment. Attends une minute et relance, rien n'est perdu.",
       "too_long": "L'écriture a dépassé le temps disponible et s'est arrêtée. Relance, ça passe en général au deuxième essai.",
+      "coupe": "Le texte s'est arrêté avant la fin. On préfère ne rien te donner plutôt qu'un contenu coupé au milieu : relance, c'est en général bon du deuxième coup.",
       "refused": "La demande a été refusée. Ce n'est pas de ton côté : signale le nous, on regarde le journal du serveur.",
       "unreachable": "Impossible de joindre le service d'écriture. Vérifie ta connexion, puis relance.",
       "empty": "La réponse est arrivée vide. Relance, c'est en général bon du deuxième coup.",

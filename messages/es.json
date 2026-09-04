@@ -7892,6 +7892,7 @@
     "erreurs": {
       "busy": "Los servidores de la IA están saturados ahora mismo. Espera un minuto y vuelve a lanzarlo, no se pierde nada.",
       "too_long": "La escritura superó el tiempo disponible y se detuvo. Vuelve a lanzarla, suele salir al segundo intento.",
+      "coupe": "El texto se detuvo antes del final. Preferimos no darte nada antes que un contenido cortado por la mitad: vuelve a lanzarlo, suele salir bien a la segunda.",
       "refused": "La petición fue rechazada. No es cosa tuya: avísanos y miramos el registro del servidor.",
       "unreachable": "No se pudo contactar con el servicio de escritura. Comprueba tu conexión y vuelve a intentarlo.",
       "empty": "La respuesta llegó vacía. Vuelve a lanzarla, suele salir al segundo intento.",

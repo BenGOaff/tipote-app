@@ -87,6 +87,7 @@ import {
   type Piste,
 } from "@/lib/generateurs/blocs";
 import { passeParLesPistes } from "@/lib/generateurs/sequences";
+import { longueurDuMorceau } from "@/lib/generateurs/longueurSortie";
 import { rangerMorceau } from "@/lib/generateurs/contenusStore";
 import {
   FORMATS_OFFRE,
@@ -681,32 +682,67 @@ export async function POST(req: NextRequest) {
   const cout = coutMorceau(piece.bloc);
   if (!(await soldeSuffisant(cout))) return refus("credits", { requis: cout });
 
-  // Le bonus est le plus long des trois ; les emails et les posts
-  // tiennent largement en dessous, et un budget trop large ne rend pas
-  // un texte meilleur, il rend un texte plus long.
-  const maxTokens = piece.bloc === "contenu" ? 4200 : piece.bloc === "post" ? 900 : 1800;
+  // ── LA LONGUEUR ET SON PLAFOND SORTENT DU MÊME ENDROIT ──
+  //
+  // `longueurSortie.ts` porte la fourchette de mots DITE au modèle et le
+  // plafond `max_tokens` posé ici. Les deux étaient écrits séparément :
+  // trois blocs sur six annonçaient un nombre de mots dans le texte de
+  // leur consigne, les trois autres n'en annonçaient aucun, et le
+  // plafond vivait dans ce ternaire. Deux endroits qui disent la
+  // longueur finissent toujours par ne plus dire la même chose, et
+  // c'est le plafond qui a raison contre le texte : il COUPE.
+  //
+  // Le plafond ne DESCEND jamais en dessous de ce qu'il valait avant
+  // (`PLANCHER`), et il ne coûte rien tant qu'il n'est pas atteint :
+  // on paie ce qui est ÉCRIT, pas ce qui est autorisé.
+  const longueur = longueurDuMorceau(id, piece.bloc);
 
-  const out = await appeler(
-    consigneProduction({ id, piece }),
-    consigneDuQuiz(brief),
-    messagePourLeModele({
-      brief,
-      offres,
-      plan: input.plan,
-      declencheur: input.declencheur,
-      // ICI on écrit pour UN profil, donc c'est SON offre qui part.
-      profilIndex: typeof input.profilIndex === "number" ? input.profilIndex : null,
-      profil: profilChoisi,
-      // L'ADRESSE DU QUIZ NE SORT QUE LÀ OÙ ELLE DOIT APPARAÎTRE : le
-      // contenu d'un bonus se lit hors ligne, y coller le lien
-      // renverrait le lecteur vers le quiz qu'il vient de finir.
-      lienQuiz: lienQuizAutorise(id, piece.bloc) ? brief.urlPublique : "",
-      piste: piste.titre || piste.format || piste.punchline ? piste : null,
-      demande: "Produis ce morceau, et rien d'autre.",
-    }),
-    maxTokens,
-  );
+  const consigneFixe = consigneProduction({ id, piece });
+  const consigneVariable = consigneDuQuiz(brief);
+  const message = messagePourLeModele({
+    brief,
+    offres,
+    plan: input.plan,
+    declencheur: input.declencheur,
+    // ICI on écrit pour UN profil, donc c'est SON offre qui part.
+    profilIndex: typeof input.profilIndex === "number" ? input.profilIndex : null,
+    profil: profilChoisi,
+    // L'ADRESSE DU QUIZ NE SORT QUE LÀ OÙ ELLE DOIT APPARAÎTRE : le
+    // contenu d'un bonus se lit hors ligne, y coller le lien
+    // renverrait le lecteur vers le quiz qu'il vient de finir.
+    lienQuiz: lienQuizAutorise(id, piece.bloc) ? brief.urlPublique : "",
+    piste: piste.titre || piste.format || piste.punchline ? piste : null,
+    demande: "Produis ce morceau, et rien d'autre.",
+  });
+
+  let out = await appeler(consigneFixe, consigneVariable, message, longueur.plafond);
+
+  // ── ON NE DÉLIVRE JAMAIS UN DEMI CONTENU ──
+  //
+  // Béné, 4 septembre 2026 : "attention à ne jamais rien tronquer, il
+  // faut contrôler mais sans jamais délivrer un demi contenu."
+  //
+  // Avant, un texte coupé à la limite était rendu, enregistré ET
+  // FACTURÉ, avec un bandeau à côté. Un bandeau ne répare pas une
+  // phrase qui s'arrête au milieu : elle payait des crédits pour un
+  // contenu qu'elle devait recoller à la main.
+  //
+  // ON RETIRE, ON NE MONTE PAS LE PLAFOND. L'Atelier l'a mesuré en
+  // production : au delà de ~4500 jetons de sortie la génération dépasse
+  // les 85 secondes et rend ZÉRO ligne. Monter le plafond échangerait
+  // donc une coupure contre une page blanche.
+  //
+  // Un seul nouveau tirage, et seulement s'il reste de quoi l'écrire :
+  // la consigne porte une fourchette de mots, donc un tirage neuf n'est
+  // pas le même texte. Deux essais coûteraient deux morceaux pour un.
+  if (out.ok && out.tronque && budgetLeft() > 45_000) {
+    console.warn("[generateurs] morceau coupe a la limite, un nouveau tirage");
+    out = await appeler(consigneFixe, consigneVariable, message, longueur.plafond);
+  }
   if (!out.ok) return refus(out.failure);
+  // Toujours coupé : on refuse, AVANT le débit. Elle relance, elle ne
+  // recolle rien, et elle ne paie pas un contenu qu'on ne lui donne pas.
+  if (out.tronque) return refus("coupe");
 
   await debiter(cout, {
     step: "produire",
@@ -767,9 +803,12 @@ export async function POST(req: NextRequest) {
     cle: piece.cle,
     credits: cout,
     markdown,
-    // Un texte coupé à la limite reste utilisable : on le rend, mais on
-    // le DIT. En silence, c'est une créatrice qui publie un contenu qui
-    // s'arrête au milieu d'une phrase sans comprendre pourquoi.
+    // TOUJOURS `false` depuis le 4 septembre : un morceau coupé est
+    // REFUSÉ plus haut, il n'arrive jamais ici. Le champ reste, parce
+    // que les lignes enregistrées AVANT cette règle en portent un, et
+    // que la bibliothèque le compte encore (`resumeMorceaux`). On rend
+    // la valeur, jamais un `false` écrit en dur : le jour où quelqu'un
+    // retire le refus, le champ redirait la vérité au lieu de mentir.
     tronque: out.tronque,
   });
 }

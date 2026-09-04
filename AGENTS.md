@@ -4044,11 +4044,113 @@ facture sans que personne ne le voie.
 #### Ce qui reste vrai, et qu'il ne faut pas perdre de vue
 
 **La sortie coûte 5 fois l'entrée au jeton, donc 73 à 79 % de la
-facture.** Tout ce qui précède optimise la moitié pas chère. Le seul
-levier qui pèse vraiment est le nombre de morceaux écrits et leur
-longueur, et il est déjà réglé : chaque morceau a son propre bouton
-depuis le 3 septembre, et `max_tokens` est posé par bloc (4200 pour le
-contenu d'un bonus, 1800 pour un email, 900 pour un post).
+facture.** Tout ce qui précède optimise la moitié pas chère.
+
+🚨 Cette page ajoutait ici « le seul levier qui pèse est la longueur des
+morceaux, et il est déjà réglé ». **Il ne l'était pas** : voir la
+section suivante, écrite le jour même.
+
+### LA SORTIE : la longueur se DIT, et on ne livre jamais un demi contenu (4 septembre 2026)
+
+Béné : "comment on peut régler le problème des tokens en sortie sans
+perdre en qualité ? Je préfère payer plutôt que de générer de la merde,
+mais je veux économiser tout ce qui est possible de l'être. Attention à
+ne jamais rien tronquer, il faut contrôler mais sans jamais délivrer un
+demi contenu."
+
+#### CE QUI A ÉTÉ RELEVÉ AVANT DE TOUCHER À QUOI QUE CE SOIT
+
+| | |
+|---|---|
+| la sortie | 5x l'entrée au jeton, donc **73 à 79 % de la facture** |
+| `thinking` | **jamais activé** par les générateurs (`buildClaudeMessageBody` ne le pose que s'il est fourni) : aucun jeton caché |
+| le préambule | déjà interdit par le socle |
+| la **conclusion** | **pas interdite**, donc payée : "n'hésite pas à adapter", "j'espère que ça te convient" |
+| la longueur | annoncée dans le TEXTE de 3 consignes sur 6, absente des 3 autres |
+| le plafond | un ternaire dans la route, à l'autre bout du fichier |
+
+**Le bonus lui même, c'est à dire le plus gros poste de sortie,
+n'annonçait AUCUNE longueur.** Le modèle pouvait donc écrire jusqu'à ce
+que le plafond l'arrête, soit ~2800 mots, alors que le socle promet dans
+ses 4 piliers "il se consomme en moins de 20 minutes". Le prompt
+contredisait le prompt.
+
+#### LA RÈGLE : `lib/generateurs/longueurSortie.ts` décide, et lui seul
+
+`longueurDuMorceau(id, bloc)` rend la FOURCHETTE de mots dite au modèle
+**et** le plafond `max_tokens` posé par la route. Deux endroits qui
+disent la longueur finissent toujours par ne plus dire la même chose, et
+ici c'est le plafond qui a raison contre le texte : il COUPE.
+
+**Une fourchette, jamais un maximum.** Un maximum seul fait viser le
+maximum ; un plancher empêche le morceau bâclé.
+
+| | mots | plafond |
+|---|---|---|
+| bonus, le contenu | 1200 à 1500 | 4500 (avant 4200) |
+| bonus, le guide | 400 à 700 | 3200 (avant 1800) |
+| bonus, les textes de remise | 250 à 450 | 2100 (avant 1800) |
+| un email de séquence | 200 à 300 | 1800 |
+| un email de promo | 150 à 250 | 1800 |
+| un post | 90 à 150 | 900 |
+
+#### UN PLAFOND SERRÉ N'ÉCONOMISE RIEN, ET MON PREMIER JET LE FAISAIT
+
+**On paie ce qui est ÉCRIT, jamais ce qui était permis.** Resserrer un
+plafond ne fait donc gagner aucun jeton : ça ne fait qu'ajouter du
+risque de couper un texte au milieu. Ma première dérivation sortait des
+plafonds PLUS SERRÉS qu'avant (un email passait de 1800 à 900), pour
+zéro euro gagné.
+
+D'où `PLANCHER` : **aucun plafond ne descend en dessous de celui d'avant
+le 4 septembre.** Il monte quand la marge le demande, jamais l'inverse.
+C'est ce que le test attrape en premier.
+
+#### ET ON NE MONTE PAS LE PLAFOND NON PLUS
+
+C'est le réflexe, et il est faux. Mesuré en production côté Atelier
+(`app/api/me/bonus/route.ts`, 5 août) : **au delà de ~4500 jetons de
+sortie, la génération dépasse les 85 secondes du budget et rend ZÉRO
+ligne.** Monter le plafond échange une troncature contre une page
+blanche. `PLAFOND_DUR = 4500` borne donc tout, et c'est le budget de
+TEMPS qui commande le haut, pas l'envie d'avoir de la place.
+
+C'est aussi le seul chiffre qui a bougé pour cette raison : le contenu
+d'un bonus est demandé à 1500 mots et pas 1800, parce que c'est le seul
+morceau où ce plafond mord. À 1500 mots, la coupure tombe au DOUBLE de
+ce qu'on demande.
+
+#### UN MORCEAU COUPÉ EST REFUSÉ, JAMAIS RENDU
+
+Avant, un texte coupé à la limite était rendu, enregistré dans la
+bibliothèque **et facturé** (côté Tipote, en crédits), avec un bandeau
+orange à côté. Un bandeau ne répare pas une phrase qui s'arrête au
+milieu : elle relisait et recollait à la main un contenu qu'elle venait
+de payer.
+
+La route fait donc **un seul nouveau tirage**, et seulement s'il reste
+45 secondes de budget (sans ça il rendrait zéro ligne). La consigne
+portant une fourchette, un tirage neuf n'est pas le même texte. Toujours
+coupé : on répond `coupe`, traduit dans les 7 langues. Le refus tombe
+**avant l'enregistrement et avant le débit** : elle relance, elle ne
+paie pas, elle ne recolle rien.
+
+`tronque` reste lu par la bibliothèque : les lignes écrites AVANT cette
+règle en portent un, et `resumeMorceaux` les compte encore.
+
+#### CE QUE JE N'AI PAS MESURÉ, ET QUI SE DIT
+
+**L'économie réelle en jetons de sortie ne peut pas se mesurer d'ici
+sans dépenser ses crédits d'API.** Ce qui est mesuré : la longueur
+demandée passe de "rien" à 1500 mots sur le morceau le plus lourd, et la
+conclusion du modèle (deux à trois phrases par morceau) est interdite.
+Ce qui est attendu, pas constaté : une baisse de la facture de sortie.
+Une vraie mesure demande une génération réelle par bloc, sur son compte.
+
+Test : `tests/logic/sortie-generateurs.test.mts` (les deux dépôts),
+vérifié en rejouant QUATRE versions d'avant (le refus retiré, le
+ternaire remis, une longueur écrite en dur dans une consigne, des
+plafonds resserrés) : les quatre rougissent.
 
 ## ON DIT TAG, JAMAIS ÉTIQUETTE (Béné, 1er septembre 2026)
 

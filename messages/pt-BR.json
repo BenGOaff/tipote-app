@@ -7892,6 +7892,7 @@
     "erreurs": {
       "busy": "Os servidores da IA estão sobrecarregados agora. Espere um minuto e tente de novo, nada se perde.",
       "too_long": "A escrita passou do tempo disponível e parou. Tente de novo, costuma dar certo na segunda.",
+      "coupe": "O texto parou antes do fim. Preferimos não te dar nada em vez de um conteúdo cortado no meio: rode de novo, na segunda costuma dar certo.",
       "refused": "O pedido foi recusado. Não é do seu lado: avise a gente e olhamos o log do servidor.",
       "unreachable": "Não foi possível falar com o serviço de escrita. Verifique sua conexão e tente de novo.",
       "empty": "A resposta chegou vazia. Tente de novo, costuma dar certo na segunda.",

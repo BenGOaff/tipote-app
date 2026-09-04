@@ -373,6 +373,7 @@ export default function GenerateurClient({
     const connues = [
       "busy",
       "too_long",
+      "coupe",
       "refused",
       "unreachable",
       "empty",
