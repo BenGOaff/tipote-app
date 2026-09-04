@@ -545,13 +545,15 @@ describe("Les consignes de chaque étape", () => {
   test("le message porte l'offre quand il y en a une, et rien sinon", () => {
     const avec = messagePourLeModele({
       brief: BRIEF_TEST,
-      offre: { promesse: "un programme de 6 semaines", format: "groupe", prix: "497 €" },
+      offres: [
+        { promesse: "un programme de 6 semaines", format: "groupe", prix: "497 €", profils: [] },
+      ],
       demande: "Vas y.",
     });
     assert.match(avec, /6 semaines/);
     assert.match(avec, /497 €/);
 
-    const sans = messagePourLeModele({ brief: BRIEF_TEST, offre: null, demande: "Vas y." });
+    const sans = messagePourLeModele({ brief: BRIEF_TEST, offres: [], demande: "Vas y." });
     assert.ok(!sans.includes("OFFRE PAYANTE"), sans);
     // Une ligne "OFFRE : -" apprendrait au modèle qu'il a le droit d'en
     // inventer une.

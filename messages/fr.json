@@ -7808,7 +7808,10 @@
     },
     "profil": {
       "aide": "La séquence part du tag de ce profil là. Elle ne doit pas pouvoir être envoyée à un autre.",
-      "sansTitre": "Profil {rang}"
+      "sansTitre": "Profil {rang}",
+      "celuiQueTuPrepares": "Le profil que tu prépares",
+      "ecrit": "(écrit)",
+      "unApresLautre": "Chaque profil a son propre texte. Tu les écris l'un après l'autre."
     },
     "offre": {
       "aide": "C'est la seule chose que ton quiz ne peut pas savoir. Sans elle, le contenu mènerait dans le vide.",
@@ -7826,7 +7829,18 @@
       },
       "prix": "Son prix",
       "prixPlaceholder": "497 €",
-      "prixAide": "Facultatif. S'il est vide, aucun prix n'est écrit nulle part."
+      "prixAide": "Facultatif. S'il est vide, aucun prix n'est écrit nulle part.",
+      "aideParProfil": "Une ligne par offre, et pour chacune les profils qu'elle sert.",
+      "rang": "Offre {rang}",
+      "retirer": "Retirer",
+      "ajouter": "Ajouter une offre",
+      "pourQuelsProfils": "Pour quels profils de résultat ?",
+      "sansOffre": "Sans offre : {profils}.",
+      "enDouble": "Dans deux offres à la fois : {profils}.",
+      "uneSeuleChacun": "Chaque profil doit être relié à une offre, et à une seule.",
+      "promesseAria": "Promesse de l'offre {rang}",
+      "formatAria": "Format de l'offre {rang}",
+      "prixAria": "Prix de l'offre {rang}"
     },
     "pistes": {
       "titre": "Trois pistes, tu en choisis une",
@@ -7886,7 +7900,8 @@
       "profil_manquant": "Choisis d'abord un profil.",
       "not_found": "Ce projet n'est plus disponible. Il a peut être été supprimé, ou il ne t'appartient pas. Rien n'a été modifié.",
       "generic": "Ça n'a pas abouti. Relance, le reste de ton travail est gardé.",
-      "credits": "Il te manque des crédits pour ce contenu. Recharge tes crédits, tout ce qui est déjà écrit est gardé."
+      "credits": "Il te manque des crédits pour ce contenu. Recharge tes crédits, tout ce qui est déjà écrit est gardé.",
+      "couverture_offres": "Chaque profil doit être relié à une offre, et à une seule."
     },
     "credits": {
       "solde": "{count, plural, one {# crédit restant} other {# crédits restants}}",
@@ -7953,6 +7968,37 @@
         "bonus": "Écrire le bonus",
         "emails": "Écrire la séquence",
         "promo": "Écrire mes contenus de promo"
+      }
+    },
+    "plan": {
+      "label": "Ce que reçoit chaque profil",
+      "options": {
+        "commun": {
+          "titre": "Le même bonus, la même offre",
+          "aide": "Le plus simple à produire et à livrer."
+        },
+        "par-profil": {
+          "titre": "Un bonus par profil, une seule offre",
+          "aide": "Ton quiz n'a pas encore de profils de résultat.",
+          "aideAvecProfils": "Chacun reçoit un texte qui parle de lui, et tous mènent à la même offre. {count} profils sur ton quiz."
+        },
+        "par-profil-son-offre": {
+          "titre": "Un bonus par profil, son offre à lui",
+          "aide": "Ton quiz sert à orienter vers l'offre adaptée : chaque bonus ramène vers celle de son profil."
+        }
+      }
+    },
+    "declencheur": {
+      "label": "Quand vas-tu envoyer ce bonus ?",
+      "options": {
+        "completion": {
+          "titre": "Pour un quiz complété",
+          "aide": "Il découvre son résultat, le bonus est la suite logique."
+        },
+        "share": {
+          "titre": "Pour un partage",
+          "aide": "Il partage ton quiz, le bonus est sa récompense."
+        }
       }
     }
   },

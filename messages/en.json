@@ -7808,7 +7808,10 @@
     },
     "profil": {
       "aide": "The sequence starts from this profile's tag. It must not be sendable to any other one.",
-      "sansTitre": "Profile {rang}"
+      "sansTitre": "Profile {rang}",
+      "celuiQueTuPrepares": "The profile you are preparing",
+      "ecrit": "(written)",
+      "unApresLautre": "Each profile has its own text. You write them one after the other."
     },
     "offre": {
       "aide": "This is the one thing your quiz cannot know. Without it, the content would lead nowhere.",
@@ -7826,7 +7829,18 @@
       },
       "prix": "Its price",
       "prixPlaceholder": "497 EUR",
-      "prixAide": "Optional. If left empty, no price is written anywhere."
+      "prixAide": "Optional. If left empty, no price is written anywhere.",
+      "aideParProfil": "One line per offer, and for each the profiles it serves.",
+      "rang": "Offer {rang}",
+      "retirer": "Remove",
+      "ajouter": "Add an offer",
+      "pourQuelsProfils": "For which result profiles?",
+      "sansOffre": "Without an offer: {profils}.",
+      "enDouble": "In two offers at once: {profils}.",
+      "uneSeuleChacun": "Each profile must be linked to one offer, and only one.",
+      "promesseAria": "Promise of offer {rang}",
+      "formatAria": "Format of offer {rang}",
+      "prixAria": "Price of offer {rang}"
     },
     "pistes": {
       "titre": "Three directions, you pick one",
@@ -7886,7 +7900,8 @@
       "profil_manquant": "Pick a profile first.",
       "not_found": "This project is no longer available. It may have been deleted, or it does not belong to you. Nothing was changed.",
       "generic": "That did not go through. Try again, the rest of your work is kept.",
-      "credits": "You do not have enough credits for this piece. Top up your credits, everything already written is kept."
+      "credits": "You do not have enough credits for this piece. Top up your credits, everything already written is kept.",
+      "couverture_offres": "Each profile must be linked to one offer, and only one."
     },
     "credits": {
       "solde": "{count, plural, one {# credit left} other {# credits left}}",
@@ -7953,6 +7968,37 @@
         "bonus": "Write the bonus",
         "emails": "Write the sequence",
         "promo": "Write my promo content"
+      }
+    },
+    "plan": {
+      "label": "What each profile receives",
+      "options": {
+        "commun": {
+          "titre": "The same bonus, the same offer",
+          "aide": "The simplest to produce and deliver."
+        },
+        "par-profil": {
+          "titre": "One bonus per profile, a single offer",
+          "aide": "Your quiz has no result profiles yet.",
+          "aideAvecProfils": "Each person gets a text that speaks to them, and they all lead to the same offer. {count} profiles on your quiz."
+        },
+        "par-profil-son-offre": {
+          "titre": "One bonus per profile, its own offer",
+          "aide": "Your quiz is there to point to the right offer: each bonus leads back to the one for its profile."
+        }
+      }
+    },
+    "declencheur": {
+      "label": "When will you send this bonus?",
+      "options": {
+        "completion": {
+          "titre": "For a completed quiz",
+          "aide": "They discover their result, the bonus is the logical next step."
+        },
+        "share": {
+          "titre": "For a share",
+          "aide": "They share your quiz, the bonus is their reward."
+        }
       }
     }
   },

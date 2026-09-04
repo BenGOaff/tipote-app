@@ -27,8 +27,12 @@ import type { Piece, Piste } from "@/lib/generateurs/blocs";
 import { MAX_PIECES } from "@/lib/generateurs/blocs";
 import type { BriefQuiz, ProfilBrief } from "@/lib/generateurs/briefQuiz";
 import { rendreBriefPourPrompt } from "@/lib/generateurs/briefQuiz";
-import type { Offre } from "@/lib/generateurs/offre";
-import { rendreOffrePourPrompt } from "@/lib/generateurs/offre";
+import {
+  rendreOffresPourPrompt,
+  type Declencheur,
+  type Offre,
+  type PlanBonus,
+} from "@/lib/generateurs/offre";
 
 /**
  * Le nom de la langue, écrit en toutes lettres.
@@ -356,13 +360,30 @@ export function consigneProduction(args: {
  */
 export function messagePourLeModele(args: {
   brief: BriefQuiz;
-  offre?: Offre | null;
+  /** Les offres saisies. Vide sur le générateur de promotion. */
+  offres?: Offre[];
+  plan?: PlanBonus;
+  declencheur?: Declencheur;
+  /**
+   * Le profil pour lequel on écrit, ou `null` à l'étape des pistes.
+   *
+   * C'est LUI qui décide quelle offre part dans le prompt : sans ça, un
+   * quiz qui oriente vers trois offres renvoyait les trois profils vers
+   * la même (retour Monique, Atelier, 5 août 2026).
+   */
+  profilIndex?: number | null;
   demande: string;
 }): string {
   return recoller([
     rendreBriefPourPrompt(args.brief),
     "",
-    rendreOffrePourPrompt(args.offre),
+    rendreOffresPourPrompt({
+      plan: args.plan ?? "commun",
+      offres: args.offres ?? [],
+      profils: args.brief.profils,
+      profilIndex: args.profilIndex ?? null,
+      declencheur: args.declencheur ?? "completion",
+    }),
     "",
     args.demande,
   ]);

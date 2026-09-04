@@ -82,7 +82,13 @@ import {
 import { BLOCS, MAX_PIECES, piecesDeLaPiste, type Piste } from "@/lib/generateurs/blocs";
 import { passeParLesPistes } from "@/lib/generateurs/sequences";
 import { rangerMorceau } from "@/lib/generateurs/contenusStore";
-import { FORMATS_OFFRE, type Offre } from "@/lib/generateurs/offre";
+import {
+  FORMATS_OFFRE,
+  PLANS_BONUS,
+  DECLENCHEURS,
+  couvertureDesOffres,
+  type Offre,
+} from "@/lib/generateurs/offre";
 import { construireBriefQuiz, type BriefQuiz } from "@/lib/generateurs/briefQuiz";
 import { SOCLE_GENERATEURS } from "@/lib/prompts/generateurs/socle";
 import {
@@ -101,6 +107,8 @@ const offreSchema = z.object({
   promesse: z.string().max(600).default(""),
   format: z.enum(FORMATS_OFFRE).default("formation"),
   prix: z.string().max(120).default(""),
+  /** Les profils que CETTE offre sert. Vide hors du plan à offres multiples. */
+  profils: z.array(z.number().int().min(0).max(29)).max(30).default([]),
 });
 
 const pisteSchema = z.object({
@@ -123,7 +131,13 @@ const pisteSchema = z.object({
 const communSchema = {
   generateur: z.enum(GENERATEURS),
   quizId: z.string().uuid(),
-  offre: offreSchema.optional(),
+  /**
+   * LES OFFRES. Plusieurs, une par profil, depuis le 3 septembre 2026
+   * (Béné : "exactement la même chose sur l'atelier et sur tiquiz").
+   */
+  offres: z.array(offreSchema).max(12).optional(),
+  plan: z.enum(PLANS_BONUS).default("commun"),
+  declencheur: z.enum(DECLENCHEURS).default("completion"),
   /** 0-based, dans l'ordre des profils du quiz. */
   profilIndex: z.number().int().min(0).max(29).optional(),
 };
@@ -327,11 +341,30 @@ export async function POST(req: NextRequest) {
   // C'est la SEULE chose qu'elle saisit, et sans elle le bonus et la
   // séquence mènent nulle part : le modèle inventerait une offre qui
   // n'existe pas, et elle publierait une promesse qu'elle ne tient pas.
-  let offre: Offre | null = null;
+  let offres: Offre[] = [];
   if (demandeUneOffre(id)) {
-    const brute = input.offre;
-    if (!brute || !brute.promesse.trim()) return refus("offre_manquante");
-    offre = { promesse: brute.promesse, format: brute.format, prix: brute.prix };
+    const brutes = (input.offres ?? []).filter((o) => o.promesse.trim().length > 0);
+    if (brutes.length === 0) return refus("offre_manquante");
+    offres = brutes.map((o) => ({
+      promesse: o.promesse,
+      format: o.format,
+      prix: o.prix,
+      profils: o.profils,
+    }));
+
+    // CHAQUE PROFIL DOIT ÊTRE RELIÉ À UNE OFFRE, ET LE SERVEUR TRANCHE.
+    //
+    // L'écran prévient déjà, mais un bonus écrit pour un profil qui ne
+    // mène nulle part fait travailler la créatrice pour rien : mieux
+    // vaut un refus qui dit quoi corriger. Même geste que l'Atelier
+    // (`analyzeOfferCoverage` puis 409).
+    const couverture = couvertureDesOffres(input.plan, offres, brief.profils.length);
+    if (!couverture.ok) {
+      return refus("couverture_offres", {
+        sansOffre: couverture.sansOffre,
+        enDouble: couverture.enDouble,
+      });
+    }
   }
 
   const model = resolveAnthropicModel(process.env.ANTHROPIC_MODEL, "sonnet");
@@ -485,7 +518,13 @@ export async function POST(req: NextRequest) {
       consignePistes(id, brief),
       messagePourLeModele({
         brief,
-        offre,
+        offres,
+        plan: input.plan,
+        declencheur: input.declencheur,
+        // À L'ÉTAPE DES PISTES ON N'ÉCRIT POUR PERSONNE ENCORE : on
+        // montre la carte complète des offres, pour que le format
+        // proposé tienne pour tous les profils.
+        profilIndex: null,
         demande: "Propose moi les trois pistes maintenant.",
       }),
       2200,
@@ -520,7 +559,10 @@ export async function POST(req: NextRequest) {
       consigneUnePisteDePlus(id, brief, input.connues),
       messagePourLeModele({
         brief,
-        offre,
+        offres,
+        plan: input.plan,
+        declencheur: input.declencheur,
+        profilIndex: null,
         demande: "Propose moi UNE piste de plus, différente des précédentes.",
       }),
       // 800 et pas 2200 : on rend une piste, pas trois. Le budget de
@@ -566,7 +608,11 @@ export async function POST(req: NextRequest) {
     consigneProduction({ id, brief, piece, piste, profil: profilChoisi }),
     messagePourLeModele({
       brief,
-      offre,
+      offres,
+      plan: input.plan,
+      declencheur: input.declencheur,
+      // ICI on écrit pour UN profil, donc c'est SON offre qui part.
+      profilIndex: typeof input.profilIndex === "number" ? input.profilIndex : null,
       demande: "Produis ce morceau, et rien d'autre.",
     }),
     maxTokens,

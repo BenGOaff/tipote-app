@@ -7808,7 +7808,10 @@
     },
     "profil": {
       "aide": "A sequência parte da tag deste perfil. Não deve poder ser enviada a outro.",
-      "sansTitre": "Perfil {rang}"
+      "sansTitre": "Perfil {rang}",
+      "celuiQueTuPrepares": "O perfil que estás a preparar",
+      "ecrit": "(escrito)",
+      "unApresLautre": "Cada perfil tem o seu próprio texto. Escreve-los um após o outro."
     },
     "offre": {
       "aide": "É a única coisa que o teu quiz não pode saber. Sem ela, o conteúdo não levaria a lado nenhum.",
@@ -7826,7 +7829,18 @@
       },
       "prix": "O seu preço",
       "prixPlaceholder": "497 EUR",
-      "prixAide": "Facultativo. Se ficar vazio, nenhum preço é escrito em lado nenhum."
+      "prixAide": "Facultativo. Se ficar vazio, nenhum preço é escrito em lado nenhum.",
+      "aideParProfil": "Uma linha por oferta, e para cada uma os perfis que serve.",
+      "rang": "Oferta {rang}",
+      "retirer": "Retirar",
+      "ajouter": "Adicionar uma oferta",
+      "pourQuelsProfils": "Para que perfis de resultado?",
+      "sansOffre": "Sem oferta: {profils}.",
+      "enDouble": "Em duas ofertas ao mesmo tempo: {profils}.",
+      "uneSeuleChacun": "Cada perfil deve estar ligado a uma oferta, e só a uma.",
+      "promesseAria": "Promessa da oferta {rang}",
+      "formatAria": "Formato da oferta {rang}",
+      "prixAria": "Preço da oferta {rang}"
     },
     "pistes": {
       "titre": "Três propostas, escolhes uma",
@@ -7886,7 +7900,8 @@
       "profil_manquant": "Escolhe primeiro um perfil.",
       "not_found": "Este projeto já não está disponível. Pode ter sido eliminado, ou não te pertence. Nada foi alterado.",
       "generic": "Não resultou. Tenta de novo, o resto do teu trabalho está guardado.",
-      "credits": "Faltam-te créditos para este conteúdo. Recarrega os teus créditos, tudo o que já foi escrito fica guardado."
+      "credits": "Faltam-te créditos para este conteúdo. Recarrega os teus créditos, tudo o que já foi escrito fica guardado.",
+      "couverture_offres": "Cada perfil deve estar ligado a uma oferta, e só a uma."
     },
     "credits": {
       "solde": "{count, plural, one {resta # crédito} other {restam # créditos}}",
@@ -7953,6 +7968,37 @@
         "bonus": "Escrever o bónus",
         "emails": "Escrever a sequência",
         "promo": "Escrever os meus conteúdos de promoção"
+      }
+    },
+    "plan": {
+      "label": "O que cada perfil recebe",
+      "options": {
+        "commun": {
+          "titre": "O mesmo bónus, a mesma oferta",
+          "aide": "O mais simples de produzir e de entregar."
+        },
+        "par-profil": {
+          "titre": "Um bónus por perfil, uma só oferta",
+          "aide": "O teu quiz ainda não tem perfis de resultado.",
+          "aideAvecProfils": "Cada pessoa recebe um texto que fala dela, e todos levam à mesma oferta. {count} perfis no teu quiz."
+        },
+        "par-profil-son-offre": {
+          "titre": "Um bónus por perfil, a sua própria oferta",
+          "aide": "O teu quiz serve para orientar para a oferta adequada: cada bónus leva à do seu perfil."
+        }
+      }
+    },
+    "declencheur": {
+      "label": "Quando vais enviar este bónus?",
+      "options": {
+        "completion": {
+          "titre": "Para um quiz concluído",
+          "aide": "Descobre o seu resultado, o bónus é a sequência lógica."
+        },
+        "share": {
+          "titre": "Para uma partilha",
+          "aide": "Partilha o teu quiz, o bónus é a sua recompensa."
+        }
       }
     }
   },

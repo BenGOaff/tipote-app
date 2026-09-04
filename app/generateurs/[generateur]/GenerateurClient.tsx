@@ -37,6 +37,7 @@ import {
   Lock,
   Megaphone,
   Pencil,
+  Plus,
   Sparkles,
   AlertTriangle,
   Wand2,
@@ -55,7 +56,19 @@ import {
   type BlocageGenerateur,
   type GenerateurId,
 } from "@/lib/generateurs/catalogue";
-import { FORMATS_OFFRE, type FormatOffre } from "@/lib/generateurs/offre";
+import {
+  FORMATS_OFFRE,
+  OFFRE_VIDE,
+  PLANS_BONUS,
+  DECLENCHEURS,
+  bonusParProfil,
+  offreParProfil,
+  couvertureDesOffres,
+  type Declencheur,
+  type FormatOffre,
+  type Offre,
+  type PlanBonus,
+} from "@/lib/generateurs/offre";
 import { passeParLesPistes, planFixe } from "@/lib/generateurs/sequences";
 import {
   etapesDuParcours,
@@ -180,9 +193,39 @@ export default function GenerateurClient({
 
   const [projetId, setProjetId] = useState<string>("");
   const [profilIndex, setProfilIndex] = useState<number>(0);
-  const [promesse, setPromesse] = useState("");
-  const [format, setFormat] = useState<FormatOffre>("formation");
-  const [prix, setPrix] = useState("");
+  // LE BRIEF DU BONUS, comme dans le labo de l'Atelier : ce que reçoit
+  // chaque profil, l'offre (ou les offres), et QUAND le bonus est remis.
+  const [plan, setPlan] = useState<PlanBonus>(
+    // Un quiz à plusieurs profils gagne presque toujours à décliner son
+    // bonus : c'est le défaut là bas, elle peut simplifier en un clic.
+    "commun",
+  );
+  const [declencheur, setDeclencheur] = useState<Declencheur>("completion");
+  const [offres, setOffres] = useState<Offre[]>([{ ...OFFRE_VIDE }]);
+
+  function majOffre(i: number, patch: Partial<Offre>) {
+    setOffres((l) => l.map((o, j) => (j === i ? { ...o, ...patch } : o)));
+  }
+  function ajouterOffre() {
+    setOffres((l) => [...l, { ...OFFRE_VIDE }]);
+  }
+  function retirerOffre(i: number) {
+    setOffres((l) => (l.length > 1 ? l.filter((_, j) => j !== i) : l));
+  }
+  function basculerProfilDOffre(i: number, profil: number) {
+    setOffres((l) =>
+      l.map((o, j) => {
+        // UN PROFIL N'APPARTIENT QU'À UNE OFFRE : le cocher ailleurs le
+        // retire d'où il était. Sans ça on fabrique l'ambiguïté qu'on
+        // vient de rendre bloquante.
+        const a = o.profils.includes(profil);
+        if (j === i) {
+          return { ...o, profils: a ? o.profils.filter((x) => x !== profil) : [...o.profils, profil] };
+        }
+        return a ? { ...o, profils: o.profils.filter((x) => x !== profil) } : o;
+      }),
+    );
+  }
 
   const [etat, setEtat] = useState<Etat>("repos");
   const [pistes, setPistes] = useState<Piste[]>([]);
@@ -234,10 +277,24 @@ export default function GenerateurClient({
 
   const veutProfil = demandeUnProfil(generateur);
   const veutOffre = demandeUneOffre(generateur);
+  // LE PLAN ET LE DÉCLENCHEUR SONT DES NOTIONS DU BONUS, pas des trois
+  // générateurs : "quand vas-tu envoyer ce bonus ?" ne veut rien dire
+  // pour une séquence d'emails. C'est un PARAMÈTRE du générateur, jamais
+  // déduit de la présence d'une offre.
+  const estBonus = generateur === "bonus";
+  // CHAQUE PROFIL A-T-IL EXACTEMENT UNE OFFRE ? On prévient AVANT de
+  // produire : un bonus écrit pour un profil qui ne mène nulle part fait
+  // travailler la créatrice pour rien.
+  const couverture = useMemo(
+    () => couvertureDesOffres(plan, offres, projet?.profils.length ?? 0),
+    [plan, offres, projet],
+  );
+  const offreRemplie = offres.some((o) => o.promesse.trim().length > 0);
+
   const pretPourPistes =
     Boolean(projet) &&
     !blocage &&
-    (!veutOffre || promesse.trim().length > 0) &&
+    (!veutOffre || (offreRemplie && couverture.ok)) &&
     (!veutProfil || Boolean(projet?.profils[profilIndex]));
 
   // ── LE PARCOURS ──
@@ -250,7 +307,7 @@ export default function GenerateurClient({
   const etatParcours = {
     projetPret: Boolean(projet) && !blocage,
     profilPret: !veutProfil || Boolean(projet?.profils[profilIndex]),
-    offrePrete: !veutOffre || promesse.trim().length > 0,
+    offrePrete: !veutOffre || (offreRemplie && couverture.ok),
     pistesPretes: pistes.length > 0,
   };
   const avant = precedente(generateur, etape);
@@ -276,6 +333,7 @@ export default function GenerateurClient({
       "profil_manquant",
       "not_found",
       "credits",
+      "couverture_offres",
     ];
     toast.error(t(`erreurs.${connues.includes(cle) ? cle : "generic"}`));
   }
@@ -284,8 +342,12 @@ export default function GenerateurClient({
     return {
       generateur,
       quizId: projetId,
-      ...(veutOffre ? { offre: { promesse, format, prix } } : {}),
-      ...(veutProfil ? { profilIndex } : {}),
+      ...(veutOffre ? { offres, plan, declencheur } : {}),
+      // LE PROFIL NE PART QUE QUAND IL VEUT DIRE QUELQUE CHOSE : sur un
+      // bonus COMMUN, il n'y a pas de profil à écrire pour, et l'envoyer
+      // ferait écrire un bonus qui parle d'un seul profil à tout le
+      // monde.
+      ...(veutProfil && (!estBonus || bonusParProfil(plan)) ? { profilIndex } : {}),
     };
   }
 
@@ -361,7 +423,28 @@ export default function GenerateurClient({
     }
   }
 
-  const cle = (p: Piece) => `${p.bloc}-${p.index}`;
+  /**
+   * CE MORCEAU S'ÉCRIT-IL UNE FOIS PAR PROFIL ?
+   *
+   * Seul le CONTENU du bonus, et seulement quand le bonus est décliné :
+   * son mode d'emploi et ses textes de remise sont les mêmes pour tout
+   * le monde. C'est exactement le `perResult && block === "content"` du
+   * labo de l'Atelier.
+   */
+  function parProfil(p: Piece): boolean {
+    return estBonus && p.bloc === "contenu" && bonusParProfil(plan);
+  }
+
+  /**
+   * LA CLÉ D'UN MORCEAU ÉCRIT, et elle porte le profil quand il y en a
+   * un.
+   *
+   * Sans le profil dans la clé, écrire le contenu du 2e profil ÉCRASE
+   * celui du 1er, et la créatrice ne s'en aperçoit qu'en rouvrant. C'est
+   * le `content:${i}` de l'Atelier.
+   */
+  const cle = (p: Piece, profil = profilIndex) =>
+    `${p.bloc}-${p.index}${parProfil(p) ? `:${profil}` : ""}`;
 
   async function ecrireUn(piste: Piste, pieceIndex: number): Promise<boolean> {
     const piece = piste.pieces[pieceIndex];
@@ -490,7 +573,16 @@ export default function GenerateurClient({
     ? choisie
     : pisteDuPlanFixe();
 
-  const clesDuTravail = travail ? travail.pieces.map(cle) : [];
+  // L'AVANCEMENT COMPTE LES PROFILS, PAS LES DOSSIERS : un contenu
+  // décliné sur 4 profils compte pour 4, sinon "tout est écrit"
+  // s'afficherait dès le premier.
+  const clesDuTravail = travail
+    ? travail.pieces.flatMap((p) =>
+        parProfil(p)
+          ? (projet?.profils ?? [{ titre: "" }]).map((_, i) => cle(p, i))
+          : [cle(p)],
+      )
+    : [];
   const av = avancement(clesDuTravail, contenus);
   const phraseAvancement =
     av.etat === "rien"
@@ -501,7 +593,10 @@ export default function GenerateurClient({
 
   const indexOuvert = travail ? travail.pieces.findIndex((x) => cle(x) === ouvert) : -1;
   const ouvertPiece = indexOuvert >= 0 ? travail!.pieces[indexOuvert]! : null;
-  const contenuOuvert = ouvert ? (contenus[ouvert] ?? null) : null;
+  // LE DOSSIER OUVERT SUIT LE PROFIL COURANT : la clé du contenu porte
+  // le profil, donc changer de profil change ce qu'on regarde.
+  const cleOuverte = ouvertPiece ? cle(ouvertPiece) : ouvert;
+  const contenuOuvert = cleOuverte ? (contenus[cleOuverte] ?? null) : null;
 
   const [copie, setCopie] = useState(false);
   async function copierOuvert() {
@@ -651,8 +746,12 @@ export default function GenerateurClient({
       </section>
       ) : null}
 
-      {/* ── 2. LE PROFIL ── */}
-      {etape === "reglages" && projet && !blocage && veutProfil ? (
+      {/* ── 2. LE PROFIL ──
+          LE BONUS N'EN A PLUS ICI : son contenu s'écrit une fois PAR
+          profil, donc le choix vit DANS le dossier du contenu, comme
+          dans le labo de l'Atelier. La séquence d'emails, elle, s'écrit
+          pour UN profil décidé d'avance : elle le garde ici. */}
+      {etape === "reglages" && projet && !blocage && veutProfil && !estBonus ? (
         <section className="rounded-xl border bg-card p-5 space-y-3">
           <div>
             <h2 className="font-display font-bold text-sm">{t("etapes.profil")}</h2>
@@ -687,52 +786,171 @@ export default function GenerateurClient({
         </section>
       ) : null}
 
-      {/* ── L'OFFRE ── */}
+      {/* ── LE BRIEF DU BONUS, calqué sur le labo de l'Atelier ──
+          Béné, 3 septembre 2026 : "c'est où l'étape pour choisir quand
+          sera envoyé le bonus, le type de bonus, pour un partage ou un
+          quiz complété ?" Elle avait raison : il n'y en avait pas. Cet
+          écran n'avait qu'UNE offre et aucun des deux choix qui
+          décident de ce que le bonus doit être. */}
       {etape === "reglages" && projet && !blocage && veutOffre ? (
-        <section className="rounded-xl border bg-card p-5 space-y-4">
-          <div>
-            <h2 className="font-display font-bold text-sm">{t("etapes.offre")}</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">{t("offre.aide")}</p>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="gen-promesse">{t("offre.promesse")}</Label>
-            <Textarea
-              id="gen-promesse"
-              rows={2}
-              maxLength={600}
-              value={promesse}
-              onChange={(e) => setPromesse(e.target.value)}
-              placeholder={t("offre.promessePlaceholder")}
+        <section className="rounded-xl border bg-card p-5 space-y-5">
+          {/* LE PLAN D'ABORD (Béné, Atelier, 5 août 2026) : "c'est ce que
+              reçoit chaque profil qui doit aller en premier, avant les
+              offres, c'est plus logique". Et ça règle une dépendance :
+              ce choix décide si les pastilles de profils existent dans
+              les cartes d'offre. Posé avant, elles apparaissent APRÈS
+              lui, donc dans le sens de lecture. */}
+          {estBonus ? (
+            <Choix
+              label={t("plan.label")}
+              value={plan}
+              onChange={(v) => setPlan(v as PlanBonus)}
+              options={PLANS_BONUS.map((v) => ({
+                value: v,
+                titre: t(`plan.options.${v}.titre`),
+                aide:
+                  v === "par-profil" && projet.profils.length > 0
+                    ? t("plan.options.par-profil.aideAvecProfils", {
+                        count: projet.profils.length,
+                      })
+                    : t(`plan.options.${v}.aide`),
+              }))}
             />
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="gen-format">{t("offre.format")}</Label>
-              <select
-                id="gen-format"
-                value={format}
-                onChange={(e) => setFormat(e.target.value as FormatOffre)}
-                className="w-full h-9 rounded-md border bg-background px-3 text-sm"
-              >
-                {FORMATS_OFFRE.map((f) => (
-                  <option key={f} value={f}>
-                    {t(`offre.formats.${f}`)}
-                  </option>
-                ))}
-              </select>
+          ) : null}
+
+          <div className="space-y-3">
+            <div>
+              <p className="text-sm font-medium">{t("etapes.offre")}</p>
+              <p className="text-xs text-muted-foreground">
+                {offreParProfil(plan) ? t("offre.aideParProfil") : t("offre.aide")}
+              </p>
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="gen-prix">{t("offre.prix")}</Label>
-              <Input
-                id="gen-prix"
-                value={prix}
-                maxLength={120}
-                onChange={(e) => setPrix(e.target.value)}
-                placeholder={t("offre.prixPlaceholder")}
-              />
-              <p className="text-[11px] text-muted-foreground">{t("offre.prixAide")}</p>
-            </div>
+
+            {offres.map((offre, i) => (
+              <div key={i} className="rounded-lg border bg-background p-4 space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    {t("offre.rang", { rang: i + 1 })}
+                  </span>
+                  {offres.length > 1 ? (
+                    <button
+                      type="button"
+                      onClick={() => retirerOffre(i)}
+                      className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+                    >
+                      {t("offre.retirer")}
+                    </button>
+                  ) : null}
+                </div>
+
+                <Textarea
+                  rows={2}
+                  maxLength={600}
+                  value={offre.promesse}
+                  onChange={(e) => majOffre(i, { promesse: e.target.value })}
+                  placeholder={t("offre.promessePlaceholder")}
+                  aria-label={t("offre.promesseAria", { rang: i + 1 })}
+                />
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <select
+                    value={offre.format}
+                    onChange={(e) => majOffre(i, { format: e.target.value as FormatOffre })}
+                    className="w-full h-9 rounded-md border bg-background px-3 text-sm"
+                    aria-label={t("offre.formatAria", { rang: i + 1 })}
+                  >
+                    {FORMATS_OFFRE.map((f) => (
+                      <option key={f} value={f}>
+                        {t(`offre.formats.${f}`)}
+                      </option>
+                    ))}
+                  </select>
+                  <Input
+                    value={offre.prix}
+                    maxLength={120}
+                    onChange={(e) => majOffre(i, { prix: e.target.value })}
+                    placeholder={t("offre.prixPlaceholder")}
+                    aria-label={t("offre.prixAria", { rang: i + 1 })}
+                  />
+                </div>
+
+                {/* Les profils servis par CETTE offre. Visible uniquement
+                    quand chaque profil a la sienne : ailleurs, une seule
+                    offre s'adresse à tout le monde et la question n'a pas
+                    de sens. */}
+                {offreParProfil(plan) && projet.profils.length > 0 ? (
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-medium">{t("offre.pourQuelsProfils")}</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {projet.profils.map((p, pi) => {
+                        const actif = offre.profils.includes(pi);
+                        return (
+                          <button
+                            key={pi}
+                            type="button"
+                            onClick={() => basculerProfilDOffre(i, pi)}
+                            className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+                              actif
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : "border-border text-muted-foreground hover:border-primary/40"
+                            }`}
+                          >
+                            {p.titre || t("profil.sansTitre", { rang: pi + 1 })}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            ))}
+
+            {offreParProfil(plan) ? (
+              <Button variant="outline" size="sm" onClick={ajouterOffre}>
+                <Plus className="h-4 w-4 mr-1.5" />
+                {t("offre.ajouter")}
+              </Button>
+            ) : null}
+
+            {/* ON NOMME LES PROFILS CONCERNÉS : "il manque une offre"
+                oblige à comparer soi même pour savoir lesquels. */}
+            {!couverture.ok ? (
+              <p className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
+                {couverture.sansOffre.length > 0
+                  ? `${t("offre.sansOffre", {
+                      profils: couverture.sansOffre
+                        .map((i) => projet.profils[i]?.titre || t("profil.sansTitre", { rang: i + 1 }))
+                        .join(", "),
+                    })} `
+                  : ""}
+                {couverture.enDouble.length > 0
+                  ? `${t("offre.enDouble", {
+                      profils: couverture.enDouble
+                        .map((i) => projet.profils[i]?.titre || t("profil.sansTitre", { rang: i + 1 }))
+                        .join(", "),
+                    })} `
+                  : ""}
+                {t("offre.uneSeuleChacun")}
+              </p>
+            ) : null}
           </div>
+
+          {/* QUAND LE BONUS EST REMIS. Ce n'est pas un détail de
+              formulaire : à la fin du quiz il prolonge un résultat qu'on
+              vient de lire ; après un partage il récompense un geste,
+              donc il doit valoir le geste. */}
+          {estBonus ? (
+            <Choix
+              label={t("declencheur.label")}
+              value={declencheur}
+              onChange={(v) => setDeclencheur(v as Declencheur)}
+              options={DECLENCHEURS.map((v) => ({
+                value: v,
+                titre: t(`declencheur.options.${v}.titre`),
+                aide: t(`declencheur.options.${v}.aide`),
+              }))}
+            />
+          ) : null}
         </section>
       ) : null}
 
@@ -873,7 +1091,16 @@ export default function GenerateurClient({
               const k = cle(piece);
               const d = DOSSIER[piece.bloc];
               const Icone = d.icone;
-              const ecrit = Boolean(contenus[k]);
+              // UN CONTENU DÉCLINÉ N'EST "PRÊT" QUE QUAND TOUS SES
+              // PROFILS SONT ÉCRITS. Le dire dès le premier ferait
+              // croire le bonus terminé alors qu'il en manque trois.
+              const nb = parProfil(piece) ? (projet?.profils.length ?? 1) : 1;
+              const faits = parProfil(piece)
+                ? (projet?.profils ?? []).filter((_, i) => contenus[cle(piece, i)]).length
+                : Boolean(contenus[k])
+                  ? 1
+                  : 0;
+              const ecrit = faits >= nb && nb > 0;
               return (
                 <button
                   key={k}
@@ -893,11 +1120,13 @@ export default function GenerateurClient({
                     {piece.cle ? t(`temps.${piece.cle}`) : piece.resume}
                   </span>
                   <span className="mt-auto pt-1 text-xs font-medium text-muted-foreground">
-                    {enCours === k
+                    {enCours && enCours.startsWith(`${piece.bloc}-${piece.index}`)
                       ? t("production.enCoursCourt")
                       : ecrit
                         ? t("production.pret")
-                        : t("production.aGenerer")}
+                        : nb > 1 && faits > 0
+                          ? t("production.avancement.partiel", { faits, total: nb })
+                          : t("production.aGenerer")}
                     {!ecrit && credits ? ` . ${t("credits.cout", { count: coutDe(piece.bloc) })}` : ""}
                   </span>
                 </button>
@@ -928,6 +1157,30 @@ export default function GenerateurClient({
             </p>
           </div>
 
+          {/* LE SÉLECTEUR DE PROFIL NE CONCERNE QUE LE CONTENU : c'est
+              le seul bloc qui s'écrit une fois par profil. Porté du labo
+              de l'Atelier, y compris son "(écrit)" par profil, qui est
+              la seule façon de savoir où on en est sans les rouvrir. */}
+          {parProfil(ouvertPiece) && projet ? (
+            <div className="space-y-1.5">
+              <Label htmlFor="gen-profil">{t("profil.celuiQueTuPrepares")}</Label>
+              <select
+                id="gen-profil"
+                value={profilIndex}
+                onChange={(e) => setProfilIndex(Number(e.target.value))}
+                className="w-full max-w-sm h-9 rounded-md border bg-background px-3 text-sm"
+              >
+                {projet.profils.map((p, i) => (
+                  <option key={i} value={i}>
+                    {p.titre || t("profil.sansTitre", { rang: i + 1 })}
+                    {contenus[cle(ouvertPiece, i)] ? ` ${t("profil.ecrit")}` : ""}
+                  </option>
+                ))}
+              </select>
+              <p className="text-[11px] text-muted-foreground">{t("profil.unApresLautre")}</p>
+            </div>
+          ) : null}
+
           <div className="flex flex-wrap gap-2">
             <Button
               size="sm"
@@ -935,7 +1188,7 @@ export default function GenerateurClient({
               disabled={!autorise || Boolean(enCours)}
               onClick={() => void ecrireUn(travail!, indexOuvert)}
             >
-              {enCours === ouvert ? (
+              {enCours === cleOuverte ? (
                 <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
               ) : (
                 <Wand2 className="h-4 w-4 mr-1.5" />
@@ -947,14 +1200,14 @@ export default function GenerateurClient({
                 <Button
                   size="sm"
                   variant="ghost"
-                  onClick={() => setEdition(edition === ouvert ? null : ouvert)}
+                  onClick={() => setEdition(edition === cleOuverte ? null : cleOuverte)}
                 >
-                  {edition === ouvert ? (
+                  {edition === cleOuverte ? (
                     <Check className="h-4 w-4 mr-1.5" />
                   ) : (
                     <Pencil className="h-4 w-4 mr-1.5" />
                   )}
-                  {edition === ouvert ? t("production.termine") : t("production.modifier")}
+                  {edition === cleOuverte ? t("production.termine") : t("production.modifier")}
                 </Button>
                 <Button size="sm" variant="ghost" onClick={() => void copierOuvert()}>
                   {copie ? (
@@ -987,14 +1240,14 @@ export default function GenerateurClient({
           {/* LE MARKDOWN RESTE LA SOURCE DE VÉRITÉ, l'éditeur n'est
               qu'un pont (`lib/bonus/markdownHtml.ts`) : le rendu et le
               PDF ne changent pas d'un pixel. */}
-          {contenuOuvert && edition === ouvert ? (
+          {contenuOuvert && edition === cleOuverte ? (
             <RichTextEdit
-              key={ouvert}
+              key={cleOuverte}
               value={markdownToEditorHtml(contenuOuvert.markdown)}
               onChange={(html) =>
                 setContenus((c) => ({
                   ...c,
-                  [ouvert!]: { markdown: editorHtmlToMarkdown(html), tronque: false },
+                  [cleOuverte!]: { markdown: editorHtmlToMarkdown(html), tronque: false },
                 }))
               }
               className="rounded-xl border bg-card p-5 text-sm leading-relaxed"
@@ -1007,7 +1260,7 @@ export default function GenerateurClient({
 
           {!contenuOuvert ? (
             <div className="rounded-xl border bg-card p-8 text-center text-sm text-muted-foreground">
-              {enCours === ouvert ? (
+              {enCours === cleOuverte ? (
                 <span className="inline-flex items-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
                   {t("production.enCoursCourt")}
@@ -1098,4 +1351,48 @@ export default function GenerateurClient({
 function RenduGenere({ markdown }: { markdown: string }) {
   // PAS DE REPLI : voir l'entête ci dessus.
   return <BonusDocument doc={parseBonusDoc(markdown)} />;
+}
+
+/**
+ * DEUX OU TROIS CARTES CLIQUABLES, porté de `Choice` dans le labo de
+ * l'Atelier.
+ *
+ * Plus lisible qu'un menu déroulant pour un choix qui change le résultat
+ * EN PROFONDEUR : ici on ne remplit pas un champ, on décide de ce que le
+ * bonus sera. Un menu déroulant cache les options qu'on n'a pas
+ * choisies, donc il cache la décision.
+ */
+function Choix({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; titre: string; aide: string }[];
+}) {
+  return (
+    <div className="space-y-2">
+      <p className="text-sm font-medium">{label}</p>
+      <div className={`grid gap-2 ${options.length > 2 ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+        {options.map((o) => (
+          <button
+            key={o.value}
+            type="button"
+            onClick={() => onChange(o.value)}
+            className={`flex flex-col gap-1 rounded-xl border p-3 text-left transition-colors ${
+              value === o.value
+                ? "border-primary bg-primary/5"
+                : "border-border hover:border-primary/40"
+            }`}
+          >
+            <span className="text-sm font-medium">{o.titre}</span>
+            <span className="text-xs text-muted-foreground">{o.aide}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 }

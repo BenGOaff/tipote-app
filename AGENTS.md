@@ -3602,6 +3602,80 @@ Test : le cas "un contenu SANS titre de section garde sa mise en forme"
 de `tests/logic/generateurs-parcours.test.mts`, vérifié en rejouant le
 repli d'avant (il rougit).
 
+### L'ÉTAPE DU BRIEF MANQUAIT ENTIÈREMENT (Béné, 3 septembre 2026)
+
+Captures de l'Atelier à l'appui : "mais t'as pas du tout reproduit sur
+Tiquiz ce qu'on a sur l'atelier !! C'est où l'étape pour choisir quand
+sera envoyé le bonus, le type de bonus, pour un partage ou un quiz
+complété ??? Je t'ai pas demandé de l'à peu près je t'ai demandé
+PAREIL."
+
+**Elle avait raison, et ce n'était pas un détail de mise en page : les
+DEUX choix qui décident de ce que le bonus doit ÊTRE n'existaient pas.**
+
+| Le réglage | l'Atelier | ici, avant |
+|---|---|---|
+| ce que reçoit chaque profil (`plan`) | 3 cartes cliquables | rien |
+| l'offre payante | plusieurs, une par profil, avec pastilles | UNE seule |
+| la couverture des profils | avertissement nommant les profils | rien |
+| quand le bonus est remis (`declencheur`) | 2 cartes cliquables | rien |
+| le profil du contenu | dans le DOSSIER, avec "(écrit)" par profil | dans les réglages |
+
+**Et mon propre `lib/generateurs/offre.ts` disait noir sur blanc "on ne
+reprend PAS ça ici, pas encore".** Le "pas encore" était un mauvais
+calcul dès le départ : le retour de Monique (Atelier, 5 août) décrit un
+quiz qui ORIENTE vers trois offres, ce qui est exactement ce que Tiquiz
+vend. Renvoyer les trois profils vers la même offre, c'est dire
+l'inverse de ce que le quiz vient de leur dire.
+
+**CE MODULE EST UNE RÉIMPLÉMENTATION, ET JE LE DIS.** Les quatre autres
+modules du labo sont portés à l'octet près, un `cmp` le prouve.
+`lib/bonus/offers.ts` ne peut pas l'être : il parle anglais
+(`BonusOffer.promise`) et tout `lib/generateurs/` parle français. J'ai
+d'abord tenté un pont, et il tenait sur un `as unknown as` entre deux
+formes DIFFÉRENTES, c'est à dire un mensonge que le compilateur ne
+pouvait plus contredire (règle du 7 août). Il n'y a donc qu'UNE forme, en
+français, et c'est le COMPORTEMENT qui est figé :
+`tests/logic/offres-par-profil.test.mts` rejoue les cas de son
+`bonus-offers.test.mts` un par un.
+
+**Quatre choses à ne pas défaire :**
+
+1. **Le plan est posé AVANT les offres** (Béné, Atelier, 5 août : "c'est
+   ce que reçoit chaque profil qui doit aller en premier"). Ce n'est pas
+   qu'une question de logique : ce choix décide si les pastilles de
+   profils existent dans les cartes d'offre, donc elles apparaissent
+   APRÈS lui, dans le sens de lecture.
+2. **Trois valeurs pour le plan, pas deux réglages.** "Un bonus ou
+   plusieurs ?" et "une offre ou plusieurs ?" feraient quatre
+   combinaisons dont une est INCOHÉRENTE : un bonus commun qui devrait
+   mener vers trois offres. La quatrième est impossible par
+   construction.
+3. **La clé d'un contenu décliné porte le PROFIL** (`contenu-1:2`).
+   Sans lui, écrire le 2e profil écrase le 1er, et elle ne s'en aperçoit
+   qu'en rouvrant. Et un dossier décliné n'est "Prêt" que quand TOUS ses
+   profils sont écrits : le dire dès le premier ferait croire le bonus
+   terminé alors qu'il en manque trois.
+4. **Le serveur REFUSE une couverture incomplète** (`couverture_offres`),
+   il ne devine pas. L'écran prévient déjà, mais un bonus écrit pour un
+   profil qui ne mène nulle part fait travailler la créatrice pour rien.
+   Une offre INUTILISÉE, elle, ne bloque pas : c'est presque toujours
+   une case oubliée, pas une faute.
+
+**Et le déclenchement part dans le PROMPT**, pas seulement à l'écran : à
+la fin du quiz le bonus prolonge un résultat qu'on vient de lire ; après
+un partage il récompense un geste, donc il doit valoir le geste. Le
+taire laisse le modèle écrire pour le cas moyen.
+
+**Ce qui reste différent, et c'est assumé :** le plan et le déclencheur
+sont gatés sur `estBonus`. "Quand vas-tu envoyer ce bonus ?" ne veut
+rien dire pour une séquence d'emails ou pour de la promo, et le labo de
+l'Atelier EST le bonus. C'est un PARAMÈTRE du générateur, jamais déduit
+de la présence d'une offre.
+
+Test : `tests/logic/offres-par-profil.test.mts`, vérifié en rejouant la
+version d'avant (8 tests rougissent).
+
 ### 4. LES CONTENUS SE RETROUVENT
 
 "Il faut aussi que les users retrouvent leurs créations dans
