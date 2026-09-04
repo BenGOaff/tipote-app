@@ -87,7 +87,11 @@ import {
   type Piste,
 } from "@/lib/generateurs/blocs";
 import { passeParLesPistes } from "@/lib/generateurs/sequences";
-import { MAX_TRANCHES, longueurDuMorceau } from "@/lib/generateurs/longueurSortie";
+import {
+  MAX_TRANCHES,
+  couperPourReprendre,
+  longueurDuMorceau,
+} from "@/lib/generateurs/longueurSortie";
 import { rangerMorceau } from "@/lib/generateurs/contenusStore";
 import {
   FORMATS_OFFRE,
@@ -99,6 +103,7 @@ import {
 import { construireBriefQuiz, type BriefQuiz } from "@/lib/generateurs/briefQuiz";
 import { SOCLE_GENERATEURS } from "@/lib/prompts/generateurs/socle";
 import {
+  CONSIGNE_DE_SUITE,
   consigneDuQuiz,
   consignePistes,
   consigneUnePisteDePlus,
@@ -413,16 +418,16 @@ export async function POST(req: NextRequest) {
     message: string,
     maxTokens: number,
     /**
-     * LE TEXTE DÉJÀ ÉCRIT, quand on demande la SUITE.
+     * LA SUITE : le texte déjà écrit, quand une tranche n'a pas suffi.
      *
-     * Posé en dernier message `assistant`, le modèle REPREND là où ça
-     * s'arrête au lieu de recommencer. C'est ce qui permet de rendre un
-     * contenu plus long qu'une tranche sans le couper ni le jeter.
-     *
-     * L'API refuse un prefill qui finit par une espace : d'où le
-     * `trimEnd` chez l'appelant.
+     * IL PART DANS LE MESSAGE, JAMAIS EN PREFILL ASSISTANT. Le prefill
+     * (reposer le texte en dernier message `assistant` pour que le
+     * modèle continue au caractère près) est le réflexe, et il répond
+     * **400 sur `claude-sonnet-4-6`**, qui est le modèle des
+     * générateurs : il est retiré de toute la famille 4.6+ et des
+     * modèles 5. Chaque suite aurait échoué en disant "refusé".
      */
-    prefill?: string,
+    suite?: string,
   ): Promise<Sortie> {
     let res: Response;
     try {
@@ -486,12 +491,12 @@ export async function POST(req: NextRequest) {
               },
               { type: "text", text: variable },
             ],
-            messages: prefill
-              ? [
-                  { role: "user", content: message },
-                  { role: "assistant", content: prefill },
-                ]
-              : [{ role: "user", content: message }],
+            messages: [
+              {
+                role: "user",
+                content: suite ? `${message}\n\n${CONSIGNE_DE_SUITE}\n\n${suite}` : message,
+              },
+            ],
           }),
         ),
         signal: AbortSignal.timeout(Math.max(1_000, budgetLeft())),
@@ -533,11 +538,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ON NE ROGNE PAS UNE SUITE. Sur une continuation, le modèle rend
-    // souvent le saut de ligne qui ouvre le paragraphe suivant : le
-    // `trim` le mangerait et recollerait "...fin de phrase.## Titre".
-    const assemble = (data?.content ?? []).map((c) => c.text ?? "").join("");
-    const brut = prefill ? assemble.replace(/\s+$/, "") : assemble.trim();
+    const brut = (data?.content ?? []).map((c) => c.text ?? "").join("").trim();
     if (!brut) {
       console.error("[generateurs] reponse vide", data?.stop_reason ?? "");
       return { ok: false, failure: "empty" };
@@ -551,9 +552,9 @@ export async function POST(req: NextRequest) {
     variable: string,
     message: string,
     maxTokens: number,
-    prefill?: string,
+    suite?: string,
   ): Promise<Sortie> {
-    let out = await appelUnique(fixe, variable, message, maxTokens, prefill);
+    let out = await appelUnique(fixe, variable, message, maxTokens, suite);
     for (let attempt = 1; attempt < MAX_ATTEMPTS; attempt++) {
       if (out.ok || !isRetryable(out.failure)) return out;
       const wait = retryDelayMs(attempt, out.retryAfter);
@@ -562,7 +563,7 @@ export async function POST(req: NextRequest) {
       if (budgetLeft() < wait + 45_000) return out;
       console.warn("[generateurs] sature, reprise dans", wait, "ms");
       await new Promise((r) => setTimeout(r, wait));
-      out = await appelUnique(fixe, variable, message, maxTokens, prefill);
+      out = await appelUnique(fixe, variable, message, maxTokens, suite);
     }
     return out;
   }
@@ -768,6 +769,9 @@ export async function POST(req: NextRequest) {
   // repayé.
   const dejaEcrit = (input.suiteDe ?? "").replace(/\s+$/, "");
   let texte = dejaEcrit;
+  // Avec quoi recoller la prochaine tranche : un saut de paragraphe
+  // quand on a reculé jusqu'à un paragraphe, une espace sinon.
+  let jointure = dejaEcrit ? couperPourReprendre(dejaEcrit).joint : "\n\n";
   let complet = false;
 
   for (let tranche = 0; tranche < MAX_TRANCHES; tranche++) {
@@ -785,11 +789,21 @@ export async function POST(req: NextRequest) {
       if (!texte) return refus(out.failure);
       break;
     }
-    texte += out.texte;
     if (!out.tronque) {
+      texte = texte ? `${texte}${jointure}${out.texte}` : out.texte;
       complet = true;
       break;
     }
+    // ── ON RECULE JUSQU'À UNE FRONTIÈRE PROPRE ──
+    //
+    // La tranche s'est arrêtée où le plafond tombe, donc souvent au
+    // milieu d'un mot. Sans prefill (interdit sur ce modèle), la suite
+    // ne peut pas reprendre là : on ramène le texte au dernier
+    // paragraphe, et ces quelques lignes sont réécrites par la suite.
+    // Rien n'est perdu, la couture est propre.
+    const coupe = couperPourReprendre(texte ? `${texte}${jointure}${out.texte}` : out.texte);
+    texte = coupe.garde;
+    jointure = coupe.joint;
     // Une tranche de plus dans la MÊME requête seulement s'il reste de
     // quoi l'écrire : sinon elle sortirait vide, et c'est l'écran qui
     // enchaîne, sans rien perdre.

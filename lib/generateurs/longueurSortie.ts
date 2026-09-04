@@ -36,6 +36,23 @@
 // et un contenu de 20000 mots sort en 20000 mots : il prend juste
 // plusieurs tranches.
 //
+// -- COMMENT ON REPREND, ET POURQUOI PAS PAR UN PREFILL ---------------
+//
+// Le réflexe est de reposer le texte déjà écrit en dernier message
+// `assistant` (le "prefill") : le modèle continue alors au caractère
+// près. C'est ce que j'avais écrit, et **ça ne marche pas ici** :
+//
+//   les générateurs tournent sur `claude-sonnet-4-6`, et le prefill
+//   d'un message assistant y répond 400 (il est retiré de toute la
+//   famille 4.6+ et des modèles 5). Chaque suite aurait donc échoué,
+//   et l'écran aurait dit "la demande a été refusée" sans plus.
+//
+// La suite passe donc par le MESSAGE, avec le texte déjà écrit et la
+// consigne de reprendre sans rien répéter. Et comme un nouveau tour ne
+// peut pas reprendre proprement au milieu d'un mot, on recule d'abord
+// jusqu'à une frontière propre (`couperPourReprendre`) : les quelques
+// mots retirés sont réécrits par la suite, donc rien ne se perd.
+//
 // -- ET LA LONGUEUR N'EST PAS UN BUDGET, C'EST UNE PROMESSE -----------
 //
 // Écrire une fourchette plutôt qu'un maximum est délibéré : un maximum
@@ -124,4 +141,41 @@ export function longueurDuMorceau(id: GenerateurId, bloc: Bloc): LongueurMorceau
  */
 export function consigneDeLongueur(l: LongueurMorceau): string {
   return `LONGUEUR : vise entre ${l.mots.min} et ${l.mots.max} mots. C'est la longueur qui sert le mieux ce morceau, pas un plafond : si le sujet demande plus, tu écris plus et tu vas au bout. Tu ne rends jamais un résumé de ce que tu aurais pu écrire, et tu ne t'arrêtes jamais au milieu d'une phrase ou d'une section.`;
+}
+
+/** Où reprendre, et avec quoi recoller. */
+export interface Reprise {
+  /** Ce qu'on garde : le texte ramené à une frontière propre. */
+  garde: string;
+  /** Ce qu'on insère entre le gardé et la suite. */
+  joint: string;
+}
+
+/**
+ * RAMÈNE UN TEXTE COUPÉ À UNE FRONTIÈRE PROPRE.
+ *
+ * Une tranche s'arrête où le plafond tombe, donc souvent au milieu d'un
+ * mot. Sans prefill, le modèle ne peut pas reprendre là : on recule
+ * jusqu'au dernier paragraphe, sinon jusqu'à la dernière phrase finie.
+ *
+ * CE QU'ON RETIRE N'EST PAS PERDU : c'est la suite qui le réécrit, et
+ * elle a tout le texte sous les yeux. On préfère réécrire trois lignes
+ * que livrer une couture au milieu d'un mot.
+ *
+ * Un texte sans aucune frontière (un seul bloc d'un bout à l'autre) est
+ * gardé ENTIER : une couture imparfaite vaut mieux qu'un texte jeté.
+ */
+export function couperPourReprendre(texte: string): Reprise {
+  const net = texte.replace(/\s+$/, "");
+  const paragraphe = net.lastIndexOf("\n\n");
+  // On exige qu'il reste de la matière avant la coupure : reculer
+  // jusqu'au tout début reviendrait à tout jeter.
+  if (paragraphe > net.length / 4) {
+    return { garde: net.slice(0, paragraphe).replace(/\s+$/, ""), joint: "\n\n" };
+  }
+  const phrase = /^[\s\S]*[.!?…][»"')\]]?(?=\s)/.exec(net);
+  if (phrase && phrase[0].length > net.length / 4) {
+    return { garde: phrase[0].replace(/\s+$/, ""), joint: " " };
+  }
+  return { garde: net, joint: " " };
 }

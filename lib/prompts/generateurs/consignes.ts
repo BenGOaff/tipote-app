@@ -432,3 +432,25 @@ export function messagePourLeModele(args: {
   l.push(args.demande);
   return recoller(l);
 }
+
+/**
+ * LA CONSIGNE DE REPRISE, quand un morceau tient en plusieurs tranches.
+ *
+ * Elle part dans le MESSAGE, avec le texte déjà écrit, et jamais en
+ * prefill assistant : le prefill répond 400 sur `claude-sonnet-4-6`,
+ * qui est le modèle des générateurs.
+ *
+ * Les trois interdictions comptent autant que la demande : sans elles,
+ * le modèle recommence son texte depuis le début (donc on paie deux
+ * fois le même contenu) ou ouvre par "Voici la suite", qui se retrouve
+ * collé au milieu du livrable.
+ */
+export const CONSIGNE_DE_SUITE = [
+  "TU AS DÉJÀ ÉCRIT LE TEXTE CI DESSOUS, et il s'arrête avant la fin.",
+  "Écris la SUITE, et uniquement la suite : elle sera collée directement au bout de ce texte.",
+  "Tu ne répètes rien de ce qui est déjà écrit, tu ne réécris pas le début, tu ne résumes pas ce qui précède.",
+  "Tu n'annonces pas que tu continues : pas de \"voici la suite\", pas de titre d'introduction.",
+  "Tu enchaînes comme si tu n'avais jamais été interrompu, et tu vas jusqu'au bout du morceau.",
+  "",
+  "--- LE TEXTE DÉJÀ ÉCRIT ---",
+].join("\n");
