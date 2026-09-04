@@ -34,7 +34,9 @@ import {
   couvertureDesOffres,
   rendreOffresPourPrompt,
   type Offre,
+  type PlanBonus,
 } from "@/lib/generateurs/offre";
+import { cleMorceau, morceauParProfil } from "@/lib/generateurs/blocs";
 
 const lire = (p: string) => fs.readFileSync(path.join(process.cwd(), p), "utf8");
 const LOCALES = ["fr", "en", "es", "it", "ar", "pt", "pt-BR"];
@@ -252,14 +254,51 @@ describe("L'écran du brief suit celui de l'Atelier", () => {
   });
 
   test("le CONTENU s'écrit une fois par profil, et la clé le porte", () => {
+    // LE COMPORTEMENT, pas l'écriture. Ce test figeait le ternaire du
+    // JSX : il est sorti ROUGE le jour où la règle a quitté le composant
+    // pour un module pur, c'est à dire sur une correction juste. Un
+    // garde-fou qui fige une FORMULATION empêche de corriger la
+    // formulation (leçon du 3 septembre).
+    assert.equal(morceauParProfil("bonus", "par-profil", "contenu"), true);
+    assert.equal(morceauParProfil("bonus", "par-profil-son-offre", "contenu"), true);
+    // Le guide et la remise sont les MÊMES pour tout le monde.
+    assert.equal(morceauParProfil("bonus", "par-profil", "guide"), false);
+    assert.equal(morceauParProfil("bonus", "par-profil", "remise"), false);
+    // Un bonus commun n'a rien à décliner.
+    assert.equal(morceauParProfil("bonus", "commun", "contenu"), false);
+    // Et la mécanique est celle du BONUS : une séquence d'emails choisit
+    // son profil dans les réglages, pas dossier par dossier.
+    assert.equal(morceauParProfil("emails", "par-profil", "email"), false);
+
     // Sans le profil dans la clé, écrire le 2e profil ÉCRASE le 1er, et
     // elle ne s'en aperçoit qu'en rouvrant.
-    assert.match(src, /function parProfil\(p: Piece\): boolean/);
-    assert.match(src, /p\.bloc === "contenu" && bonusParProfil\(plan\)/);
-    assert.match(src, /parProfil\(p\) \? `:\$\{profil\}` : ""/);
+    const k = (plan: PlanBonus, profil: number) =>
+      cleMorceau({ generateur: "bonus", plan, bloc: "contenu", index: 1, profil });
+    assert.notEqual(k("par-profil", 0), k("par-profil", 1));
+    assert.equal(k("commun", 0), k("commun", 1));
+
+    // L'ÉCRAN NE RECOMPOSE PAS : il appelle les deux fonctions. Deux
+    // façons de composer une clé finiraient par ne plus se retrouver, et
+    // un contenu déjà écrit s'afficherait comme jamais généré.
+    assert.match(src, /morceauParProfil\(generateur, plan, p\.bloc\)/);
+    assert.match(src, /cleMorceau\(\{ generateur, plan, bloc: p\.bloc/);
     // Et le sélecteur vit DANS le dossier, comme dans l'Atelier.
     assert.match(src, /t\("profil\.celuiQueTuPrepares"\)/);
     assert.match(src, /t\("profil\.ecrit"\)/);
+  });
+
+  test("le serveur SAIT pour quel profil il écrit", () => {
+    // Il l'ignorait : `demandeUnProfil` répond non pour le bonus (le
+    // profil se choisit dans le dossier, pas dans les réglages), donc le
+    // serveur recevait la même demande pour les trois profils et rendait
+    // trois fois le même texte. Trois clics, trois générations, un seul
+    // contenu.
+    const route = lire("app/api/generateurs/route.ts");
+    assert.match(route, /morceauParProfil\(id, input\.plan, piece\.bloc\)/);
+    assert.match(route, /morceauPourUnProfil[\s\S]{0,220}?profilChoisi = brief\.profils\[i\]/);
+    // Et l'écran le lui envoie, morceau par morceau : `corpsCommun` ne
+    // peut pas le savoir, il ne connaît pas le morceau.
+    assert.match(src, /parProfil\(piece\) \? \{ profilIndex \}/);
   });
 
   test("le serveur REFUSE une couverture incomplète, il ne devine pas", () => {

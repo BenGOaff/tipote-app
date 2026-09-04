@@ -21,6 +21,15 @@
 // liste vide ET dit que ça a échoué, parce que "je n'ai pas pu regarder"
 // et "il n'y a rien" sont deux réponses différentes (règle du 23 août) :
 // un écran vide se lit "je n'ai rien créé", et c'est faux.
+//
+// -- ET LE MÊME REPLI SUR LES TROIS COLONNES DE LA REPRISE -----------
+//
+// `20260903_generateurs_reprise.sql` ajoute `brief`, `pistes` et
+// `piste`. PostgREST rejette l'écriture ENTIÈRE sur une colonne qu'il ne
+// connaît pas : sans repli, un déploiement en avance sur la migration
+// ferait perdre TOUS les contenus générés, en silence, alors que la
+// bibliothèque marchait la veille. On réessaie donc sans elles, et on
+// CRIE : la reprise attend la migration, le contenu non.
 
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
@@ -30,6 +39,7 @@ import {
   type MorceauEnregistre,
 } from "@/lib/generateurs/bibliotheque";
 import type { GenerateurId } from "@/lib/generateurs/catalogue";
+import { assainirProjet, type ProjetEnregistre } from "@/lib/generateurs/projet";
 
 const TABLE = "generateur_contenus";
 
@@ -42,6 +52,13 @@ export interface CleLivraison {
   titre: string;
   profilIndex: number | null;
   profilTitre: string;
+  /**
+   * DE QUOI REPRENDRE LE TRAVAIL : le brief, les pistes proposées, et
+   * celle qui a été choisie. Il est RÉÉCRIT à chaque morceau, et c'est
+   * voulu : c'est le dernier état de l'écran, donc celui qu'on veut
+   * retrouver en rouvrant.
+   */
+  projet: ProjetEnregistre;
 }
 
 /**
@@ -54,6 +71,20 @@ export interface CleLivraison {
  * que personne ne recollerait dans l'ordre.
  */
 const FENETRE_MS = 6 * 60 * 60 * 1000;
+
+/**
+ * Les trois colonnes de la reprise, ASSAINIES avant d'entrer.
+ *
+ * `assainirProjet` borne la FORME et la TAILLE : ces valeurs viennent
+ * d'un corps de requête, et un écran modifié pourrait y mettre n'importe
+ * quoi. Elles ressortiront par `lireContenu`, qui les rassainit à la
+ * lecture : les deux passages sont voulus, l'écriture protège la base et
+ * la lecture protège une ligne écrite avant cette règle.
+ */
+function colonnesProjet(projet: ProjetEnregistre) {
+  const propre = assainirProjet(projet);
+  return { brief: propre.brief, pistes: propre.pistes, piste: propre.piste };
+}
 
 export async function rangerMorceau(
   cle: CleLivraison,
@@ -84,22 +115,48 @@ export async function rangerMorceau(
 
     const existante = lireContenu((data ?? [])[0] as Record<string, unknown> | undefined);
     if (existante) {
-      // Le morceau REMPLACE celui de même bloc et même rang : relancer
-      // l'email 3 doit écraser le 3, pas en ajouter un sixième.
+      // Le morceau REMPLACE celui de même bloc, même rang ET MÊME
+      // PROFIL : relancer l'email 3 doit écraser le 3, pas en ajouter un
+      // sixième. Le profil fait partie de la clé, sinon écrire le
+      // contenu du 2e profil d'un bonus décliné effacerait celui du 1er,
+      // et elle ne s'en apercevrait qu'en rouvrant.
+      const memeProfil = (a: number | null | undefined, b: number | null | undefined) =>
+        (a ?? null) === (b ?? null);
       const morceaux = existante.morceaux.filter(
-        (m) => !(m.bloc === morceau.bloc && m.index === morceau.index),
+        (m) =>
+          !(
+            m.bloc === morceau.bloc &&
+            m.index === morceau.index &&
+            memeProfil(m.profil, morceau.profil)
+          ),
       );
       morceaux.push(morceau);
-      morceaux.sort((a, b) => a.bloc.localeCompare(b.bloc) || a.index - b.index);
+      morceaux.sort(
+        (a, b) =>
+          a.bloc.localeCompare(b.bloc) ||
+          a.index - b.index ||
+          (a.profil ?? -1) - (b.profil ?? -1),
+      );
+      // LE PROJET EST RÉÉCRIT, PAS FUSIONNÉ : elle a pu corriger son
+      // offre entre deux morceaux, et c'est le dernier état qu'elle doit
+      // retrouver.
+      const base = { pieces: morceaux, updated_at: new Date().toISOString() };
       const { error: e2 } = await supabaseAdmin
         .from(TABLE)
-        .update({ pieces: morceaux, updated_at: new Date().toISOString() })
+        .update({ ...base, ...colonnesProjet(cle.projet) })
         .eq("id", existante.id);
-      if (e2) console.error("[generateurs] mise a jour de la livraison :", e2.message);
+      if (e2) {
+        console.error("[generateurs] mise a jour avec la reprise :", e2.message);
+        const { error: e2b } = await supabaseAdmin
+          .from(TABLE)
+          .update(base)
+          .eq("id", existante.id);
+        if (e2b) console.error("[generateurs] mise a jour de la livraison :", e2b.message);
+      }
       return;
     }
 
-    const { error: e3 } = await supabaseAdmin.from(TABLE).insert({
+    const ligne = {
       user_id: cle.userId,
       project_id: cle.projectId,
       quiz_id: cle.quizId,
@@ -109,8 +166,15 @@ export async function rangerMorceau(
       profil_index: cle.profilIndex,
       profil_titre: cle.profilTitre,
       pieces: [morceau],
-    });
-    if (e3) console.error("[generateurs] creation de la livraison :", e3.message);
+    };
+    const { error: e3 } = await supabaseAdmin
+      .from(TABLE)
+      .insert({ ...ligne, ...colonnesProjet(cle.projet) });
+    if (e3) {
+      console.error("[generateurs] creation avec la reprise :", e3.message);
+      const { error: e3b } = await supabaseAdmin.from(TABLE).insert(ligne);
+      if (e3b) console.error("[generateurs] creation de la livraison :", e3b.message);
+    }
   } catch (e) {
     // Un contenu non enregistré est un contenu qu'elle a quand même
     // sous les yeux. Faire echouer la génération pour ça serait perdre
@@ -142,6 +206,37 @@ export async function lireContenus(
   } catch (e) {
     console.error("[generateurs] lecture impossible :", e instanceof Error ? e.message : e);
     return { contenus: [], erreur: true };
+  }
+}
+
+/**
+ * UNE livraison, pour la reprendre.
+ *
+ * LE FILTRE PAR PERSONNE EST DANS LA REQUÊTE, pas dans un `if` au
+ * dessus : c'est lui qui empêche de rouvrir le travail de quelqu'un
+ * d'autre avec un identifiant deviné. Et on ne distingue pas "ça
+ * n'existe pas" de "ce n'est pas à toi" : le dire révélerait qu'un
+ * contenu existe.
+ */
+export async function lireContenuParId(
+  userId: string,
+  id: string,
+): Promise<ContenuGenere | null> {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from(TABLE)
+      .select("*")
+      .eq("id", id)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (error) {
+      console.error("[generateurs] lecture d'une livraison :", error.message);
+      return null;
+    }
+    return lireContenu(data as Record<string, unknown> | null);
+  } catch (e) {
+    console.error("[generateurs] lecture impossible :", e instanceof Error ? e.message : e);
+    return null;
   }
 }
 

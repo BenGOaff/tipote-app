@@ -7931,8 +7931,10 @@
       "morceaux": "{count, plural, one {# part} other {# parts}}",
       "copier": "Copy everything",
       "supprimer": "Delete",
+      "reprendre": "Resume this content",
       "tronques": "{count, plural, one {# part was cut short} other {# parts were cut short}}",
-      "erreurLecture": "Your library can't be read right now. Nothing is lost, try again in a moment."
+      "erreurLecture": "Your library can't be read right now. Nothing is lost, try again in a moment.",
+      "pasReprenable": "This content was written before we started saving the settings: you can read and copy it, but not resume it."
     },
     "temps": {
       "sonResultat": "Their result",

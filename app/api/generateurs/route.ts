@@ -79,7 +79,13 @@ import {
   demandeUneOffre,
   type GenerateurId,
 } from "@/lib/generateurs/catalogue";
-import { BLOCS, MAX_PIECES, piecesDeLaPiste, type Piste } from "@/lib/generateurs/blocs";
+import {
+  BLOCS,
+  MAX_PIECES,
+  morceauParProfil,
+  piecesDeLaPiste,
+  type Piste,
+} from "@/lib/generateurs/blocs";
 import { passeParLesPistes } from "@/lib/generateurs/sequences";
 import { rangerMorceau } from "@/lib/generateurs/contenusStore";
 import {
@@ -162,6 +168,13 @@ const schema = z.discriminatedUnion("step", [
      * promotion) : là il n'y a pas de piste, il y a une séquence.
      */
     piste: pisteSchema.optional(),
+    /**
+     * TOUTES les pistes proposées, pour pouvoir REPRENDRE le projet
+     * depuis la bibliothèque. Elles ne partent pas au modèle : elles
+     * sont enregistrées avec le morceau, sinon rouvrir un contenu
+     * afficherait une étape des pistes vide et il faudrait les repayer.
+     */
+    pistes: z.array(pisteSchema).max(6).optional(),
     /** Le rang du morceau DANS la piste, 0-based. */
     pieceIndex: z.number().int().min(0).max(19),
   }),
@@ -597,6 +610,21 @@ export async function POST(req: NextRequest) {
   const piece = piste.pieces[input.pieceIndex];
   if (!piece) return refus("piece_inconnue");
 
+  // ── LE BONUS DÉCLINÉ ÉCRIT SON CONTENU POUR UN PROFIL ──
+  //
+  // `demandeUnProfil` répond non pour le bonus, et c'est juste : le
+  // profil ne se choisit pas dans les réglages, il se choisit dans le
+  // DOSSIER, morceau par morceau. Mais le CONTENU d'un bonus décliné
+  // s'écrit une fois par profil, et le serveur l'ignorait : il rendait
+  // trois fois le même texte pendant que l'écran le rangeait sous trois
+  // clés différentes. Trois clics, trois générations, un seul contenu.
+  const morceauPourUnProfil = morceauParProfil(id, input.plan, piece.bloc);
+  if (morceauPourUnProfil) {
+    const i = input.profilIndex ?? -1;
+    profilChoisi = brief.profils[i] ?? null;
+    if (!profilChoisi) return refus("profil_manquant");
+  }
+
   const cout = coutMorceau(piece.bloc);
   if (!(await soldeSuffisant(cout))) return refus("credits", { requis: cout });
 
@@ -635,6 +663,12 @@ export async function POST(req: NextRequest) {
   // et le travail était perdu ET FACTURÉ EN CRÉDITS. On enregistre APRÈS
   // chaque morceau et pas à la fin : une génération dure une minute et
   // demie, et l'onglet fermé au septième ne doit pas tout emporter.
+  //
+  // ET ON RANGE DE QUOI REPRENDRE (3 septembre 2026). Sans le brief ni
+  // la piste, la bibliothèque LISAIT le travail sans pouvoir le
+  // continuer : corriger un email ou écrire le contenu du 3e profil
+  // demandait de tout resaisir et de REPAYER les pistes, donc des
+  // crédits.
   await rangerMorceau(
     {
       userId: user.id,
@@ -643,10 +677,27 @@ export async function POST(req: NextRequest) {
       quizId: input.quizId,
       quizTitre: brief.titre,
       titre: piste.titre,
+      // LA LIGNE EST LE PROJET, PAS LE PROFIL, dès que le générateur ne
+      // choisit pas son profil dans ses réglages. Sur un bonus décliné,
+      // mettre le contenu dans une ligne par profil séparerait un guide
+      // de son contenu, et la reprise rouvrirait un projet à moitié. Le
+      // profil vit donc sur le MORCEAU.
       profilIndex: demandeUnProfil(id) ? (input.profilIndex ?? null) : null,
       profilTitre: profilChoisi?.titre ?? "",
+      projet: {
+        brief: { plan: input.plan, declencheur: input.declencheur, offres },
+        pistes: (input.pistes ?? []).map((p) => ({ ...p, tempsParPersonne: "" })),
+        piste: input.piste ? { ...input.piste, tempsParPersonne: "" } : null,
+      },
     },
-    { bloc: piece.bloc, index: piece.index, cle: piece.cle, markdown, tronque: out.tronque },
+    {
+      bloc: piece.bloc,
+      index: piece.index,
+      cle: piece.cle,
+      markdown,
+      tronque: out.tronque,
+      profil: morceauPourUnProfil ? (input.profilIndex ?? null) : null,
+    },
   );
 
   return NextResponse.json({

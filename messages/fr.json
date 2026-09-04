@@ -7931,8 +7931,10 @@
       "morceaux": "{count, plural, one {# morceau} other {# morceaux}}",
       "copier": "Tout copier",
       "supprimer": "Supprimer",
+      "reprendre": "Reprendre ce contenu",
       "tronques": "{count, plural, one {# morceau a été coupé en route} other {# morceaux ont été coupés en route}}",
-      "erreurLecture": "Impossible de lire ta bibliothèque pour le moment. Tes contenus ne sont pas perdus, réessaie dans un instant."
+      "erreurLecture": "Impossible de lire ta bibliothèque pour le moment. Tes contenus ne sont pas perdus, réessaie dans un instant.",
+      "pasReprenable": "Ce contenu a été écrit avant qu'on garde les réglages : tu peux le lire et le copier, mais pas le reprendre."
     },
     "temps": {
       "sonResultat": "Son résultat",

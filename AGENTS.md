@@ -3724,14 +3724,12 @@ elle que ton bonus doit ramener", "Autorise les pop-ups", "La copie a
   une RAISON parmi neuf, traduite en 7 langues, qui dit quoi faire
   (saturé, trop long, hors quota, pas configuré...). C'est la règle du
   3 août, et reculer là dessus serait une régression.
-- **la BIBLIOTHÈQUE ne rouvre pas un projet.** Chez lui, "Tes bonus" est
-  le premier écran dès qu'un bonus existe, et rouvrir restaure le brief,
-  les pistes, la piste choisie et les blocs, en atterrissant à la bonne
-  étape. Ici `/generateurs/mes-contenus` LIT les contenus, elle ne
-  reprend pas le travail : `generateur_contenus` stocke les morceaux
-  mais ni le brief (plan, déclencheur, offres) ni la piste. C'est le
-  seul écart qui demande une MIGRATION, et il est nommé ici pour ne pas
-  être redécouvert.
+- 🚨 **"la BIBLIOTHÈQUE ne rouvre pas un projet" A ÉTÉ CORRIGÉ le
+  3 septembre**, et cette ligne le disait encore. C'était le dernier
+  écart avec son labo, et il demandait une migration : voir la section
+  suivante. Une note d'état des lieux se relit quand on corrige ce
+  qu'elle décrit, sinon le prochain passage agit sur une dette déjà
+  soldée (leçon du 31 août).
 
 **LA LEÇON DE MÉTHODE, et elle vaut pour les prochains portages :**
 comparer deux écrans à l'oeil rate ce qui n'est PAS là. Relever les
@@ -3748,6 +3746,101 @@ correction juste. Le second regardait LIGNE PAR LIGNE, donc il
 rougissait sur un garde posé à la ligne d'au dessus. Un test qui mesure
 la présence ou l'ORDRE de quelque chose dans un fichier retire d'abord
 les commentaires, sinon il tombe sur sa propre explication.
+
+**Et le lendemain, une TROISIÈME fois, dans le même fichier :** le test
+du contenu par profil figeait le ternaire du JSX, donc il est sorti
+rouge le jour où la règle a quitté le composant pour un module pur,
+c'est à dire sur une correction juste. **Un garde-fou qui fige une
+FORMULATION empêche de corriger la formulation** : il vise maintenant le
+COMPORTEMENT (`morceauParProfil` appelée avec ses cas), et il n'exige de
+la source que le fait qu'elle DÉLÈGUE.
+
+### ON REPREND UN CONTENU LÀ OÙ ON L'A LAISSÉ (Béné, 3 septembre 2026)
+
+"Oui fais la migration." C'était le dernier écart avec le labo de
+l'Atelier, et le plus cher des trois.
+
+`generateur_contenus` gardait les MORCEAUX depuis le 2 septembre, donc
+plus rien n'était perdu à un rafraîchissement. Mais elle ne gardait pas
+de quoi CONTINUER : ni le brief (le plan, le déclenchement, les offres),
+ni les pistes proposées, ni celle qui a été choisie. La bibliothèque
+LISAIT le travail sans pouvoir le reprendre. Corriger un email, en
+générer un sixième, ou écrire le contenu du 3e profil demandait de tout
+resaisir et de REPAYER les pistes.
+
+**On ÉTEND la table, on n'en ajoute pas une deuxième.** Une deuxième
+donnerait DEUX bibliothèques pour la même chose, et c'est la divergence
+que ces dépôts paient en boucle depuis juin (deux files de tickets, deux
+registres d'affiliés, deux rendus markdown). La ligne EST le projet :
+elle porte déjà le générateur, le quiz, son titre recopié et les
+morceaux.
+
+**LE PROFIL VIT SUR LE MORCEAU, PAS SUR LA LIGNE.** Le contenu d'un
+bonus décliné s'écrit une fois par profil, alors que son mode d'emploi
+et ses textes de remise sont les mêmes pour tout le monde. Mettre le
+bonus dans une ligne PAR PROFIL séparerait un guide de son contenu, et
+la reprise rouvrirait un projet à moitié. C'est un PARAMÈTRE du
+générateur (`demandeUnProfil` pour la ligne, `morceauParProfil` pour le
+morceau), jamais une déduction.
+
+### ET LE SERVEUR NE SAVAIT PAS POUR QUI IL ÉCRIVAIT
+
+Trouvé en branchant la reprise, et c'est un vrai bug d'argent.
+
+La règle "le contenu d'un bonus décliné s'écrit une fois par profil"
+vivait DANS `GenerateurClient`, en une ligne de JSX. L'écran la
+connaissait donc, et le serveur non : `corpsCommun` n'envoyait
+`profilIndex` que pour les emails. Le serveur recevait la même demande
+pour les trois profils, rendait **trois fois le même texte**, et l'écran
+le rangeait sous trois clés différentes. Trois clics, trois générations
+facturées, un seul contenu.
+
+**Règle : `morceauParProfil(generateur, plan, bloc)` et
+`cleMorceau({...})` vivent dans `lib/generateurs/blocs.ts`**, et les
+DEUX côtés les appellent : l'écran quand il range ce qu'il vient
+d'écrire, le serveur quand il rouvre un contenu. Deux façons de composer
+une clé finiraient par ne plus se retrouver, et un contenu déjà écrit
+s'afficherait comme jamais généré, donc se regénérerait.
+
+C'est la règle du 1er août, dans sa forme la plus littérale : une règle
+enfermée dans un composant n'est pas testable, donc elle n'est pas
+testée.
+
+### QUATRE CHOSES À NE PAS DÉFAIRE
+
+1. **Le repli si la migration n'est pas encore passée.** PostgREST
+   rejette l'écriture ENTIÈRE sur une colonne qu'il ne connaît pas :
+   sans repli, un déploiement en avance ferait perdre TOUS les contenus
+   générés, en silence, alors que la bibliothèque marchait la veille
+   (drame `quiz_events.meta`). On réessaie sans les trois colonnes, et
+   on CRIE : la reprise attend la migration, le contenu non.
+2. **Une ligne d'AVANT la migration ne se reprend pas, et l'écran le
+   DIT.** `brief` vaut `{}` par défaut, donc `projet` vaut `null`, donc
+   `peutEtreRepris` répond non. On ne fabrique pas un brief vide qui
+   rouvrirait un écran sans rien dedans, et le bouton absent se justifie
+   sur la ligne (règle du 22 août).
+3. **Le JSONB est LIBRE, donc le contrôle est dans `projet.ts`.**
+   Ajouter un champ au brief ne doit pas demander une migration (même
+   choix que `bonus_projects` chez lui). On borne la FORME et la TAILLE,
+   jamais la liste des champs, et `assainirProjet` ne lève JAMAIS : une
+   valeur illisible en base ne doit pas rendre un contenu impossible à
+   rouvrir.
+4. **On atterrit sur les CONTENUS, et le fil des étapes reste
+   reclicable.** Ouvrir sur l'étape du projet obligerait à retraverser
+   trois écrans déjà remplis pour corriger un mot.
+
+**Le filtre par personne est DANS la requête** de `lireContenuParId`,
+pas dans un `if` au dessus : c'est lui qui empêche de rouvrir le travail
+de quelqu'un d'autre avec un identifiant deviné. Et on ne distingue pas
+"ça n'existe pas" de "ce n'est pas à toi".
+
+🚨 Migration : `supabase/migrations/20260903_generateurs_reprise.sql`,
+**sur les DEUX Supabase** (Tiquiz et Tipote).
+
+Test : `tests/logic/reprise-generateurs.test.mts`, vérifié en rejouant
+deux versions d'avant (le repli retiré, le brief vide accepté : les deux
+rougissent), plus le cas "le serveur SAIT pour quel profil il écrit" de
+`offres-par-profil.test.mts`.
 
 ### 4. LES CONTENUS SE RETROUVENT
 

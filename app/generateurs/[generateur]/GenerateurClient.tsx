@@ -77,6 +77,7 @@ import {
   suivante,
   type Etape,
 } from "@/lib/generateurs/parcours";
+import { cleMorceau, morceauParProfil } from "@/lib/generateurs/blocs";
 import type { Bloc, Piece, Piste } from "@/lib/generateurs/blocs";
 import { avancement } from "@/lib/generateurs/avancement";
 import { RichTextEdit } from "@/components/ui/rich-text-edit";
@@ -111,6 +112,30 @@ export interface ProjetAffiche {
   profils: { titre: string; description: string }[];
   /** L'étape de partage est-elle activée sur ce quiz ? */
   partageActive: boolean;
+}
+
+/**
+ * DE QUOI REPRENDRE UN CONTENU DÉJÀ COMMENCÉ.
+ *
+ * Béné, 3 septembre 2026 : "oui fais la migration." La bibliothèque
+ * LISAIT le travail sans pouvoir le continuer : corriger un email,
+ * écrire le contenu du 3e profil ou générer une pièce de plus demandait
+ * de tout resaisir et de REPAYER les pistes.
+ *
+ * Les clés de `contenus` sont construites CÔTÉ SERVEUR par la même
+ * règle que l'écran (`morceauParProfil`) : deux façons de composer une
+ * clé finiraient par ne plus se retrouver, et un contenu écrit
+ * s'afficherait comme jamais généré.
+ */
+export interface RepriseContenu {
+  projetId: string;
+  plan: PlanBonus;
+  declencheur: Declencheur;
+  offres: Offre[];
+  pistes: Piste[];
+  piste: Piste | null;
+  profilIndex: number | null;
+  contenus: Record<string, { markdown: string; tronque: boolean }>;
 }
 
 /**
@@ -171,6 +196,7 @@ export default function GenerateurClient({
   autorise,
   lienPlans,
   credits = null,
+  reprise = null,
 }: {
   userEmail: string;
   generateur: GenerateurId;
@@ -179,6 +205,8 @@ export default function GenerateurClient({
   /** Où mène "Voir les formules" (l'onglet diffère selon le dépôt). */
   lienPlans: string;
   credits?: CreditsAffiches | null;
+  /** Un contenu de la bibliothèque à reprendre, ou `null` (le cas normal). */
+  reprise?: RepriseContenu | null;
 }) {
   const t = useTranslations("generateurs");
 
@@ -193,17 +221,28 @@ export default function GenerateurClient({
     if (credits && Number.isFinite(n) && n > 0) setSolde((s) => Math.max(0, (s ?? 0) - n));
   }
 
-  const [projetId, setProjetId] = useState<string>("");
-  const [profilIndex, setProfilIndex] = useState<number>(0);
+  // TOUS LES ÉTATS DU BRIEF PARTENT DE LA REPRISE QUAND IL Y EN A UNE.
+  // Les remplir dans un effet APRÈS le montage ferait clignoter l'écran
+  // sur l'étape du projet avant de sauter aux contenus, et un projet
+  // choisi par un effet est un projet qu'un clic malheureux peut
+  // reperdre.
+  const [projetId, setProjetId] = useState<string>(reprise?.projetId ?? "");
+  const [profilIndex, setProfilIndex] = useState<number>(reprise?.profilIndex ?? 0);
   // LE BRIEF DU BONUS, comme dans le labo de l'Atelier : ce que reçoit
   // chaque profil, l'offre (ou les offres), et QUAND le bonus est remis.
   const [plan, setPlan] = useState<PlanBonus>(
     // Un quiz à plusieurs profils gagne presque toujours à décliner son
     // bonus : c'est le défaut là bas, elle peut simplifier en un clic.
-    "commun",
+    reprise?.plan ?? "commun",
   );
-  const [declencheur, setDeclencheur] = useState<Declencheur>("completion");
-  const [offres, setOffres] = useState<Offre[]>([{ ...OFFRE_VIDE }]);
+  const [declencheur, setDeclencheur] = useState<Declencheur>(
+    reprise?.declencheur ?? "completion",
+  );
+  const [offres, setOffres] = useState<Offre[]>(
+    // UNE OFFRE VIDE PAR DÉFAUT, jamais un tableau vide : l'écran rend
+    // une carte par offre, et zéro carte ne laisserait rien à remplir.
+    reprise?.offres.length ? reprise.offres : [{ ...OFFRE_VIDE }],
+  );
 
   function majOffre(i: number, patch: Partial<Offre>) {
     setOffres((l) => l.map((o, j) => (j === i ? { ...o, ...patch } : o)));
@@ -230,12 +269,12 @@ export default function GenerateurClient({
   }
 
   const [etat, setEtat] = useState<Etat>("repos");
-  const [pistes, setPistes] = useState<Piste[]>([]);
+  const [pistes, setPistes] = useState<Piste[]>(reprise?.pistes ?? []);
   const [recommandee, setRecommandee] = useState(0);
   const [pourquoiRecommandee, setPourquoiRecommandee] = useState("");
-  const [choisie, setChoisie] = useState<Piste | null>(null);
+  const [choisie, setChoisie] = useState<Piste | null>(reprise?.piste ?? null);
   const [contenus, setContenus] = useState<Record<string, { markdown: string; tronque: boolean }>>(
-    {},
+    reprise?.contenus ?? {},
   );
   const [enCours, setEnCours] = useState<string | null>(null);
   // LE DOSSIER OUVERT, ET RIEN D'AUTRE À L'ÉCRAN.
@@ -311,7 +350,11 @@ export default function GenerateurClient({
   // mêmes dépendent du générateur : la promo ne demande ni profil ni
   // offre, et seuls les BONUS passent par des pistes (`sequences.ts`).
   const parcours = useMemo(() => etapesDuParcours(generateur), [generateur]);
-  const [etape, setEtape] = useState<Etape>(parcours[0]!);
+  // ON ATTERRIT SUR LES CONTENUS QUAND ON REPREND : c'est là que le
+  // travail est, et le fil des étapes reste reclicable pour remonter au
+  // brief. Ouvrir sur l'étape du projet obligerait à retraverser trois
+  // écrans déjà remplis avant de corriger un mot.
+  const [etape, setEtape] = useState<Etape>(reprise ? "contenus" : parcours[0]!);
   const etatParcours = {
     projetPret: Boolean(projet) && !blocage,
     profilPret: !veutProfil || Boolean(projet?.profils[profilIndex]),
@@ -434,13 +477,14 @@ export default function GenerateurClient({
   /**
    * CE MORCEAU S'ÉCRIT-IL UNE FOIS PAR PROFIL ?
    *
-   * Seul le CONTENU du bonus, et seulement quand le bonus est décliné :
-   * son mode d'emploi et ses textes de remise sont les mêmes pour tout
-   * le monde. C'est exactement le `perResult && block === "content"` du
-   * labo de l'Atelier.
+   * La règle vit dans `morceauParProfil` et pas ici : l'écran la
+   * connaissait, le SERVEUR non, donc il écrivait le même contenu pour
+   * les trois profils pendant que l'écran les rangeait sous trois clés
+   * différentes. Une règle recopiée dans un composant n'est pas
+   * testable, donc elle n'est pas testée.
    */
   function parProfil(p: Piece): boolean {
-    return estBonus && p.bloc === "contenu" && bonusParProfil(plan);
+    return morceauParProfil(generateur, plan, p.bloc);
   }
 
   /**
@@ -452,7 +496,7 @@ export default function GenerateurClient({
    * le `content:${i}` de l'Atelier.
    */
   const cle = (p: Piece, profil = profilIndex) =>
-    `${p.bloc}-${p.index}${parProfil(p) ? `:${profil}` : ""}`;
+    cleMorceau({ generateur, plan, bloc: p.bloc, index: p.index, profil });
 
   async function ecrireUn(piste: Piste, pieceIndex: number): Promise<boolean> {
     const piece = piste.pieces[pieceIndex];
@@ -467,6 +511,16 @@ export default function GenerateurClient({
           ...corpsCommun(),
           piste,
           pieceIndex,
+          // LE PROFIL PART QUAND LE MORCEAU EN A UN. `corpsCommun` ne
+          // peut pas le savoir : il ne connaît pas le morceau, et sur un
+          // bonus décliné c'est le morceau qui décide (le contenu oui,
+          // le guide et la remise non).
+          ...(parProfil(piece) ? { profilIndex } : {}),
+          // LES PISTES PARTENT POUR ÊTRE ENREGISTRÉES, pas pour le
+          // modèle : sans elles, reprendre un projet depuis la
+          // bibliothèque rouvrirait l'étape des pistes VIDE, donc il
+          // faudrait les repayer pour corriger un mot.
+          ...(pistes.length > 0 ? { pistes } : {}),
         }),
       });
       const data = await res.json().catch(() => null);

@@ -26,6 +26,20 @@
 
 import { GENERATEURS, type GenerateurId } from "@/lib/generateurs/catalogue";
 import type { Bloc } from "@/lib/generateurs/blocs";
+import { assainirProjet, type ProjetEnregistre } from "@/lib/generateurs/projet";
+
+/**
+ * Cette ligne porte-t-elle un brief ?
+ *
+ * Un objet VIDE (`{}`, le défaut de la colonne) n'en est pas un : c'est
+ * une ligne d'avant la migration, ou une ligne dont l'écriture du brief
+ * a échoué. Les deux se traitent pareil, on ne reprend pas.
+ */
+function aUnBrief(ligne: Record<string, unknown>): boolean {
+  const b = ligne.brief;
+  if (!b || typeof b !== "object") return false;
+  return Object.keys(b as Record<string, unknown>).length > 0;
+}
 
 /** Un morceau enregistré. */
 export interface MorceauEnregistre {
@@ -36,6 +50,16 @@ export interface MorceauEnregistre {
   markdown: string;
   /** Le modèle a été coupé : l'écran le dit au lieu de faire croire à un texte fini. */
   tronque?: boolean;
+  /**
+   * LE PROFIL POUR LEQUEL CE MORCEAU A ÉTÉ ÉCRIT, ou `null`.
+   *
+   * Le contenu d'un bonus décliné s'écrit une fois PAR profil, alors que
+   * son mode d'emploi et ses textes de remise sont les mêmes pour tout
+   * le monde. Le profil vit donc sur le MORCEAU, pas sur la ligne :
+   * mettre le bonus dans une ligne par profil séparerait un guide de
+   * son contenu, et la reprise rouvrirait un projet à moitié.
+   */
+  profil?: number | null;
 }
 
 /** Une livraison : un générateur, un projet, et ses morceaux. */
@@ -49,6 +73,12 @@ export interface ContenuGenere {
   profilIndex: number | null;
   profilTitre: string;
   morceaux: MorceauEnregistre[];
+  /**
+   * DE QUOI REPRENDRE LE TRAVAIL, ou `null` sur une ligne écrite avant
+   * la migration du 3 septembre. L'écran le DIT au lieu de proposer un
+   * bouton qui échouerait.
+   */
+  projet: ProjetEnregistre | null;
   creeLe: string;
   majLe: string;
 }
@@ -71,6 +101,8 @@ export function lireContenu(ligne: Record<string, unknown> | null | undefined): 
       cle: texte(m?.cle) || undefined,
       markdown: String(m?.markdown ?? ""),
       tronque: m?.tronque === true,
+      profil:
+        m?.profil === null || m?.profil === undefined ? null : Number(m.profil),
     }))
     // Un morceau vide n'a rien à montrer, et il ferait croire à un
     // contenu incomplet alors qu'il n'a simplement jamais été écrit.
@@ -88,6 +120,14 @@ export function lireContenu(ligne: Record<string, unknown> | null | undefined): 
         : Number(ligne.profil_index),
     profilTitre: texte(ligne.profil_titre),
     morceaux,
+    // UNE LIGNE D'AVANT LA MIGRATION N'A PAS DE BRIEF : `projet` vaut
+    // `null`, et `peutEtreRepris` répond non. On ne fabrique pas un
+    // brief vide qui rouvrirait un écran sans rien dedans.
+    projet: aUnBrief(ligne) ? assainirProjet({
+      brief: ligne.brief,
+      pistes: ligne.pistes,
+      piste: ligne.piste,
+    }) : null,
     creeLe: texte(ligne.created_at),
     majLe: texte(ligne.updated_at) || texte(ligne.created_at),
   };

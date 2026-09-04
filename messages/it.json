@@ -7931,8 +7931,10 @@
       "morceaux": "{count, plural, one {# parte} other {# parti}}",
       "copier": "Copia tutto",
       "supprimer": "Elimina",
+      "reprendre": "Riprendi questo contenuto",
       "tronques": "{count, plural, one {# parte è stata troncata} other {# parti sono state troncate}}",
-      "erreurLecture": "Non riesco a leggere la tua libreria adesso. Niente è perso, riprova tra poco."
+      "erreurLecture": "Non riesco a leggere la tua libreria adesso. Niente è perso, riprova tra poco.",
+      "pasReprenable": "Questo contenuto è stato scritto prima che salvassimo le impostazioni: puoi leggerlo e copiarlo, ma non riprenderlo."
     },
     "temps": {
       "sonResultat": "Il suo risultato",
