@@ -79,16 +79,30 @@ import {
   demandeUneOffre,
   type GenerateurId,
 } from "@/lib/generateurs/catalogue";
-import { BLOCS, MAX_PIECES, piecesDeLaPiste, type Piste } from "@/lib/generateurs/blocs";
+import {
+  BLOCS,
+  MAX_PIECES,
+  morceauParProfil,
+  piecesDeLaPiste,
+  type Piste,
+} from "@/lib/generateurs/blocs";
 import { passeParLesPistes } from "@/lib/generateurs/sequences";
 import { rangerMorceau } from "@/lib/generateurs/contenusStore";
-import { FORMATS_OFFRE, type Offre } from "@/lib/generateurs/offre";
+import {
+  FORMATS_OFFRE,
+  PLANS_BONUS,
+  DECLENCHEURS,
+  couvertureDesOffres,
+  type Offre,
+} from "@/lib/generateurs/offre";
 import { construireBriefQuiz, type BriefQuiz } from "@/lib/generateurs/briefQuiz";
 import { SOCLE_GENERATEURS } from "@/lib/prompts/generateurs/socle";
 import {
+  consigneDuQuiz,
   consignePistes,
   consigneUnePisteDePlus,
   consigneProduction,
+  lienQuizAutorise,
   messagePourLeModele,
 } from "@/lib/prompts/generateurs/consignes";
 import { cleAnthropic } from "@/lib/ai/cleAnthropic";
@@ -101,6 +115,8 @@ const offreSchema = z.object({
   promesse: z.string().max(600).default(""),
   format: z.enum(FORMATS_OFFRE).default("formation"),
   prix: z.string().max(120).default(""),
+  /** Les profils que CETTE offre sert. Vide hors du plan à offres multiples. */
+  profils: z.array(z.number().int().min(0).max(29)).max(30).default([]),
 });
 
 const pisteSchema = z.object({
@@ -123,7 +139,13 @@ const pisteSchema = z.object({
 const communSchema = {
   generateur: z.enum(GENERATEURS),
   quizId: z.string().uuid(),
-  offre: offreSchema.optional(),
+  /**
+   * LES OFFRES. Plusieurs, une par profil, depuis le 3 septembre 2026
+   * (Béné : "exactement la même chose sur l'atelier et sur tiquiz").
+   */
+  offres: z.array(offreSchema).max(12).optional(),
+  plan: z.enum(PLANS_BONUS).default("commun"),
+  declencheur: z.enum(DECLENCHEURS).default("completion"),
   /** 0-based, dans l'ordre des profils du quiz. */
   profilIndex: z.number().int().min(0).max(29).optional(),
 };
@@ -148,6 +170,13 @@ const schema = z.discriminatedUnion("step", [
      * promotion) : là il n'y a pas de piste, il y a une séquence.
      */
     piste: pisteSchema.optional(),
+    /**
+     * TOUTES les pistes proposées, pour pouvoir REPRENDRE le projet
+     * depuis la bibliothèque. Elles ne partent pas au modèle : elles
+     * sont enregistrées avec le morceau, sinon rouvrir un contenu
+     * afficherait une étape des pistes vide et il faudrait les repayer.
+     */
+    pistes: z.array(pisteSchema).max(6).optional(),
     /** Le rang du morceau DANS la piste, 0-based. */
     pieceIndex: z.number().int().min(0).max(19),
   }),
@@ -327,11 +356,30 @@ export async function POST(req: NextRequest) {
   // C'est la SEULE chose qu'elle saisit, et sans elle le bonus et la
   // séquence mènent nulle part : le modèle inventerait une offre qui
   // n'existe pas, et elle publierait une promesse qu'elle ne tient pas.
-  let offre: Offre | null = null;
+  let offres: Offre[] = [];
   if (demandeUneOffre(id)) {
-    const brute = input.offre;
-    if (!brute || !brute.promesse.trim()) return refus("offre_manquante");
-    offre = { promesse: brute.promesse, format: brute.format, prix: brute.prix };
+    const brutes = (input.offres ?? []).filter((o) => o.promesse.trim().length > 0);
+    if (brutes.length === 0) return refus("offre_manquante");
+    offres = brutes.map((o) => ({
+      promesse: o.promesse,
+      format: o.format,
+      prix: o.prix,
+      profils: o.profils,
+    }));
+
+    // CHAQUE PROFIL DOIT ÊTRE RELIÉ À UNE OFFRE, ET LE SERVEUR TRANCHE.
+    //
+    // L'écran prévient déjà, mais un bonus écrit pour un profil qui ne
+    // mène nulle part fait travailler la créatrice pour rien : mieux
+    // vaut un refus qui dit quoi corriger. Même geste que l'Atelier
+    // (`analyzeOfferCoverage` puis 409).
+    const couverture = couvertureDesOffres(input.plan, offres, brief.profils.length);
+    if (!couverture.ok) {
+      return refus("couverture_offres", {
+        sansOffre: couverture.sansOffre,
+        enDouble: couverture.enDouble,
+      });
+    }
   }
 
   const model = resolveAnthropicModel(process.env.ANTHROPIC_MODEL, "sonnet");
@@ -346,7 +394,12 @@ export async function POST(req: NextRequest) {
     | { ok: true; texte: string; tronque: boolean }
     | { ok: false; failure: AiFailure; retryAfter?: string | null };
 
-  async function appelUnique(variable: string, message: string, maxTokens: number): Promise<Sortie> {
+  async function appelUnique(
+    fixe: string,
+    variable: string,
+    message: string,
+    maxTokens: number,
+  ): Promise<Sortie> {
     let res: Response;
     try {
       res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -361,14 +414,50 @@ export async function POST(req: NextRequest) {
             model,
             max_tokens: maxTokens,
             temperature: 0.8,
-            // LE SOCLE D'ABORD, MARQUÉ POUR LE CACHE, LA CONSIGNE
-            // ENSUITE. Le cache d'Anthropic est un préfixe EXACT :
-            // inverser les deux blocs ne cacherait plus rien, en
-            // silence et à plein tarif.
+            // ── TROIS BLOCS, DU PLUS STABLE AU MOINS STABLE ──
+            //
+            // Le cache d'Anthropic est un préfixe EXACT : le premier
+            // octet qui change invalide tout ce qui suit. L'ordre n'est
+            // donc pas une préférence de lecture, c'est ce qui décide de
+            // ce qui se met en cache.
+            //
+            //   1. LE SOCLE. Le même pour les trois générateurs, pour
+            //      toutes les créatrices, dans toutes les langues.
+            //      2841 jetons, UNE entrée de cache pour tout le monde.
+            //   2. LA CONSIGNE FIXE. Ce qu'on demande d'écrire, sans un
+            //      seul fait dedans : il y en a 21 en tout (3 blocs du
+            //      bonus, 5 emails, 7 contenus de promo, 3+3 pour les
+            //      pistes). Chacune est la MÊME pour tout le monde.
+            //   3. LA LANGUE ET LE TON. Des règles, mais qui dépendent
+            //      de SON quiz : après le dernier point de cache. Les
+            //      mettre avant multiplierait les entrées par les 100
+            //      langues du catalogue pour gagner 74 jetons.
+            //
+            // Les FAITS (son brief, ses offres, le profil, la piste
+            // qu'elle a choisie, l'adresse de son quiz) vivent dans le
+            // MESSAGE, pas ici. C'est ce qui rend le bloc 2 identique
+            // d'une créatrice à l'autre, donc cachable : avant le
+            // 4 septembre il portait la piste et le profil, donc AUCUNE
+            // des 21 consignes n'était la même deux fois.
+            //
+            // TTL : 5 minutes, le défaut, et c'est un choix. Une lecture
+            // RELANCE le compteur sans rien coûter : dès que deux appels
+            // qui partagent le préfixe partent à moins de 5 minutes
+            // d'écart, l'entrée ne meurt jamais. Le TTL d'une heure
+            // coûte 2x à l'écriture au lieu de 1,25x et n'achète rien
+            // dans ce cas là. Il ne se justifierait que sur un trafic
+            // CREUX (moins d'un appel toutes les 5 minutes) ET avec au
+            // moins 3 lectures par entrée : à mesurer avant de changer,
+            // jamais par principe.
             system: [
               {
                 type: "text",
                 text: SOCLE_GENERATEURS,
+                cache_control: { type: "ephemeral" },
+              },
+              {
+                type: "text",
+                text: fixe,
                 cache_control: { type: "ephemeral" },
               },
               { type: "text", text: variable },
@@ -424,8 +513,13 @@ export async function POST(req: NextRequest) {
   }
 
   /** Le même appel, avec les reprises sur saturation. */
-  async function appeler(variable: string, message: string, maxTokens: number): Promise<Sortie> {
-    let out = await appelUnique(variable, message, maxTokens);
+  async function appeler(
+    fixe: string,
+    variable: string,
+    message: string,
+    maxTokens: number,
+  ): Promise<Sortie> {
+    let out = await appelUnique(fixe, variable, message, maxTokens);
     for (let attempt = 1; attempt < MAX_ATTEMPTS; attempt++) {
       if (out.ok || !isRetryable(out.failure)) return out;
       const wait = retryDelayMs(attempt, out.retryAfter);
@@ -434,7 +528,7 @@ export async function POST(req: NextRequest) {
       if (budgetLeft() < wait + 45_000) return out;
       console.warn("[generateurs] sature, reprise dans", wait, "ms");
       await new Promise((r) => setTimeout(r, wait));
-      out = await appelUnique(variable, message, maxTokens);
+      out = await appelUnique(fixe, variable, message, maxTokens);
     }
     return out;
   }
@@ -482,10 +576,17 @@ export async function POST(req: NextRequest) {
       return refus("credits", { requis: COUT_PISTES });
     }
     const out = await appeler(
-      consignePistes(id, brief),
+      consignePistes(id),
+      consigneDuQuiz(brief),
       messagePourLeModele({
         brief,
-        offre,
+        offres,
+        plan: input.plan,
+        declencheur: input.declencheur,
+        // À L'ÉTAPE DES PISTES ON N'ÉCRIT POUR PERSONNE ENCORE : on
+        // montre la carte complète des offres, pour que le format
+        // proposé tienne pour tous les profils.
+        profilIndex: null,
         demande: "Propose moi les trois pistes maintenant.",
       }),
       2200,
@@ -517,10 +618,17 @@ export async function POST(req: NextRequest) {
       return refus("credits", { requis: COUT_PISTES });
     }
     const out = await appeler(
-      consigneUnePisteDePlus(id, brief, input.connues),
+      // LA PARTIE FIXE EST CELLE DES PISTES, à l'octet près : les deux
+      // étapes partagent donc une seule entrée de cache. Ce qu'elle a
+      // déjà sous les yeux est un FAIT, il part avec le reste.
+      consignePistes(id),
+      [consigneDuQuiz(brief), consigneUnePisteDePlus(id, input.connues)].join("\n\n"),
       messagePourLeModele({
         brief,
-        offre,
+        offres,
+        plan: input.plan,
+        declencheur: input.declencheur,
+        profilIndex: null,
         demande: "Propose moi UNE piste de plus, différente des précédentes.",
       }),
       // 800 et pas 2200 : on rend une piste, pas trois. Le budget de
@@ -549,10 +657,26 @@ export async function POST(req: NextRequest) {
     format: input.piste?.format ?? "",
     punchline: input.piste?.punchline ?? "",
     pourquoi: input.piste?.pourquoi ?? "",
+    tempsParPersonne: "",
     pieces: piecesDeLaPiste(id, input.piste?.pieces),
   };
   const piece = piste.pieces[input.pieceIndex];
   if (!piece) return refus("piece_inconnue");
+
+  // ── LE BONUS DÉCLINÉ ÉCRIT SON CONTENU POUR UN PROFIL ──
+  //
+  // `demandeUnProfil` répond non pour le bonus, et c'est juste : le
+  // profil ne se choisit pas dans les réglages, il se choisit dans le
+  // DOSSIER, morceau par morceau. Mais le CONTENU d'un bonus décliné
+  // s'écrit une fois par profil, et le serveur l'ignorait : il rendait
+  // trois fois le même texte pendant que l'écran le rangeait sous trois
+  // clés différentes. Trois clics, trois générations, un seul contenu.
+  const morceauPourUnProfil = morceauParProfil(id, input.plan, piece.bloc);
+  if (morceauPourUnProfil) {
+    const i = input.profilIndex ?? -1;
+    profilChoisi = brief.profils[i] ?? null;
+    if (!profilChoisi) return refus("profil_manquant");
+  }
 
   const cout = coutMorceau(piece.bloc);
   if (!(await soldeSuffisant(cout))) return refus("credits", { requis: cout });
@@ -563,10 +687,21 @@ export async function POST(req: NextRequest) {
   const maxTokens = piece.bloc === "contenu" ? 4200 : piece.bloc === "post" ? 900 : 1800;
 
   const out = await appeler(
-    consigneProduction({ id, brief, piece, piste, profil: profilChoisi }),
+    consigneProduction({ id, piece }),
+    consigneDuQuiz(brief),
     messagePourLeModele({
       brief,
-      offre,
+      offres,
+      plan: input.plan,
+      declencheur: input.declencheur,
+      // ICI on écrit pour UN profil, donc c'est SON offre qui part.
+      profilIndex: typeof input.profilIndex === "number" ? input.profilIndex : null,
+      profil: profilChoisi,
+      // L'ADRESSE DU QUIZ NE SORT QUE LÀ OÙ ELLE DOIT APPARAÎTRE : le
+      // contenu d'un bonus se lit hors ligne, y coller le lien
+      // renverrait le lecteur vers le quiz qu'il vient de finir.
+      lienQuiz: lienQuizAutorise(id, piece.bloc) ? brief.urlPublique : "",
+      piste: piste.titre || piste.format || piste.punchline ? piste : null,
       demande: "Produis ce morceau, et rien d'autre.",
     }),
     maxTokens,
@@ -588,6 +723,12 @@ export async function POST(req: NextRequest) {
   // et le travail était perdu ET FACTURÉ EN CRÉDITS. On enregistre APRÈS
   // chaque morceau et pas à la fin : une génération dure une minute et
   // demie, et l'onglet fermé au septième ne doit pas tout emporter.
+  //
+  // ET ON RANGE DE QUOI REPRENDRE (3 septembre 2026). Sans le brief ni
+  // la piste, la bibliothèque LISAIT le travail sans pouvoir le
+  // continuer : corriger un email ou écrire le contenu du 3e profil
+  // demandait de tout resaisir et de REPAYER les pistes, donc des
+  // crédits.
   await rangerMorceau(
     {
       userId: user.id,
@@ -596,10 +737,27 @@ export async function POST(req: NextRequest) {
       quizId: input.quizId,
       quizTitre: brief.titre,
       titre: piste.titre,
+      // LA LIGNE EST LE PROJET, PAS LE PROFIL, dès que le générateur ne
+      // choisit pas son profil dans ses réglages. Sur un bonus décliné,
+      // mettre le contenu dans une ligne par profil séparerait un guide
+      // de son contenu, et la reprise rouvrirait un projet à moitié. Le
+      // profil vit donc sur le MORCEAU.
       profilIndex: demandeUnProfil(id) ? (input.profilIndex ?? null) : null,
       profilTitre: profilChoisi?.titre ?? "",
+      projet: {
+        brief: { plan: input.plan, declencheur: input.declencheur, offres },
+        pistes: (input.pistes ?? []).map((p) => ({ ...p, tempsParPersonne: "" })),
+        piste: input.piste ? { ...input.piste, tempsParPersonne: "" } : null,
+      },
     },
-    { bloc: piece.bloc, index: piece.index, cle: piece.cle, markdown, tronque: out.tronque },
+    {
+      bloc: piece.bloc,
+      index: piece.index,
+      cle: piece.cle,
+      markdown,
+      tronque: out.tronque,
+      profil: morceauPourUnProfil ? (input.profilIndex ?? null) : null,
+    },
   );
 
   return NextResponse.json({
@@ -663,6 +821,10 @@ function lirePistes(
           format: txt(o.format),
           punchline: txt(o.punchline),
           pourquoi: txt(o.pourquoi),
+          // VIDE dans le cas normal : le socle interdit déjà ce qui
+          // demande son temps par personne. Quand ce n'est pas vide, la
+          // carte l'affiche en avertissement.
+          tempsParPersonne: txt(o.tempsParPersonne),
           pieces: piecesDeLaPiste(
             id,
             (Array.isArray(o.pieces) ? o.pieces : []) as { bloc?: unknown; resume?: unknown }[],

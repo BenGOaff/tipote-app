@@ -7784,7 +7784,7 @@
     "etapes": {
       "projet": "1. The project",
       "profil": "2. The profile",
-      "offre": "The offer it leads to",
+      "offre": "Your paid offer",
       "pistes": "The angles",
       "contenus": "The content"
     },
@@ -7808,7 +7808,10 @@
     },
     "profil": {
       "aide": "The sequence starts from this profile's tag. It must not be sendable to any other one.",
-      "sansTitre": "Profile {rang}"
+      "sansTitre": "Profile {rang}",
+      "celuiQueTuPrepares": "The profile you are preparing",
+      "ecrit": "(written)",
+      "unApresLautre": "Each profile has its own text. You write them one after the other."
     },
     "offre": {
       "aide": "This is the one thing your quiz cannot know. Without it, the content would lead nowhere.",
@@ -7826,18 +7829,31 @@
       },
       "prix": "Its price",
       "prixPlaceholder": "497 EUR",
-      "prixAide": "Optional. If left empty, no price is written anywhere."
+      "prixAide": "Optional. If left empty, no price is written anywhere.",
+      "aideParProfil": "One line per offer, and for each the profiles it serves.",
+      "rang": "Offer {rang}",
+      "retirer": "Remove",
+      "ajouter": "Add an offer",
+      "pourQuelsProfils": "For which result profiles?",
+      "sansOffre": "Without an offer: {profils}.",
+      "enDouble": "In two offers at once: {profils}.",
+      "uneSeuleChacun": "Each profile must be linked to one offer, and only one.",
+      "promesseAria": "Promise of offer {rang}",
+      "formatAria": "Format of offer {rang}",
+      "prixAria": "Price of offer {rang}",
+      "aideBonus": "That's where your bonus has to lead.",
+      "tropCourte": "Describe each offer in one sentence so I can aim properly."
     },
     "pistes": {
       "titre": "Three directions, you pick one",
-      "lancer": "Suggest three angles",
+      "lancer": "Suggest 3 directions",
       "uneDePlus": "None of these convince me, suggest another one",
       "uneDePlusAide": "One more idea, in a different format. The ones above stay.",
-      "encours": "Writing three angles",
+      "encours": "Looking for your directions...",
       "aide": "They are deliberately different. Take the one that sounds like you, not the most impressive one.",
       "recommandee": "Recommended",
       "recommandation": "My pick: direction {rang}.",
-      "choisir": "Go with this one",
+      "choisir": "I'll take this one",
       "choisie": "Chosen angle",
       "changer": "Change angle",
       "morceaux": "{count} pieces to write"
@@ -7863,7 +7879,8 @@
         "rien": "Nothing generated yet",
         "partiel": "{faits} of {total} written",
         "complet": "Everything is written"
-      }
+      },
+      "copieEchouee": "The copy failed. Select the text and copy it by hand."
     },
     "blocs": {
       "contenu": "The full bonus",
@@ -7886,7 +7903,8 @@
       "profil_manquant": "Pick a profile first.",
       "not_found": "This project is no longer available. It may have been deleted, or it does not belong to you. Nothing was changed.",
       "generic": "That did not go through. Try again, the rest of your work is kept.",
-      "credits": "You do not have enough credits for this piece. Top up your credits, everything already written is kept."
+      "credits": "You do not have enough credits for this piece. Top up your credits, everything already written is kept.",
+      "couverture_offres": "Each profile must be linked to one offer, and only one."
     },
     "credits": {
       "solde": "{count, plural, one {# credit left} other {# credits left}}",
@@ -7913,8 +7931,10 @@
       "morceaux": "{count, plural, one {# part} other {# parts}}",
       "copier": "Copy everything",
       "supprimer": "Delete",
+      "reprendre": "Resume this content",
       "tronques": "{count, plural, one {# part was cut short} other {# parts were cut short}}",
-      "erreurLecture": "Your library can't be read right now. Nothing is lost, try again in a moment."
+      "erreurLecture": "Your library can't be read right now. Nothing is lost, try again in a moment.",
+      "pasReprenable": "This content was written before we started saving the settings: you can read and copy it, but not resume it."
     },
     "temps": {
       "sonResultat": "Their result",
@@ -7954,6 +7974,48 @@
         "emails": "Write the sequence",
         "promo": "Write my promo content"
       }
+    },
+    "plan": {
+      "label": "What each profile receives",
+      "options": {
+        "commun": {
+          "titre": "The same bonus, the same offer",
+          "aide": "The simplest to produce and deliver."
+        },
+        "par-profil": {
+          "titre": "One bonus per profile, a single offer",
+          "aide": "Your quiz has no result profiles yet.",
+          "aideAvecProfils": "Each person gets a text that speaks to them, and they all lead to the same offer. {count} profiles on your quiz."
+        },
+        "par-profil-son-offre": {
+          "titre": "One bonus per profile, its own offer",
+          "aide": "Your quiz is there to point to the right offer: each bonus leads back to the one for its profile."
+        }
+      }
+    },
+    "declencheur": {
+      "label": "When will you send this bonus?",
+      "options": {
+        "completion": {
+          "titre": "For a completed quiz",
+          "aide": "They discover their result, the bonus is the logical next step."
+        },
+        "share": {
+          "titre": "For a share",
+          "aide": "They share your quiz, the bonus is their reward.",
+          "aidePasActive": "The sharing step is not enabled on your quiz yet."
+        }
+      }
+    },
+    "aides": {
+      "contenu": "For your visitor: the bonus text itself, ready to lay out.",
+      "guide": "For you: what you produce, with which tool, and how it reaches your visitor.",
+      "remise": "Title, punchline and 5 promise bullets to announce the bonus in your campaign and your posts, plus the email that delivers it."
+    },
+    "vides": {
+      "contenu": "Nothing here yet. Generate your bonus content.",
+      "guide": "Nothing here yet. Generate your creation guide.",
+      "remise": "Nothing here yet. Generate something to talk about your bonus."
     }
   },
   "erreursIa": {

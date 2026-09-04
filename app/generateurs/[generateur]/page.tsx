@@ -24,9 +24,15 @@ import { isPaidPlan } from "@/lib/planLimits";
 import { ensureUserCredits } from "@/lib/credits";
 import { COUT_PAR_BLOC, COUT_PISTES } from "@/lib/generateurs/credits";
 import { GENERATEURS, type GenerateurId } from "@/lib/generateurs/catalogue";
+import { cleMorceau } from "@/lib/generateurs/blocs";
+import { lireContenuParId } from "@/lib/generateurs/contenusStore";
+import { peutEtreRepris } from "@/lib/generateurs/projet";
 import { resultChoiceLabel } from "@/lib/quiz/resultLabel";
 import { stripHtml } from "@/lib/richText";
-import GenerateurClient, { type ProjetAffiche } from "./GenerateurClient";
+import GenerateurClient, {
+  type ProjetAffiche,
+  type RepriseContenu,
+} from "./GenerateurClient";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("nav");
@@ -35,10 +41,13 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function GenerateurPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ generateur: string }>;
+  searchParams: Promise<{ reprise?: string }>;
 }) {
   const { generateur } = await params;
+  const { reprise: repriseId } = await searchParams;
   if (!GENERATEURS.includes(generateur as GenerateurId)) notFound();
   const id = generateur as GenerateurId;
 
@@ -60,7 +69,7 @@ export default async function GenerateurPage({
   const scope = await getActiveProjectId(supabase, user.id);
   let requete = supabaseAdmin
     .from("quizzes")
-    .select("id, title, mode, status, created_at")
+    .select("id, title, mode, status, created_at, virality_enabled")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(100);
@@ -72,6 +81,7 @@ export default async function GenerateurPage({
     title: string | null;
     mode: string | null;
     status: string | null;
+    virality_enabled: boolean | null;
   }[];
   const ids = lignes.map((q) => q.id);
 
@@ -138,7 +148,62 @@ export default async function GenerateurPage({
     statut: q.status ?? "draft",
     nbQuestions: compteQuestions.get(q.id) ?? 0,
     profils: parQuiz.get(q.id) ?? [],
+    // L'ÉTAPE DE PARTAGE EST-ELLE ACTIVÉE ? Le labo de l'Atelier le dit
+    // sur la carte "Pour un partage" : proposer un déclenchement qui
+    // n'existe pas sur ce quiz là ferait écrire un bonus que personne
+    // ne recevra jamais.
+    partageActive: q.virality_enabled === true,
   }));
+
+  // ── LA REPRISE ──
+  //
+  // Béné, 3 septembre 2026 : "oui fais la migration." Sans elle, la
+  // bibliothèque LISAIT le travail sans pouvoir le continuer, et ici ça
+  // coûtait des CRÉDITS : reprendre les pistes se repayait.
+  //
+  // On se TAIT quand on ne peut pas reprendre (identifiant inconnu,
+  // autre générateur, ligne écrite avant la migration) : l'écran s'ouvre
+  // normalement, et c'est la BIBLIOTHÈQUE qui dit sur la ligne pourquoi
+  // le bouton n'y est pas. Un écran qui crierait ici sur une adresse
+  // bricolée à la main n'apprendrait rien à personne.
+  let reprise: RepriseContenu | null = null;
+  if (repriseId) {
+    const contenu = await lireContenuParId(user.id, repriseId);
+    if (
+      contenu &&
+      contenu.generateur === id &&
+      contenu.quizId &&
+      peutEtreRepris(contenu) &&
+      contenu.projet
+    ) {
+      const projetDeLaLigne = contenu.projet;
+      reprise = {
+        projetId: contenu.quizId,
+        plan: projetDeLaLigne.brief.plan,
+        declencheur: projetDeLaLigne.brief.declencheur,
+        offres: projetDeLaLigne.brief.offres,
+        pistes: projetDeLaLigne.pistes,
+        piste: projetDeLaLigne.piste,
+        profilIndex: contenu.profilIndex,
+        // LES CLÉS SONT COMPOSÉES PAR `cleMorceau`, la MÊME fonction que
+        // l'écran : deux façons de composer une clé finiraient par ne
+        // plus se retrouver, et un contenu déjà écrit s'afficherait
+        // comme jamais généré, donc se regénérerait, donc se repaierait.
+        contenus: Object.fromEntries(
+          contenu.morceaux.map((m) => [
+            cleMorceau({
+              generateur: id,
+              plan: projetDeLaLigne.brief.plan,
+              bloc: m.bloc,
+              index: m.index,
+              profil: m.profil,
+            }),
+            { markdown: m.markdown, tronque: m.tronque === true },
+          ]),
+        ),
+      };
+    }
+  }
 
   return (
     <GenerateurClient
@@ -148,6 +213,7 @@ export default async function GenerateurPage({
       autorise={autorise}
       lienPlans="/settings?tab=billing"
       credits={credits}
+      reprise={reprise}
     />
   );
 }

@@ -37,6 +37,7 @@ import {
   Lock,
   Megaphone,
   Pencil,
+  Plus,
   Sparkles,
   AlertTriangle,
   Wand2,
@@ -55,7 +56,19 @@ import {
   type BlocageGenerateur,
   type GenerateurId,
 } from "@/lib/generateurs/catalogue";
-import { FORMATS_OFFRE, type FormatOffre } from "@/lib/generateurs/offre";
+import {
+  FORMATS_OFFRE,
+  OFFRE_VIDE,
+  PLANS_BONUS,
+  DECLENCHEURS,
+  bonusParProfil,
+  offreParProfil,
+  couvertureDesOffres,
+  type Declencheur,
+  type FormatOffre,
+  type Offre,
+  type PlanBonus,
+} from "@/lib/generateurs/offre";
 import { passeParLesPistes, planFixe } from "@/lib/generateurs/sequences";
 import {
   etapesDuParcours,
@@ -64,6 +77,7 @@ import {
   suivante,
   type Etape,
 } from "@/lib/generateurs/parcours";
+import { cleMorceau, morceauParProfil } from "@/lib/generateurs/blocs";
 import type { Bloc, Piece, Piste } from "@/lib/generateurs/blocs";
 import { avancement } from "@/lib/generateurs/avancement";
 import { RichTextEdit } from "@/components/ui/rich-text-edit";
@@ -96,6 +110,32 @@ export interface ProjetAffiche {
   statut: string;
   nbQuestions: number;
   profils: { titre: string; description: string }[];
+  /** L'étape de partage est-elle activée sur ce quiz ? */
+  partageActive: boolean;
+}
+
+/**
+ * DE QUOI REPRENDRE UN CONTENU DÉJÀ COMMENCÉ.
+ *
+ * Béné, 3 septembre 2026 : "oui fais la migration." La bibliothèque
+ * LISAIT le travail sans pouvoir le continuer : corriger un email,
+ * écrire le contenu du 3e profil ou générer une pièce de plus demandait
+ * de tout resaisir et de REPAYER les pistes.
+ *
+ * Les clés de `contenus` sont construites CÔTÉ SERVEUR par la même
+ * règle que l'écran (`morceauParProfil`) : deux façons de composer une
+ * clé finiraient par ne plus se retrouver, et un contenu écrit
+ * s'afficherait comme jamais généré.
+ */
+export interface RepriseContenu {
+  projetId: string;
+  plan: PlanBonus;
+  declencheur: Declencheur;
+  offres: Offre[];
+  pistes: Piste[];
+  piste: Piste | null;
+  profilIndex: number | null;
+  contenus: Record<string, { markdown: string; tronque: boolean }>;
 }
 
 /**
@@ -156,6 +196,7 @@ export default function GenerateurClient({
   autorise,
   lienPlans,
   credits = null,
+  reprise = null,
 }: {
   userEmail: string;
   generateur: GenerateurId;
@@ -164,6 +205,8 @@ export default function GenerateurClient({
   /** Où mène "Voir les formules" (l'onglet diffère selon le dépôt). */
   lienPlans: string;
   credits?: CreditsAffiches | null;
+  /** Un contenu de la bibliothèque à reprendre, ou `null` (le cas normal). */
+  reprise?: RepriseContenu | null;
 }) {
   const t = useTranslations("generateurs");
 
@@ -178,19 +221,60 @@ export default function GenerateurClient({
     if (credits && Number.isFinite(n) && n > 0) setSolde((s) => Math.max(0, (s ?? 0) - n));
   }
 
-  const [projetId, setProjetId] = useState<string>("");
-  const [profilIndex, setProfilIndex] = useState<number>(0);
-  const [promesse, setPromesse] = useState("");
-  const [format, setFormat] = useState<FormatOffre>("formation");
-  const [prix, setPrix] = useState("");
+  // TOUS LES ÉTATS DU BRIEF PARTENT DE LA REPRISE QUAND IL Y EN A UNE.
+  // Les remplir dans un effet APRÈS le montage ferait clignoter l'écran
+  // sur l'étape du projet avant de sauter aux contenus, et un projet
+  // choisi par un effet est un projet qu'un clic malheureux peut
+  // reperdre.
+  const [projetId, setProjetId] = useState<string>(reprise?.projetId ?? "");
+  const [profilIndex, setProfilIndex] = useState<number>(reprise?.profilIndex ?? 0);
+  // LE BRIEF DU BONUS, comme dans le labo de l'Atelier : ce que reçoit
+  // chaque profil, l'offre (ou les offres), et QUAND le bonus est remis.
+  const [plan, setPlan] = useState<PlanBonus>(
+    // Un quiz à plusieurs profils gagne presque toujours à décliner son
+    // bonus : c'est le défaut là bas, elle peut simplifier en un clic.
+    reprise?.plan ?? "commun",
+  );
+  const [declencheur, setDeclencheur] = useState<Declencheur>(
+    reprise?.declencheur ?? "completion",
+  );
+  const [offres, setOffres] = useState<Offre[]>(
+    // UNE OFFRE VIDE PAR DÉFAUT, jamais un tableau vide : l'écran rend
+    // une carte par offre, et zéro carte ne laisserait rien à remplir.
+    reprise?.offres.length ? reprise.offres : [{ ...OFFRE_VIDE }],
+  );
+
+  function majOffre(i: number, patch: Partial<Offre>) {
+    setOffres((l) => l.map((o, j) => (j === i ? { ...o, ...patch } : o)));
+  }
+  function ajouterOffre() {
+    setOffres((l) => [...l, { ...OFFRE_VIDE }]);
+  }
+  function retirerOffre(i: number) {
+    setOffres((l) => (l.length > 1 ? l.filter((_, j) => j !== i) : l));
+  }
+  function basculerProfilDOffre(i: number, profil: number) {
+    setOffres((l) =>
+      l.map((o, j) => {
+        // UN PROFIL N'APPARTIENT QU'À UNE OFFRE : le cocher ailleurs le
+        // retire d'où il était. Sans ça on fabrique l'ambiguïté qu'on
+        // vient de rendre bloquante.
+        const a = o.profils.includes(profil);
+        if (j === i) {
+          return { ...o, profils: a ? o.profils.filter((x) => x !== profil) : [...o.profils, profil] };
+        }
+        return a ? { ...o, profils: o.profils.filter((x) => x !== profil) } : o;
+      }),
+    );
+  }
 
   const [etat, setEtat] = useState<Etat>("repos");
-  const [pistes, setPistes] = useState<Piste[]>([]);
+  const [pistes, setPistes] = useState<Piste[]>(reprise?.pistes ?? []);
   const [recommandee, setRecommandee] = useState(0);
   const [pourquoiRecommandee, setPourquoiRecommandee] = useState("");
-  const [choisie, setChoisie] = useState<Piste | null>(null);
+  const [choisie, setChoisie] = useState<Piste | null>(reprise?.piste ?? null);
   const [contenus, setContenus] = useState<Record<string, { markdown: string; tronque: boolean }>>(
-    {},
+    reprise?.contenus ?? {},
   );
   const [enCours, setEnCours] = useState<string | null>(null);
   // LE DOSSIER OUVERT, ET RIEN D'AUTRE À L'ÉCRAN.
@@ -234,10 +318,30 @@ export default function GenerateurClient({
 
   const veutProfil = demandeUnProfil(generateur);
   const veutOffre = demandeUneOffre(generateur);
+  // LE PLAN ET LE DÉCLENCHEUR SONT DES NOTIONS DU BONUS, pas des trois
+  // générateurs : "quand vas-tu envoyer ce bonus ?" ne veut rien dire
+  // pour une séquence d'emails. C'est un PARAMÈTRE du générateur, jamais
+  // déduit de la présence d'une offre.
+  const estBonus = generateur === "bonus";
+  // CHAQUE PROFIL A-T-IL EXACTEMENT UNE OFFRE ? On prévient AVANT de
+  // produire : un bonus écrit pour un profil qui ne mène nulle part fait
+  // travailler la créatrice pour rien.
+  const couverture = useMemo(
+    () => couvertureDesOffres(plan, offres, projet?.profils.length ?? 0),
+    [plan, offres, projet],
+  );
+  // UNE OFFRE DE TROIS MOTS NE PERMET PAS DE VISER. Le labo de
+  // l'Atelier refuse en dessous de 10 caractères, avec la phrase qui dit
+  // quoi corriger : "décris chaque offre en une phrase".
+  const offreRemplie = offres.some((o) => o.promesse.trim().length > 0);
+  const offreTropCourte =
+    offres.some((o) => o.promesse.trim().length > 0) &&
+    offres.some((o) => o.promesse.trim().length > 0 && o.promesse.trim().length < 10);
+
   const pretPourPistes =
     Boolean(projet) &&
     !blocage &&
-    (!veutOffre || promesse.trim().length > 0) &&
+    (!veutOffre || (offreRemplie && !offreTropCourte && couverture.ok)) &&
     (!veutProfil || Boolean(projet?.profils[profilIndex]));
 
   // ── LE PARCOURS ──
@@ -246,11 +350,15 @@ export default function GenerateurClient({
   // mêmes dépendent du générateur : la promo ne demande ni profil ni
   // offre, et seuls les BONUS passent par des pistes (`sequences.ts`).
   const parcours = useMemo(() => etapesDuParcours(generateur), [generateur]);
-  const [etape, setEtape] = useState<Etape>(parcours[0]!);
+  // ON ATTERRIT SUR LES CONTENUS QUAND ON REPREND : c'est là que le
+  // travail est, et le fil des étapes reste reclicable pour remonter au
+  // brief. Ouvrir sur l'étape du projet obligerait à retraverser trois
+  // écrans déjà remplis avant de corriger un mot.
+  const [etape, setEtape] = useState<Etape>(reprise ? "contenus" : parcours[0]!);
   const etatParcours = {
     projetPret: Boolean(projet) && !blocage,
     profilPret: !veutProfil || Boolean(projet?.profils[profilIndex]),
-    offrePrete: !veutOffre || promesse.trim().length > 0,
+    offrePrete: !veutOffre || (offreRemplie && !offreTropCourte && couverture.ok),
     pistesPretes: pistes.length > 0,
   };
   const avant = precedente(generateur, etape);
@@ -276,6 +384,7 @@ export default function GenerateurClient({
       "profil_manquant",
       "not_found",
       "credits",
+      "couverture_offres",
     ];
     toast.error(t(`erreurs.${connues.includes(cle) ? cle : "generic"}`));
   }
@@ -284,8 +393,12 @@ export default function GenerateurClient({
     return {
       generateur,
       quizId: projetId,
-      ...(veutOffre ? { offre: { promesse, format, prix } } : {}),
-      ...(veutProfil ? { profilIndex } : {}),
+      ...(veutOffre ? { offres, plan, declencheur } : {}),
+      // LE PROFIL NE PART QUE QUAND IL VEUT DIRE QUELQUE CHOSE : sur un
+      // bonus COMMUN, il n'y a pas de profil à écrire pour, et l'envoyer
+      // ferait écrire un bonus qui parle d'un seul profil à tout le
+      // monde.
+      ...(veutProfil && (!estBonus || bonusParProfil(plan)) ? { profilIndex } : {}),
     };
   }
 
@@ -361,7 +474,29 @@ export default function GenerateurClient({
     }
   }
 
-  const cle = (p: Piece) => `${p.bloc}-${p.index}`;
+  /**
+   * CE MORCEAU S'ÉCRIT-IL UNE FOIS PAR PROFIL ?
+   *
+   * La règle vit dans `morceauParProfil` et pas ici : l'écran la
+   * connaissait, le SERVEUR non, donc il écrivait le même contenu pour
+   * les trois profils pendant que l'écran les rangeait sous trois clés
+   * différentes. Une règle recopiée dans un composant n'est pas
+   * testable, donc elle n'est pas testée.
+   */
+  function parProfil(p: Piece): boolean {
+    return morceauParProfil(generateur, plan, p.bloc);
+  }
+
+  /**
+   * LA CLÉ D'UN MORCEAU ÉCRIT, et elle porte le profil quand il y en a
+   * un.
+   *
+   * Sans le profil dans la clé, écrire le contenu du 2e profil ÉCRASE
+   * celui du 1er, et la créatrice ne s'en aperçoit qu'en rouvrant. C'est
+   * le `content:${i}` de l'Atelier.
+   */
+  const cle = (p: Piece, profil = profilIndex) =>
+    cleMorceau({ generateur, plan, bloc: p.bloc, index: p.index, profil });
 
   async function ecrireUn(piste: Piste, pieceIndex: number): Promise<boolean> {
     const piece = piste.pieces[pieceIndex];
@@ -376,6 +511,16 @@ export default function GenerateurClient({
           ...corpsCommun(),
           piste,
           pieceIndex,
+          // LE PROFIL PART QUAND LE MORCEAU EN A UN. `corpsCommun` ne
+          // peut pas le savoir : il ne connaît pas le morceau, et sur un
+          // bonus décliné c'est le morceau qui décide (le contenu oui,
+          // le guide et la remise non).
+          ...(parProfil(piece) ? { profilIndex } : {}),
+          // LES PISTES PARTENT POUR ÊTRE ENREGISTRÉES, pas pour le
+          // modèle : sans elles, reprendre un projet depuis la
+          // bibliothèque rouvrirait l'étape des pistes VIDE, donc il
+          // faudrait les repayer pour corriger un mot.
+          ...(pistes.length > 0 ? { pistes } : {}),
         }),
       });
       const data = await res.json().catch(() => null);
@@ -417,6 +562,7 @@ export default function GenerateurClient({
       format: "",
       punchline: "",
       pourquoi: "",
+      tempsParPersonne: "",
       pieces: plan.map((temps) => {
         const n = (compteurs.get(temps.bloc) ?? 0) + 1;
         compteurs.set(temps.bloc, n);
@@ -440,6 +586,24 @@ export default function GenerateurClient({
     setOuvert(null);
     setEdition(null);
     setEtape("contenus");
+  }
+
+  /**
+   * LA PHRASE D'UN DOSSIER, et le mot qui dit son vide.
+   *
+   * Les trois blocs du bonus ont la leur, portée de `FOLDERS[].hint` et
+   * `.empty` dans le labo de l'Atelier : "pour toi / pour ton visiteur"
+   * est ce qui évite d'ouvrir les trois pour savoir lequel est lequel.
+   * Les morceaux d'un plan fixe portent leur rôle traduit.
+   */
+  function aideDuBloc(piece: Piece): string {
+    if (piece.cle) return t(`temps.${piece.cle}`);
+    return estBonus ? t(`aides.${piece.bloc}`) : piece.resume;
+  }
+  function videDuBloc(piece: Piece): string {
+    // UN VIDE QUI DIT QUOI FAIRE. "Rien n'a encore été écrit" décrit
+    // l'écran ; "Génère ton guide de création" dit le geste.
+    return estBonus ? t(`vides.${piece.bloc}`) : t("production.vide");
   }
 
   /** Le titre d'un morceau, traduit. Jamais l'intention brute. */
@@ -490,7 +654,16 @@ export default function GenerateurClient({
     ? choisie
     : pisteDuPlanFixe();
 
-  const clesDuTravail = travail ? travail.pieces.map(cle) : [];
+  // L'AVANCEMENT COMPTE LES PROFILS, PAS LES DOSSIERS : un contenu
+  // décliné sur 4 profils compte pour 4, sinon "tout est écrit"
+  // s'afficherait dès le premier.
+  const clesDuTravail = travail
+    ? travail.pieces.flatMap((p) =>
+        parProfil(p)
+          ? (projet?.profils ?? [{ titre: "" }]).map((_, i) => cle(p, i))
+          : [cle(p)],
+      )
+    : [];
   const av = avancement(clesDuTravail, contenus);
   const phraseAvancement =
     av.etat === "rien"
@@ -501,7 +674,10 @@ export default function GenerateurClient({
 
   const indexOuvert = travail ? travail.pieces.findIndex((x) => cle(x) === ouvert) : -1;
   const ouvertPiece = indexOuvert >= 0 ? travail!.pieces[indexOuvert]! : null;
-  const contenuOuvert = ouvert ? (contenus[ouvert] ?? null) : null;
+  // LE DOSSIER OUVERT SUIT LE PROFIL COURANT : la clé du contenu porte
+  // le profil, donc changer de profil change ce qu'on regarde.
+  const cleOuverte = ouvertPiece ? cle(ouvertPiece) : ouvert;
+  const contenuOuvert = cleOuverte ? (contenus[cleOuverte] ?? null) : null;
 
   const [copie, setCopie] = useState(false);
   async function copierOuvert() {
@@ -511,9 +687,11 @@ export default function GenerateurClient({
       setCopie(true);
       setTimeout(() => setCopie(false), 2000);
     } catch {
-      // Un échec de copie SE DIT : un bouton qui ne fait rien envoie
-      // chercher au mauvais endroit (règle du 1er août sur le partage).
-      toast.error(t("erreurs.generic"));
+      // UN ÉCHEC DE COPIE DIT QUOI FAIRE. Un bouton qui ne fait rien
+      // envoie chercher au mauvais endroit (règle du 1er août), et une
+      // phrase générique n'aide pas plus : ses mots à lui disent la
+      // sortie, sélectionner le texte à la main.
+      toast.error(t("production.copieEchouee"));
     }
   }
 
@@ -651,8 +829,12 @@ export default function GenerateurClient({
       </section>
       ) : null}
 
-      {/* ── 2. LE PROFIL ── */}
-      {etape === "reglages" && projet && !blocage && veutProfil ? (
+      {/* ── 2. LE PROFIL ──
+          LE BONUS N'EN A PLUS ICI : son contenu s'écrit une fois PAR
+          profil, donc le choix vit DANS le dossier du contenu, comme
+          dans le labo de l'Atelier. La séquence d'emails, elle, s'écrit
+          pour UN profil décidé d'avance : elle le garde ici. */}
+      {etape === "reglages" && projet && !blocage && veutProfil && !estBonus ? (
         <section className="rounded-xl border bg-card p-5 space-y-3">
           <div>
             <h2 className="font-display font-bold text-sm">{t("etapes.profil")}</h2>
@@ -687,52 +869,181 @@ export default function GenerateurClient({
         </section>
       ) : null}
 
-      {/* ── L'OFFRE ── */}
+      {/* ── LE BRIEF DU BONUS, calqué sur le labo de l'Atelier ──
+          Béné, 3 septembre 2026 : "c'est où l'étape pour choisir quand
+          sera envoyé le bonus, le type de bonus, pour un partage ou un
+          quiz complété ?" Elle avait raison : il n'y en avait pas. Cet
+          écran n'avait qu'UNE offre et aucun des deux choix qui
+          décident de ce que le bonus doit être. */}
       {etape === "reglages" && projet && !blocage && veutOffre ? (
-        <section className="rounded-xl border bg-card p-5 space-y-4">
-          <div>
-            <h2 className="font-display font-bold text-sm">{t("etapes.offre")}</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">{t("offre.aide")}</p>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="gen-promesse">{t("offre.promesse")}</Label>
-            <Textarea
-              id="gen-promesse"
-              rows={2}
-              maxLength={600}
-              value={promesse}
-              onChange={(e) => setPromesse(e.target.value)}
-              placeholder={t("offre.promessePlaceholder")}
+        <section className="rounded-xl border bg-card p-5 space-y-5">
+          {/* LE PLAN D'ABORD (Béné, Atelier, 5 août 2026) : "c'est ce que
+              reçoit chaque profil qui doit aller en premier, avant les
+              offres, c'est plus logique". Et ça règle une dépendance :
+              ce choix décide si les pastilles de profils existent dans
+              les cartes d'offre. Posé avant, elles apparaissent APRÈS
+              lui, donc dans le sens de lecture. */}
+          {estBonus ? (
+            <Choix
+              label={t("plan.label")}
+              value={plan}
+              onChange={(v) => setPlan(v as PlanBonus)}
+              options={PLANS_BONUS.map((v) => ({
+                value: v,
+                titre: t(`plan.options.${v}.titre`),
+                aide:
+                  v === "par-profil" && projet.profils.length > 0
+                    ? t("plan.options.par-profil.aideAvecProfils", {
+                        count: projet.profils.length,
+                      })
+                    : t(`plan.options.${v}.aide`),
+              }))}
             />
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="gen-format">{t("offre.format")}</Label>
-              <select
-                id="gen-format"
-                value={format}
-                onChange={(e) => setFormat(e.target.value as FormatOffre)}
-                className="w-full h-9 rounded-md border bg-background px-3 text-sm"
-              >
-                {FORMATS_OFFRE.map((f) => (
-                  <option key={f} value={f}>
-                    {t(`offre.formats.${f}`)}
-                  </option>
-                ))}
-              </select>
+          ) : null}
+
+          <div className="space-y-3">
+            <div>
+              <p className="text-sm font-medium">{t("etapes.offre")}</p>
+              <p className="text-xs text-muted-foreground">
+                {offreParProfil(plan)
+                  ? t("offre.aideParProfil")
+                  : estBonus
+                    ? t("offre.aideBonus")
+                    : t("offre.aide")}
+              </p>
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="gen-prix">{t("offre.prix")}</Label>
-              <Input
-                id="gen-prix"
-                value={prix}
-                maxLength={120}
-                onChange={(e) => setPrix(e.target.value)}
-                placeholder={t("offre.prixPlaceholder")}
-              />
-              <p className="text-[11px] text-muted-foreground">{t("offre.prixAide")}</p>
-            </div>
+
+            {offres.map((offre, i) => (
+              <div key={i} className="rounded-lg border bg-background p-4 space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    {t("offre.rang", { rang: i + 1 })}
+                  </span>
+                  {offres.length > 1 ? (
+                    <button
+                      type="button"
+                      onClick={() => retirerOffre(i)}
+                      className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+                    >
+                      {t("offre.retirer")}
+                    </button>
+                  ) : null}
+                </div>
+
+                <Textarea
+                  rows={2}
+                  maxLength={600}
+                  value={offre.promesse}
+                  onChange={(e) => majOffre(i, { promesse: e.target.value })}
+                  placeholder={t("offre.promessePlaceholder")}
+                  aria-label={t("offre.promesseAria", { rang: i + 1 })}
+                />
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <select
+                    value={offre.format}
+                    onChange={(e) => majOffre(i, { format: e.target.value as FormatOffre })}
+                    className="w-full h-9 rounded-md border bg-background px-3 text-sm"
+                    aria-label={t("offre.formatAria", { rang: i + 1 })}
+                  >
+                    {FORMATS_OFFRE.map((f) => (
+                      <option key={f} value={f}>
+                        {t(`offre.formats.${f}`)}
+                      </option>
+                    ))}
+                  </select>
+                  <Input
+                    value={offre.prix}
+                    maxLength={120}
+                    onChange={(e) => majOffre(i, { prix: e.target.value })}
+                    placeholder={t("offre.prixPlaceholder")}
+                    aria-label={t("offre.prixAria", { rang: i + 1 })}
+                  />
+                </div>
+
+                {/* Les profils servis par CETTE offre. Visible uniquement
+                    quand chaque profil a la sienne : ailleurs, une seule
+                    offre s'adresse à tout le monde et la question n'a pas
+                    de sens. */}
+                {offreParProfil(plan) && projet.profils.length > 0 ? (
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-medium">{t("offre.pourQuelsProfils")}</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {projet.profils.map((p, pi) => {
+                        const actif = offre.profils.includes(pi);
+                        return (
+                          <button
+                            key={pi}
+                            type="button"
+                            onClick={() => basculerProfilDOffre(i, pi)}
+                            className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+                              actif
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : "border-border text-muted-foreground hover:border-primary/40"
+                            }`}
+                          >
+                            {p.titre || t("profil.sansTitre", { rang: pi + 1 })}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            ))}
+
+            {offreParProfil(plan) ? (
+              <Button variant="outline" size="sm" onClick={ajouterOffre}>
+                <Plus className="h-4 w-4 mr-1.5" />
+                {t("offre.ajouter")}
+              </Button>
+            ) : null}
+
+            {/* ON NOMME LES PROFILS CONCERNÉS : "il manque une offre"
+                oblige à comparer soi même pour savoir lesquels. */}
+            {!couverture.ok ? (
+              <p className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
+                {couverture.sansOffre.length > 0
+                  ? `${t("offre.sansOffre", {
+                      profils: couverture.sansOffre
+                        .map((i) => projet.profils[i]?.titre || t("profil.sansTitre", { rang: i + 1 }))
+                        .join(", "),
+                    })} `
+                  : ""}
+                {couverture.enDouble.length > 0
+                  ? `${t("offre.enDouble", {
+                      profils: couverture.enDouble
+                        .map((i) => projet.profils[i]?.titre || t("profil.sansTitre", { rang: i + 1 }))
+                        .join(", "),
+                    })} `
+                  : ""}
+                {t("offre.uneSeuleChacun")}
+              </p>
+            ) : null}
           </div>
+
+          {/* QUAND LE BONUS EST REMIS. Ce n'est pas un détail de
+              formulaire : à la fin du quiz il prolonge un résultat qu'on
+              vient de lire ; après un partage il récompense un geste,
+              donc il doit valoir le geste. */}
+          {estBonus ? (
+            <Choix
+              label={t("declencheur.label")}
+              value={declencheur}
+              onChange={(v) => setDeclencheur(v as Declencheur)}
+              options={DECLENCHEURS.map((v) => ({
+                value: v,
+                titre: t(`declencheur.options.${v}.titre`),
+                // PROPOSER UN DÉCLENCHEMENT QUI N'EXISTE PAS SUR CE QUIZ
+                // LÀ ferait écrire un bonus que personne ne recevra
+                // jamais. Le labo de l'Atelier le dit sur la carte.
+                aide:
+                  v === "share" && !projet.partageActive
+                    ? t("declencheur.options.share.aidePasActive")
+                    : t(`declencheur.options.${v}.aide`),
+              }))}
+            />
+          ) : null}
         </section>
       ) : null}
 
@@ -775,6 +1086,16 @@ export default function GenerateurClient({
                   {p.punchline ? <p className="text-sm">{p.punchline}</p> : null}
                   {p.pourquoi ? (
                     <p className="text-xs text-muted-foreground">{p.pourquoi}</p>
+                  ) : null}
+                  {/* CE QUE CETTE PISTE LUI COÛTERA, PAR PERSONNE.
+                      Vide dans le cas normal. Caché derrière le mot
+                      "personnalisé", ce prix ne se découvre qu'au
+                      quarantième lead, c'est à dire quand le quiz
+                      commence à marcher. */}
+                  {p.tempsParPersonne ? (
+                    <p className="rounded-md bg-amber-50 px-2.5 py-2 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
+                      {p.tempsParPersonne}
+                    </p>
                   ) : null}
                   <p className="text-[11px] text-muted-foreground mt-auto pt-2 border-t">
                     {t("pistes.morceaux", { count: p.pieces.length })}
@@ -873,7 +1194,16 @@ export default function GenerateurClient({
               const k = cle(piece);
               const d = DOSSIER[piece.bloc];
               const Icone = d.icone;
-              const ecrit = Boolean(contenus[k]);
+              // UN CONTENU DÉCLINÉ N'EST "PRÊT" QUE QUAND TOUS SES
+              // PROFILS SONT ÉCRITS. Le dire dès le premier ferait
+              // croire le bonus terminé alors qu'il en manque trois.
+              const nb = parProfil(piece) ? (projet?.profils.length ?? 1) : 1;
+              const faits = parProfil(piece)
+                ? (projet?.profils ?? []).filter((_, i) => contenus[cle(piece, i)]).length
+                : Boolean(contenus[k])
+                  ? 1
+                  : 0;
+              const ecrit = faits >= nb && nb > 0;
               return (
                 <button
                   key={k}
@@ -890,14 +1220,20 @@ export default function GenerateurClient({
                     {titrePiece(piece)}
                   </span>
                   <span className="text-sm text-muted-foreground">
-                    {piece.cle ? t(`temps.${piece.cle}`) : piece.resume}
+                    {/* LES TROIS DOSSIERS DU BONUS ONT LEUR PHRASE, ses
+                        mots à lui. Mes cartes affichaient `piece.resume`,
+                        qui est VIDE sur le bonus : trois cartes sans un
+                        mot pour dire ce qu'il y a dedans. */}
+                    {aideDuBloc(piece)}
                   </span>
                   <span className="mt-auto pt-1 text-xs font-medium text-muted-foreground">
-                    {enCours === k
+                    {enCours && enCours.startsWith(`${piece.bloc}-${piece.index}`)
                       ? t("production.enCoursCourt")
                       : ecrit
                         ? t("production.pret")
-                        : t("production.aGenerer")}
+                        : nb > 1 && faits > 0
+                          ? t("production.avancement.partiel", { faits, total: nb })
+                          : t("production.aGenerer")}
                     {!ecrit && credits ? ` . ${t("credits.cout", { count: coutDe(piece.bloc) })}` : ""}
                   </span>
                 </button>
@@ -924,9 +1260,33 @@ export default function GenerateurClient({
           <div>
             <h2 className="font-display text-xl font-bold">{titrePiece(ouvertPiece)}</h2>
             <p className="text-sm text-muted-foreground mt-0.5">
-              {ouvertPiece.cle ? t(`temps.${ouvertPiece.cle}`) : ouvertPiece.resume}
+              {aideDuBloc(ouvertPiece)}
             </p>
           </div>
+
+          {/* LE SÉLECTEUR DE PROFIL NE CONCERNE QUE LE CONTENU : c'est
+              le seul bloc qui s'écrit une fois par profil. Porté du labo
+              de l'Atelier, y compris son "(écrit)" par profil, qui est
+              la seule façon de savoir où on en est sans les rouvrir. */}
+          {parProfil(ouvertPiece) && projet ? (
+            <div className="space-y-1.5">
+              <Label htmlFor="gen-profil">{t("profil.celuiQueTuPrepares")}</Label>
+              <select
+                id="gen-profil"
+                value={profilIndex}
+                onChange={(e) => setProfilIndex(Number(e.target.value))}
+                className="w-full max-w-sm h-9 rounded-md border bg-background px-3 text-sm"
+              >
+                {projet.profils.map((p, i) => (
+                  <option key={i} value={i}>
+                    {p.titre || t("profil.sansTitre", { rang: i + 1 })}
+                    {contenus[cle(ouvertPiece, i)] ? ` ${t("profil.ecrit")}` : ""}
+                  </option>
+                ))}
+              </select>
+              <p className="text-[11px] text-muted-foreground">{t("profil.unApresLautre")}</p>
+            </div>
+          ) : null}
 
           <div className="flex flex-wrap gap-2">
             <Button
@@ -935,7 +1295,7 @@ export default function GenerateurClient({
               disabled={!autorise || Boolean(enCours)}
               onClick={() => void ecrireUn(travail!, indexOuvert)}
             >
-              {enCours === ouvert ? (
+              {enCours === cleOuverte ? (
                 <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
               ) : (
                 <Wand2 className="h-4 w-4 mr-1.5" />
@@ -947,14 +1307,14 @@ export default function GenerateurClient({
                 <Button
                   size="sm"
                   variant="ghost"
-                  onClick={() => setEdition(edition === ouvert ? null : ouvert)}
+                  onClick={() => setEdition(edition === cleOuverte ? null : cleOuverte)}
                 >
-                  {edition === ouvert ? (
+                  {edition === cleOuverte ? (
                     <Check className="h-4 w-4 mr-1.5" />
                   ) : (
                     <Pencil className="h-4 w-4 mr-1.5" />
                   )}
-                  {edition === ouvert ? t("production.termine") : t("production.modifier")}
+                  {edition === cleOuverte ? t("production.termine") : t("production.modifier")}
                 </Button>
                 <Button size="sm" variant="ghost" onClick={() => void copierOuvert()}>
                   {copie ? (
@@ -987,14 +1347,14 @@ export default function GenerateurClient({
           {/* LE MARKDOWN RESTE LA SOURCE DE VÉRITÉ, l'éditeur n'est
               qu'un pont (`lib/bonus/markdownHtml.ts`) : le rendu et le
               PDF ne changent pas d'un pixel. */}
-          {contenuOuvert && edition === ouvert ? (
+          {contenuOuvert && edition === cleOuverte ? (
             <RichTextEdit
-              key={ouvert}
+              key={cleOuverte}
               value={markdownToEditorHtml(contenuOuvert.markdown)}
               onChange={(html) =>
                 setContenus((c) => ({
                   ...c,
-                  [ouvert!]: { markdown: editorHtmlToMarkdown(html), tronque: false },
+                  [cleOuverte!]: { markdown: editorHtmlToMarkdown(html), tronque: false },
                 }))
               }
               className="rounded-xl border bg-card p-5 text-sm leading-relaxed"
@@ -1007,13 +1367,13 @@ export default function GenerateurClient({
 
           {!contenuOuvert ? (
             <div className="rounded-xl border bg-card p-8 text-center text-sm text-muted-foreground">
-              {enCours === ouvert ? (
+              {enCours === cleOuverte ? (
                 <span className="inline-flex items-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
                   {t("production.enCoursCourt")}
                 </span>
               ) : (
-                t("production.vide")
+                videDuBloc(ouvertPiece)
               )}
             </div>
           ) : null}
@@ -1098,4 +1458,48 @@ export default function GenerateurClient({
 function RenduGenere({ markdown }: { markdown: string }) {
   // PAS DE REPLI : voir l'entête ci dessus.
   return <BonusDocument doc={parseBonusDoc(markdown)} />;
+}
+
+/**
+ * DEUX OU TROIS CARTES CLIQUABLES, porté de `Choice` dans le labo de
+ * l'Atelier.
+ *
+ * Plus lisible qu'un menu déroulant pour un choix qui change le résultat
+ * EN PROFONDEUR : ici on ne remplit pas un champ, on décide de ce que le
+ * bonus sera. Un menu déroulant cache les options qu'on n'a pas
+ * choisies, donc il cache la décision.
+ */
+function Choix({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; titre: string; aide: string }[];
+}) {
+  return (
+    <div className="space-y-2">
+      <p className="text-sm font-medium">{label}</p>
+      <div className={`grid gap-2 ${options.length > 2 ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+        {options.map((o) => (
+          <button
+            key={o.value}
+            type="button"
+            onClick={() => onChange(o.value)}
+            className={`flex flex-col gap-1 rounded-xl border p-3 text-left transition-colors ${
+              value === o.value
+                ? "border-primary bg-primary/5"
+                : "border-border hover:border-primary/40"
+            }`}
+          >
+            <span className="text-sm font-medium">{o.titre}</span>
+            <span className="text-xs text-muted-foreground">{o.aide}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 }

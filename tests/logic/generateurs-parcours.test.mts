@@ -155,7 +155,13 @@ describe("Le parcours d'un générateur", () => {
 // ---------------------------------------------------------------------
 
 describe("L'écran suit le parcours", () => {
-  const src = lire("app/generateurs/[generateur]/GenerateurClient.tsx");
+  // ON RETIRE LES COMMENTAIRES : un test qui mesure la présence ou
+  // l'ORDRE de quelque chose dans un fichier tombe sinon sur sa propre
+  // explication écrite juste au dessus. C'est la faute déjà payée le
+  // 2 septembre sur la reprise du quiz de la page de vente.
+  const src = lire("app/generateurs/[generateur]/GenerateurClient.tsx")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, "");
 
   test("chaque section est gatée sur son étape", () => {
     for (const e of ["projet", "reglages", "pistes", "contenus"]) {
@@ -171,18 +177,24 @@ describe("L'écran suit le parcours", () => {
   test("l'intention du modèle n'est JAMAIS affichée telle quelle", () => {
     // Sur un plan fixe, `resume` porte la consigne envoyée au modèle,
     // en français, dans un écran qui existe en 7 langues.
-    // ON VISE LE FAIT, PAS LA FORME : la version d'avant figeait le JSX
-    // au caractère près, donc elle rougissait sur une correction juste.
-    // Un garde-fou qui fige une formulation empêche de la corriger.
-    for (const ligne of src.split("\n")) {
-      if (!/\.resume\b/.test(ligne)) continue;
-      assert.match(
-        ligne,
-        /\.cle \?/,
-        `l'intention brute s'affiche sans garde : ${ligne.trim()}`,
-      );
-    }
-    assert.ok(src.includes("t(`temps.${piece.cle}`)"), "le rôle n'est pas traduit");
+    // ON VISE LE FAIT, PAS LA FORME. Deux versions de ce test ont déjà
+    // été fausses : la première figeait le JSX au caractère près, la
+    // seconde regardait LIGNE PAR LIGNE et rougissait donc sur un garde
+    // posé à la ligne d'au dessus, c'est à dire sur du code correct.
+    //
+    // Le fait est : `piece.resume` ne se lit QUE dans `aideDuBloc`, et
+    // `aideDuBloc` rend le rôle TRADUIT dès que la pièce en a un.
+    const fn = src.indexOf("function aideDuBloc");
+    assert.ok(fn > 0, "aideDuBloc a disparu : où l'intention est-elle gardée ?");
+    const corps = src.slice(fn, src.indexOf("\n  }", fn));
+    assert.match(corps, /if \(piece\.cle\) return t\(`temps\.\$\{piece\.cle\}`\)/);
+
+    const ailleurs = (src.slice(0, fn) + src.slice(fn + corps.length)).match(/\.resume\b/g);
+    assert.equal(
+      ailleurs,
+      null,
+      "l'intention brute se lit ailleurs que dans aideDuBloc, donc sans garde",
+    );
   });
 
   test("la bibliothèque et les générateurs sont deux entrées distinctes", () => {

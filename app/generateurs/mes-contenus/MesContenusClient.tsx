@@ -11,7 +11,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { ArrowLeft, Gift, Mail, Megaphone, ChevronDown, Copy, Check, Trash2, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Gift, Mail, Megaphone, ChevronDown, Copy, Check, PenLine, Trash2, AlertTriangle } from "lucide-react";
 
 import AppShell from "@/components/AppShell";
 import { parseBonusDoc } from "@/lib/bonus/document";
@@ -22,6 +22,7 @@ import {
   type ContenuGenere,
 } from "@/lib/generateurs/bibliotheque";
 import type { GenerateurId } from "@/lib/generateurs/catalogue";
+import { peutEtreRepris } from "@/lib/generateurs/projet";
 
 const ICONES: Record<GenerateurId, typeof Gift> = {
   bonus: Gift,
@@ -133,6 +134,12 @@ function LigneContenu({
   const { principale, secondaire } = etiquetteContenu(contenu);
   const { total, tronques } = resumeMorceaux(contenu);
   const [copie, setCopie] = useState(false);
+  // PEUT-ON REPRENDRE CE CONTENU ? Non pour tout ce qui a été écrit
+  // avant la migration du 3 septembre : la ligne porte ses morceaux mais
+  // pas son brief, donc rouvrir afficherait un écran vide en prétendant
+  // reprendre son travail. La ligne le DIT, elle ne se contente pas
+  // d'un bouton absent (règle du 22 août).
+  const reprenable = peutEtreRepris(contenu);
 
   async function copierTout() {
     const texte = contenu.morceaux.map((m) => m.markdown).join("\n\n---\n\n");
@@ -162,6 +169,16 @@ function LigneContenu({
             {[secondaire, t("bibliotheque.morceaux", { count: total })].filter(Boolean).join(" · ")}
           </p>
         </button>
+        {reprenable ? (
+          <Link
+            href={`/generateurs/${contenu.generateur}?reprise=${contenu.id}`}
+            className="shrink-0 text-muted-foreground hover:text-foreground"
+            title={t("bibliotheque.reprendre")}
+            aria-label={t("bibliotheque.reprendre")}
+          >
+            <PenLine className="h-4 w-4" />
+          </Link>
+        ) : null}
         <button
           type="button"
           onClick={() => void copierTout()}
@@ -188,6 +205,12 @@ function LigneContenu({
       {tronques > 0 ? (
         <p className="mt-1 text-xs text-amber-700">
           {t("bibliotheque.tronques", { count: tronques })}
+        </p>
+      ) : null}
+
+      {!reprenable ? (
+        <p className="mt-1 text-xs text-muted-foreground">
+          {t("bibliotheque.pasReprenable")}
         </p>
       ) : null}
 

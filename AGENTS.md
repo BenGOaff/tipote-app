@@ -3602,6 +3602,246 @@ Test : le cas "un contenu SANS titre de section garde sa mise en forme"
 de `tests/logic/generateurs-parcours.test.mts`, vérifié en rejouant le
 repli d'avant (il rougit).
 
+### L'ÉTAPE DU BRIEF MANQUAIT ENTIÈREMENT (Béné, 3 septembre 2026)
+
+Captures de l'Atelier à l'appui : "mais t'as pas du tout reproduit sur
+Tiquiz ce qu'on a sur l'atelier !! C'est où l'étape pour choisir quand
+sera envoyé le bonus, le type de bonus, pour un partage ou un quiz
+complété ??? Je t'ai pas demandé de l'à peu près je t'ai demandé
+PAREIL."
+
+**Elle avait raison, et ce n'était pas un détail de mise en page : les
+DEUX choix qui décident de ce que le bonus doit ÊTRE n'existaient pas.**
+
+| Le réglage | l'Atelier | ici, avant |
+|---|---|---|
+| ce que reçoit chaque profil (`plan`) | 3 cartes cliquables | rien |
+| l'offre payante | plusieurs, une par profil, avec pastilles | UNE seule |
+| la couverture des profils | avertissement nommant les profils | rien |
+| quand le bonus est remis (`declencheur`) | 2 cartes cliquables | rien |
+| le profil du contenu | dans le DOSSIER, avec "(écrit)" par profil | dans les réglages |
+
+**Et mon propre `lib/generateurs/offre.ts` disait noir sur blanc "on ne
+reprend PAS ça ici, pas encore".** Le "pas encore" était un mauvais
+calcul dès le départ : le retour de Monique (Atelier, 5 août) décrit un
+quiz qui ORIENTE vers trois offres, ce qui est exactement ce que Tiquiz
+vend. Renvoyer les trois profils vers la même offre, c'est dire
+l'inverse de ce que le quiz vient de leur dire.
+
+**CE MODULE EST UNE RÉIMPLÉMENTATION, ET JE LE DIS.** Les quatre autres
+modules du labo sont portés à l'octet près, un `cmp` le prouve.
+`lib/bonus/offers.ts` ne peut pas l'être : il parle anglais
+(`BonusOffer.promise`) et tout `lib/generateurs/` parle français. J'ai
+d'abord tenté un pont, et il tenait sur un `as unknown as` entre deux
+formes DIFFÉRENTES, c'est à dire un mensonge que le compilateur ne
+pouvait plus contredire (règle du 7 août). Il n'y a donc qu'UNE forme, en
+français, et c'est le COMPORTEMENT qui est figé :
+`tests/logic/offres-par-profil.test.mts` rejoue les cas de son
+`bonus-offers.test.mts` un par un.
+
+**Quatre choses à ne pas défaire :**
+
+1. **Le plan est posé AVANT les offres** (Béné, Atelier, 5 août : "c'est
+   ce que reçoit chaque profil qui doit aller en premier"). Ce n'est pas
+   qu'une question de logique : ce choix décide si les pastilles de
+   profils existent dans les cartes d'offre, donc elles apparaissent
+   APRÈS lui, dans le sens de lecture.
+2. **Trois valeurs pour le plan, pas deux réglages.** "Un bonus ou
+   plusieurs ?" et "une offre ou plusieurs ?" feraient quatre
+   combinaisons dont une est INCOHÉRENTE : un bonus commun qui devrait
+   mener vers trois offres. La quatrième est impossible par
+   construction.
+3. **La clé d'un contenu décliné porte le PROFIL** (`contenu-1:2`).
+   Sans lui, écrire le 2e profil écrase le 1er, et elle ne s'en aperçoit
+   qu'en rouvrant. Et un dossier décliné n'est "Prêt" que quand TOUS ses
+   profils sont écrits : le dire dès le premier ferait croire le bonus
+   terminé alors qu'il en manque trois.
+4. **Le serveur REFUSE une couverture incomplète** (`couverture_offres`),
+   il ne devine pas. L'écran prévient déjà, mais un bonus écrit pour un
+   profil qui ne mène nulle part fait travailler la créatrice pour rien.
+   Une offre INUTILISÉE, elle, ne bloque pas : c'est presque toujours
+   une case oubliée, pas une faute.
+
+**Et le déclenchement part dans le PROMPT**, pas seulement à l'écran : à
+la fin du quiz le bonus prolonge un résultat qu'on vient de lire ; après
+un partage il récompense un geste, donc il doit valoir le geste. Le
+taire laisse le modèle écrire pour le cas moyen.
+
+**Ce qui reste différent, et c'est assumé :** le plan et le déclencheur
+sont gatés sur `estBonus`. "Quand vas-tu envoyer ce bonus ?" ne veut
+rien dire pour une séquence d'emails ou pour de la promo, et le labo de
+l'Atelier EST le bonus. C'est un PARAMÈTRE du générateur, jamais déduit
+de la présence d'une offre.
+
+Test : `tests/logic/offres-par-profil.test.mts`, vérifié en rejouant la
+version d'avant (8 tests rougissent).
+
+### J'AI RELEVÉ SES PHRASES UNE PAR UNE (Béné, 3 septembre 2026)
+
+"Tu peux pas chercher par toi-même ce qui ne serait pas strictement
+identique pour le corriger ? Tu as TOUS les codes pour le faire."
+
+Si, et c'est ce qu'il fallait faire depuis le début au lieu d'attendre
+qu'elle ouvre l'écran. La méthode, reproductible :
+
+1. extraire chaque phrase VISIBLE de son labo (commentaires retirés) ;
+2. la chercher dans nos 7 fichiers de langue, en normalisant les
+   accents, les apostrophes et les variables ;
+3. lire ce qui reste.
+
+**26 phrases sans équivalent.** Après tri, deux vrais gestes manquants
+et une série de mots.
+
+**LES DEUX GESTES :**
+
+| Ce qui manquait | Ce que ça coûtait |
+|---|---|
+| **le temps par personne** d'une piste (`needsHerTime` chez lui) | le socle interdit déjà ce qui demande son temps à CHAQUE visiteur, mais un format peut en valoir la peine. Le prix se DIT : caché derrière le mot "personnalisé", il ne se découvre qu'au quarantième lead, c'est à dire quand le quiz commence à marcher |
+| **"L'étape de partage n'est pas encore activée sur ton quiz"** | on proposait un déclenchement qui n'existe pas sur ce quiz là, donc un bonus que personne ne recevrait jamais. La carte lit maintenant `virality_enabled` en base |
+
+**ET TROIS DÉFAUTS TROUVÉS EN CHERCHANT :**
+
+- **les trois dossiers du bonus n'avaient AUCUNE phrase.** Mes cartes
+  affichaient `piece.resume`, qui est VIDE sur le bonus : trois cartes
+  sans un mot pour dire ce qu'il y a dedans. "Pour toi / pour ton
+  visiteur" est exactement ce qui évite d'ouvrir les trois pour savoir
+  lequel est lequel (`aides.*`, ses phrases).
+- **un dossier vide décrivait l'écran au lieu de dire le geste.** "Rien
+  n'a encore été écrit" contre "Génère ton guide de création"
+  (`vides.*`).
+- **une offre de trois mots passait.** Son labo refuse en dessous de 10
+  caractères, avec la phrase qui dit quoi corriger.
+
+**LES MOTS, alignés sur les siens** : "Proposer 3 pistes", "Je cherche
+tes pistes...", "Je prends celle-ci", "Ton offre payante", "C'est vers
+elle que ton bonus doit ramener", "Autorise les pop-ups", "La copie a
+échoué. Sélectionne le texte et copie-le à la main."
+
+**CE QUI RESTE DIFFÉRENT, ET C'EST ASSUMÉ :**
+
+- **nos messages d'erreur sont plus riches que les siens.** Il dit "La
+  génération n'a pas abouti. Réessaie dans un instant." ; nous rendons
+  une RAISON parmi neuf, traduite en 7 langues, qui dit quoi faire
+  (saturé, trop long, hors quota, pas configuré...). C'est la règle du
+  3 août, et reculer là dessus serait une régression.
+- 🚨 **"la BIBLIOTHÈQUE ne rouvre pas un projet" A ÉTÉ CORRIGÉ le
+  3 septembre**, et cette ligne le disait encore. C'était le dernier
+  écart avec son labo, et il demandait une migration : voir la section
+  suivante. Une note d'état des lieux se relit quand on corrige ce
+  qu'elle décrit, sinon le prochain passage agit sur une dette déjà
+  soldée (leçon du 31 août).
+
+**LA LEÇON DE MÉTHODE, et elle vaut pour les prochains portages :**
+comparer deux écrans à l'oeil rate ce qui n'est PAS là. Relever les
+phrases de l'un et les chercher dans l'autre trouve les absences, qui
+sont exactement ce qu'un coup d'oeil ne voit pas.
+
+Test : le bloc "les mots et les gestes de son labo" de
+`tests/logic/offres-par-profil.test.mts`, vérifié en rejouant la version
+d'avant (6 tests rougissent).
+
+**Et deux fois de suite, mon propre test était faux avant le code.** Le
+premier figeait le JSX au caractère près, donc il rougissait sur une
+correction juste. Le second regardait LIGNE PAR LIGNE, donc il
+rougissait sur un garde posé à la ligne d'au dessus. Un test qui mesure
+la présence ou l'ORDRE de quelque chose dans un fichier retire d'abord
+les commentaires, sinon il tombe sur sa propre explication.
+
+**Et le lendemain, une TROISIÈME fois, dans le même fichier :** le test
+du contenu par profil figeait le ternaire du JSX, donc il est sorti
+rouge le jour où la règle a quitté le composant pour un module pur,
+c'est à dire sur une correction juste. **Un garde-fou qui fige une
+FORMULATION empêche de corriger la formulation** : il vise maintenant le
+COMPORTEMENT (`morceauParProfil` appelée avec ses cas), et il n'exige de
+la source que le fait qu'elle DÉLÈGUE.
+
+### ON REPREND UN CONTENU LÀ OÙ ON L'A LAISSÉ (Béné, 3 septembre 2026)
+
+"Oui fais la migration." C'était le dernier écart avec le labo de
+l'Atelier, et le plus cher des trois.
+
+`generateur_contenus` gardait les MORCEAUX depuis le 2 septembre, donc
+plus rien n'était perdu à un rafraîchissement. Mais elle ne gardait pas
+de quoi CONTINUER : ni le brief (le plan, le déclenchement, les offres),
+ni les pistes proposées, ni celle qui a été choisie. La bibliothèque
+LISAIT le travail sans pouvoir le reprendre. Corriger un email, en
+générer un sixième, ou écrire le contenu du 3e profil demandait de tout
+resaisir et de REPAYER les pistes.
+
+**On ÉTEND la table, on n'en ajoute pas une deuxième.** Une deuxième
+donnerait DEUX bibliothèques pour la même chose, et c'est la divergence
+que ces dépôts paient en boucle depuis juin (deux files de tickets, deux
+registres d'affiliés, deux rendus markdown). La ligne EST le projet :
+elle porte déjà le générateur, le quiz, son titre recopié et les
+morceaux.
+
+**LE PROFIL VIT SUR LE MORCEAU, PAS SUR LA LIGNE.** Le contenu d'un
+bonus décliné s'écrit une fois par profil, alors que son mode d'emploi
+et ses textes de remise sont les mêmes pour tout le monde. Mettre le
+bonus dans une ligne PAR PROFIL séparerait un guide de son contenu, et
+la reprise rouvrirait un projet à moitié. C'est un PARAMÈTRE du
+générateur (`demandeUnProfil` pour la ligne, `morceauParProfil` pour le
+morceau), jamais une déduction.
+
+### ET LE SERVEUR NE SAVAIT PAS POUR QUI IL ÉCRIVAIT
+
+Trouvé en branchant la reprise, et c'est un vrai bug d'argent.
+
+La règle "le contenu d'un bonus décliné s'écrit une fois par profil"
+vivait DANS `GenerateurClient`, en une ligne de JSX. L'écran la
+connaissait donc, et le serveur non : `corpsCommun` n'envoyait
+`profilIndex` que pour les emails. Le serveur recevait la même demande
+pour les trois profils, rendait **trois fois le même texte**, et l'écran
+le rangeait sous trois clés différentes. Trois clics, trois générations
+facturées, un seul contenu.
+
+**Règle : `morceauParProfil(generateur, plan, bloc)` et
+`cleMorceau({...})` vivent dans `lib/generateurs/blocs.ts`**, et les
+DEUX côtés les appellent : l'écran quand il range ce qu'il vient
+d'écrire, le serveur quand il rouvre un contenu. Deux façons de composer
+une clé finiraient par ne plus se retrouver, et un contenu déjà écrit
+s'afficherait comme jamais généré, donc se regénérerait.
+
+C'est la règle du 1er août, dans sa forme la plus littérale : une règle
+enfermée dans un composant n'est pas testable, donc elle n'est pas
+testée.
+
+### QUATRE CHOSES À NE PAS DÉFAIRE
+
+1. **Le repli si la migration n'est pas encore passée.** PostgREST
+   rejette l'écriture ENTIÈRE sur une colonne qu'il ne connaît pas :
+   sans repli, un déploiement en avance ferait perdre TOUS les contenus
+   générés, en silence, alors que la bibliothèque marchait la veille
+   (drame `quiz_events.meta`). On réessaie sans les trois colonnes, et
+   on CRIE : la reprise attend la migration, le contenu non.
+2. **Une ligne d'AVANT la migration ne se reprend pas, et l'écran le
+   DIT.** `brief` vaut `{}` par défaut, donc `projet` vaut `null`, donc
+   `peutEtreRepris` répond non. On ne fabrique pas un brief vide qui
+   rouvrirait un écran sans rien dedans, et le bouton absent se justifie
+   sur la ligne (règle du 22 août).
+3. **Le JSONB est LIBRE, donc le contrôle est dans `projet.ts`.**
+   Ajouter un champ au brief ne doit pas demander une migration (même
+   choix que `bonus_projects` chez lui). On borne la FORME et la TAILLE,
+   jamais la liste des champs, et `assainirProjet` ne lève JAMAIS : une
+   valeur illisible en base ne doit pas rendre un contenu impossible à
+   rouvrir.
+4. **On atterrit sur les CONTENUS, et le fil des étapes reste
+   reclicable.** Ouvrir sur l'étape du projet obligerait à retraverser
+   trois écrans déjà remplis pour corriger un mot.
+
+**Le filtre par personne est DANS la requête** de `lireContenuParId`,
+pas dans un `if` au dessus : c'est lui qui empêche de rouvrir le travail
+de quelqu'un d'autre avec un identifiant deviné. Et on ne distingue pas
+"ça n'existe pas" de "ce n'est pas à toi".
+
+🚨 Migration : `supabase/migrations/20260903_generateurs_reprise.sql`,
+**sur les DEUX Supabase** (Tiquiz et Tipote).
+
+Test : `tests/logic/reprise-generateurs.test.mts`, vérifié en rejouant
+deux versions d'avant (le repli retiré, le brief vide accepté : les deux
+rougissent), plus le cas "le serveur SAIT pour quel profil il écrit" de
+`offres-par-profil.test.mts`.
+
 ### 4. LES CONTENUS SE RETROUVENT
 
 "Il faut aussi que les users retrouvent leurs créations dans
@@ -3710,6 +3950,105 @@ qu'on a vérifié, et dire aussi ce qu'on n'a pas vérifié.
 
 Test : les 4 cas ajoutés à `tests/logic/generateurs.test.mts` (les deux
 dépôts), vérifiés en rejouant la version d'avant : les 4 rougissent.
+
+### LE CACHE : ce qui se paie une fois, et ce qui se paie à chaque appel (4 septembre 2026)
+
+Béné : "beaucoup de choses sont reprises d'un user à l'autre alors on
+doit pouvoir économiser quelque part ?" Puis, sur le TTL : "fais au mieux
+pour le jour où on aura 1000 utilisateurs intensifs."
+
+**Elle avait raison, et j'avais d'abord répondu à côté.** J'ai commencé
+par dire que le préfixe caché ne laissait plus rien à gagner. Mesuré, il
+en restait un tiers.
+
+#### CE QUI BLOQUAIT, ET IL ÉTAIT INVISIBLE
+
+Le socle est mis en cache depuis le 1er septembre. La consigne, non. Et
+elle ne POUVAIT pas l'être : elle portait **le profil, la piste choisie
+et l'adresse du quiz**, c'est à dire des FAITS. Mesuré avant correction :
+**0 des 15 consignes de production n'était la même d'une créatrice à
+l'autre.** 383 jetons repayés plein tarif à chaque appel, sur un texte
+dont seules 3 lignes changeaient.
+
+L'en-tête de `messagePourLeModele` disait pourtant déjà la règle : "le
+système dit les règles, le message dit le cas". Trois blocs de FAITS
+vivaient dans les RÈGLES.
+
+#### LA STRUCTURE, DU PLUS STABLE AU MOINS STABLE
+
+| | quoi | qui |
+|---|---|---|
+| 1, caché | le SOCLE, 2841 jetons | UNE entrée pour tout le monde, les trois générateurs, toutes les langues |
+| 2, caché | la CONSIGNE, ~281 jetons | 18 entrées, une par (générateur, bloc, rang) |
+| 3, plein tarif | la langue et le ton, 73 jetons | par créatrice |
+| message | son brief, ses offres, le profil, la piste, l'adresse | par appel |
+
+**MESURÉ, entrée effective d'un appel de production :**
+
+| | avant | après |
+|---|---|---|
+| cache chaud (le trafic dense) | 842 j | **569 j (-32 %)** |
+| cache froid (aujourd'hui) | | **-9 % (bonus) à -17 % (promo)** |
+
+C'est gagnant dans les DEUX régimes, et c'est ce qui a tranché : sortir
+les faits ne coûte rien tout de suite et rapporte un tiers à l'échelle.
+
+#### LE TTL RESTE À 5 MINUTES, ET C'EST LA RÉPONSE À "1000 UTILISATEURS"
+
+C'est le contraire de ce qu'on croit. **Une LECTURE relance le compteur
+sans rien coûter.** Donc dès que deux appels qui partagent le préfixe
+partent à moins de 5 minutes d'écart, l'entrée ne meurt jamais. À
+1000 utilisateurs intensifs, les 19 entrées restent chaudes en
+permanence, et le TTL d'une heure ne ferait que **doubler le prix de
+l'écriture (2x au lieu de 1,25x) pour rien**.
+
+Le TTL d'une heure sert au cas INVERSE : un trafic creux, avec des trous
+de plus de 5 minutes. Et même là il lui faut **3 lectures par entrée**
+pour rentrer dedans. À mesurer avant de le poser, jamais par principe.
+
+#### CE QUE J'AI TESTÉ ET QUI AURAIT COÛTÉ PLUS CHER
+
+- **Un socle par générateur.** Mesuré : le bloc qui décrit les trois ne
+  fait que **11 % du socle** (301 jetons). On récupérerait 200 jetons une
+  fois par session en créant trois caches à réchauffer.
+- **Mettre la langue et le ton avant le point de cache.** Ça
+  multiplierait les entrées par les 100 langues du catalogue fois deux
+  formes d'adresse, pour gagner 73 jetons.
+
+#### ET LA LEÇON DE MESURE, QUI EST SUR MOI
+
+Ma première mesure disait "5 consignes sur 5 identiques" côté emails.
+**Elle était fausse** : mon faux brief portait `locale` alors que le
+champ s'appelle `langue`, donc `consigneLangue` recevait `undefined` des
+deux côtés et rendait la même chose. J'ai bâti une conclusion sur un
+test qui ne distinguait pas ce qu'il était censé distinguer, dans la
+séance même où je citais cette règle.
+
+**Un faux jeu de données ne se voit pas : il rend le test VERT.** Une
+mesure de comparaison doit d'abord prouver qu'elle sait voir une
+différence quand il y en a une.
+
+#### Le garde-fou
+
+`tests/logic/cache-des-prompts.test.mts`, vérifié en rejouant la version
+d'avant (une adresse remise dans la consigne, un seul point de cache :
+les deux rougissent). Il tient quatre choses : le socle n'interpole rien,
+les 15 consignes sont identiques d'une créatrice à l'autre, il y a
+exactement DEUX points de cache et le bloc variable n'en porte aucun, et
+le TTL reste à 5 minutes avec sa raison écrite à côté.
+
+**Le cache échoue EN SILENCE** : une variable qui repasse dans le préfixe
+ne casse rien, ne lève rien, n'affiche rien. Elle multiplie juste la
+facture sans que personne ne le voie.
+
+#### Ce qui reste vrai, et qu'il ne faut pas perdre de vue
+
+**La sortie coûte 5 fois l'entrée au jeton, donc 73 à 79 % de la
+facture.** Tout ce qui précède optimise la moitié pas chère. Le seul
+levier qui pèse vraiment est le nombre de morceaux écrits et leur
+longueur, et il est déjà réglé : chaque morceau a son propre bouton
+depuis le 3 septembre, et `max_tokens` est posé par bloc (4200 pour le
+contenu d'un bonus, 1800 pour un email, 900 pour un post).
 
 ## ON DIT TAG, JAMAIS ÉTIQUETTE (Béné, 1er septembre 2026)
 

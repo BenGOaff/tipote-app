@@ -7784,7 +7784,7 @@
     "etapes": {
       "projet": "1. Il progetto",
       "profil": "2. Il profilo",
-      "offre": "L'offerta a cui porta",
+      "offre": "La tua offerta a pagamento",
       "pistes": "Le proposte",
       "contenus": "I contenuti"
     },
@@ -7808,7 +7808,10 @@
     },
     "profil": {
       "aide": "La sequenza parte dal tag di questo profilo. Non deve poter essere inviata a un altro.",
-      "sansTitre": "Profilo {rang}"
+      "sansTitre": "Profilo {rang}",
+      "celuiQueTuPrepares": "Il profilo che stai preparando",
+      "ecrit": "(scritto)",
+      "unApresLautre": "Ogni profilo ha il suo testo. Li scrivi uno dopo l'altro."
     },
     "offre": {
       "aide": "È l'unica cosa che il tuo quiz non può sapere. Senza, il contenuto non porterebbe da nessuna parte.",
@@ -7826,18 +7829,31 @@
       },
       "prix": "Il suo prezzo",
       "prixPlaceholder": "497 EUR",
-      "prixAide": "Facoltativo. Se resta vuoto, nessun prezzo viene scritto da nessuna parte."
+      "prixAide": "Facoltativo. Se resta vuoto, nessun prezzo viene scritto da nessuna parte.",
+      "aideParProfil": "Una riga per offerta, e per ognuna i profili che serve.",
+      "rang": "Offerta {rang}",
+      "retirer": "Rimuovi",
+      "ajouter": "Aggiungi un'offerta",
+      "pourQuelsProfils": "Per quali profili di risultato?",
+      "sansOffre": "Senza offerta: {profils}.",
+      "enDouble": "In due offerte insieme: {profils}.",
+      "uneSeuleChacun": "Ogni profilo deve essere collegato a una sola offerta.",
+      "promesseAria": "Promessa dell'offerta {rang}",
+      "formatAria": "Formato dell'offerta {rang}",
+      "prixAria": "Prezzo dell'offerta {rang}",
+      "aideBonus": "È verso di lei che il tuo bonus deve portare.",
+      "tropCourte": "Descrivi ogni offerta in una frase, così posso mirare bene."
     },
     "pistes": {
       "titre": "Tre proposte, ne scegli una",
-      "lancer": "Proporre tre proposte",
+      "lancer": "Proponi 3 proposte",
       "uneDePlus": "Nessuna mi convince, proponine un'altra",
       "uneDePlusAide": "Un'idea in più, in un formato diverso. Quelle sopra restano.",
-      "encours": "Sto scrivendo tre proposte",
+      "encours": "Cerco le tue proposte...",
       "aide": "Sono volutamente diverse. Scegli quella che ti somiglia, non la più impressionante.",
       "recommandee": "Consigliata",
       "recommandation": "Il mio consiglio: la proposta {rang}.",
-      "choisir": "Vado con questa",
+      "choisir": "Prendo questa",
       "choisie": "Proposta scelta",
       "changer": "Cambiare proposta",
       "morceaux": "{count} contenuti da scrivere"
@@ -7863,7 +7879,8 @@
         "rien": "Niente generato per ora",
         "partiel": "{faits} su {total} scritti",
         "complet": "Tutto è scritto"
-      }
+      },
+      "copieEchouee": "La copia non è riuscita. Seleziona il testo e copialo a mano."
     },
     "blocs": {
       "contenu": "Il bonus, per intero",
@@ -7886,7 +7903,8 @@
       "profil_manquant": "Scegli prima un profilo.",
       "not_found": "Questo progetto non è più disponibile. Può essere stato eliminato, oppure non ti appartiene. Non è stato modificato nulla.",
       "generic": "Non è andata a buon fine. Riprova, il resto del tuo lavoro è conservato.",
-      "credits": "Non hai abbastanza crediti per questo contenuto. Ricarica i tuoi crediti, tutto quello che è già scritto resta."
+      "credits": "Non hai abbastanza crediti per questo contenuto. Ricarica i tuoi crediti, tutto quello che è già scritto resta.",
+      "couverture_offres": "Ogni profilo deve essere collegato a una sola offerta."
     },
     "credits": {
       "solde": "{count, plural, one {# credito rimasto} other {# crediti rimasti}}",
@@ -7913,8 +7931,10 @@
       "morceaux": "{count, plural, one {# parte} other {# parti}}",
       "copier": "Copia tutto",
       "supprimer": "Elimina",
+      "reprendre": "Riprendi questo contenuto",
       "tronques": "{count, plural, one {# parte è stata troncata} other {# parti sono state troncate}}",
-      "erreurLecture": "Non riesco a leggere la tua libreria adesso. Niente è perso, riprova tra poco."
+      "erreurLecture": "Non riesco a leggere la tua libreria adesso. Niente è perso, riprova tra poco.",
+      "pasReprenable": "Questo contenuto è stato scritto prima che salvassimo le impostazioni: puoi leggerlo e copiarlo, ma non riprenderlo."
     },
     "temps": {
       "sonResultat": "Il suo risultato",
@@ -7954,6 +7974,48 @@
         "emails": "Scrivere la sequenza",
         "promo": "Scrivere i miei contenuti di promozione"
       }
+    },
+    "plan": {
+      "label": "Quello che riceve ogni profilo",
+      "options": {
+        "commun": {
+          "titre": "Lo stesso bonus, la stessa offerta",
+          "aide": "Il più semplice da produrre e da consegnare."
+        },
+        "par-profil": {
+          "titre": "Un bonus per profilo, una sola offerta",
+          "aide": "Il tuo quiz non ha ancora profili di risultato.",
+          "aideAvecProfils": "Ognuno riceve un testo che parla di lui, e tutti portano alla stessa offerta. {count} profili sul tuo quiz."
+        },
+        "par-profil-son-offre": {
+          "titre": "Un bonus per profilo, la sua offerta",
+          "aide": "Il tuo quiz serve a orientare verso l'offerta adatta: ogni bonus riporta a quella del suo profilo."
+        }
+      }
+    },
+    "declencheur": {
+      "label": "Quando invierai questo bonus?",
+      "options": {
+        "completion": {
+          "titre": "Per un quiz completato",
+          "aide": "Scopre il suo risultato, il bonus è il seguito logico."
+        },
+        "share": {
+          "titre": "Per una condivisione",
+          "aide": "Condivide il tuo quiz, il bonus è la sua ricompensa.",
+          "aidePasActive": "Il passaggio di condivisione non è ancora attivo sul tuo quiz."
+        }
+      }
+    },
+    "aides": {
+      "contenu": "Per il tuo visitatore: il testo del bonus, pronto da impaginare.",
+      "guide": "Per te: cosa produci, con quale strumento, e come arriva al tuo visitatore.",
+      "remise": "Titolo, punchline e 5 punti promessa per annunciare il bonus nella tua campagna e nei tuoi post, più l'email che lo consegna."
+    },
+    "vides": {
+      "contenu": "Niente qui per ora. Genera il contenuto del tuo bonus.",
+      "guide": "Niente qui per ora. Genera la tua guida di creazione.",
+      "remise": "Niente qui per ora. Genera di che parlare del tuo bonus."
     }
   },
   "erreursIa": {

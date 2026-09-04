@@ -24,6 +24,7 @@
 // payée six fois dans ces dépôts.
 
 import type { GenerateurId } from "@/lib/generateurs/catalogue";
+import { bonusParProfil, type PlanBonus } from "@/lib/generateurs/offre";
 import { planFixe } from "@/lib/generateurs/sequences";
 
 /** Les morceaux qu'un générateur peut produire. Liste fermée. */
@@ -91,6 +92,20 @@ export interface Piste {
   /** Pourquoi cette piste là pour CE quiz. */
   pourquoi: string;
   pieces: Piece[];
+  /**
+   * CE QUE CETTE PISTE LUI COÛTERA, PAR PERSONNE. Vide le plus souvent.
+   *
+   * Porté de `needsHerTime` dans le labo de l'Atelier. Le socle interdit
+   * déjà de proposer quoi que ce soit qui demande son temps à CHAQUE
+   * visiteur (un audit personnalisé, un appel de 20 minutes, une
+   * relecture) : un quiz qui marche ramène des centaines de personnes,
+   * donc une réussite qui se transforme en dette.
+   *
+   * Mais un format PEUT en valoir la peine, et alors le prix se DIT :
+   * caché derrière le mot "personnalisé", il ne se découvre qu'au
+   * quarantième lead.
+   */
+  tempsParPersonne: string;
 }
 
 /** Combien de morceaux au maximum, par générateur. */
@@ -104,6 +119,58 @@ export const MAX_PIECES: Record<GenerateurId, number> = {
   // semaine. Au delà, on produit du contenu que personne ne publiera.
   promo: 8,
 };
+
+/**
+ * CE MORCEAU S'ÉCRIT-IL POUR UN PROFIL PRÉCIS ?
+ *
+ * Seul le CONTENU du bonus, et seulement quand le bonus est décliné :
+ * son mode d'emploi et ses textes de remise sont les mêmes pour tout le
+ * monde. C'est exactement le `perResult && block === "content"` du labo
+ * de l'Atelier.
+ *
+ * -- POURQUOI CETTE RÈGLE A QUITTÉ LE COMPOSANT -----------------------
+ *
+ * Elle était écrite dans `GenerateurClient`, donc l'ÉCRAN savait qu'un
+ * bonus décliné s'écrit une fois par profil, et le SERVEUR non : il
+ * recevait la même demande pour les trois profils, sans savoir pour qui
+ * il écrivait, et rendait trois fois le même texte. La créatrice
+ * cliquait trois fois, payait trois fois, et obtenait un seul contenu.
+ *
+ * Une règle enfermée dans un composant n'est pas testable, donc elle
+ * n'est pas testée : c'est la règle du 1er août, et c'est le défaut
+ * qu'elle décrit exactement.
+ */
+export function morceauParProfil(
+  id: GenerateurId,
+  plan: PlanBonus,
+  bloc: Bloc,
+): boolean {
+  return id === "bonus" && bloc === "contenu" && bonusParProfil(plan);
+}
+
+/**
+ * LA CLÉ D'UN MORCEAU ÉCRIT, et elle porte le profil quand il y en a un.
+ *
+ * Sans le profil dans la clé, écrire le contenu du 2e profil ÉCRASE
+ * celui du 1er, et la créatrice ne s'en aperçoit qu'en rouvrant. C'est
+ * le `content:${i}` du labo de l'Atelier.
+ *
+ * Elle vit ici parce que DEUX endroits la composent : l'écran quand il
+ * range ce qu'il vient de générer, et le serveur quand il rouvre un
+ * contenu de la bibliothèque. Deux façons de composer une clé finiraient
+ * par ne plus se retrouver, et un contenu déjà écrit s'afficherait comme
+ * jamais généré.
+ */
+export function cleMorceau(args: {
+  generateur: GenerateurId;
+  plan: PlanBonus;
+  bloc: Bloc;
+  index: number;
+  profil?: number | null;
+}): string {
+  const avecProfil = morceauParProfil(args.generateur, args.plan, args.bloc);
+  return `${args.bloc}-${args.index}${avecProfil ? `:${args.profil ?? 0}` : ""}`;
+}
 
 const nettoyer = (v: unknown): string => String(v ?? "").trim();
 
