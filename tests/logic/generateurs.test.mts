@@ -40,9 +40,11 @@ import {
 } from "@/lib/generateurs/blocs";
 import { SOCLE_GENERATEURS } from "@/lib/prompts/generateurs/socle";
 import {
+  consigneDuQuiz,
   consigneLangue,
   consignePistes,
   consigneProduction,
+  lienQuizAutorise,
   messagePourLeModele,
 } from "@/lib/prompts/generateurs/consignes";
 import { urlPubliqueProjet } from "@/lib/quiz/urlPublique";
@@ -432,12 +434,40 @@ describe("Le socle des générateurs", () => {
   });
 });
 
+/**
+ * TOUT CE QUE LE MODÈLE REÇOIT, dans l'ordre où il le reçoit.
+ *
+ * Les trois blocs système plus le message. On teste le CONTENU du
+ * prompt, jamais le bloc qui le porte : la répartition entre les trois
+ * est une décision de CACHE, elle bougera encore, et un test qui la fige
+ * empêche de l'améliorer.
+ */
+function promptComplet(a: {
+  id: Parameters<typeof consigneProduction>[0]["id"];
+  piece: Parameters<typeof consigneProduction>[0]["piece"];
+  profil?: (typeof BRIEF_TEST)["profils"][number] | null;
+  piste?: { titre: string; format: string; punchline: string } | null;
+}): string {
+  return [
+    consigneProduction({ id: a.id, piece: a.piece }),
+    consigneDuQuiz(BRIEF_TEST),
+    messagePourLeModele({
+      brief: BRIEF_TEST,
+      offres: [],
+      profil: a.profil ?? null,
+      piste: a.piste ?? null,
+      lienQuiz: lienQuizAutorise(a.id, a.piece.bloc) ? BRIEF_TEST.urlPublique : "",
+      demande: "Produis ce morceau, et rien d'autre.",
+    }),
+  ].join("\n\n");
+}
+
 describe("Les consignes de chaque étape", () => {
   test("le bonus reçoit les 4 piliers, et eux seuls les reçoivent", () => {
     // Portés de l'Atelier (lib/prompts/bonus.ts). Ils sont dans la partie
     // VARIABLE et pas dans le socle : les coller dans le socle les ferait
     // payer sur chaque email et chaque post, qui n'en ont que faire.
-    const bonus = consignePistes("bonus", BRIEF_TEST);
+    const bonus = consignePistes("bonus");
     for (const pilier of ["URGENCE", "SPÉCIFICITÉ", "ACCESSIBILITÉ", "CONTINUITÉ"]) {
       assert.ok(bonus.includes(pilier), `le pilier ${pilier} a disparu de la consigne bonus`);
     }
@@ -488,13 +518,13 @@ describe("Les consignes de chaque étape", () => {
 
   test("le ton du quiz est imposé, pas redemandé", () => {
     const vous = { ...BRIEF_TEST, adresse: "vous" as const };
-    assert.match(consignePistes("bonus", vous), /VOUVOIES/);
-    assert.match(consignePistes("bonus", BRIEF_TEST), /TUTOIES/);
+    assert.match(consigneDuQuiz(vous), /VOUVOIES/);
+    assert.match(consigneDuQuiz(BRIEF_TEST), /TUTOIES/);
   });
 
   test("le gabarit JSON des pistes n'a pas de tiret cadratin", () => {
     for (const id of GENERATEURS) {
-      const c = consignePistes(id, BRIEF_TEST);
+      const c = consignePistes(id);
       assert.ok(!c.includes("—"), `${id} : tiret cadratin dans la consigne`);
     }
   });
@@ -502,58 +532,46 @@ describe("Les consignes de chaque étape", () => {
   test("seuls les générateurs à série demandent des `pieces` au modèle", () => {
     // Le bonus a ses trois blocs imposés : les lui redemander lui
     // apprendrait qu'il a le droit d'en choisir d'autres.
-    assert.ok(!consignePistes("bonus", BRIEF_TEST).includes('"pieces"'));
-    assert.ok(consignePistes("emails", BRIEF_TEST).includes('"pieces"'));
-    assert.ok(consignePistes("promo", BRIEF_TEST).includes('"pieces"'));
+    assert.ok(!consignePistes("bonus").includes('"pieces"'));
+    assert.ok(consignePistes("emails").includes('"pieces"'));
+    assert.ok(consignePistes("promo").includes('"pieces"'));
   });
 
   test("la production dit POUR QUI on écrit quand il y a un profil", () => {
-    const c = consigneProduction({
+    // ON TESTE CE QUE LE MODÈLE REÇOIT, pas dans quel bloc ça se trouve.
+    // Ces assertions visaient la consigne ; le profil et la piste ont
+    // déménagé dans le message le 4 septembre pour rendre la consigne
+    // cachable, et un test qui fige l'EMPLACEMENT rougit alors sur une
+    // correction juste.
+    const c = promptComplet({
       id: "emails",
-      brief: BRIEF_TEST,
       piece: { bloc: "email", index: 2, resume: "lever l'objection du temps" },
-      piste: {
-        titre: "Trois jours",
-        format: "sequence",
-        punchline: "",
-        pourquoi: "",
-        tempsParPersonne: "",
-        pieces: [],
-      },
       profil: BRIEF_TEST.profils[0],
+      piste: { titre: "Trois jours", format: "sequence", punchline: "" },
     });
     assert.match(c, /La discrète/);
     assert.match(c, /lever l'objection du temps/);
     // Sans ça, l'email 2 réécrit l'email 1 sous un autre titre.
     assert.match(c, /N'empiète pas sur eux/);
+    assert.match(c, /Trois jours/);
   });
 
   test("le lien du quiz n'est donné QUE là où il doit apparaître", () => {
-    const piste = {
-      titre: "x",
-      format: "",
-      punchline: "",
-      pourquoi: "",
-      tempsParPersonne: "",
-      pieces: [],
-    };
-    const promo = consigneProduction({
-      id: "promo",
-      brief: BRIEF_TEST,
-      piece: { bloc: "post", index: 1, resume: "" },
-      piste,
-    });
+    const promo = promptComplet({ id: "promo", piece: { bloc: "post", index: 1, resume: "" } });
     assert.match(promo, /style-de-vente/);
 
     // Le CONTENU du bonus se lit hors ligne : y coller l'adresse du quiz
     // ferait renvoyer le lecteur vers le quiz qu'il vient de finir.
-    const bonus = consigneProduction({
-      id: "bonus",
-      brief: BRIEF_TEST,
-      piece: { bloc: "contenu", index: 1, resume: "" },
-      piste,
-    });
+    const bonus = promptComplet({ id: "bonus", piece: { bloc: "contenu", index: 1, resume: "" } });
     assert.ok(!bonus.includes("style-de-vente"), bonus);
+
+    // Et la règle est une FONCTION, pas une condition recopiée : le
+    // message la lit pour savoir s'il porte l'adresse, la consigne ne la
+    // porte plus.
+    assert.equal(lienQuizAutorise("promo", "post"), true);
+    assert.equal(lienQuizAutorise("bonus", "remise"), true);
+    assert.equal(lienQuizAutorise("bonus", "contenu"), false);
+    assert.equal(lienQuizAutorise("emails", "email"), false);
   });
 
   test("le message porte l'offre quand il y en a une, et rien sinon", () => {

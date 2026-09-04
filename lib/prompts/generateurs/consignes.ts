@@ -187,12 +187,9 @@ Les trois pistes attaquent par trois entrées différentes : par exemple la situ
 };
 
 /** Le bloc système VARIABLE de l'étape 1. */
-export function consignePistes(id: GenerateurId, brief: BriefQuiz): string {
+export function consignePistes(id: GenerateurId): string {
   return [
     CONSIGNE_PISTES[id],
-    "",
-    consigneLangue(brief.langue),
-    consigneTon(brief),
     "",
     "TU RÉPONDS UNIQUEMENT PAR CET OBJET JSON, sans un mot avant ni après, sans bloc de code :",
     gabaritPistes(id),
@@ -219,15 +216,11 @@ export function consignePistes(id: GenerateurId, brief: BriefQuiz): string {
  */
 export function consigneUnePisteDePlus(
   id: GenerateurId,
-  brief: BriefQuiz,
   connues: { format: string; titre: string }[],
 ): string {
   const liste = connues.map((p, i) => `${i + 1}. ${p.format} : ${p.titre}`).join("\n");
   return [
     CONSIGNE_PISTES[id],
-    "",
-    consigneLangue(brief.langue),
-    consigneTon(brief),
     "",
     "ELLE A DÉJÀ CES PISTES SOUS LES YEUX, ET AUCUNE NE LA CONVAINC :",
     liste,
@@ -294,14 +287,8 @@ Il se lit dans un fil, sans contexte : la première ligne doit arrêter le pouce
 Le lien du quiz est à la fin, sur sa propre ligne. Termine par au maximum trois mots-dièse, en minuscules, tirés du vocabulaire de la niche. Aucun emoji sauf si le brief en montre.`;
 
 /** Le bloc système VARIABLE de l'étape 2. */
-export function consigneProduction(args: {
-  id: GenerateurId;
-  brief: BriefQuiz;
-  piece: Piece;
-  piste: Piste;
-  profil?: ProfilBrief | null;
-}): string {
-  const { id, brief, piece, piste, profil } = args;
+export function consigneProduction(args: { id: GenerateurId; piece: Piece }): string {
+  const { id, piece } = args;
 
   let quoi: string;
   if (id === "bonus") {
@@ -314,31 +301,9 @@ export function consigneProduction(args: {
 
   const l = [quoi, ""];
 
-  if (profil) {
-    l.push(
-      "LE PROFIL POUR LEQUEL TU ÉCRIS, ET LUI SEUL :",
-      `- ${profil.titre || `Profil ${profil.rang}`}`,
-      profil.description ? `- ce que le quiz vient de lui dire : ${profil.description}` : "",
-      "Ce texte ne doit pas pouvoir être envoyé à un autre profil sans être réécrit.",
-      "",
-    );
-  }
-
-  if (brief.urlPublique && (id === "promo" || piece.bloc === "remise")) {
-    l.push(
-      `LE LIEN DU QUIZ, à recopier EXACTEMENT, sans rien y ajouter : ${brief.urlPublique}`,
-      "",
-    );
-  }
-
-  l.push(
-    "LA PISTE CHOISIE PAR LA CRÉATRICE :",
-    `- ${piste.titre}`,
-    piste.format ? `- forme : ${piste.format}` : "",
-    piste.punchline ? `- ce qu'elle promet : ${piste.punchline}` : "",
-    "",
-  );
-
+  // `resume` porte l'INTENTION du temps (l'email 2 n'est pas l'email 3).
+  // Il vient de `sequences.ts`, donc il est le MÊME pour tout le monde :
+  // il a sa place ici, du côté qui se met en cache.
   if (piece.resume) {
     l.push(
       `CE MORCEAU LÀ, ET RIEN D'AUTRE : ${piece.resume}`,
@@ -347,8 +312,37 @@ export function consigneProduction(args: {
     );
   }
 
-  l.push(consigneLangue(brief.langue), consigneTon(brief));
   return recoller(l);
+}
+
+/**
+ * LE LIEN DU QUIZ A-T-IL LE DROIT D'APPARAÎTRE DANS CE MORCEAU ?
+ *
+ * Non partout, et ce n'est pas un détail : le CONTENU d'un bonus se lit
+ * hors ligne, y coller l'adresse renverrait le lecteur vers le quiz
+ * qu'il vient de finir. Il ne sort donc que dans la promotion et dans
+ * les textes de remise.
+ *
+ * La règle vit ici, en fonction pure, parce que DEUX endroits en
+ * dépendent depuis que les faits ont quitté le bloc système : la
+ * consigne ne le porte plus, c'est le message qui le porte. Recopier la
+ * condition dans le message la ferait diverger au premier bloc ajouté.
+ */
+export function lienQuizAutorise(id: GenerateurId, bloc: Piece["bloc"]): boolean {
+  return id === "promo" || bloc === "remise";
+}
+
+/**
+ * CE QUI DÉPEND DE SON QUIZ, ET RIEN D'AUTRE : la langue et le ton.
+ *
+ * Ce sont des règles, donc elles restent dans le bloc système ; mais
+ * elles changent d'une créatrice à l'autre, donc elles vivent APRÈS le
+ * dernier point de cache. Les mettre avant multiplierait les entrées par
+ * le nombre de langues du catalogue (100) fois deux formes d'adresse,
+ * pour gagner 74 jetons.
+ */
+export function consigneDuQuiz(brief: BriefQuiz): string {
+  return recoller([consigneLangue(brief.langue), consigneTon(brief)]);
 }
 
 // ─────────────────────────────────────────────────────────────────────
@@ -376,9 +370,20 @@ export function messagePourLeModele(args: {
    * la même (retour Monique, Atelier, 5 août 2026).
    */
   profilIndex?: number | null;
+  /**
+   * LA PISTE CHOISIE, quand il y en a une. C'est un FAIT (ce qu'elle a
+   * choisi), pas une règle : il vivait dans le bloc système, ce qui
+   * rendait la consigne différente pour chaque créatrice, donc
+   * impossible à mettre en cache.
+   */
+  piste?: { titre: string; format: string; punchline: string } | null;
+  /** LE PROFIL pour lequel on écrit, avec ses mots à lui. */
+  profil?: ProfilBrief | null;
+  /** L'adresse du quiz, seulement là où elle a le droit d'apparaître. */
+  lienQuiz?: string;
   demande: string;
 }): string {
-  return recoller([
+  const l = [
     rendreBriefPourPrompt(args.brief),
     "",
     rendreOffresPourPrompt({
@@ -389,6 +394,34 @@ export function messagePourLeModele(args: {
       declencheur: args.declencheur ?? "completion",
     }),
     "",
-    args.demande,
-  ]);
+  ];
+
+  if (args.profil) {
+    l.push(
+      "LE PROFIL POUR LEQUEL TU ÉCRIS, ET LUI SEUL :",
+      `- ${args.profil.titre || `Profil ${args.profil.rang}`}`,
+      args.profil.description
+        ? `- ce que le quiz vient de lui dire : ${args.profil.description}`
+        : "",
+      "Ce texte ne doit pas pouvoir être envoyé à un autre profil sans être réécrit.",
+      "",
+    );
+  }
+
+  if (args.lienQuiz) {
+    l.push(`LE LIEN DU QUIZ, à recopier EXACTEMENT, sans rien y ajouter : ${args.lienQuiz}`, "");
+  }
+
+  if (args.piste) {
+    l.push(
+      "LA PISTE CHOISIE PAR LA CRÉATRICE :",
+      `- ${args.piste.titre}`,
+      args.piste.format ? `- forme : ${args.piste.format}` : "",
+      args.piste.punchline ? `- ce qu'elle promet : ${args.piste.punchline}` : "",
+      "",
+    );
+  }
+
+  l.push(args.demande);
+  return recoller(l);
 }

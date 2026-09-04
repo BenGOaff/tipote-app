@@ -98,9 +98,11 @@ import {
 import { construireBriefQuiz, type BriefQuiz } from "@/lib/generateurs/briefQuiz";
 import { SOCLE_GENERATEURS } from "@/lib/prompts/generateurs/socle";
 import {
+  consigneDuQuiz,
   consignePistes,
   consigneUnePisteDePlus,
   consigneProduction,
+  lienQuizAutorise,
   messagePourLeModele,
 } from "@/lib/prompts/generateurs/consignes";
 import { cleAnthropic } from "@/lib/ai/cleAnthropic";
@@ -392,7 +394,12 @@ export async function POST(req: NextRequest) {
     | { ok: true; texte: string; tronque: boolean }
     | { ok: false; failure: AiFailure; retryAfter?: string | null };
 
-  async function appelUnique(variable: string, message: string, maxTokens: number): Promise<Sortie> {
+  async function appelUnique(
+    fixe: string,
+    variable: string,
+    message: string,
+    maxTokens: number,
+  ): Promise<Sortie> {
     let res: Response;
     try {
       res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -407,14 +414,50 @@ export async function POST(req: NextRequest) {
             model,
             max_tokens: maxTokens,
             temperature: 0.8,
-            // LE SOCLE D'ABORD, MARQUÉ POUR LE CACHE, LA CONSIGNE
-            // ENSUITE. Le cache d'Anthropic est un préfixe EXACT :
-            // inverser les deux blocs ne cacherait plus rien, en
-            // silence et à plein tarif.
+            // ── TROIS BLOCS, DU PLUS STABLE AU MOINS STABLE ──
+            //
+            // Le cache d'Anthropic est un préfixe EXACT : le premier
+            // octet qui change invalide tout ce qui suit. L'ordre n'est
+            // donc pas une préférence de lecture, c'est ce qui décide de
+            // ce qui se met en cache.
+            //
+            //   1. LE SOCLE. Le même pour les trois générateurs, pour
+            //      toutes les créatrices, dans toutes les langues.
+            //      2841 jetons, UNE entrée de cache pour tout le monde.
+            //   2. LA CONSIGNE FIXE. Ce qu'on demande d'écrire, sans un
+            //      seul fait dedans : il y en a 21 en tout (3 blocs du
+            //      bonus, 5 emails, 7 contenus de promo, 3+3 pour les
+            //      pistes). Chacune est la MÊME pour tout le monde.
+            //   3. LA LANGUE ET LE TON. Des règles, mais qui dépendent
+            //      de SON quiz : après le dernier point de cache. Les
+            //      mettre avant multiplierait les entrées par les 100
+            //      langues du catalogue pour gagner 74 jetons.
+            //
+            // Les FAITS (son brief, ses offres, le profil, la piste
+            // qu'elle a choisie, l'adresse de son quiz) vivent dans le
+            // MESSAGE, pas ici. C'est ce qui rend le bloc 2 identique
+            // d'une créatrice à l'autre, donc cachable : avant le
+            // 4 septembre il portait la piste et le profil, donc AUCUNE
+            // des 21 consignes n'était la même deux fois.
+            //
+            // TTL : 5 minutes, le défaut, et c'est un choix. Une lecture
+            // RELANCE le compteur sans rien coûter : dès que deux appels
+            // qui partagent le préfixe partent à moins de 5 minutes
+            // d'écart, l'entrée ne meurt jamais. Le TTL d'une heure
+            // coûte 2x à l'écriture au lieu de 1,25x et n'achète rien
+            // dans ce cas là. Il ne se justifierait que sur un trafic
+            // CREUX (moins d'un appel toutes les 5 minutes) ET avec au
+            // moins 3 lectures par entrée : à mesurer avant de changer,
+            // jamais par principe.
             system: [
               {
                 type: "text",
                 text: SOCLE_GENERATEURS,
+                cache_control: { type: "ephemeral" },
+              },
+              {
+                type: "text",
+                text: fixe,
                 cache_control: { type: "ephemeral" },
               },
               { type: "text", text: variable },
@@ -470,8 +513,13 @@ export async function POST(req: NextRequest) {
   }
 
   /** Le même appel, avec les reprises sur saturation. */
-  async function appeler(variable: string, message: string, maxTokens: number): Promise<Sortie> {
-    let out = await appelUnique(variable, message, maxTokens);
+  async function appeler(
+    fixe: string,
+    variable: string,
+    message: string,
+    maxTokens: number,
+  ): Promise<Sortie> {
+    let out = await appelUnique(fixe, variable, message, maxTokens);
     for (let attempt = 1; attempt < MAX_ATTEMPTS; attempt++) {
       if (out.ok || !isRetryable(out.failure)) return out;
       const wait = retryDelayMs(attempt, out.retryAfter);
@@ -480,7 +528,7 @@ export async function POST(req: NextRequest) {
       if (budgetLeft() < wait + 45_000) return out;
       console.warn("[generateurs] sature, reprise dans", wait, "ms");
       await new Promise((r) => setTimeout(r, wait));
-      out = await appelUnique(variable, message, maxTokens);
+      out = await appelUnique(fixe, variable, message, maxTokens);
     }
     return out;
   }
@@ -528,7 +576,8 @@ export async function POST(req: NextRequest) {
       return refus("credits", { requis: COUT_PISTES });
     }
     const out = await appeler(
-      consignePistes(id, brief),
+      consignePistes(id),
+      consigneDuQuiz(brief),
       messagePourLeModele({
         brief,
         offres,
@@ -569,7 +618,11 @@ export async function POST(req: NextRequest) {
       return refus("credits", { requis: COUT_PISTES });
     }
     const out = await appeler(
-      consigneUnePisteDePlus(id, brief, input.connues),
+      // LA PARTIE FIXE EST CELLE DES PISTES, à l'octet près : les deux
+      // étapes partagent donc une seule entrée de cache. Ce qu'elle a
+      // déjà sous les yeux est un FAIT, il part avec le reste.
+      consignePistes(id),
+      [consigneDuQuiz(brief), consigneUnePisteDePlus(id, input.connues)].join("\n\n"),
       messagePourLeModele({
         brief,
         offres,
@@ -634,7 +687,8 @@ export async function POST(req: NextRequest) {
   const maxTokens = piece.bloc === "contenu" ? 4200 : piece.bloc === "post" ? 900 : 1800;
 
   const out = await appeler(
-    consigneProduction({ id, brief, piece, piste, profil: profilChoisi }),
+    consigneProduction({ id, piece }),
+    consigneDuQuiz(brief),
     messagePourLeModele({
       brief,
       offres,
@@ -642,6 +696,12 @@ export async function POST(req: NextRequest) {
       declencheur: input.declencheur,
       // ICI on écrit pour UN profil, donc c'est SON offre qui part.
       profilIndex: typeof input.profilIndex === "number" ? input.profilIndex : null,
+      profil: profilChoisi,
+      // L'ADRESSE DU QUIZ NE SORT QUE LÀ OÙ ELLE DOIT APPARAÎTRE : le
+      // contenu d'un bonus se lit hors ligne, y coller le lien
+      // renverrait le lecteur vers le quiz qu'il vient de finir.
+      lienQuiz: lienQuizAutorise(id, piece.bloc) ? brief.urlPublique : "",
+      piste: piste.titre || piste.format || piste.punchline ? piste : null,
       demande: "Produis ce morceau, et rien d'autre.",
     }),
     maxTokens,

@@ -3951,6 +3951,105 @@ qu'on a vérifié, et dire aussi ce qu'on n'a pas vérifié.
 Test : les 4 cas ajoutés à `tests/logic/generateurs.test.mts` (les deux
 dépôts), vérifiés en rejouant la version d'avant : les 4 rougissent.
 
+### LE CACHE : ce qui se paie une fois, et ce qui se paie à chaque appel (4 septembre 2026)
+
+Béné : "beaucoup de choses sont reprises d'un user à l'autre alors on
+doit pouvoir économiser quelque part ?" Puis, sur le TTL : "fais au mieux
+pour le jour où on aura 1000 utilisateurs intensifs."
+
+**Elle avait raison, et j'avais d'abord répondu à côté.** J'ai commencé
+par dire que le préfixe caché ne laissait plus rien à gagner. Mesuré, il
+en restait un tiers.
+
+#### CE QUI BLOQUAIT, ET IL ÉTAIT INVISIBLE
+
+Le socle est mis en cache depuis le 1er septembre. La consigne, non. Et
+elle ne POUVAIT pas l'être : elle portait **le profil, la piste choisie
+et l'adresse du quiz**, c'est à dire des FAITS. Mesuré avant correction :
+**0 des 15 consignes de production n'était la même d'une créatrice à
+l'autre.** 383 jetons repayés plein tarif à chaque appel, sur un texte
+dont seules 3 lignes changeaient.
+
+L'en-tête de `messagePourLeModele` disait pourtant déjà la règle : "le
+système dit les règles, le message dit le cas". Trois blocs de FAITS
+vivaient dans les RÈGLES.
+
+#### LA STRUCTURE, DU PLUS STABLE AU MOINS STABLE
+
+| | quoi | qui |
+|---|---|---|
+| 1, caché | le SOCLE, 2841 jetons | UNE entrée pour tout le monde, les trois générateurs, toutes les langues |
+| 2, caché | la CONSIGNE, ~281 jetons | 18 entrées, une par (générateur, bloc, rang) |
+| 3, plein tarif | la langue et le ton, 73 jetons | par créatrice |
+| message | son brief, ses offres, le profil, la piste, l'adresse | par appel |
+
+**MESURÉ, entrée effective d'un appel de production :**
+
+| | avant | après |
+|---|---|---|
+| cache chaud (le trafic dense) | 842 j | **569 j (-32 %)** |
+| cache froid (aujourd'hui) | | **-9 % (bonus) à -17 % (promo)** |
+
+C'est gagnant dans les DEUX régimes, et c'est ce qui a tranché : sortir
+les faits ne coûte rien tout de suite et rapporte un tiers à l'échelle.
+
+#### LE TTL RESTE À 5 MINUTES, ET C'EST LA RÉPONSE À "1000 UTILISATEURS"
+
+C'est le contraire de ce qu'on croit. **Une LECTURE relance le compteur
+sans rien coûter.** Donc dès que deux appels qui partagent le préfixe
+partent à moins de 5 minutes d'écart, l'entrée ne meurt jamais. À
+1000 utilisateurs intensifs, les 19 entrées restent chaudes en
+permanence, et le TTL d'une heure ne ferait que **doubler le prix de
+l'écriture (2x au lieu de 1,25x) pour rien**.
+
+Le TTL d'une heure sert au cas INVERSE : un trafic creux, avec des trous
+de plus de 5 minutes. Et même là il lui faut **3 lectures par entrée**
+pour rentrer dedans. À mesurer avant de le poser, jamais par principe.
+
+#### CE QUE J'AI TESTÉ ET QUI AURAIT COÛTÉ PLUS CHER
+
+- **Un socle par générateur.** Mesuré : le bloc qui décrit les trois ne
+  fait que **11 % du socle** (301 jetons). On récupérerait 200 jetons une
+  fois par session en créant trois caches à réchauffer.
+- **Mettre la langue et le ton avant le point de cache.** Ça
+  multiplierait les entrées par les 100 langues du catalogue fois deux
+  formes d'adresse, pour gagner 73 jetons.
+
+#### ET LA LEÇON DE MESURE, QUI EST SUR MOI
+
+Ma première mesure disait "5 consignes sur 5 identiques" côté emails.
+**Elle était fausse** : mon faux brief portait `locale` alors que le
+champ s'appelle `langue`, donc `consigneLangue` recevait `undefined` des
+deux côtés et rendait la même chose. J'ai bâti une conclusion sur un
+test qui ne distinguait pas ce qu'il était censé distinguer, dans la
+séance même où je citais cette règle.
+
+**Un faux jeu de données ne se voit pas : il rend le test VERT.** Une
+mesure de comparaison doit d'abord prouver qu'elle sait voir une
+différence quand il y en a une.
+
+#### Le garde-fou
+
+`tests/logic/cache-des-prompts.test.mts`, vérifié en rejouant la version
+d'avant (une adresse remise dans la consigne, un seul point de cache :
+les deux rougissent). Il tient quatre choses : le socle n'interpole rien,
+les 15 consignes sont identiques d'une créatrice à l'autre, il y a
+exactement DEUX points de cache et le bloc variable n'en porte aucun, et
+le TTL reste à 5 minutes avec sa raison écrite à côté.
+
+**Le cache échoue EN SILENCE** : une variable qui repasse dans le préfixe
+ne casse rien, ne lève rien, n'affiche rien. Elle multiplie juste la
+facture sans que personne ne le voie.
+
+#### Ce qui reste vrai, et qu'il ne faut pas perdre de vue
+
+**La sortie coûte 5 fois l'entrée au jeton, donc 73 à 79 % de la
+facture.** Tout ce qui précède optimise la moitié pas chère. Le seul
+levier qui pèse vraiment est le nombre de morceaux écrits et leur
+longueur, et il est déjà réglé : chaque morceau a son propre bouton
+depuis le 3 septembre, et `max_tokens` est posé par bloc (4200 pour le
+contenu d'un bonus, 1800 pour un email, 900 pour un post).
+
 ## ON DIT TAG, JAMAIS ÉTIQUETTE (Béné, 1er septembre 2026)
 
 "Ne dis jamais étiquette, nulle part, on parle bien de tag en français
