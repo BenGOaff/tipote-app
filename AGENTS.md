@@ -4144,11 +4144,51 @@ dépenser ses crédits d'API.** Ce qui est mesuré : les six morceaux
 savent enfin quelle longueur viser, et la conclusion est interdite. Ce
 qui est attendu, pas constaté : une baisse de la facture de sortie.
 
+#### ET LE PREFILL ASSISTANT RÉPOND 400 SUR NOTRE MODÈLE
+
+C'est la mauvaise surprise de la journée, et elle a été trouvée AVANT
+qu'elle ne la voie, en relisant la documentation de l'API au lieu de me
+fier à ce que je croyais savoir.
+
+Pour faire reprendre un texte, le réflexe est le **prefill** : reposer
+ce qui est déjà écrit en dernier message `assistant`, et le modèle
+continue au caractère près. C'est ce que j'avais écrit et poussé.
+
+**Le prefill est RETIRÉ de toute la famille 4.6 et des modèles 5**, et
+les générateurs tournent sur `claude-sonnet-4-6`
+(`resolveAnthropicModel(..., "sonnet")`). Chaque suite aurait donc reçu
+un **400**, que `classifyUpstream` traduit en `refused`, donc l'écran
+aurait dit "La demande a été refusée. Ce n'est pas de ton côté" à chaque
+fois qu'un contenu dépasse une tranche. La première tranche marchait,
+c'est tout.
+
+**Règle : la suite part dans le MESSAGE** (`CONSIGNE_DE_SUITE`), avec le
+texte déjà écrit et trois interdictions qui comptent autant que la
+demande : ne rien répéter, ne pas réécrire le début, ne pas annoncer
+"voici la suite". Sans elles, le modèle recommence son texte, donc on
+paie deux fois le même contenu.
+
+**Et sans prefill, on ne peut pas reprendre au milieu d'un mot.** Une
+tranche s'arrête où le plafond tombe : `couperPourReprendre()` ramène
+donc le texte au dernier paragraphe (sinon à la dernière phrase finie),
+et ces quelques lignes sont réécrites par la suite. **Rien n'est perdu :
+la couture est propre.** Un texte sans aucune frontière est gardé
+ENTIER, parce qu'une couture imparfaite vaut toujours mieux qu'un texte
+jeté.
+
+**LA LEÇON, ET ELLE EST SUR MOI :** j'ai poussé un mécanisme que je
+n'avais jamais exécuté, en me fiant à un réflexe. Les tests étaient
+verts, `tsc` était vert, et le code ne pouvait pas marcher. **Un vert
+local ne prouve rien sur un contrat d'API** (c'est déjà la leçon de
+`pdf-parse`, 7 août), et la question de Béné, "pas de mauvaise surprise
+à attendre ?", est exactement celle qu'il faut se poser AVANT de dire
+que c'est fini.
+
 Test : `tests/logic/sortie-generateurs.test.mts` (les deux dépôts),
-vérifié en rejouant CINQ versions d'avant (le bonus raboté à 1500, le
-refus sur un texte qui continue, la suite sans prefill donc qui
-recommence, un échec qui jette le déjà écrit, le bandeau sans bouton) :
-les cinq rougissent.
+vérifié en rejouant SIX versions d'avant (le bonus raboté à 1500, le
+refus sur un texte qui continue, **le prefill assistant remis**, la
+reprise sans frontière propre, un échec qui jette le déjà écrit, le
+bandeau sans bouton) : les six rougissent.
 
 ## ON DIT TAG, JAMAIS ÉTIQUETTE (Béné, 1er septembre 2026)
 

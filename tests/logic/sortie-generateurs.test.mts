@@ -36,11 +36,12 @@ import {
   MAX_TRANCHES,
   TRANCHE_MAX,
   consigneDeLongueur,
+  couperPourReprendre,
   longueurDuMorceau,
 } from "@/lib/generateurs/longueurSortie";
 import { BLOCS_DU_GENERATEUR, type Bloc } from "@/lib/generateurs/blocs";
 import { GENERATEURS, type GenerateurId } from "@/lib/generateurs/catalogue";
-import { consigneProduction } from "@/lib/prompts/generateurs/consignes";
+import { CONSIGNE_DE_SUITE, consigneProduction } from "@/lib/prompts/generateurs/consignes";
 import { SOCLE_GENERATEURS } from "@/lib/prompts/generateurs/socle";
 
 const lire = (p: string) => fs.readFileSync(path.join(process.cwd(), p), "utf8");
@@ -145,16 +146,34 @@ describe("un texte plus long qu'une tranche CONTINUE, il ne s'annule pas", () =>
     );
   });
 
-  test("le modèle REPREND le texte déjà écrit au lieu de recommencer", () => {
-    // Sans le prefill `assistant`, une suite recommencerait au début :
-    // on paierait deux fois pour un texte qui se répète.
-    assert.match(route, /role: "assistant", content: prefill/);
-    assert.match(route, /suiteDe/);
+  test("AUCUN prefill assistant : il répond 400 sur le modèle des générateurs", () => {
+    // Le réflexe pour une reprise est de reposer le texte en dernier
+    // message `assistant`. C'est ce que j'avais écrit, et le prefill est
+    // RETIRÉ de la famille 4.6+ : `claude-sonnet-4-6` répond 400, donc
+    // chaque suite aurait échoué en disant "refusé".
+    assert.doesNotMatch(
+      route,
+      /role: "assistant"/,
+      "un prefill assistant : 400 sur claude-sonnet-4-6, chaque suite echoue",
+    );
   });
 
-  test("les tranches s'enchaînent, et ce qui est écrit s'ajoute", () => {
+  test("la suite part dans le MESSAGE, avec la consigne de ne rien répéter", () => {
+    assert.match(route, /CONSIGNE_DE_SUITE/);
+    assert.match(route, /suiteDe/);
+    // Sans ces interdictions, le modèle recommence son texte depuis le
+    // début : on paierait deux fois le même contenu.
+    assert.match(CONSIGNE_DE_SUITE, /Tu ne répètes rien de ce qui est déjà écrit/);
+    assert.match(CONSIGNE_DE_SUITE, /uniquement la suite/);
+  });
+
+  test("les tranches s'enchaînent, et on recolle à une frontière propre", () => {
     assert.match(route, /for \(let tranche = 0; tranche < MAX_TRANCHES; tranche\+\+\)/);
-    assert.match(route, /texte \+= out\.texte/);
+    assert.match(
+      route,
+      /couperPourReprendre\(/,
+      "sans frontière propre, la suite reprendrait au milieu d'un mot",
+    );
   });
 
   test("une tranche qui échoue ne jette pas ce qui est déjà écrit", () => {
@@ -179,6 +198,39 @@ describe("un texte plus long qu'une tranche CONTINUE, il ne s'annule pas", () =>
     const enregistre = route.indexOf("await rangerMorceau(");
     const calcule = route.indexOf("markdown = sanitizeAiText(texte)");
     assert.ok(calcule > 0 && enregistre > calcule, "on enregistre avant d'avoir le texte complet");
+  });
+});
+
+describe("on recule jusqu'à une frontière propre, sans rien perdre", () => {
+  test("on repart du dernier paragraphe", () => {
+    const t = "Premier paragraphe entier.\n\nDeuxième paragraphe coupé au mil";
+    const r = couperPourReprendre(t);
+    assert.equal(r.garde, "Premier paragraphe entier.");
+    assert.equal(r.joint, "\n\n");
+  });
+
+  test("sans paragraphe, on repart de la dernière phrase finie", () => {
+    const t = "Une phrase finie. Une deuxième aussi finie. Et une troisième cou";
+    const r = couperPourReprendre(t);
+    assert.equal(r.garde, "Une phrase finie. Une deuxième aussi finie.");
+    assert.equal(r.joint, " ");
+  });
+
+  test("un texte SANS aucune frontière est gardé ENTIER", () => {
+    // Une couture imparfaite vaut mieux qu'un texte jeté : c'est la
+    // règle de la journée.
+    const t = "un seul bloc sans ponctuation finale ni saut de ligne qui continue";
+    assert.equal(couperPourReprendre(t).garde, t);
+  });
+
+  test("et on ne recule jamais jusqu'à presque tout jeter", () => {
+    // Un paragraphe de deux mots au tout début ne doit pas faire
+    // effacer les mille mots qui suivent.
+    const t = "Titre\n\n" + "du texte qui continue longtemps ".repeat(30) + "et coup";
+    assert.ok(
+      couperPourReprendre(t).garde.length > t.length / 2,
+      "on a jeté plus de la moitié du texte pour trouver une frontière",
+    );
   });
 });
 
