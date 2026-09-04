@@ -290,3 +290,126 @@ describe("L'écran du brief suit celui de l'Atelier", () => {
     }
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────
+// LES MOTS ET LES GESTES DE SON LABO, RELEVÉS UN PAR UN
+// ─────────────────────────────────────────────────────────────────────
+//
+// Béné, 3 septembre 2026 : "tu peux pas chercher par toi-même ce qui ne
+// serait pas strictement identique pour le corriger ? Tu as TOUS les
+// codes pour le faire."
+//
+// Si. J'ai donc extrait chaque phrase visible de son labo et cherché
+// l'équivalent chez nous : 26 n'en avaient pas. Ce bloc fige celles qui
+// portent un GESTE, pas seulement un mot.
+
+describe("Les mots et les gestes de son labo", () => {
+  const fr = JSON.parse(lire("messages/fr.json")) as {
+    generateurs: Record<string, Record<string, unknown>>;
+  };
+  const g = fr.generateurs;
+  const ecran = lire("app/generateurs/[generateur]/GenerateurClient.tsx")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, "");
+
+  test("ses libellés, mot pour mot", () => {
+    // Trois gestes que Tiquiz nommait autrement. Elle a dit "pareil" :
+    // ce sont ses mots qui gagnent, pas les miens.
+    assert.equal((g.pistes as Record<string, string>).lancer, "Proposer 3 pistes");
+    assert.equal((g.pistes as Record<string, string>).encours, "Je cherche tes pistes...");
+    assert.equal((g.pistes as Record<string, string>).choisir, "Je prends celle-ci");
+    assert.equal((g.etapes as Record<string, string>).offre, "Ton offre payante");
+  });
+
+  test("LES TROIS DOSSIERS DU BONUS ONT LEUR PHRASE", () => {
+    // Mes cartes affichaient l'intention de la pièce, qui est VIDE sur
+    // le bonus : trois cartes sans un mot pour dire ce qu'il y a dedans.
+    // "Pour toi / pour ton visiteur" est ce qui évite d'ouvrir les trois
+    // pour savoir lequel est lequel.
+    const aides = g.aides as Record<string, string>;
+    assert.match(aides.contenu!, /Pour ton visiteur/);
+    assert.match(aides.guide!, /Pour toi/);
+    assert.match(aides.remise!, /5 puces promesses/);
+    assert.match(ecran, /function aideDuBloc/, "les dossiers n'ont plus de phrase");
+    assert.match(ecran, /t\(`aides\.\$\{piece\.bloc\}`\)/);
+  });
+
+  test("UN DOSSIER VIDE DIT LE GESTE, pas l'état de l'écran", () => {
+    // "Rien n'a encore été écrit" décrit l'écran ; "Génère ton guide de
+    // création" dit quoi faire.
+    const vides = g.vides as Record<string, string>;
+    for (const b of ["contenu", "guide", "remise"]) {
+      assert.match(vides[b]!, /Génère/, `le vide de ${b} ne dit pas le geste`);
+    }
+    assert.match(ecran, /function videDuBloc/);
+  });
+
+  test("UNE PISTE QUI COÛTE SON TEMPS PAR PERSONNE LE DIT", () => {
+    // Porté de `needsHerTime`. Le socle interdit déjà ce qui demande son
+    // temps à chaque visiteur ; quand un format en vaut quand même la
+    // peine, le prix se DIT. Caché derrière le mot "personnalisé", il ne
+    // se découvre qu'au quarantième lead.
+    assert.match(ecran, /p\.tempsParPersonne \?/, "l'avertissement n'est plus affiché");
+    assert.match(ecran, /amber/, "il ne se voit plus comme un avertissement");
+    const consignes = lire("lib/prompts/generateurs/consignes.ts");
+    assert.match(consignes, /tempsParPersonne/, "le prompt ne le demande plus");
+    assert.match(consignes, /PAR PERSONNE/, "le prompt ne dit plus ce qu'il attend");
+    const route = lire("app/api/generateurs/route.ts");
+    assert.match(route, /tempsParPersonne: txt\(o\.tempsParPersonne\)/, "le lecteur le jette");
+  });
+
+  test("UNE OFFRE DE TROIS MOTS NE PASSE PAS", () => {
+    // Son labo refuse en dessous de 10 caractères, avec la phrase qui
+    // dit quoi corriger.
+    assert.match(g.offre.tropCourte as string, /une phrase/);
+    assert.match(ecran, /length < 10/, "rien ne refuse plus une offre trop courte");
+    assert.match(ecran, /offreTropCourte/);
+  });
+
+  test("LA CARTE PARTAGE DIT QUE L'ÉTAPE N'EST PAS ACTIVÉE", () => {
+    // Proposer un déclenchement qui n'existe pas sur ce quiz là ferait
+    // écrire un bonus que personne ne recevra jamais.
+    const d = g.declencheur as { options: Record<string, Record<string, string>> };
+    assert.match(d.options.share!.aidePasActive!, /pas encore activée/);
+    assert.match(ecran, /!projet\.partageActive/, "l'écran ne le dit plus");
+    // Et la donnée vient VRAIMENT du quiz, pas d'une supposition.
+    const page = lire("app/generateurs/[generateur]/page.tsx");
+    assert.match(page, /virality_enabled/, "le drapeau n'est plus lu en base");
+    assert.match(page, /partageActive: q\.virality_enabled === true/);
+  });
+
+  test("UNE COPIE QUI ÉCHOUE DIT LA SORTIE", () => {
+    assert.match(g.production.copieEchouee as string, /à la main/);
+    assert.match(ecran, /t\("production\.copieEchouee"\)/);
+  });
+
+  test("tout ça existe dans les 7 langues", () => {
+    for (const loc of LOCALES) {
+      const m = (
+        JSON.parse(lire(`messages/${loc}.json`)) as {
+          generateurs: Record<string, Record<string, unknown>>;
+        }
+      ).generateurs;
+      for (const b of ["contenu", "guide", "remise"]) {
+        assert.ok(
+          String((m.aides as Record<string, string>)[b] ?? "").trim().length > 0,
+          `${loc} : aides.${b}`,
+        );
+        assert.ok(
+          String((m.vides as Record<string, string>)[b] ?? "").trim().length > 0,
+          `${loc} : vides.${b}`,
+        );
+      }
+      assert.ok(String(m.offre.tropCourte ?? "").trim().length > 0, `${loc} : offre.tropCourte`);
+      assert.ok(
+        String(m.production.copieEchouee ?? "").trim().length > 0,
+        `${loc} : production.copieEchouee`,
+      );
+      const d = m.declencheur as { options: Record<string, Record<string, string>> };
+      assert.ok(
+        String(d.options.share?.aidePasActive ?? "").trim().length > 0,
+        `${loc} : aidePasActive`,
+      );
+    }
+  });
+});

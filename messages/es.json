@@ -7784,7 +7784,7 @@
     "etapes": {
       "projet": "1. El proyecto",
       "profil": "2. El perfil",
-      "offre": "La oferta a la que lleva",
+      "offre": "Tu oferta de pago",
       "pistes": "Las propuestas",
       "contenus": "Los contenidos"
     },
@@ -7840,18 +7840,20 @@
       "uneSeuleChacun": "Cada perfil debe estar vinculado a una oferta, y solo a una.",
       "promesseAria": "Promesa de la oferta {rang}",
       "formatAria": "Formato de la oferta {rang}",
-      "prixAria": "Precio de la oferta {rang}"
+      "prixAria": "Precio de la oferta {rang}",
+      "aideBonus": "Es hacia ella que tu bonus debe llevar.",
+      "tropCourte": "Describe cada oferta en una frase para que pueda apuntar bien."
     },
     "pistes": {
       "titre": "Tres propuestas, eliges una",
-      "lancer": "Proponer tres propuestas",
+      "lancer": "Proponer 3 propuestas",
       "uneDePlus": "Ninguna me convence, propón otra",
       "uneDePlusAide": "Una idea más, en otro formato. Las de arriba se quedan.",
-      "encours": "Escribiendo tres propuestas",
+      "encours": "Busco tus propuestas...",
       "aide": "Son deliberadamente distintas. Elige la que se parece a ti, no la más impresionante.",
       "recommandee": "Recomendada",
       "recommandation": "Mi recomendación: la propuesta {rang}.",
-      "choisir": "Seguir con esta",
+      "choisir": "Me quedo con esta",
       "choisie": "Propuesta elegida",
       "changer": "Cambiar de propuesta",
       "morceaux": "{count} contenidos por escribir"
@@ -7877,7 +7879,8 @@
         "rien": "Nada generado por ahora",
         "partiel": "{faits} de {total} escritos",
         "complet": "Todo está escrito"
-      }
+      },
+      "copieEchouee": "La copia falló. Selecciona el texto y cópialo a mano."
     },
     "blocs": {
       "contenu": "El bonus, entero",
@@ -7997,9 +8000,20 @@
         },
         "share": {
           "titre": "Al compartir",
-          "aide": "Comparte tu quiz, el bonus es su recompensa."
+          "aide": "Comparte tu quiz, el bonus es su recompensa.",
+          "aidePasActive": "El paso de compartir aún no está activado en tu quiz."
         }
       }
+    },
+    "aides": {
+      "contenu": "Para tu visitante: el texto del bonus, listo para maquetar.",
+      "guide": "Para ti: lo que produces, con qué herramienta, y cómo llega a tu visitante.",
+      "remise": "Título, frase gancho y 5 viñetas de promesa para anunciar el bonus en tu campaña y tus publicaciones, más el email que lo entrega."
+    },
+    "vides": {
+      "contenu": "Nada por aquí todavía. Genera el contenido de tu bonus.",
+      "guide": "Nada por aquí todavía. Genera tu guía de creación.",
+      "remise": "Nada por aquí todavía. Genera con qué hablar de tu bonus."
     }
   },
   "erreursIa": {

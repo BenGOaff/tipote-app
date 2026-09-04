@@ -7784,7 +7784,7 @@
     "etapes": {
       "projet": "1. The project",
       "profil": "2. The profile",
-      "offre": "The offer it leads to",
+      "offre": "Your paid offer",
       "pistes": "The angles",
       "contenus": "The content"
     },
@@ -7840,18 +7840,20 @@
       "uneSeuleChacun": "Each profile must be linked to one offer, and only one.",
       "promesseAria": "Promise of offer {rang}",
       "formatAria": "Format of offer {rang}",
-      "prixAria": "Price of offer {rang}"
+      "prixAria": "Price of offer {rang}",
+      "aideBonus": "That's where your bonus has to lead.",
+      "tropCourte": "Describe each offer in one sentence so I can aim properly."
     },
     "pistes": {
       "titre": "Three directions, you pick one",
-      "lancer": "Suggest three angles",
+      "lancer": "Suggest 3 directions",
       "uneDePlus": "None of these convince me, suggest another one",
       "uneDePlusAide": "One more idea, in a different format. The ones above stay.",
-      "encours": "Writing three angles",
+      "encours": "Looking for your directions...",
       "aide": "They are deliberately different. Take the one that sounds like you, not the most impressive one.",
       "recommandee": "Recommended",
       "recommandation": "My pick: direction {rang}.",
-      "choisir": "Go with this one",
+      "choisir": "I'll take this one",
       "choisie": "Chosen angle",
       "changer": "Change angle",
       "morceaux": "{count} pieces to write"
@@ -7877,7 +7879,8 @@
         "rien": "Nothing generated yet",
         "partiel": "{faits} of {total} written",
         "complet": "Everything is written"
-      }
+      },
+      "copieEchouee": "The copy failed. Select the text and copy it by hand."
     },
     "blocs": {
       "contenu": "The full bonus",
@@ -7997,9 +8000,20 @@
         },
         "share": {
           "titre": "For a share",
-          "aide": "They share your quiz, the bonus is their reward."
+          "aide": "They share your quiz, the bonus is their reward.",
+          "aidePasActive": "The sharing step is not enabled on your quiz yet."
         }
       }
+    },
+    "aides": {
+      "contenu": "For your visitor: the bonus text itself, ready to lay out.",
+      "guide": "For you: what you produce, with which tool, and how it reaches your visitor.",
+      "remise": "Title, punchline and 5 promise bullets to announce the bonus in your campaign and your posts, plus the email that delivers it."
+    },
+    "vides": {
+      "contenu": "Nothing here yet. Generate your bonus content.",
+      "guide": "Nothing here yet. Generate your creation guide.",
+      "remise": "Nothing here yet. Generate something to talk about your bonus."
     }
   },
   "erreursIa": {

@@ -3676,6 +3676,79 @@ de la présence d'une offre.
 Test : `tests/logic/offres-par-profil.test.mts`, vérifié en rejouant la
 version d'avant (8 tests rougissent).
 
+### J'AI RELEVÉ SES PHRASES UNE PAR UNE (Béné, 3 septembre 2026)
+
+"Tu peux pas chercher par toi-même ce qui ne serait pas strictement
+identique pour le corriger ? Tu as TOUS les codes pour le faire."
+
+Si, et c'est ce qu'il fallait faire depuis le début au lieu d'attendre
+qu'elle ouvre l'écran. La méthode, reproductible :
+
+1. extraire chaque phrase VISIBLE de son labo (commentaires retirés) ;
+2. la chercher dans nos 7 fichiers de langue, en normalisant les
+   accents, les apostrophes et les variables ;
+3. lire ce qui reste.
+
+**26 phrases sans équivalent.** Après tri, deux vrais gestes manquants
+et une série de mots.
+
+**LES DEUX GESTES :**
+
+| Ce qui manquait | Ce que ça coûtait |
+|---|---|
+| **le temps par personne** d'une piste (`needsHerTime` chez lui) | le socle interdit déjà ce qui demande son temps à CHAQUE visiteur, mais un format peut en valoir la peine. Le prix se DIT : caché derrière le mot "personnalisé", il ne se découvre qu'au quarantième lead, c'est à dire quand le quiz commence à marcher |
+| **"L'étape de partage n'est pas encore activée sur ton quiz"** | on proposait un déclenchement qui n'existe pas sur ce quiz là, donc un bonus que personne ne recevrait jamais. La carte lit maintenant `virality_enabled` en base |
+
+**ET TROIS DÉFAUTS TROUVÉS EN CHERCHANT :**
+
+- **les trois dossiers du bonus n'avaient AUCUNE phrase.** Mes cartes
+  affichaient `piece.resume`, qui est VIDE sur le bonus : trois cartes
+  sans un mot pour dire ce qu'il y a dedans. "Pour toi / pour ton
+  visiteur" est exactement ce qui évite d'ouvrir les trois pour savoir
+  lequel est lequel (`aides.*`, ses phrases).
+- **un dossier vide décrivait l'écran au lieu de dire le geste.** "Rien
+  n'a encore été écrit" contre "Génère ton guide de création"
+  (`vides.*`).
+- **une offre de trois mots passait.** Son labo refuse en dessous de 10
+  caractères, avec la phrase qui dit quoi corriger.
+
+**LES MOTS, alignés sur les siens** : "Proposer 3 pistes", "Je cherche
+tes pistes...", "Je prends celle-ci", "Ton offre payante", "C'est vers
+elle que ton bonus doit ramener", "Autorise les pop-ups", "La copie a
+échoué. Sélectionne le texte et copie-le à la main."
+
+**CE QUI RESTE DIFFÉRENT, ET C'EST ASSUMÉ :**
+
+- **nos messages d'erreur sont plus riches que les siens.** Il dit "La
+  génération n'a pas abouti. Réessaie dans un instant." ; nous rendons
+  une RAISON parmi neuf, traduite en 7 langues, qui dit quoi faire
+  (saturé, trop long, hors quota, pas configuré...). C'est la règle du
+  3 août, et reculer là dessus serait une régression.
+- **la BIBLIOTHÈQUE ne rouvre pas un projet.** Chez lui, "Tes bonus" est
+  le premier écran dès qu'un bonus existe, et rouvrir restaure le brief,
+  les pistes, la piste choisie et les blocs, en atterrissant à la bonne
+  étape. Ici `/generateurs/mes-contenus` LIT les contenus, elle ne
+  reprend pas le travail : `generateur_contenus` stocke les morceaux
+  mais ni le brief (plan, déclencheur, offres) ni la piste. C'est le
+  seul écart qui demande une MIGRATION, et il est nommé ici pour ne pas
+  être redécouvert.
+
+**LA LEÇON DE MÉTHODE, et elle vaut pour les prochains portages :**
+comparer deux écrans à l'oeil rate ce qui n'est PAS là. Relever les
+phrases de l'un et les chercher dans l'autre trouve les absences, qui
+sont exactement ce qu'un coup d'oeil ne voit pas.
+
+Test : le bloc "les mots et les gestes de son labo" de
+`tests/logic/offres-par-profil.test.mts`, vérifié en rejouant la version
+d'avant (6 tests rougissent).
+
+**Et deux fois de suite, mon propre test était faux avant le code.** Le
+premier figeait le JSX au caractère près, donc il rougissait sur une
+correction juste. Le second regardait LIGNE PAR LIGNE, donc il
+rougissait sur un garde posé à la ligne d'au dessus. Un test qui mesure
+la présence ou l'ORDRE de quelque chose dans un fichier retire d'abord
+les commentaires, sinon il tombe sur sa propre explication.
+
 ### 4. LES CONTENUS SE RETROUVENT
 
 "Il faut aussi que les users retrouvent leurs créations dans

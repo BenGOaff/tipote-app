@@ -7784,7 +7784,7 @@
     "etapes": {
       "projet": "1. Il progetto",
       "profil": "2. Il profilo",
-      "offre": "L'offerta a cui porta",
+      "offre": "La tua offerta a pagamento",
       "pistes": "Le proposte",
       "contenus": "I contenuti"
     },
@@ -7840,18 +7840,20 @@
       "uneSeuleChacun": "Ogni profilo deve essere collegato a una sola offerta.",
       "promesseAria": "Promessa dell'offerta {rang}",
       "formatAria": "Formato dell'offerta {rang}",
-      "prixAria": "Prezzo dell'offerta {rang}"
+      "prixAria": "Prezzo dell'offerta {rang}",
+      "aideBonus": "È verso di lei che il tuo bonus deve portare.",
+      "tropCourte": "Descrivi ogni offerta in una frase, così posso mirare bene."
     },
     "pistes": {
       "titre": "Tre proposte, ne scegli una",
-      "lancer": "Proporre tre proposte",
+      "lancer": "Proponi 3 proposte",
       "uneDePlus": "Nessuna mi convince, proponine un'altra",
       "uneDePlusAide": "Un'idea in più, in un formato diverso. Quelle sopra restano.",
-      "encours": "Sto scrivendo tre proposte",
+      "encours": "Cerco le tue proposte...",
       "aide": "Sono volutamente diverse. Scegli quella che ti somiglia, non la più impressionante.",
       "recommandee": "Consigliata",
       "recommandation": "Il mio consiglio: la proposta {rang}.",
-      "choisir": "Vado con questa",
+      "choisir": "Prendo questa",
       "choisie": "Proposta scelta",
       "changer": "Cambiare proposta",
       "morceaux": "{count} contenuti da scrivere"
@@ -7877,7 +7879,8 @@
         "rien": "Niente generato per ora",
         "partiel": "{faits} su {total} scritti",
         "complet": "Tutto è scritto"
-      }
+      },
+      "copieEchouee": "La copia non è riuscita. Seleziona il testo e copialo a mano."
     },
     "blocs": {
       "contenu": "Il bonus, per intero",
@@ -7997,9 +8000,20 @@
         },
         "share": {
           "titre": "Per una condivisione",
-          "aide": "Condivide il tuo quiz, il bonus è la sua ricompensa."
+          "aide": "Condivide il tuo quiz, il bonus è la sua ricompensa.",
+          "aidePasActive": "Il passaggio di condivisione non è ancora attivo sul tuo quiz."
         }
       }
+    },
+    "aides": {
+      "contenu": "Per il tuo visitatore: il testo del bonus, pronto da impaginare.",
+      "guide": "Per te: cosa produci, con quale strumento, e come arriva al tuo visitatore.",
+      "remise": "Titolo, punchline e 5 punti promessa per annunciare il bonus nella tua campagna e nei tuoi post, più l'email che lo consegna."
+    },
+    "vides": {
+      "contenu": "Niente qui per ora. Genera il contenuto del tuo bonus.",
+      "guide": "Niente qui per ora. Genera la tua guida di creazione.",
+      "remise": "Niente qui per ora. Genera di che parlare del tuo bonus."
     }
   },
   "erreursIa": {

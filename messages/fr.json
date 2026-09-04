@@ -7784,7 +7784,7 @@
     "etapes": {
       "projet": "1. Le projet",
       "profil": "2. Le profil",
-      "offre": "L'offre vers laquelle ça mène",
+      "offre": "Ton offre payante",
       "pistes": "Les pistes",
       "contenus": "Les contenus"
     },
@@ -7840,18 +7840,20 @@
       "uneSeuleChacun": "Chaque profil doit être relié à une offre, et à une seule.",
       "promesseAria": "Promesse de l'offre {rang}",
       "formatAria": "Format de l'offre {rang}",
-      "prixAria": "Prix de l'offre {rang}"
+      "prixAria": "Prix de l'offre {rang}",
+      "aideBonus": "C'est vers elle que ton bonus doit ramener.",
+      "tropCourte": "Décris chaque offre en une phrase pour que je puisse viser juste."
     },
     "pistes": {
       "titre": "Trois pistes, tu en choisis une",
-      "lancer": "Proposer trois pistes",
+      "lancer": "Proposer 3 pistes",
       "uneDePlus": "Aucune ne me convainc, propose-m'en une autre",
       "uneDePlusAide": "Une idée de plus, dans un format différent. Celles du dessus restent.",
-      "encours": "Trois pistes en cours d'écriture",
+      "encours": "Je cherche tes pistes...",
       "aide": "Elles sont volontairement différentes. Prends celle qui te ressemble, pas la plus impressionnante.",
       "recommandee": "Conseillée",
       "recommandation": "Ma recommandation : la piste {rang}.",
-      "choisir": "Partir sur celle ci",
+      "choisir": "Je prends celle-ci",
       "choisie": "Piste choisie",
       "changer": "Changer de piste",
       "morceaux": "{count} contenus à écrire"
@@ -7872,12 +7874,13 @@
       "modifier": "Modifier",
       "termine": "Terminé",
       "pdf": "PDF",
-      "popupBloquee": "Ton navigateur a bloqué la fenêtre. Autorise les fenêtres surgissantes pour cette page.",
+      "popupBloquee": "Ton navigateur a bloqué la fenêtre. Autorise les pop-ups pour cette page.",
       "avancement": {
         "rien": "Rien de généré pour l'instant",
         "partiel": "{faits} sur {total} écrits",
         "complet": "Tout est écrit"
-      }
+      },
+      "copieEchouee": "La copie a échoué. Sélectionne le texte et copie-le à la main."
     },
     "blocs": {
       "contenu": "Le bonus, en entier",
@@ -7997,9 +8000,20 @@
         },
         "share": {
           "titre": "Pour un partage",
-          "aide": "Il partage ton quiz, le bonus est sa récompense."
+          "aide": "Il partage ton quiz, le bonus est sa récompense.",
+          "aidePasActive": "L'étape de partage n'est pas encore activée sur ton quiz."
         }
       }
+    },
+    "aides": {
+      "contenu": "Pour ton visiteur : le texte du bonus lui-même, prêt à mettre en page.",
+      "guide": "Pour toi : ce que tu produis, avec quel outil, et comment il arrive chez ton visiteur.",
+      "remise": "Titre, punchline et 5 puces promesses pour annoncer le bonus dans ta campagne et tes posts, plus l'email qui le livre."
+    },
+    "vides": {
+      "contenu": "Rien ici pour l'instant. Génère le contenu de ton bonus.",
+      "guide": "Rien ici pour l'instant. Génère ton guide de création.",
+      "remise": "Rien ici pour l'instant. Génère de quoi parler de ton bonus."
     }
   },
   "erreursIa": {

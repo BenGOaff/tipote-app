@@ -7784,7 +7784,7 @@
     "etapes": {
       "projet": "1. O projeto",
       "profil": "2. O perfil",
-      "offre": "A oferta a que leva",
+      "offre": "A tua oferta paga",
       "pistes": "As propostas",
       "contenus": "Os conteúdos"
     },
@@ -7840,18 +7840,20 @@
       "uneSeuleChacun": "Cada perfil deve estar ligado a uma oferta, e só a uma.",
       "promesseAria": "Promessa da oferta {rang}",
       "formatAria": "Formato da oferta {rang}",
-      "prixAria": "Preço da oferta {rang}"
+      "prixAria": "Preço da oferta {rang}",
+      "aideBonus": "É para ela que o teu bónus deve levar.",
+      "tropCourte": "Descreve cada oferta numa frase para que eu possa apontar bem."
     },
     "pistes": {
       "titre": "Três propostas, escolhes uma",
-      "lancer": "Propor três propostas",
+      "lancer": "Propor 3 propostas",
       "uneDePlus": "Nenhuma me convence, propõe outra",
       "uneDePlusAide": "Mais uma ideia, noutro formato. As de cima ficam.",
-      "encours": "A escrever três propostas",
+      "encours": "Procuro as tuas propostas...",
       "aide": "São propositadamente diferentes. Escolhe a que se parece contigo, não a mais impressionante.",
       "recommandee": "Aconselhada",
       "recommandation": "A minha recomendação: a proposta {rang}.",
-      "choisir": "Seguir com esta",
+      "choisir": "Fico com esta",
       "choisie": "Proposta escolhida",
       "changer": "Mudar de proposta",
       "morceaux": "{count} conteúdos por escrever"
@@ -7877,7 +7879,8 @@
         "rien": "Nada gerado por agora",
         "partiel": "{faits} de {total} escritos",
         "complet": "Está tudo escrito"
-      }
+      },
+      "copieEchouee": "A cópia falhou. Seleciona o texto e copia-o à mão."
     },
     "blocs": {
       "contenu": "O bónus, na íntegra",
@@ -7997,9 +8000,20 @@
         },
         "share": {
           "titre": "Para uma partilha",
-          "aide": "Partilha o teu quiz, o bónus é a sua recompensa."
+          "aide": "Partilha o teu quiz, o bónus é a sua recompensa.",
+          "aidePasActive": "O passo de partilha ainda não está ativado no teu quiz."
         }
       }
+    },
+    "aides": {
+      "contenu": "Para o teu visitante: o texto do bónus, pronto a paginar.",
+      "guide": "Para ti: o que produzes, com que ferramenta, e como chega ao teu visitante.",
+      "remise": "Título, punchline e 5 pontos de promessa para anunciar o bónus na tua campanha e nas tuas publicações, mais o email que o entrega."
+    },
+    "vides": {
+      "contenu": "Nada por aqui ainda. Gera o conteúdo do teu bónus.",
+      "guide": "Nada por aqui ainda. Gera o teu guia de criação.",
+      "remise": "Nada por aqui ainda. Gera com que falar do teu bónus."
     }
   },
   "erreursIa": {

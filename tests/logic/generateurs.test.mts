@@ -512,7 +512,14 @@ describe("Les consignes de chaque étape", () => {
       id: "emails",
       brief: BRIEF_TEST,
       piece: { bloc: "email", index: 2, resume: "lever l'objection du temps" },
-      piste: { titre: "Trois jours", format: "sequence", punchline: "", pourquoi: "", pieces: [] },
+      piste: {
+        titre: "Trois jours",
+        format: "sequence",
+        punchline: "",
+        pourquoi: "",
+        tempsParPersonne: "",
+        pieces: [],
+      },
       profil: BRIEF_TEST.profils[0],
     });
     assert.match(c, /La discrète/);
@@ -522,7 +529,14 @@ describe("Les consignes de chaque étape", () => {
   });
 
   test("le lien du quiz n'est donné QUE là où il doit apparaître", () => {
-    const piste = { titre: "x", format: "", punchline: "", pourquoi: "", pieces: [] };
+    const piste = {
+      titre: "x",
+      format: "",
+      punchline: "",
+      pourquoi: "",
+      tempsParPersonne: "",
+      pieces: [],
+    };
     const promo = consigneProduction({
       id: "promo",
       brief: BRIEF_TEST,

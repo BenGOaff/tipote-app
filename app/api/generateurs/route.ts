@@ -591,6 +591,7 @@ export async function POST(req: NextRequest) {
     format: input.piste?.format ?? "",
     punchline: input.piste?.punchline ?? "",
     pourquoi: input.piste?.pourquoi ?? "",
+    tempsParPersonne: "",
     pieces: piecesDeLaPiste(id, input.piste?.pieces),
   };
   const piece = piste.pieces[input.pieceIndex];
@@ -709,6 +710,10 @@ function lirePistes(
           format: txt(o.format),
           punchline: txt(o.punchline),
           pourquoi: txt(o.pourquoi),
+          // VIDE dans le cas normal : le socle interdit déjà ce qui
+          // demande son temps par personne. Quand ce n'est pas vide, la
+          // carte l'affiche en avertissement.
+          tempsParPersonne: txt(o.tempsParPersonne),
           pieces: piecesDeLaPiste(
             id,
             (Array.isArray(o.pieces) ? o.pieces : []) as { bloc?: unknown; resume?: unknown }[],

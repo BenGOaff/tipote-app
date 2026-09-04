@@ -102,7 +102,8 @@ function gabaritPistes(id: GenerateurId): string {
   const commun = `"titre": "le nom du livrable, tel qu'il sera affiché",
     "format": "sa forme en deux ou trois mots",
     "punchline": "une phrase qui donne envie, adressée au lecteur",
-    "pourquoi": "pourquoi cette piste là pour CE quiz, une phrase, adressée à la créatrice"`;
+    "pourquoi": "pourquoi cette piste là pour CE quiz, une phrase, adressée à la créatrice",
+    "tempsParPersonne": "VIDE si ça se livre tout seul. Sinon, la phrase qui dit ce que ça lui coûtera PAR PERSONNE."`;
 
   if (id === "bonus") {
     return `{
@@ -141,7 +142,8 @@ function gabaritUnePiste(id: GenerateurId): string {
   const commun = `"titre": "le nom du livrable, tel qu'il sera affiché",
   "format": "sa forme en deux ou trois mots",
   "punchline": "une phrase qui donne envie, adressée au lecteur",
-  "pourquoi": "pourquoi cette piste là pour CE quiz, une phrase, adressée à la créatrice"`;
+  "pourquoi": "pourquoi cette piste là pour CE quiz, une phrase, adressée à la créatrice",
+  "tempsParPersonne": "VIDE si ça se livre tout seul. Sinon, la phrase qui dit ce que ça lui coûtera PAR PERSONNE."`;
   if (id === "bonus") return `{\n  ${commun}\n}`;
   const bloc = id === "emails" ? `"email"` : `"email" ou "post"`;
   return `{
@@ -196,6 +198,8 @@ export function consignePistes(id: GenerateurId, brief: BriefQuiz): string {
     gabaritPistes(id),
     "",
     "TROIS pistes, ni plus ni moins. `recommandee` est l'indice de celle que tu conseilles, à partir de 0.",
+    "",
+    "`tempsParPersonne` EST VIDE dans le cas normal. Tu ne le remplis que si le format que tu proposes demande son temps à CHAQUE nouveau visiteur, et tu dis alors ce que ça lui coûtera par personne. Ne le cache JAMAIS derrière le mot \"personnalisé\" : un quiz qui marche ramène des centaines de personnes, donc une réussite qui se transforme en dette.",
   ].join("\n");
 }
 

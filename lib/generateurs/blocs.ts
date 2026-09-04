@@ -91,6 +91,20 @@ export interface Piste {
   /** Pourquoi cette piste là pour CE quiz. */
   pourquoi: string;
   pieces: Piece[];
+  /**
+   * CE QUE CETTE PISTE LUI COÛTERA, PAR PERSONNE. Vide le plus souvent.
+   *
+   * Porté de `needsHerTime` dans le labo de l'Atelier. Le socle interdit
+   * déjà de proposer quoi que ce soit qui demande son temps à CHAQUE
+   * visiteur (un audit personnalisé, un appel de 20 minutes, une
+   * relecture) : un quiz qui marche ramène des centaines de personnes,
+   * donc une réussite qui se transforme en dette.
+   *
+   * Mais un format PEUT en valoir la peine, et alors le prix se DIT :
+   * caché derrière le mot "personnalisé", il ne se découvre qu'au
+   * quarantième lead.
+   */
+  tempsParPersonne: string;
 }
 
 /** Combien de morceaux au maximum, par générateur. */

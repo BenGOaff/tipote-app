@@ -60,7 +60,7 @@ export default async function GenerateurPage({
   const scope = await getActiveProjectId(supabase, user.id);
   let requete = supabaseAdmin
     .from("quizzes")
-    .select("id, title, mode, status, created_at")
+    .select("id, title, mode, status, created_at, virality_enabled")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(100);
@@ -72,6 +72,7 @@ export default async function GenerateurPage({
     title: string | null;
     mode: string | null;
     status: string | null;
+    virality_enabled: boolean | null;
   }[];
   const ids = lignes.map((q) => q.id);
 
@@ -138,6 +139,11 @@ export default async function GenerateurPage({
     statut: q.status ?? "draft",
     nbQuestions: compteQuestions.get(q.id) ?? 0,
     profils: parQuiz.get(q.id) ?? [],
+    // L'ÉTAPE DE PARTAGE EST-ELLE ACTIVÉE ? Le labo de l'Atelier le dit
+    // sur la carte "Pour un partage" : proposer un déclenchement qui
+    // n'existe pas sur ce quiz là ferait écrire un bonus que personne
+    // ne recevra jamais.
+    partageActive: q.virality_enabled === true,
   }));
 
   return (

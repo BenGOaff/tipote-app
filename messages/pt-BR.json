@@ -7784,7 +7784,7 @@
     "etapes": {
       "projet": "1. O projeto",
       "profil": "2. O perfil",
-      "offre": "A oferta para a qual leva",
+      "offre": "Sua oferta paga",
       "pistes": "As propostas",
       "contenus": "Os conteúdos"
     },
@@ -7840,18 +7840,20 @@
       "uneSeuleChacun": "Cada perfil deve estar ligado a uma oferta, e só a uma.",
       "promesseAria": "Promessa da oferta {rang}",
       "formatAria": "Formato da oferta {rang}",
-      "prixAria": "Preço da oferta {rang}"
+      "prixAria": "Preço da oferta {rang}",
+      "aideBonus": "É para ela que seu bônus deve levar.",
+      "tropCourte": "Descreva cada oferta em uma frase para que eu possa mirar bem."
     },
     "pistes": {
       "titre": "Três propostas, você escolhe uma",
-      "lancer": "Propor três propostas",
+      "lancer": "Propor 3 propostas",
       "uneDePlus": "Nenhuma me convence, proponha outra",
       "uneDePlusAide": "Mais uma ideia, em outro formato. As de cima ficam.",
-      "encours": "Escrevendo três propostas",
+      "encours": "Procuro suas propostas...",
       "aide": "Elas são propositalmente diferentes. Escolha a que se parece com você, não a mais impressionante.",
       "recommandee": "Recomendada",
       "recommandation": "Minha recomendação: a proposta {rang}.",
-      "choisir": "Seguir com esta",
+      "choisir": "Fico com esta",
       "choisie": "Proposta escolhida",
       "changer": "Trocar de proposta",
       "morceaux": "{count} conteúdos para escrever"
@@ -7877,7 +7879,8 @@
         "rien": "Nada gerado por enquanto",
         "partiel": "{faits} de {total} escritos",
         "complet": "Está tudo escrito"
-      }
+      },
+      "copieEchouee": "A cópia falhou. Selecione o texto e copie à mão."
     },
     "blocs": {
       "contenu": "O bônus, por inteiro",
@@ -7997,9 +8000,20 @@
         },
         "share": {
           "titre": "Para um compartilhamento",
-          "aide": "Ele compartilha seu quiz, o bônus é a recompensa."
+          "aide": "Ele compartilha seu quiz, o bônus é a recompensa.",
+          "aidePasActive": "A etapa de compartilhamento ainda não está ativada no seu quiz."
         }
       }
+    },
+    "aides": {
+      "contenu": "Para seu visitante: o texto do bônus, pronto para diagramar.",
+      "guide": "Para você: o que você produz, com qual ferramenta, e como chega ao seu visitante.",
+      "remise": "Título, punchline e 5 pontos de promessa para anunciar o bônus na sua campanha e nos seus posts, mais o email que o entrega."
+    },
+    "vides": {
+      "contenu": "Nada por aqui ainda. Gere o conteúdo do seu bônus.",
+      "guide": "Nada por aqui ainda. Gere seu guia de criação.",
+      "remise": "Nada por aqui ainda. Gere com que falar do seu bônus."
     }
   },
   "erreursIa": {

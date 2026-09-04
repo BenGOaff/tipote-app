@@ -109,6 +109,8 @@ export interface ProjetAffiche {
   statut: string;
   nbQuestions: number;
   profils: { titre: string; description: string }[];
+  /** L'étape de partage est-elle activée sur ce quiz ? */
+  partageActive: boolean;
 }
 
 /**
@@ -289,12 +291,18 @@ export default function GenerateurClient({
     () => couvertureDesOffres(plan, offres, projet?.profils.length ?? 0),
     [plan, offres, projet],
   );
+  // UNE OFFRE DE TROIS MOTS NE PERMET PAS DE VISER. Le labo de
+  // l'Atelier refuse en dessous de 10 caractères, avec la phrase qui dit
+  // quoi corriger : "décris chaque offre en une phrase".
   const offreRemplie = offres.some((o) => o.promesse.trim().length > 0);
+  const offreTropCourte =
+    offres.some((o) => o.promesse.trim().length > 0) &&
+    offres.some((o) => o.promesse.trim().length > 0 && o.promesse.trim().length < 10);
 
   const pretPourPistes =
     Boolean(projet) &&
     !blocage &&
-    (!veutOffre || (offreRemplie && couverture.ok)) &&
+    (!veutOffre || (offreRemplie && !offreTropCourte && couverture.ok)) &&
     (!veutProfil || Boolean(projet?.profils[profilIndex]));
 
   // ── LE PARCOURS ──
@@ -307,7 +315,7 @@ export default function GenerateurClient({
   const etatParcours = {
     projetPret: Boolean(projet) && !blocage,
     profilPret: !veutProfil || Boolean(projet?.profils[profilIndex]),
-    offrePrete: !veutOffre || (offreRemplie && couverture.ok),
+    offrePrete: !veutOffre || (offreRemplie && !offreTropCourte && couverture.ok),
     pistesPretes: pistes.length > 0,
   };
   const avant = precedente(generateur, etape);
@@ -500,6 +508,7 @@ export default function GenerateurClient({
       format: "",
       punchline: "",
       pourquoi: "",
+      tempsParPersonne: "",
       pieces: plan.map((temps) => {
         const n = (compteurs.get(temps.bloc) ?? 0) + 1;
         compteurs.set(temps.bloc, n);
@@ -523,6 +532,24 @@ export default function GenerateurClient({
     setOuvert(null);
     setEdition(null);
     setEtape("contenus");
+  }
+
+  /**
+   * LA PHRASE D'UN DOSSIER, et le mot qui dit son vide.
+   *
+   * Les trois blocs du bonus ont la leur, portée de `FOLDERS[].hint` et
+   * `.empty` dans le labo de l'Atelier : "pour toi / pour ton visiteur"
+   * est ce qui évite d'ouvrir les trois pour savoir lequel est lequel.
+   * Les morceaux d'un plan fixe portent leur rôle traduit.
+   */
+  function aideDuBloc(piece: Piece): string {
+    if (piece.cle) return t(`temps.${piece.cle}`);
+    return estBonus ? t(`aides.${piece.bloc}`) : piece.resume;
+  }
+  function videDuBloc(piece: Piece): string {
+    // UN VIDE QUI DIT QUOI FAIRE. "Rien n'a encore été écrit" décrit
+    // l'écran ; "Génère ton guide de création" dit le geste.
+    return estBonus ? t(`vides.${piece.bloc}`) : t("production.vide");
   }
 
   /** Le titre d'un morceau, traduit. Jamais l'intention brute. */
@@ -606,9 +633,11 @@ export default function GenerateurClient({
       setCopie(true);
       setTimeout(() => setCopie(false), 2000);
     } catch {
-      // Un échec de copie SE DIT : un bouton qui ne fait rien envoie
-      // chercher au mauvais endroit (règle du 1er août sur le partage).
-      toast.error(t("erreurs.generic"));
+      // UN ÉCHEC DE COPIE DIT QUOI FAIRE. Un bouton qui ne fait rien
+      // envoie chercher au mauvais endroit (règle du 1er août), et une
+      // phrase générique n'aide pas plus : ses mots à lui disent la
+      // sortie, sélectionner le texte à la main.
+      toast.error(t("production.copieEchouee"));
     }
   }
 
@@ -822,7 +851,11 @@ export default function GenerateurClient({
             <div>
               <p className="text-sm font-medium">{t("etapes.offre")}</p>
               <p className="text-xs text-muted-foreground">
-                {offreParProfil(plan) ? t("offre.aideParProfil") : t("offre.aide")}
+                {offreParProfil(plan)
+                  ? t("offre.aideParProfil")
+                  : estBonus
+                    ? t("offre.aideBonus")
+                    : t("offre.aide")}
               </p>
             </div>
 
@@ -947,7 +980,13 @@ export default function GenerateurClient({
               options={DECLENCHEURS.map((v) => ({
                 value: v,
                 titre: t(`declencheur.options.${v}.titre`),
-                aide: t(`declencheur.options.${v}.aide`),
+                // PROPOSER UN DÉCLENCHEMENT QUI N'EXISTE PAS SUR CE QUIZ
+                // LÀ ferait écrire un bonus que personne ne recevra
+                // jamais. Le labo de l'Atelier le dit sur la carte.
+                aide:
+                  v === "share" && !projet.partageActive
+                    ? t("declencheur.options.share.aidePasActive")
+                    : t(`declencheur.options.${v}.aide`),
               }))}
             />
           ) : null}
@@ -993,6 +1032,16 @@ export default function GenerateurClient({
                   {p.punchline ? <p className="text-sm">{p.punchline}</p> : null}
                   {p.pourquoi ? (
                     <p className="text-xs text-muted-foreground">{p.pourquoi}</p>
+                  ) : null}
+                  {/* CE QUE CETTE PISTE LUI COÛTERA, PAR PERSONNE.
+                      Vide dans le cas normal. Caché derrière le mot
+                      "personnalisé", ce prix ne se découvre qu'au
+                      quarantième lead, c'est à dire quand le quiz
+                      commence à marcher. */}
+                  {p.tempsParPersonne ? (
+                    <p className="rounded-md bg-amber-50 px-2.5 py-2 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
+                      {p.tempsParPersonne}
+                    </p>
                   ) : null}
                   <p className="text-[11px] text-muted-foreground mt-auto pt-2 border-t">
                     {t("pistes.morceaux", { count: p.pieces.length })}
@@ -1117,7 +1166,11 @@ export default function GenerateurClient({
                     {titrePiece(piece)}
                   </span>
                   <span className="text-sm text-muted-foreground">
-                    {piece.cle ? t(`temps.${piece.cle}`) : piece.resume}
+                    {/* LES TROIS DOSSIERS DU BONUS ONT LEUR PHRASE, ses
+                        mots à lui. Mes cartes affichaient `piece.resume`,
+                        qui est VIDE sur le bonus : trois cartes sans un
+                        mot pour dire ce qu'il y a dedans. */}
+                    {aideDuBloc(piece)}
                   </span>
                   <span className="mt-auto pt-1 text-xs font-medium text-muted-foreground">
                     {enCours && enCours.startsWith(`${piece.bloc}-${piece.index}`)
@@ -1153,7 +1206,7 @@ export default function GenerateurClient({
           <div>
             <h2 className="font-display text-xl font-bold">{titrePiece(ouvertPiece)}</h2>
             <p className="text-sm text-muted-foreground mt-0.5">
-              {ouvertPiece.cle ? t(`temps.${ouvertPiece.cle}`) : ouvertPiece.resume}
+              {aideDuBloc(ouvertPiece)}
             </p>
           </div>
 
@@ -1266,7 +1319,7 @@ export default function GenerateurClient({
                   {t("production.enCoursCourt")}
                 </span>
               ) : (
-                t("production.vide")
+                videDuBloc(ouvertPiece)
               )}
             </div>
           ) : null}
