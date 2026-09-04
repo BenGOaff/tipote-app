@@ -1,110 +1,94 @@
 // lib/generateurs/longueurSortie.ts
 //
-// COMBIEN CHAQUE MORCEAU DOIT FAIRE, ET LE PLAFOND QUI VA AVEC.
+// COMBIEN CHAQUE MORCEAU DOIT FAIRE, ET COMMENT IL SORT EN ENTIER.
 //
-// Béné, 4 septembre 2026 : "comment on peut régler le problème des
-// tokens en sortie sans perdre en qualité ? Je préfère payer plutôt que
-// de générer de la merde, mais je veux économiser tout ce qui est
-// possible de l'être. Attention à ne jamais rien tronquer, il faut
-// contrôler mais sans jamais délivrer un demi contenu."
+// Béné, 4 septembre 2026 : "tout ce que je veux c'est que rien ne doit
+// tronqué ni annulé : si la sortie doit faire 20000 mots ben elle en
+// 20000 c'est tout. Un email qui demande à faire XX mots ben il sort XX
+// mots, on ne détruit jamais la qualité."
 //
-// -- CE QUI COÛTE, ET CE QUI NE COÛTE PAS -----------------------------
+// -- CE QUE J'AVAIS FAIT DE TRAVERS LE MATIN MÊME ---------------------
 //
-// La sortie coûte CINQ fois l'entrée au jeton, donc 73 à 79 % de la
-// facture (mesuré le 4 septembre). Tout le travail sur le cache
-// n'optimisait que la moitié pas chère.
+// Deux fautes, et les deux vont contre cette phrase :
 //
-// Et le plafond `max_tokens` ne coûte RIEN : on paie ce qui est écrit,
-// pas ce qui était permis. Le seul levier qui pèse est donc la longueur
-// DEMANDÉE, et c'est aussi le seul qui empêche une troncature.
+//   1. j'avais RABOTÉ le contenu d'un bonus de 1800 à 1500 mots, pour
+//      qu'il tienne sous un plafond technique. C'est exactement "on
+//      détruit la qualité pour économiser" ;
+//   2. j'avais ajouté un REFUS quand le texte dépassait quand même. Un
+//      refus, c'est une annulation : elle repart avec rien.
 //
-// -- POURQUOI ON NE PEUT PAS SIMPLEMENT MONTER LE PLAFOND -------------
+// Les deux sont retirées. La fourchette de mots est une consigne
+// ÉDITORIALE, jamais un budget : un email de 250 mots doit faire
+// 250 mots parce que c'est la bonne longueur d'un email, pas parce que
+// ça coûte moins cher.
 //
-// C'est le réflexe, et il est faux. Mesuré en production côté Atelier
-// (`app/api/me/bonus/route.ts`, commentaire du 5 août) : au delà de
-// ~4500 jetons de sortie, la génération dépasse régulièrement les
-// 85 secondes du budget et se fait couper, ce qui rend ZÉRO ligne.
+// -- LA SEULE CONTRAINTE QUI EXISTE VRAIMENT, ET ELLE EST DE TEMPS ----
 //
-// Un plafond trop haut échange donc une troncature contre une page
-// vide. On ne monte pas le plafond : on demande une longueur qui tient
-// LARGEMENT dessous, et le plafond redevient ce qu'il doit être, un
-// filet contre l'emballement.
+// Mesuré en production côté Atelier (`app/api/me/bonus/route.ts`,
+// 5 août) : au delà de ~4500 jetons de sortie, UN appel dépasse les
+// 85 secondes du budget et rend ZÉRO ligne. Ce n'est pas une limite de
+// contenu, c'est le temps qu'une requête HTTP a le droit de durer
+// derrière Cloudflare.
+//
+// D'où la seule bonne réponse : on n'écrit pas moins, on écrit en
+// PLUSIEURS TRANCHES. Le modèle reprend exactement là où il s'est
+// arrêté (prefill), et on recolle. Rien n'est coupé, rien n'est jeté,
+// et un contenu de 20000 mots sort en 20000 mots : il prend juste
+// plusieurs tranches.
 //
 // -- ET LA LONGUEUR N'EST PAS UN BUDGET, C'EST UNE PROMESSE -----------
 //
-// Le socle promet déjà, dans les 4 piliers d'un bonus qui convertit :
-// "ACCESSIBILITÉ : il se consomme en moins de 20 minutes". Un bonus de
-// 2800 mots ne tient pas cette promesse. La fourchette ci dessous ne
-// RABOTE donc pas le contenu : elle fait tenir au prompt ce que le socle
-// annonce déjà, et elle retire la marge où le modèle délaye.
-//
 // Écrire une fourchette plutôt qu'un maximum est délibéré : un maximum
 // seul fait viser le maximum, et un plancher empêche le morceau bâclé.
+// Le modèle est libre de dépasser quand le sujet le demande : la suite
+// s'écrira dans la tranche d'après.
 
 import type { Bloc } from "@/lib/generateurs/blocs";
 import type { GenerateurId } from "@/lib/generateurs/catalogue";
 
 export interface LongueurMorceau {
-  /** La fourchette annoncée au modèle, en mots. */
+  /** La fourchette annoncée au modèle, en mots. Une intention, pas un couperet. */
   mots: { min: number; max: number };
-  /** Le filet : au delà, on arrête. Jamais atteint quand la consigne est suivie. */
-  plafond: number;
+  /**
+   * La taille d'UNE tranche d'écriture, en jetons. Ce n'est PAS la
+   * longueur du contenu : ce qui dépasse s'écrit dans la tranche
+   * suivante.
+   */
+  trancheMax: number;
 }
 
 /**
- * LE PLAFOND EST DÉRIVÉ, JAMAIS CHOISI À LA MAIN, ET IL NE BAISSE
- * JAMAIS.
+ * LA TAILLE D'UNE TRANCHE, ET POURQUOI ELLE NE BOUGE PAS.
  *
- * `max` mots x 1,5 jeton par mot (le français est gourmand) x 3 de
- * marge : il faudrait que le modèle écrive TROIS FOIS la longueur
- * demandée pour être coupé.
+ * C'est le budget de TEMPS qui la fixe, pas l'envie d'avoir de la
+ * place : au delà, l'appel dépasse les 85 secondes et ne rend rien du
+ * tout. Monter ce nombre n'achète pas un texte plus long, ça achète une
+ * page blanche.
  *
- * -- ET SURTOUT : UN PLAFOND SERRÉ N'ÉCONOMISE RIEN -------------------
- *
- * On paie ce qui est ÉCRIT, jamais ce qui était permis. Resserrer le
- * plafond ne fait donc économiser aucun jeton : ça ne fait qu'ajouter
- * du risque de couper un texte au milieu. Mon premier jet dérivait des
- * plafonds PLUS SERRÉS qu'avant (un email passait de 1800 à 900) : ça
- * aurait rendu la troncature plus probable pour zéro euro gagné.
- *
- * D'où `PLANCHER` : le plafond ne descend jamais en dessous de celui
- * d'avant le 4 septembre. Il monte quand la marge le demande, jamais
- * l'inverse.
- *
- * Et le tout est borné par `PLAFOND_DUR` : c'est le budget de temps qui
- * commande le haut, pas l'envie d'avoir de la place.
+ * Et le descendre n'économise RIEN : on paie ce qui est ÉCRIT, jamais
+ * ce qui était permis. Ça ne ferait qu'ajouter des allers-retours.
  */
-const JETONS_PAR_MOT = 1.5;
-const MARGE = 3;
-
-/** Les plafonds d'avant, qui deviennent des planchers. */
-const PLANCHER: Record<string, number> = {
-  "bonus:contenu": 4200,
-  "bonus:guide": 1800,
-  "bonus:remise": 1800,
-  "emails:email": 1800,
-  "promo:email": 1800,
-  "promo:post": 900,
-};
+export const TRANCHE_MAX = 4500;
 
 /**
- * LE PLAFOND QU'ON NE DÉPASSE JAMAIS, quelle que soit la longueur
- * demandée. Mesuré côté Atelier : au delà, la génération sort du budget
- * de 85 secondes et ne rend rien du tout.
+ * Combien de tranches on enchaîne avant de rendre la main.
+ *
+ * 6 tranches, c'est ~27000 jetons, donc ~18000 mots pour un seul
+ * morceau. Au delà, l'écran affiche "Écrire la suite" et elle relance :
+ * on ne s'arrête JAMAIS sur un refus, on rend toujours ce qui est écrit
+ * avec de quoi continuer.
  */
-export const PLAFOND_DUR = 4500;
+export const MAX_TRANCHES = 6;
 
 const LONGUEURS: Record<string, { min: number; max: number }> = {
   // Le bonus lui même. C'était le SEUL morceau sans aucune longueur
-  // annoncée, et c'est le plus gros poste de sortie : le modèle pouvait
-  // écrire jusqu'à ce que le plafond l'arrête, donc jusqu'à ~2800 mots,
-  // c'est à dire trois fois plus que ce que le socle promet.
+  // annoncée, donc le modèle écrivait au jugé, sans savoir s'il devait
+  // rendre deux pages ou dix.
   //
-  // 1500 ET PAS 1800, et c'est le seul chiffre que la marge commande :
-  // c'est le seul morceau où `PLAFOND_DUR` mord, donc le seul où le
-  // filet peut devenir un couperet. À 1500 mots, la coupure tombe à
-  // 4500 jetons, soit exactement le DOUBLE de ce qu'on demande.
-  "bonus:contenu": { min: 1200, max: 1500 },
+  // 1800 ET PAS 1500 : j'avais baissé ce chiffre le matin même pour
+  // qu'il tienne dans une tranche. C'est la tranche qui s'adapte au
+  // contenu, jamais l'inverse.
+  "bonus:contenu": { min: 1200, max: 1800 },
   // Le mode d'emploi s'adresse à la créatrice : des étapes, pas un
   // cours. Il n'avait pas de longueur non plus.
   "bonus:guide": { min: 400, max: 700 },
@@ -112,23 +96,19 @@ const LONGUEURS: Record<string, { min: number; max: number }> = {
   "bonus:remise": { min: 250, max: 450 },
   // Ces trois là avaient déjà leur longueur, écrite DANS la consigne.
   // Elle vit ici maintenant : deux endroits qui disent la longueur
-  // finissent toujours par ne plus dire la même chose, et c'est le
-  // plafond qui aurait raison contre le texte.
+  // finissent toujours par ne plus dire la même chose.
   "emails:email": { min: 200, max: 300 },
   "promo:email": { min: 150, max: 250 },
   "promo:post": { min: 90, max: 150 },
 };
 
-/** Ce que ce morceau doit faire, et le filet qui va avec. */
+/** Ce que ce morceau doit faire, et la taille d'une tranche d'écriture. */
 export function longueurDuMorceau(id: GenerateurId, bloc: Bloc): LongueurMorceau {
-  // Un morceau qu'on ne connaît pas ne doit pas se retrouver sans
-  // plafond : on retombe sur le format le plus court, qui est aussi le
-  // plus sûr côté temps.
-  const cle = `${id}:${bloc}`;
-  const mots = LONGUEURS[cle] ?? { min: 150, max: 300 };
-  const derive = Math.ceil((mots.max * JETONS_PAR_MOT * MARGE) / 100) * 100;
-  const plafond = Math.min(PLAFOND_DUR, Math.max(derive, PLANCHER[cle] ?? 900));
-  return { mots, plafond };
+  // Un morceau qu'on ne connaît pas garde la MÊME tranche que les
+  // autres : ce n'est pas parce qu'on ne sait pas quoi lui demander
+  // qu'il doit sortir amputé.
+  const mots = LONGUEURS[`${id}:${bloc}`] ?? { min: 150, max: 300 };
+  return { mots, trancheMax: TRANCHE_MAX };
 }
 
 /**
@@ -136,7 +116,12 @@ export function longueurDuMorceau(id: GenerateurId, bloc: Bloc): LongueurMorceau
  *
  * Elle vit dans la consigne, du côté CACHÉ : elle ne dépend que du
  * morceau, jamais de la créatrice.
+ *
+ * ELLE NE DIT PAS "COUPE". Une consigne qui demande de raccourcir fait
+ * rendre un sommaire à la place d'un contenu : c'est précisément la
+ * qualité qu'on refuse de détruire. Elle dit la bonne longueur, et
+ * laisse le sujet commander quand il faut plus.
  */
 export function consigneDeLongueur(l: LongueurMorceau): string {
-  return `LONGUEUR : entre ${l.mots.min} et ${l.mots.max} mots. C'est une fourchette, pas un objectif à atteindre : en dessous le morceau est bâclé, au dessus il délaye. Si tu as plus à dire que la place, tu coupes ce qui est le moins utile, tu ne rends jamais un texte qui s'arrête au milieu.`;
+  return `LONGUEUR : vise entre ${l.mots.min} et ${l.mots.max} mots. C'est la longueur qui sert le mieux ce morceau, pas un plafond : si le sujet demande plus, tu écris plus et tu vas au bout. Tu ne rends jamais un résumé de ce que tu aurais pu écrire, et tu ne t'arrêtes jamais au milieu d'une phrase ou d'une section.`;
 }

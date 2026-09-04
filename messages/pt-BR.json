@@ -7864,7 +7864,8 @@
       "refaire": "Refazer",
       "copier": "Copiar",
       "copie": "Copiado",
-      "tronque": "Este conteúdo foi cortado antes do fim. Reescreva, costuma dar certo na segunda tentativa.",
+      "tronque": "Este texto tem continuação. Nada se perde: escreva a continuação, ela se junta ao que já está aqui.",
+      "ecrireLaSuite": "Escrever a continuação",
       "vide": "Nada foi escrito ainda.",
       "aGenerer": "A gerar",
       "pret": "Pronto",
@@ -7892,7 +7893,6 @@
     "erreurs": {
       "busy": "Os servidores da IA estão sobrecarregados agora. Espere um minuto e tente de novo, nada se perde.",
       "too_long": "A escrita passou do tempo disponível e parou. Tente de novo, costuma dar certo na segunda.",
-      "coupe": "O texto parou antes do fim. Preferimos não te dar nada em vez de um conteúdo cortado no meio: rode de novo, na segunda costuma dar certo.",
       "refused": "O pedido foi recusado. Não é do seu lado: avise a gente e olhamos o log do servidor.",
       "unreachable": "Não foi possível falar com o serviço de escrita. Verifique sua conexão e tente de novo.",
       "empty": "A resposta chegou vazia. Tente de novo, costuma dar certo na segunda.",
@@ -7933,7 +7933,7 @@
       "copier": "Copiar tudo",
       "supprimer": "Excluir",
       "reprendre": "Retomar este conteúdo",
-      "tronques": "{count, plural, one {# parte foi cortada} other {# partes foram cortadas}}",
+      "tronques": "{count, plural, one {# parte tem continuação para escrever} other {# partes têm continuação para escrever}}",
       "erreurLecture": "Não consigo ler sua biblioteca agora. Nada se perde, tente daqui a pouco.",
       "pasReprenable": "Este conteúdo foi escrito antes de a gente salvar as configurações: dá para ler e copiar, mas não para retomar."
     },

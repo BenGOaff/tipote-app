@@ -4050,107 +4050,105 @@ facture.** Tout ce qui précède optimise la moitié pas chère.
 morceaux, et il est déjà réglé ». **Il ne l'était pas** : voir la
 section suivante, écrite le jour même.
 
-### LA SORTIE : la longueur se DIT, et on ne livre jamais un demi contenu (4 septembre 2026)
+### LA SORTIE : rien n'est tronqué, rien n'est annulé (4 septembre 2026)
 
-Béné : "comment on peut régler le problème des tokens en sortie sans
-perdre en qualité ? Je préfère payer plutôt que de générer de la merde,
-mais je veux économiser tout ce qui est possible de l'être. Attention à
-ne jamais rien tronquer, il faut contrôler mais sans jamais délivrer un
-demi contenu."
+Béné, d'abord : "comment on peut régler le problème des tokens en sortie
+sans perdre en qualité ?" Puis, en relisant ce que j'avais fait :
+
+> "tout ce que je veux c'est que rien ne doit tronqué ni annulé : si la
+> sortie doit faire 20000 mots ben elle en 20000 c'est tout. Un email qui
+> demande à faire XX mots ben il sort XX mots, on ne détruit jamais la
+> qualité."
+
+**MON PREMIER JET FAISAIT EXACTEMENT LES DEUX CHOSES QU'ELLE INTERDIT**,
+et c'est la vraie leçon de la journée :
+
+1. j'avais **RABOTÉ** le contenu d'un bonus de 1800 à 1500 mots, pour
+   qu'il tienne sous un plafond technique. C'est "détruire la qualité
+   pour économiser", et ça ne se voit sur aucun écran ;
+2. j'avais ajouté un **REFUS** quand le texte dépassait quand même. Un
+   refus, c'est une annulation : elle repart avec rien, après avoir
+   attendu une minute et demie.
+
+**On économise sur ce qui ne sert à rien, jamais sur le livrable.**
 
 #### CE QUI A ÉTÉ RELEVÉ AVANT DE TOUCHER À QUOI QUE CE SOIT
 
 | | |
 |---|---|
 | la sortie | 5x l'entrée au jeton, donc **73 à 79 % de la facture** |
-| `thinking` | **jamais activé** par les générateurs (`buildClaudeMessageBody` ne le pose que s'il est fourni) : aucun jeton caché |
+| `thinking` | **jamais activé** par les générateurs : aucun jeton caché |
 | le préambule | déjà interdit par le socle |
-| la **conclusion** | **pas interdite**, donc payée : "n'hésite pas à adapter", "j'espère que ça te convient" |
+| la **conclusion** | **pas interdite**, donc payée : "n'hésite pas à adapter" |
 | la longueur | annoncée dans le TEXTE de 3 consignes sur 6, absente des 3 autres |
 | le plafond | un ternaire dans la route, à l'autre bout du fichier |
 
-**Le bonus lui même, c'est à dire le plus gros poste de sortie,
-n'annonçait AUCUNE longueur.** Le modèle pouvait donc écrire jusqu'à ce
-que le plafond l'arrête, soit ~2800 mots, alors que le socle promet dans
-ses 4 piliers "il se consomme en moins de 20 minutes". Le prompt
-contredisait le prompt.
+**Le bonus lui même, le plus gros poste de sortie, n'annonçait AUCUNE
+longueur** : le modèle écrivait au jugé, sans savoir s'il devait rendre
+deux pages ou dix.
 
-#### LA RÈGLE : `lib/generateurs/longueurSortie.ts` décide, et lui seul
+#### LA SEULE LIMITE QUI EXISTE VRAIMENT EST UNE LIMITE DE TEMPS
 
-`longueurDuMorceau(id, bloc)` rend la FOURCHETTE de mots dite au modèle
-**et** le plafond `max_tokens` posé par la route. Deux endroits qui
-disent la longueur finissent toujours par ne plus dire la même chose, et
-ici c'est le plafond qui a raison contre le texte : il COUPE.
+Mesuré en production côté Atelier (`app/api/me/bonus/route.ts`, 5 août) :
+**au delà de ~4500 jetons de sortie, UN appel dépasse les 85 secondes du
+budget et rend ZÉRO ligne.** Ce n'est pas une limite de CONTENU, c'est le
+temps qu'une requête a le droit de durer derrière Cloudflare.
 
-**Une fourchette, jamais un maximum.** Un maximum seul fait viser le
-maximum ; un plancher empêche le morceau bâclé.
+Confondre les deux est ce qui m'a fait raboter le bonus. La bonne réponse
+n'est pas d'écrire moins, c'est d'écrire en **PLUSIEURS TRANCHES** :
 
-| | mots | plafond |
-|---|---|---|
-| bonus, le contenu | 1200 à 1500 | 4500 (avant 4200) |
-| bonus, le guide | 400 à 700 | 3200 (avant 1800) |
-| bonus, les textes de remise | 250 à 450 | 2100 (avant 1800) |
-| un email de séquence | 200 à 300 | 1800 |
-| un email de promo | 150 à 250 | 1800 |
-| un post | 90 à 150 | 900 |
+- le texte déjà écrit repart en dernier message `assistant` (prefill),
+  donc le modèle **REPREND** au caractère près au lieu de recommencer ;
+- ce qui est déjà écrit n'est jamais réécrit, donc **jamais repayé** ;
+- l'écran enchaîne les tranches tout seul, et quand il en faut encore
+  plus, il propose "Écrire la suite" au lieu de constater ;
+- **un échec en cours de route ne jette rien** : on rend ce qui existe.
 
-#### UN PLAFOND SERRÉ N'ÉCONOMISE RIEN, ET MON PREMIER JET LE FAISAIT
+`MAX_TRANCHES = 6` x `TRANCHE_MAX = 4500`, c'est ~18000 mots pour UN
+morceau, et au delà le bouton est toujours là. **Il n'y a plus aucun
+chemin qui rend un texte coupé sans moyen de le finir.**
 
-**On paie ce qui est ÉCRIT, jamais ce qui était permis.** Resserrer un
-plafond ne fait donc gagner aucun jeton : ça ne fait qu'ajouter du
-risque de couper un texte au milieu. Ma première dérivation sortait des
-plafonds PLUS SERRÉS qu'avant (un email passait de 1800 à 900), pour
-zéro euro gagné.
+#### LES LONGUEURS SONT UNE DÉCISION ÉDITORIALE, PAS UN BUDGET
 
-D'où `PLANCHER` : **aucun plafond ne descend en dessous de celui d'avant
-le 4 septembre.** Il monte quand la marge le demande, jamais l'inverse.
-C'est ce que le test attrape en premier.
+| | mots |
+|---|---|
+| bonus, le contenu | 1200 à 1800 |
+| bonus, le guide | 400 à 700 |
+| bonus, les textes de remise | 250 à 450 |
+| un email de séquence | 200 à 300 |
+| un email de promo | 150 à 250 |
+| un post | 90 à 150 |
 
-#### ET ON NE MONTE PAS LE PLAFOND NON PLUS
+Un email de 250 mots fait 250 mots parce que c'est la bonne longueur d'un
+email, pas parce que ça coûte moins cher. **Et la consigne autorise
+explicitement à dépasser** ("si le sujet demande plus, tu écris plus et
+tu vas au bout") : elle ne dit jamais "coupe", parce qu'une consigne qui
+demande de raccourcir fait rendre un SOMMAIRE à la place d'un contenu.
 
-C'est le réflexe, et il est faux. Mesuré en production côté Atelier
-(`app/api/me/bonus/route.ts`, 5 août) : **au delà de ~4500 jetons de
-sortie, la génération dépasse les 85 secondes du budget et rend ZÉRO
-ligne.** Monter le plafond échange une troncature contre une page
-blanche. `PLAFOND_DUR = 4500` borne donc tout, et c'est le budget de
-TEMPS qui commande le haut, pas l'envie d'avoir de la place.
+Le test fige ces six fourchettes : les baisser fait rougir.
 
-C'est aussi le seul chiffre qui a bougé pour cette raison : le contenu
-d'un bonus est demandé à 1500 mots et pas 1800, parce que c'est le seul
-morceau où ce plafond mord. À 1500 mots, la coupure tombe au DOUBLE de
-ce qu'on demande.
+#### CE QU'ON RETIRE VRAIMENT, ET ÇA NE COÛTE AUCUNE LIGNE DE CONTENU
 
-#### UN MORCEAU COUPÉ EST REFUSÉ, JAMAIS RENDU
+La **conclusion du modèle** sur son propre travail ("j'espère que ça te
+convient", "n'hésite pas à adapter"), deux à trois phrases par morceau,
+payées à chaque fois. C'est la seule économie de ce chantier, et elle ne
+retire rien à personne.
 
-Avant, un texte coupé à la limite était rendu, enregistré dans la
-bibliothèque **et facturé** (côté Tipote, en crédits), avec un bandeau
-orange à côté. Un bandeau ne répare pas une phrase qui s'arrête au
-milieu : elle relisait et recollait à la main un contenu qu'elle venait
-de payer.
-
-La route fait donc **un seul nouveau tirage**, et seulement s'il reste
-45 secondes de budget (sans ça il rendrait zéro ligne). La consigne
-portant une fourchette, un tirage neuf n'est pas le même texte. Toujours
-coupé : on répond `coupe`, traduit dans les 7 langues. Le refus tombe
-**avant l'enregistrement et avant le débit** : elle relance, elle ne
-paie pas, elle ne recolle rien.
-
-`tronque` reste lu par la bibliothèque : les lignes écrites AVANT cette
-règle en portent un, et `resumeMorceaux` les compte encore.
+**Et resserrer un plafond n'économise RIEN** : on paie ce qui est ÉCRIT,
+jamais ce qui était permis. Ça n'ajoute que du risque de couper.
 
 #### CE QUE JE N'AI PAS MESURÉ, ET QUI SE DIT
 
-**L'économie réelle en jetons de sortie ne peut pas se mesurer d'ici
-sans dépenser ses crédits d'API.** Ce qui est mesuré : la longueur
-demandée passe de "rien" à 1500 mots sur le morceau le plus lourd, et la
-conclusion du modèle (deux à trois phrases par morceau) est interdite.
-Ce qui est attendu, pas constaté : une baisse de la facture de sortie.
-Une vraie mesure demande une génération réelle par bloc, sur son compte.
+**L'économie réelle en jetons de sortie ne peut pas se mesurer d'ici sans
+dépenser ses crédits d'API.** Ce qui est mesuré : les six morceaux
+savent enfin quelle longueur viser, et la conclusion est interdite. Ce
+qui est attendu, pas constaté : une baisse de la facture de sortie.
 
 Test : `tests/logic/sortie-generateurs.test.mts` (les deux dépôts),
-vérifié en rejouant QUATRE versions d'avant (le refus retiré, le
-ternaire remis, une longueur écrite en dur dans une consigne, des
-plafonds resserrés) : les quatre rougissent.
+vérifié en rejouant CINQ versions d'avant (le bonus raboté à 1500, le
+refus sur un texte qui continue, la suite sans prefill donc qui
+recommence, un échec qui jette le déjà écrit, le bandeau sans bouton) :
+les cinq rougissent.
 
 ## ON DIT TAG, JAMAIS ÉTIQUETTE (Béné, 1er septembre 2026)
 

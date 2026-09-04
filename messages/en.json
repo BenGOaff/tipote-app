@@ -7864,7 +7864,8 @@
       "refaire": "Redo",
       "copier": "Copy",
       "copie": "Copied",
-      "tronque": "This piece was cut off before the end. Rewrite it, it usually works on the second try.",
+      "tronque": "There is more to write. Nothing is lost: write the rest, it gets added to what is already here.",
+      "ecrireLaSuite": "Write the rest",
       "vide": "Nothing has been written yet.",
       "aGenerer": "To generate",
       "pret": "Ready",
@@ -7892,7 +7893,6 @@
     "erreurs": {
       "busy": "The AI servers are saturated right now. Wait a minute and try again, nothing is lost.",
       "too_long": "Writing ran out of time and stopped. Try again, it usually works on the second attempt.",
-      "coupe": "The text stopped before the end. We would rather give you nothing than half a piece: run it again, the second try usually works.",
       "refused": "The request was refused. It is not on your side: tell us and we will check the server log.",
       "unreachable": "The writing service could not be reached. Check your connection, then try again.",
       "empty": "The answer came back empty. Try again, it is usually fine the second time.",
@@ -7933,7 +7933,7 @@
       "copier": "Copy everything",
       "supprimer": "Delete",
       "reprendre": "Resume this content",
-      "tronques": "{count, plural, one {# part was cut short} other {# parts were cut short}}",
+      "tronques": "{count, plural, one {# part still has more to write} other {# parts still have more to write}}",
       "erreurLecture": "Your library can't be read right now. Nothing is lost, try again in a moment.",
       "pasReprenable": "This content was written before we started saving the settings: you can read and copy it, but not resume it."
     },

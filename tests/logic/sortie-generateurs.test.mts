@@ -1,35 +1,31 @@
 // tests/logic/sortie-generateurs.test.mts
 //
-// LA LONGUEUR DE CE QU'ON ÉCRIT, ET LE REFUS DE LIVRER UN DEMI CONTENU.
+// RIEN N'EST TRONQUÉ, RIEN N'EST ANNULÉ.
 //
-// Béné, 4 septembre 2026 : "comment on peut régler le problème des
-// tokens en sortie sans perdre en qualité ? Je préfère payer plutôt que
-// de générer de la merde, mais je veux économiser tout ce qui est
-// possible de l'être. Attention à ne jamais rien tronquer, il faut
-// contrôler mais sans jamais délivrer un demi contenu."
+// Béné, 4 septembre 2026 : "tout ce que je veux c'est que rien ne doit
+// tronqué ni annulé : si la sortie doit faire 20000 mots ben elle en
+// 20000 c'est tout. Un email qui demande à faire XX mots ben il sort XX
+// mots, on ne détruit jamais la qualité."
 //
-// -- CE QUE CE FILET TIENT, ET POURQUOI -------------------------------
+// -- CE QUE CE FILET EXISTE POUR EMPÊCHER, ET C'ÉTAIT MOI -------------
 //
-// 1. LA LONGUEUR VIT À UN SEUL ENDROIT. Avant, trois blocs sur six
-//    annonçaient un nombre de mots dans le TEXTE de leur consigne, les
-//    trois autres n'en annonçaient aucun, et le plafond `max_tokens`
-//    vivait dans un ternaire de la route. Deux endroits qui disent la
-//    longueur finissent toujours par ne plus dire la même chose, et
-//    c'est le plafond qui a raison contre le texte : il COUPE.
+// Le matin même, j'avais fait les deux fautes que cette phrase nomme :
 //
-// 2. LE PLAFOND NE BAISSE JAMAIS. On paie ce qui est ÉCRIT, pas ce qui
-//    était permis : resserrer un plafond n'économise pas un centime, ça
-//    ne fait qu'ajouter du risque de couper. Mon premier jet dérivait
-//    des plafonds plus SERRÉS qu'avant (un email passait de 1800 à
-//    900) : c'est exactement la faute que ce test attrape.
+//   1. RABOTÉ le contenu d'un bonus de 1800 à 1500 mots pour qu'il
+//      tienne sous un plafond technique. C'est "détruire la qualité
+//      pour économiser", et ça ne se voit sur aucun écran ;
+//   2. ajouté un REFUS quand le texte dépassait quand même. Un refus,
+//      c'est une annulation : elle repart avec rien.
 //
-// 3. UN MORCEAU COUPÉ EST REFUSÉ, jamais rendu. Un bandeau ne répare
-//    pas une phrase qui s'arrête au milieu.
+// La limite réelle n'est pas une limite de CONTENU, c'est le temps
+// qu'une requête a le droit de durer (~85 s derrière Cloudflare, mesuré
+// côté Atelier : au delà de ~4500 jetons de sortie, un appel rend ZÉRO
+// ligne). La réponse est donc d'écrire en PLUSIEURS TRANCHES et de
+// recoller, jamais d'écrire moins.
 //
-// 4. ON NE MONTE PAS LE PLAFOND POUR AUTANT. Mesuré côté Atelier : au
-//    delà de ~4500 jetons de sortie, la génération sort du budget de
-//    85 secondes et rend ZÉRO ligne. Monter le plafond échangerait une
-//    troncature contre une page blanche.
+// Les quatre tests qui comptent : aucune longueur ne baisse, aucun refus
+// sur un texte qui continue, la suite reprend là où ça s'arrête, et ce
+// qui est déjà écrit n'est jamais jeté.
 
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
@@ -37,7 +33,8 @@ import fs from "node:fs";
 import path from "node:path";
 
 import {
-  PLAFOND_DUR,
+  MAX_TRANCHES,
+  TRANCHE_MAX,
   consigneDeLongueur,
   longueurDuMorceau,
 } from "@/lib/generateurs/longueurSortie";
@@ -63,81 +60,51 @@ const COUPLES: { id: GenerateurId; bloc: Bloc }[] = GENERATEURS.flatMap((id) =>
 );
 
 /**
- * LES PLAFONDS D'AVANT LE 4 SEPTEMBRE, relevés dans le ternaire de la
- * route avant de le retirer. Ce sont des FAITS, pas une formulation :
- * les figer est ce qui empêche un plafond de redescendre.
+ * LES LONGUEURS QUI ONT ÉTÉ DÉCIDÉES POUR LA QUALITÉ, pas pour le
+ * budget. Ce sont des FAITS, pas une formulation : les figer est ce qui
+ * empêche qu'on les rabote un jour pour tenir dans une contrainte
+ * technique. Un email de 300 mots doit faire 300 mots.
  */
-const PLAFOND_AVANT: Record<string, number> = {
-  "bonus:contenu": 4200,
-  "bonus:guide": 1800,
-  "bonus:remise": 1800,
-  "emails:email": 1800,
-  "promo:email": 1800,
-  "promo:post": 900,
+const MOTS_ATTENDUS: Record<string, { min: number; max: number }> = {
+  "bonus:contenu": { min: 1200, max: 1800 },
+  "bonus:guide": { min: 400, max: 700 },
+  "bonus:remise": { min: 250, max: 450 },
+  "emails:email": { min: 200, max: 300 },
+  "promo:email": { min: 150, max: 250 },
+  "promo:post": { min: 90, max: 150 },
 };
 
-describe("la longueur de chaque morceau", () => {
-  test("chaque bloc qui existe a une fourchette, et elle a du sens", () => {
+describe("on ne rabote JAMAIS la longueur d'un morceau", () => {
+  test("chaque morceau garde la longueur décidée pour lui", () => {
     for (const { id, bloc } of COUPLES) {
-      const l = longueurDuMorceau(id, bloc);
-      assert.ok(l.mots.min > 0, `${id}:${bloc} : un plancher à zéro`);
-      assert.ok(
-        l.mots.max > l.mots.min,
-        `${id}:${bloc} : la fourchette est vide ou inversée`,
-      );
-      // Une fourchette trop large ne dit rien : le modèle vise alors le
-      // haut, ce qui est exactement ce qu'on retire.
-      assert.ok(
-        l.mots.max <= l.mots.min * 2,
-        `${id}:${bloc} : fourchette trop large (${l.mots.min}-${l.mots.max})`,
+      const attendu = MOTS_ATTENDUS[`${id}:${bloc}`];
+      assert.ok(attendu, `${id}:${bloc} : longueur attendue inconnue, complète la table`);
+      const { mots } = longueurDuMorceau(id, bloc);
+      assert.deepEqual(
+        mots,
+        attendu,
+        `${id}:${bloc} : la longueur a bougé. Elle ne se raccourcit pas pour tenir ` +
+          "dans une tranche : c'est la tranche qui s'adapte, jamais le contenu.",
       );
     }
   });
 
-  test("AUCUN plafond ne descend en dessous de celui d'avant", () => {
+  test("la tranche est la MÊME pour tous : elle ne dépend pas du contenu", () => {
+    // Une tranche plus petite pour un bloc "court" serait un rabot
+    // déguisé : c'est le budget de temps qui la fixe, et il est le même
+    // pour tout le monde.
     for (const { id, bloc } of COUPLES) {
-      const avant = PLAFOND_AVANT[`${id}:${bloc}`];
-      assert.ok(avant, `${id}:${bloc} : plafond d'avant inconnu, complète la table`);
-      const { plafond } = longueurDuMorceau(id, bloc);
-      assert.ok(
-        plafond >= avant,
-        `${id}:${bloc} : le plafond descend de ${avant} à ${plafond}. ` +
-          "Resserrer n'économise RIEN (on paie ce qui est écrit) et rend la coupure plus probable.",
-      );
+      assert.equal(longueurDuMorceau(id, bloc).trancheMax, TRANCHE_MAX, `${id}:${bloc}`);
     }
   });
 
-  test("et aucun ne dépasse le budget de temps", () => {
-    for (const { id, bloc } of COUPLES) {
-      assert.ok(
-        longueurDuMorceau(id, bloc).plafond <= PLAFOND_DUR,
-        `${id}:${bloc} : au delà de ${PLAFOND_DUR} jetons la génération rend ZÉRO ligne`,
-      );
-    }
-  });
-
-  test("le plafond laisse largement la place à la longueur demandée", () => {
-    for (const { id, bloc } of COUPLES) {
-      const l = longueurDuMorceau(id, bloc);
-      // 1,5 jeton par mot : il faut que le modèle puisse écrire bien
-      // plus que la fourchette avant d'être coupé, sinon le filet
-      // devient un couperet.
-      assert.ok(
-        l.plafond >= l.mots.max * 1.5 * 2,
-        `${id}:${bloc} : plafond ${l.plafond} trop serré pour ${l.mots.max} mots`,
-      );
-    }
-  });
-
-  test("un couple inconnu a quand même un plafond", () => {
+  test("un morceau inconnu n'est pas amputé non plus", () => {
     const l = longueurDuMorceau("promo" as GenerateurId, "guide" as Bloc);
-    assert.ok(l.plafond > 0);
+    assert.equal(l.trancheMax, TRANCHE_MAX);
     assert.ok(l.mots.max > 0);
   });
-});
 
-describe("elle est DITE au modèle, et à un seul endroit", () => {
-  test("la consigne de production porte la fourchette du morceau", () => {
+  test("la consigne DIT la longueur, et autorise à la dépasser", () => {
     for (const { id, bloc } of COUPLES) {
       const l = longueurDuMorceau(id, bloc);
       const texte = consigneProduction({
@@ -149,17 +116,14 @@ describe("elle est DITE au modèle, et à un seul endroit", () => {
         `${id}:${bloc} : la consigne n'annonce pas sa longueur`,
       );
     }
-  });
-
-  test("elle dit aussi de COUPER le moins utile, jamais de s'arrêter au milieu", () => {
     const phrase = consigneDeLongueur(longueurDuMorceau("bonus", "contenu"));
-    assert.match(phrase, /jamais un texte qui s'arrête au milieu/);
+    // Une consigne qui dit "coupe" fait rendre un sommaire à la place
+    // d'un contenu : c'est exactement la qualité qu'on refuse de perdre.
+    assert.match(phrase, /si le sujet demande plus, tu écris plus/);
+    assert.doesNotMatch(phrase, /tu coupes/);
   });
 
   test("AUCUN nombre de mots n'est réécrit à la main dans les consignes", () => {
-    // C'est la faute d'origine : "Le corps tient en moins de 300 mots."
-    // était écrit dans le texte de trois consignes, à côté d'un plafond
-    // qui vivait ailleurs.
     const src = sansCommentaires(lire("lib/prompts/generateurs/consignes.ts"));
     const enDur = src.match(/\d+\s*mots/g) ?? [];
     assert.deepEqual(
@@ -168,93 +132,120 @@ describe("elle est DITE au modèle, et à un seul endroit", () => {
       `une longueur écrite en dur dans consignes.ts : ${enDur.join(", ")}`,
     );
   });
+});
 
-  test("et la consigne DÉLÈGUE à longueurSortie", () => {
-    const src = sansCommentaires(lire("lib/prompts/generateurs/consignes.ts"));
-    assert.match(src, /consigneDeLongueur\(\s*longueurDuMorceau\(/);
+describe("un texte plus long qu'une tranche CONTINUE, il ne s'annule pas", () => {
+  const route = sansCommentaires(lire("app/api/generateurs/route.ts"));
+
+  test("aucun refus quand le morceau dépasse", () => {
+    assert.doesNotMatch(
+      route,
+      /refus\("coupe"\)/,
+      "un morceau long serait ANNULÉ : elle repartirait avec rien",
+    );
+  });
+
+  test("le modèle REPREND le texte déjà écrit au lieu de recommencer", () => {
+    // Sans le prefill `assistant`, une suite recommencerait au début :
+    // on paierait deux fois pour un texte qui se répète.
+    assert.match(route, /role: "assistant", content: prefill/);
+    assert.match(route, /suiteDe/);
+  });
+
+  test("les tranches s'enchaînent, et ce qui est écrit s'ajoute", () => {
+    assert.match(route, /for \(let tranche = 0; tranche < MAX_TRANCHES; tranche\+\+\)/);
+    assert.match(route, /texte \+= out\.texte/);
+  });
+
+  test("une tranche qui échoue ne jette pas ce qui est déjà écrit", () => {
+    assert.match(
+      route,
+      /if \(!out\.ok\) \{\s*if \(!texte\) return refus\(out\.failure\);\s*break;/,
+      "un échec en cours de route effacerait le texte déjà payé",
+    );
+  });
+
+  test("et on ne relance une tranche que s'il reste de quoi l'écrire", () => {
+    // Sans ce garde, la tranche suivante dépasserait le budget et
+    // rendrait zéro ligne : on aurait échangé une suite contre rien.
+    assert.match(route, /if \(budgetLeft\(\) < 45_000\) break;/);
+  });
+
+  test("ce qui est enregistré est TOUT ce qui a été écrit", () => {
+    // Le morceau est réécrit à chaque requête avec le texte CUMULÉ :
+    // fermer l'onglet entre deux tranches ne perd donc rien, et la
+    // reprise repart de ce qui existe.
+    assert.match(route, /markdown = sanitizeAiText\(texte\)/);
+    const enregistre = route.indexOf("await rangerMorceau(");
+    const calcule = route.indexOf("markdown = sanitizeAiText(texte)");
+    assert.ok(calcule > 0 && enregistre > calcule, "on enregistre avant d'avoir le texte complet");
   });
 });
 
-describe("on ne délivre JAMAIS un demi contenu", () => {
-  const route = sansCommentaires(lire("app/api/generateurs/route.ts"));
+describe("l'écran ne laisse jamais un demi contenu", () => {
+  const client = lire("app/generateurs/[generateur]/GenerateurClient.tsx");
 
-  test("le plafond vient du module, plus d'un ternaire dans la route", () => {
-    assert.match(route, /longueurDuMorceau\(id, piece\.bloc\)/);
-    assert.doesNotMatch(
-      route,
-      /piece\.bloc === "contenu" \? \d+/,
-      "le ternaire de plafonds est revenu dans la route",
-    );
-  });
-
-  test("un morceau coupé est REFUSÉ, pas rendu", () => {
+  test("il enchaîne les tranches tout seul", () => {
     assert.match(
-      route,
-      /if \(out\.tronque\) return refus\("coupe"\)/,
-      "un texte coupé repart vers l'écran au lieu d'être refusé",
+      sansCommentaires(client),
+      /for \(let tranche = 0; tranche < MAX_TRANCHES; tranche\+\+\)/,
     );
+    assert.match(client, /suiteDe: texte/);
   });
 
-  test("le refus tombe AVANT l'enregistrement et avant la réponse", () => {
-    const refusCoupe = route.indexOf('return refus("coupe")');
-    const enregistre = route.indexOf("await rangerMorceau(");
-    const repond = route.indexOf("return NextResponse.json({\n    ok: true,\n    bloc:");
-    assert.ok(refusCoupe > 0, "le refus n'existe pas");
-    assert.ok(enregistre > 0);
-    assert.ok(
-      refusCoupe < enregistre,
-      "un morceau coupé serait enregistré dans la bibliothèque avant d'être refusé",
-    );
-    if (repond > 0) assert.ok(refusCoupe < repond);
+  test("une suite n'est pas décomptée une deuxième fois", () => {
+    // Le serveur ne débite pas une suite (côté Tipote) : l'écran ne doit
+    // pas non plus retirer un crédit à chaque tranche.
+    assert.match(sansCommentaires(client), /if \(!texte\) retirer\(data\)/);
   });
 
-  test("un seul nouveau tirage, et seulement s'il reste du temps", () => {
-    assert.match(
-      route,
-      /if \(out\.ok && out\.tronque && budgetLeft\(\) > 45_000\)/,
-      "le nouveau tirage n'est pas gardé par le budget de temps : il rendrait zéro ligne",
-    );
-    // Deux reprises coûteraient deux morceaux pour un seul livré.
-    // On compte les RÉAFFECTATIONS, pas les `const out = await ...` des
-    // deux autres branches : un test qui ne distingue pas ce qu'il est
-    // censé distinguer est pire qu'un test absent.
-    assert.equal(
-      (route.match(/(?<!(?:const|let) )out = await appeler\(/g) ?? []).length,
-      1,
-      "plus d'un nouveau tirage sur troncature",
-    );
+  test("et quand il en reste, elle a un BOUTON, pas juste un constat", () => {
+    assert.match(client, /production\.ecrireLaSuite/);
+    assert.match(client, /ecrireUn\(travail!, indexOuvert, contenuOuvert\.markdown\)/);
   });
 
-  test("et on ne monte pas le plafond pour rattraper une coupure", () => {
-    assert.doesNotMatch(
-      route,
-      /plafond\s*[*+]\s*\d/,
-      "un plafond augmenté au deuxième essai échange une coupure contre une page blanche",
-    );
+  test("la raison `coupe` n'existe plus nulle part", () => {
+    // Un libellé que plus rien ne rend est un piège que le prochain
+    // passage rebranche en croyant réparer.
+    assert.doesNotMatch(client, /"coupe"/);
+    for (const loc of ["fr", "en", "es", "it", "ar", "pt", "pt-BR"]) {
+      const m = JSON.parse(lire(`messages/${loc}.json`)) as {
+        generateurs: { erreurs: Record<string, string> };
+      };
+      assert.equal(m.generateurs.erreurs.coupe, undefined, `${loc} : raison coupe restée`);
+    }
+  });
+
+  test("les deux phrases de la suite existent dans les 7 langues", () => {
+    for (const loc of ["fr", "en", "es", "it", "ar", "pt", "pt-BR"]) {
+      const m = JSON.parse(lire(`messages/${loc}.json`)) as {
+        generateurs: { production: Record<string, string> };
+      };
+      const suite = m.generateurs.production.ecrireLaSuite;
+      const reste = m.generateurs.production.tronque;
+      assert.ok(suite && suite.trim().length > 2, `${loc} : bouton absent`);
+      assert.ok(reste && reste.trim().length > 20, `${loc} : phrase absente`);
+      for (const p of [suite, reste]) {
+        assert.ok(!/—|–/.test(p), `${loc} : tiret cadratin`);
+      }
+    }
   });
 });
 
 describe("ce qui ne se paie pas et qu'on retire quand même", () => {
   test("le socle interdit la conclusion sur le travail", () => {
     // Le préambule était déjà interdit, la CONCLUSION non : "n'hésite
-    // pas à adapter" est de la sortie payée qui ne sert à personne.
+    // pas à adapter" est de la sortie payée qui ne sert à personne. Ça
+    // ne retire pas une ligne de contenu, seulement du remplissage.
     assert.match(SOCLE_GENERATEURS, /n'hésite pas à adapter/);
     assert.match(SOCLE_GENERATEURS, /Le dernier mot du texte est le dernier mot du contenu/);
   });
 
-  test("la raison `coupe` existe dans les 7 langues", () => {
-    for (const loc of ["fr", "en", "es", "it", "ar", "pt", "pt-BR"]) {
-      const m = JSON.parse(lire(`messages/${loc}.json`)) as {
-        generateurs: { erreurs: Record<string, string> };
-      };
-      const phrase = m.generateurs.erreurs.coupe;
-      assert.ok(phrase && phrase.trim().length > 20, `${loc} : raison coupe absente`);
-      assert.ok(!/—|–/.test(phrase), `${loc} : tiret cadratin dans la phrase`);
-    }
-  });
-
-  test("et l'écran la connaît, sinon il affiche la phrase générique", () => {
-    const src = lire("app/generateurs/[generateur]/GenerateurClient.tsx");
-    assert.match(src, /"coupe",/);
+  test("et la borne de tranches laisse la place à un très long contenu", () => {
+    // 6 tranches x 4500 jetons, c'est ~18000 mots pour UN morceau. Au
+    // delà, l'écran propose encore d'écrire la suite : on ne s'arrête
+    // jamais sur un refus.
+    assert.ok(MAX_TRANCHES >= 4, "trop peu de tranches pour un contenu long");
+    assert.ok(TRANCHE_MAX >= 4000);
   });
 });
