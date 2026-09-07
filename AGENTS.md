@@ -4596,3 +4596,42 @@ quand quelque chose a déjà échoué, peut être la feuille de style.
 Test : `tests/logic/langue-du-viewer.test.mts`, vérifié en rejouant deux
 versions d'avant (le `getT` sans repli, le select fautif) : les deux
 rougissent.
+
+## Un fichier de `public/` MASQUE une route de même chemin (7 septembre 2026)
+
+Béné, en lisant le journal du serveur de dev : "pour le favicon c'est
+pas un conflit entre NOS favicon et ceux que nos users ajoutent pour
+leur branding dans tiquiz et tipote quand ils ajoutent leur domaine ?"
+
+**Si, et c'était un vrai bug, côté TIQUIZ.** Mesuré en production, cache
+Cloudflare contourné :
+
+| | ce qui répondait | taille | en-tête |
+|---|---|---|---|
+| `quiz.tipote.com` | `image/x-icon` | 7030 o, 128x128 | `max-age=14400` |
+| `app.tipote.com` | `image/png` | 13372 o, 512x512 | `max-age=300, s-maxage=300` |
+
+`app/favicon.ico/route.ts` pose `max-age=300` et ne peut JAMAIS rendre
+`image/x-icon` : elle lit un PNG et le déclare comme tel. Tiquiz servait
+donc son fichier statique `public/favicon.ico`, qui MASQUAIT la route,
+et le favicon téléversé par une créatrice pour son domaine perso n'était
+jamais servi. Sa route ne tournait pas une seule fois.
+
+**Ici la route répond**, c'est mesuré, et il n'y a aucun
+`public/favicon.ico` dans ce dépôt. Le garde-fou y vit quand même : un
+garde-fou qui ne protège qu'un des deux jumeaux ne protège personne, et
+c'est un fichier de trois lignes à déposer qui rouvrirait le trou sans
+qu'aucune erreur ne s'écrive.
+
+**Le seul signal était une ligne du journal de dev** ("A conflicting
+public file and page file was found for path /favicon.ico"), et elle
+passait pour du bruit. C'est la famille des images en 403 du 31 août :
+le geste était juste et n'atteignait pas sa cible.
+
+**Le test LIT le nom du fichier par défaut DANS la route**, il ne le
+recopie pas : Tiquiz sert `favicon-tiquiz.png`, Tipote `favicon.png`, et
+une liste écrite dans le test divergerait au premier renommage en disant
+vert sur un fichier disparu.
+
+Test : `tests/logic/favicon-des-clientes.test.mts`, vérifié en rejouant
+la version d'avant (un `public/favicon.ico` recréé) : il rougit.
