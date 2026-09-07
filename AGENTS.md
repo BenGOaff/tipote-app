@@ -4529,3 +4529,70 @@ intacts à travers Cloudflare et ils disent la bonne chose.
 Test : `tests/logic/corps-avale-par-cloudflare.test.mts`, vérifié en
 rejouant deux versions d'avant (les deux rougissent). Le jumeau Tiquiz
 porte le même, étendu à ses 11 chemins.
+
+## Un client anglophone de Tiquiz est parti, et Tipote portait les mêmes défauts (7 septembre 2026)
+
+L'email est arrivé sur Tiquiz, le module quiz est jumeau : **les quatre
+défauts qu'il décrit vivaient ici aussi, et deux d'entre eux en pire.**
+Le détail complet, avec ses phrases et les mesures, vit dans
+l'`AGENTS.md` de TIQUIZ. Ce qui est propre à ce dépôt tient en trois
+points.
+
+### 1. UN QUIZ `pt-BR` SORTAIT ENTIÈREMENT EN FRANÇAIS
+
+Le `getT` de ce dépôt n'avait **aucun repli BCP-47** :
+
+```
+return { ...(translations[locale ?? "fr"] ?? translations.fr), ...resume };
+```
+
+`pt-BR` est proposée dans le sélecteur de langue de l'éditeur et n'est
+pas une clé de `translations` : tout le viewer retombait donc sur le
+français. Côté Tiquiz le repli existait pour `translations` et manquait
+seulement pour `RESUME_COPY` ; ici il n'existait nulle part.
+
+**Règle : `lib/quiz/langueViewer.ts`, `repliLangue()`**, identique à
+l'octet près dans les deux dépôts (`cmp` le prouve), appelée par les
+DEUX tables. Et les deux écrans d'erreur du viewer passent par
+`getTErreur`, qui prend la langue du NAVIGATEUR : ils appelaient
+`getT(null)` et `getT(json?.quiz?.locale)` sur une réponse d'erreur, qui
+ne porte jamais de quiz, donc ils rendaient le français à tout le monde.
+
+Le bandeau "Mode aperçu" et le toast "Aperçu de ton brouillon" étaient
+écrits en dur en français : ils sont traduits.
+
+### 2. AUCUNE BALISE JSON-LD, ET AUCUN PIXEL SERVEUR, SUR UN QUIZ PUBLIC
+
+Le select de `app/q/[quizId]/page.tsx` demandait `questions` et
+`content_locale` sur la table `quizzes`. **Les deux colonnes n'y sont
+pas** : `questions` vit dans `quiz_questions`, `content_locale` vit sur
+`business_profiles`. PostgREST rejette alors le select ENTIER, donc
+`full` valait `null`.
+
+**Mesuré le 7 septembre sur `app.tipote.com/q/chemindepuissance` : zéro
+balise `application/ld+json` dans le HTML servi**, alors que le titre et
+l'`og:image` (qui viennent d'une AUTRE requête) étaient justes.
+
+Et c'est la même requête qui porte `meta_pixel_id`, `ga4_measurement_id`
+et `google_ads_conversion_id` : **`pixels` valait donc `null`, et aucun
+pixel n'était rendu côté serveur sur aucun quiz public.**
+
+Personne ne l'a vu parce que l'erreur n'était jamais lue. Elle l'est, et
+elle crie. Le nombre de questions passe par un `head: true` sur
+`quiz_questions`, et `inLanguage` vient de `quizzes.locale`, la langue
+que le visiteur LIT.
+
+### 3. AUCUN ERROR BOUNDARY DANS TOUT `app/`
+
+La page publique d'un quiz ne rend aucun contenu côté serveur : la
+moindre exception laissait une page BLANCHE, sans un mot. C'est la règle
+du 3 août ("un `ok: false` produit toujours quelque chose à l'écran"),
+qui ne couvrait que le serveur. `app/global-error.tsx` et
+`app/q/[quizId]/error.tsx` affichent une phrase et un bouton
+"recharger", dans la langue du navigateur (`lib/site/messagesPanne.ts`),
+en style INLINE et sans importer un composant d'UI : cet écran s'affiche
+quand quelque chose a déjà échoué, peut être la feuille de style.
+
+Test : `tests/logic/langue-du-viewer.test.mts`, vérifié en rejouant deux
+versions d'avant (le `getT` sans repli, le select fautif) : les deux
+rougissent.

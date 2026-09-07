@@ -245,13 +245,27 @@ export default async function PublicQuizPage({ params, searchParams }: RouteCont
   // JSON-LD pour SEO + indexation IA (Schema.org Quiz). On profite de
   // cette query pour aussi récupérer les pixel IDs server-side et les
   // injecter via <TrackingPixels> (Pixel Helper les détecte au load).
+  // CE SELECT DEMANDAIT DEUX COLONNES QUI N'EXISTENT PAS, ET IL ECHOUAIT
+  // EN ENTIER, EN SILENCE (7 septembre 2026).
+  //
+  // `questions` vit dans la table `quiz_questions`, `content_locale` vit
+  // sur `business_profiles`. PostgREST rejette alors le select complet,
+  // donc `full` valait null, donc la page publique d'un quiz ne rendait
+  // NI JSON-LD, NI les pixels cote serveur. Mesure sur
+  // `app.tipote.com/q/chemindepuissance` : zero balise
+  // `application/ld+json` dans le HTML servi, alors que le titre et
+  // l'og:image (qui viennent d'une AUTRE requete) etaient justes.
+  //
+  // Personne ne l'a vu parce que l'erreur n'etait jamais lue. On la lit,
+  // et on CRIE.
   const fullDataBase = supabaseAdmin
     .from("quizzes")
-    .select("id, user_id, project_id, title, og_description, og_image_url, introduction, questions, created_at, updated_at, content_locale, meta_pixel_id, ga4_measurement_id, google_ads_conversion_id")
+    .select("id, user_id, project_id, title, og_description, og_image_url, introduction, created_at, updated_at, locale, meta_pixel_id, ga4_measurement_id, google_ads_conversion_id")
     .eq("status", "active");
-  const { data: full } = await (UUID_RE.test(quizId)
+  const { data: full, error: fullErr } = await (UUID_RE.test(quizId)
     ? fullDataBase.eq("id", quizId).maybeSingle()
     : fullDataBase.ilike("slug", echapperMotifLike(quizId)).maybeSingle());
+  if (fullErr) console.error("[q/page] quiz illisible pour le JSON-LD et les pixels :", fullErr.message);
   const fullQuiz = full as
     | {
         id: string;
@@ -261,10 +275,9 @@ export default async function PublicQuizPage({ params, searchParams }: RouteCont
         og_description: string | null;
         og_image_url: string | null;
         introduction: string | null;
-        questions: unknown[] | null;
         created_at: string;
         updated_at: string;
-        content_locale: string | null;
+        locale: string | null;
         meta_pixel_id: string | null;
         ga4_measurement_id: string | null;
         google_ads_conversion_id: string | null;
@@ -283,6 +296,19 @@ export default async function PublicQuizPage({ params, searchParams }: RouteCont
     const b = biz as { share_site_name?: string | null; brand_website_url?: string | null } | null;
     authorName = b?.share_site_name ?? null;
     authorUrl = b?.brand_website_url ?? null;
+  }
+
+  // `head: true` : on veut le NOMBRE, pas les questions. Les tirer pour
+  // les compter ramenerait tout l'enonce de chaque question sur une page
+  // qui n'en affiche aucune.
+  let questionCount: number | null = null;
+  if (fullQuiz?.id) {
+    const { count, error } = await supabaseAdmin
+      .from("quiz_questions")
+      .select("id", { count: "exact", head: true })
+      .eq("quiz_id", fullQuiz.id);
+    if (error) console.error("[q/page] nombre de questions illisible :", error.message);
+    questionCount = typeof count === "number" ? count : null;
   }
 
   const canonical = (await buildCanonicalUrl(`/q/${quizId}`)) ?? "";
@@ -306,8 +332,8 @@ export default async function PublicQuizPage({ params, searchParams }: RouteCont
           updatedAt={fullQuiz.updated_at}
           authorName={authorName}
           authorUrl={authorUrl}
-          numberOfQuestions={Array.isArray(fullQuiz.questions) ? fullQuiz.questions.length : null}
-          inLanguage={fullQuiz.content_locale}
+          numberOfQuestions={questionCount}
+          inLanguage={fullQuiz.locale}
         />
       )}
       {pixels && (

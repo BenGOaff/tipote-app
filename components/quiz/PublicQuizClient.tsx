@@ -95,6 +95,7 @@ import {
   sanitizeAutreTexte,
 } from "@/lib/quiz/otherOption";
 import { brouillonPourQuestion } from "@/lib/quiz/brouillonReponse";
+import { langueDuNavigateur, messagesApercu, repliLangue } from "@/lib/quiz/langueViewer";
 import {
   AFFILIATE_VIDE,
   affiliateAbsent,
@@ -1078,11 +1079,30 @@ const translations: Record<string, QuizTranslations> = {
 
 function getT(locale: string | null | undefined, addressForm?: string | null): QuizTranslations {
   // For French locale: use "fr_vous" variant when creator prefers vouvoiement
-  const resume = RESUME_COPY[locale ?? "fr"] ?? RESUME_COPY.fr;
   if ((locale ?? "fr") === "fr" && addressForm === "vous") {
     return { ...translations.fr_vous, ...RESUME_COPY.fr_vous };
   }
-  return { ...(translations[locale ?? "fr"] ?? translations.fr), ...resume };
+  // UN SEUL repli BCP-47, celui de lib/quiz/langueViewer.ts, applique
+  // aux DEUX tables. Ici il n'y en avait AUCUN : un quiz regle en
+  // `pt-BR` dans l'editeur sortait entierement en FRANCAIS, et c'est
+  // exactement le "some parts of the quiz UI were in French" d'un
+  // client anglophone (7 septembre 2026).
+  return {
+    ...repliLangue(locale, translations, "fr"),
+    ...repliLangue(locale, RESUME_COPY, "fr"),
+  };
+}
+
+/** Les DEUX ecrans d'erreur du viewer parlent AVANT d'avoir charge le
+ *  quiz : sa langue est inconnue, et `getT(null)` rendait le francais a
+ *  tout le monde. On prend la langue du navigateur, qui dit toujours
+ *  quelque chose ; le francais reste le repli.
+ *
+ *  On ne touche PAS a `getT(null)` pour le reste du viewer : un quiz
+ *  dont la creatrice n'a jamais ouvert le selecteur de langue a bien
+ *  `locale` a null, et il doit rester francais. */
+function getTErreur(locale?: string | null): QuizTranslations {
+  return getT(locale ?? langueDuNavigateur());
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -1166,15 +1186,17 @@ export default function PublicQuizClient({
       "padding:8px 16px", "text-align:center",
       "box-shadow:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -2px rgba(0,0,0,.1)",
     ].join(";");
-    const namePart = previewName ? `, Bonjour ${previewName}` : "";
-    el.textContent = `\u{1F441}️ Mode aperçu${namePart} · rien n'est enregistré`;
+    el.textContent = messagesApercu(quiz?.locale, quiz?.address_form).banniere(previewName);
     document.body.appendChild(el);
     document.body.style.paddingTop = `${el.offsetHeight}px`;
     return () => {
       el.remove();
       document.body.style.paddingTop = "";
     };
-  }, [isPreviewMode, previewName]);
+    // `quiz?.locale` est dans les deps : le bandeau est monte AVANT que
+    // le quiz soit charge, donc sans elle il resterait dans la langue de
+    // repli pour toute la session.
+  }, [isPreviewMode, previewName, quiz?.locale, quiz?.address_form]);
 
   const [step, setStep] = useState<Step>("intro");
   // Capture AVANT les questions (sondage only). Off par defaut -> flux
@@ -1696,7 +1718,7 @@ export default function PublicQuizClient({
         const res = await fetch(`/api/quiz/${quizId}/public`, { cache: "no-store" });
         const json = await res.json();
         if (!json?.ok || !json.quiz) {
-          setError(getT(json?.quiz?.locale).quizUnavailable);
+          setError(getTErreur(json?.quiz?.locale).quizUnavailable);
           return;
         }
         // Quiz draft servi à son créateur (mode aperçu) — on prévient
@@ -1704,9 +1726,9 @@ export default function PublicQuizClient({
         // page n'est pas accessible publiquement tant qu'elle n'est
         // pas publiée. Sinon il croit avoir un lien partageable.
         if (json.isDraftPreview) {
-          toast.message("👁️ Aperçu de ton brouillon", {
-            description:
-              "Ce quiz n'est pas encore publié. Personne ne peut y accéder via ce lien, publie-le depuis l'éditeur pour le partager.",
+          const mApercu = messagesApercu(json.quiz?.locale, json.quiz?.address_form);
+          toast.message(mApercu.brouillonTitre, {
+            description: mApercu.brouillonCorps,
             duration: 8000,
           });
         }
@@ -1731,7 +1753,7 @@ export default function PublicQuizClient({
         if (json.toast_widget_id) setToastWidgetId(json.toast_widget_id);
         if (json.share_widget_id) setShareWidgetId(json.share_widget_id);
       } catch {
-        setError(getT(null).loadError);
+        setError(getTErreur().loadError);
       } finally {
         setLoading(false);
       }
