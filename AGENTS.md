@@ -96,6 +96,8 @@ changement de design porté ici se valide là-bas.
 | les bugs récurrents et les conventions | `CLAUDE_PITFALLS.md` |
 | sur quelle branche pousser | `CLAUDE_WORKFLOW.md` |
 | ce qui reste à reprendre à Systeme.io | `ROADMAP_SORTIE_SIO.md` (dépôt tiquiz) |
+| **par quoi reprendre, tout de suite** | **`PASSATION.md`** (dépôt tiquiz, daté du 9 septembre) |
+| **ce qui reste à faire, dit par Béné** | **`CHANTIERS.md`** (dépôt tiquiz) |
 
 **Béné ne lit pas les dossiers.** Tout ce qu'elle doit faire ou copier
 se met dans le message final, jamais dans un fichier qu'on lui demande
