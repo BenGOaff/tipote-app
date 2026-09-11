@@ -28,6 +28,35 @@ test("un sous-shell qui rend une valeur VIDE est nommé, avec la commande qui ne
   assert.ok(v.lignes.some((l) => l.includes("13 caractères")));
 });
 
+test("deux fichiers, deux secrets : c'est le FICHIER qui est nommé, pas le sous-shell (11 septembre, le soir)", () => {
+  // Sur le serveur, `.env.production` passe devant `.env`. Next lit le
+  // premier, la crontab et `grep` lisent le second. Le sous-shell rend
+  // fidèlement la valeur de `.env` : l'accuser envoyait chercher au
+  // mauvais endroit, et la commande « grep ... .env » répondait 401 aussi.
+  const v = verdict({
+    fichier: "prod-prod-prod",
+    nomFichier: ".env.production",
+    envCrontab: "dotenv-dotenv-",
+    shell: "dotenv-dotenv-",
+    processus: "prod-prod-prod",
+    standalone: "prod-prod-prod",
+    pingLocal: 200,
+    pingPublic: 200,
+  });
+  assert.equal(v.ok, false);
+  assert.ok(v.problemes.some((p) => p.includes("DEUX fichiers") && p.includes("grep -m1 '^CRON_SECRET=' .env.production")));
+  assert.ok(!v.problemes.some((p) => p.includes("sous-shell de la crontab qui est faux")), "le sous-shell est honnête : il ne doit pas être accusé");
+  assert.ok(v.lignes.some((l) => l.startsWith("fichier .env.production")), "le rapport nomme le fichier qu'il a lu");
+  assert.ok(v.lignes.some((l) => l.includes("fichier .env (crontab)") && l.includes("DIFFÉRENTE")));
+  assert.ok(!v.lignes.join("\n").includes("prod-prod") && !v.problemes.join("\n").includes("dotenv-"));
+});
+
+test("un seul fichier, comme avant : rien de nouveau ne s'affiche", () => {
+  const v = verdict({ fichier: "aaaa", shell: "aaaa", processus: "aaaa", standalone: "aaaa", pingLocal: 200, pingPublic: 200 });
+  assert.equal(v.ok, true);
+  assert.ok(!v.lignes.some((l) => l.includes("(crontab)")));
+});
+
 test("un processus qui tient une AUTRE valeur est nommé, et la sortie est un --update-env depuis le dépôt", () => {
   const v = verdict({ fichier: "aaaa", shell: "aaaa", processus: "bbbb", standalone: "aaaa", pingLocal: 401, pingPublic: 401 });
   assert.equal(v.ok, false);

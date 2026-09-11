@@ -62,23 +62,42 @@ export function lireCleDuTexte(texte, cle) {
  * le serveur tourne sans la variable. `shell` vaut `null` quand bash n'a
  * pas pu être lancé. Un ping vaut un statut HTTP, ou une chaîne d'erreur.
  */
-export function verdict({ fichier, shell, processus, standalone, pingLocal, pingPublic }) {
+export function verdict({ fichier, nomFichier = ".env", envCrontab = fichier, shell, processus, standalone, pingLocal, pingPublic }) {
   const problemes = [];
   const lignes = [];
 
-  lignes.push(`fichier .env        : ${fichier ? `présente, ${fichier.length} caractères` : "ABSENTE"}`);
+  // `fichier` est la valeur du fichier que NEXT lit (le premier de la liste
+  // de priorité). `envCrontab` est la valeur de `.env`, le seul fichier que
+  // la crontab et `grep` lisent. Le 11 septembre, le rapport disait
+  // « fichier .env » en ayant lu `.env.production` : il accusait le
+  // sous-shell d'une différence qui vivait entre DEUX fichiers.
+  lignes.push(`fichier ${nomFichier.padEnd(11)} : ${fichier ? `présente, ${fichier.length} caractères` : "ABSENTE"}`);
   if (!fichier) {
     problemes.push(
       `${CLE} n'est pas dans le .env du dépôt. Aucun cron ne peut passer tant qu'elle n'y est pas.`,
     );
   }
+  if (fichier && nomFichier !== ".env") {
+    const etat = !envCrontab ? "ABSENTE" : envCrontab === fichier ? "identique" : `DIFFÉRENTE (${envCrontab.length} caractères)`;
+    lignes.push(`fichier .env (crontab) : ${etat}`);
+    if (envCrontab !== fichier) {
+      problemes.push(
+        `DEUX fichiers, deux secrets. Next et PM2 lisent ${nomFichier} (il passe devant .env) ;\n` +
+          `     la crontab et « grep ... .env » lisent .env, qui porte une autre valeur. La route\n` +
+          `     n'accepte que celle de ${nomFichier}. La ligne de crontab doit donc lire CE fichier :\n` +
+          `     curl -fsS -X POST -H "X-Cron-Secret: $(grep -m1 '^CRON_SECRET=' ${nomFichier} | cut -d= -f2- | tr -d '\"')" https://app.tipote.com${CHEMIN_ROUTE}`,
+      );
+    }
+  }
 
   if (shell === null) {
     lignes.push("sous-shell bash     : non mesuré (bash introuvable)");
   } else {
-    const etat = !shell ? "VIDE" : shell === fichier ? "identique au fichier" : `DIFFÉRENTE du fichier (${shell.length} caractères)`;
+    // Le sous-shell lit `.env` : on le compare à `.env`, jamais au fichier
+    // que Next lit. Sinon on l'accuse d'une différence qui n'est pas la sienne.
+    const etat = !shell ? "VIDE" : shell === envCrontab ? "identique au fichier" : `DIFFÉRENTE du fichier (${shell.length} caractères)`;
     lignes.push(`sous-shell bash     : ${etat}`);
-    if (fichier && shell !== fichier) {
+    if (envCrontab && shell !== envCrontab) {
       problemes.push(
         `« ( set -a; . .env; set +a; ... ) » n'envoie pas la valeur du fichier : bash s'arrête\n` +
           `     sur une ligne du .env qu'il ne sait pas lire, ou en lit une autrement. C'est le\n` +
@@ -144,14 +163,24 @@ export function verdict({ fichier, shell, processus, standalone, pingLocal, ping
   return { ok, lignes, problemes };
 }
 
+/**
+ * La valeur que NEXT lira, et le NOM du fichier où il la trouve : l'ordre
+ * est celui de `@next/env`, et le premier fichier qui porte la clé gagne.
+ */
 function lireDuFichier(cle) {
   for (const nom of [".env.production.local", ".env.local", ".env.production", ".env"]) {
     const chemin = join(RACINE, nom);
     if (!existsSync(chemin)) continue;
     const v = lireCleDuTexte(readFileSync(chemin, "utf8"), cle);
-    if (v) return v;
+    if (v) return { nom, valeur: v };
   }
-  return "";
+  return { nom: ".env", valeur: "" };
+}
+
+/** La valeur de `.env` seul : c'est le fichier que la crontab et `grep` lisent. */
+function lireDuDotEnv(cle) {
+  const chemin = join(RACINE, ".env");
+  return existsSync(chemin) ? lireCleDuTexte(readFileSync(chemin, "utf8"), cle) : "";
 }
 
 /** Ce que `( set -a; . .env; set +a; ... )` donne VRAIMENT, dans un bash à part. */
@@ -216,7 +245,8 @@ async function ping(base, secret) {
 }
 
 async function main() {
-  const fichier = lireDuFichier(CLE);
+  const { nom: nomFichier, valeur: fichier } = lireDuFichier(CLE);
+  const envCrontab = lireDuDotEnv(CLE);
   const shell = valeurDuSousShell(CLE);
   const processus = valeurDuProcessus(CLE);
   const standalone = valeurDuStandalone(CLE);
@@ -224,7 +254,7 @@ async function main() {
   const pingLocal = fichier ? await ping(`http://127.0.0.1:${port}`, fichier) : undefined;
   const pingPublic = fichier ? await ping("https://app.tipote.com", fichier) : undefined;
 
-  const v = verdict({ fichier, shell, processus, standalone, pingLocal, pingPublic });
+  const v = verdict({ fichier, nomFichier, envCrontab, shell, processus, standalone, pingLocal, pingPublic });
   console.log(`\n  ${CLE} : QUI TIENT QUELLE VALEUR\n`);
   for (const l of v.lignes) console.log(`  ${l}`);
   console.log("");

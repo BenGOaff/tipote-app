@@ -4837,3 +4837,24 @@ le DIT au lieu d'inventer une cause (règle du 2 septembre).
 
 Test : `tests/logic/check-cron-secret.test.mts`, vérifié en rejouant le
 GET qui approuve (il rougit).
+
+#### Et le contrôle lui même accusait le sous-shell d'une différence entre DEUX fichiers (le soir, suite)
+
+Sur le serveur, le contrôle a dit « sous-shell DIFFÉRENT du fichier », et
+la commande `grep ... .env` qu'il proposait a rendu `unauthorized` elle
+aussi. Le sous-shell était honnête : il lit `.env`. Le contrôle, lui,
+lisait `.env.production.local`, `.env.local` puis `.env.production`
+AVANT `.env` (l'ordre de `@next/env`) et affichait « fichier .env » quel
+que soit le fichier trouvé. Next et PM2 lisent ce fichier prioritaire ;
+la crontab et `grep` lisent `.env`. Deux fichiers, deux secrets, et le
+rapport les fondait en un.
+
+**Règle : le rapport NOMME le fichier qu'il a lu, compare `.env` à
+part (« fichier .env (crontab) »), et compare le sous-shell à `.env`,
+jamais au fichier de Next.** Quand les deux diffèrent, la ligne de
+crontab doit lire le fichier que Next lit, et le rapport imprime la
+commande avec ce nom dedans.
+
+Un contrôle qui ne distingue pas ce qu'il est censé distinguer est pire
+qu'un contrôle absent, et celui là a envoyé Béné réparer une crontab qui
+n'avait rien. Vérifié en rejouant la version d'avant : le test rougit.
