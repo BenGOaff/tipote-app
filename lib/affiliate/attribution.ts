@@ -287,22 +287,41 @@ async function lireLigneAffilie(sa: string): Promise<{
   status: string;
   recompense_commission_pct?: number | null;
 } | null> {
-  const { data: affRow } = await supabaseAdmin
-    .from("affiliates")
-    .select(AFF_COLS_NEW)
-    .eq("sa", sa)
-    .maybeSingle();
-  const affLu = affRow
-    ? affRow
-    : (
-        await supabaseAdmin.from("affiliates").select(AFF_COLS).eq("sa", sa).maybeSingle()
-      ).data;
+  const neuf = await supabaseAdmin.from("affiliates").select(AFF_COLS_NEW).eq("sa", sa).maybeSingle();
+  // Le premier select echoue LEGITIMEMENT quand la colonne du bareme
+  // n'est pas encore en prod : on relit sans elle, comme avant.
+  const ancien = neuf.data
+    ? null
+    : await supabaseAdmin.from("affiliates").select(AFF_COLS).eq("sa", sa).maybeSingle();
+  if (!neuf.data && ancien?.error) {
+    // "JE N'AI PAS PU REGARDER" N'EST PAS "IL N'Y A PERSONNE" (audit du
+    // 11 septembre 2026). Les deux erreurs etaient ignorees : une
+    // lecture qui ratait rendait `null`, donc l'affilie passait pour
+    // INCONNU, donc `attributeSale` passait au candidat SUIVANT et
+    // pouvait payer quelqu'un d'autre a sa place. On leve : la route
+    // repond 503, et l'appelant (Tiquiz, l'Atelier) range l'appel dans
+    // son filet et le rejoue quand le registre repond.
+    throw new RegistreIllisible(`affiliates(${sa}) : ${ancien.error.message}`);
+  }
+  const affLu = neuf.data ?? ancien?.data ?? null;
   return (affLu as unknown as {
     sa: string;
     email: string;
     status: string;
     recompense_commission_pct?: number | null;
   } | null) ?? null;
+}
+
+/**
+ * Le registre n'a pas pu etre lu. Distinct d'un affilie inconnu : la
+ * reponse a l'appelant est "reessaie", jamais "personne".
+ */
+export class RegistreIllisible extends Error {
+  readonly registreIllisible = true;
+  constructor(message: string) {
+    super(message);
+    this.name = "RegistreIllisible";
+  }
 }
 
 export async function attributeSale(input: AttributeSaleInput): Promise<AttributeSaleResult> {

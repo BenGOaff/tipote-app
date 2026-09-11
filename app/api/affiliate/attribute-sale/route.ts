@@ -154,5 +154,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     ref_hint: typeof body.affiliate_code === "string" ? body.affiliate_code : null,
   });
 
+  if (result.status === "error") {
+    // UN REGISTRE QU'ON N'A PAS PU LIRE OU ECRIRE REPOND 503, PAS 200
+    // (audit du 11 septembre 2026). Un 200 disait a l'appelant "c'est
+    // pris" sur une commission qui n'existait pas : Tiquiz et l'Atelier
+    // rangent un 503 dans leur filet et rejouent l'appel tel quel quand
+    // le registre repond. Le rejeu est sans danger : une cle deja connue
+    // repond `duplicate`.
+    return NextResponse.json({ ok: false, reason: "registre_indisponible", result }, { status: 503 });
+  }
   return NextResponse.json({ ok: true, result });
 }
