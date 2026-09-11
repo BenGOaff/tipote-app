@@ -4635,3 +4635,69 @@ vert sur un fichier disparu.
 
 Test : `tests/logic/favicon-des-clientes.test.mts`, vérifié en rejouant
 la version d'avant (un `public/favicon.ico` recréé) : il rougit.
+
+## « Je n'ai pas pu regarder » n'est pas « il n'y a personne » : le registre répond 503 (11 septembre 2026)
+
+Audit de Béné : "est-ce que je peux envoyer mes affiliés dessus sans
+risque ?" La chaîne a été relue de bout en bout dans les trois dépôts
+(le détail vit dans l'`AGENTS.md` de Tiquiz). Ce qui concerne CE dépôt :
+
+### LE TROU : une lecture ratée faisait payer quelqu'un d'autre
+
+`lireLigneAffilie` ignorait l'erreur de ses deux selects. Une lecture
+qui ratait (base indisponible une seconde, colonne absente) rendait
+`null`, donc l'affilié passait pour INCONNU, donc `attributeSale`
+passait au candidat SUIVANT (la règle du 29 août, qui saute
+l'introuvable) et pouvait créer la commission au nom de quelqu'un
+d'autre. Et `POST /api/affiliate/attribute-sale` répondait 200 sur un
+`status: "error"` : l'appelant croyait la commission prise.
+
+**Règle : le registre LÈVE (`RegistreIllisible`), `attributeSale` rend
+`status: "error"`, et la route répond 503 `registre_indisponible`.**
+Tiquiz et l'Atelier rangent un 503 dans leur filet
+(`commissions_en_attente`) et rejouent l'appel tel quel quand le
+registre répond ; une clé déjà connue rend `duplicate`, donc le rejeu ne
+paie jamais deux fois. Le repli sur les anciennes colonnes reste : une
+migration pas encore passée ne casse rien.
+
+### CE QUI EST VÉRIFIÉ ET QUI N'AVAIT RIEN
+
+Le premier rattachement gagne (`findRecentConversion` ascendant, à vie),
+l'auto-affiliation est refusée alias compris, `paused` garde l'acquis et
+`banned` ne touche rien, le taux vient des accords puis du barème, `base`
+absent est lu en TTC (conservateur), `regle_par` absent exclut du lot
+(conservateur), l'annulation refuse de réécrire une commission versée,
+le lot écarte et AFFICHE (devise, coordonnées, mandat, minimum), une
+lecture du registre par paquets qui échoue arrête tout.
+
+### CE QUI RESTE, ET QUI N'EST PAS DU CODE
+
+- **Aucun cron ne fait mûrir les commissions.** `approuverCommissionsMures`
+  n'est appelée que par le bouton « Approuver » de
+  `/admin/versements` (`app/api/affiliate/admin/versements/route.ts`).
+  C'est le process : cliquer entre le 10 et le 13, AVANT de construire
+  le lot. Un cron le ferait sans elle, et c'est sa décision.
+- **Le cron du barème (`app/api/cron/recompense-affilies`) n'a de
+  crontab écrit nulle part** dans les trois dépôts : la seule trace est
+  une ligne `curl` en commentaire de la route. S'il ne tourne pas, un
+  affilié à 11 filleuls reste à 40 %, sans erreur nulle part. Se vérifie
+  sur le serveur avec `crontab -l`.
+- **`trop-tard` ne vit que dans `pm2 logs`** : une commission déjà
+  versée qu'un remboursement annule n'est écrite nulle part en base.
+  C'est un cas pour un humain, et il faut lire le journal pour le savoir.
+- **La conversion se cherche sur l'adresse BRUTE**, pas normalisée :
+  quelqu'un inscrit en `a+x@gmail.com` qui achète en `a@gmail.com` ne
+  retrouve pas son rattachement par email (le `?ref=` du lien, lui,
+  marche). L'anti-auto-affiliation, elle, normalise.
+- **`figerLot` marque les commissions `paid` APRÈS les autofactures** :
+  si ce marquage échoue, les lignes restent `approved` sans `payout_id`
+  et rentreraient dans le lot suivant. Le journal le crie
+  (`commissions_non_marquees`) ; c'est à relire avant de refaire un lot.
+- **Bumper `MANDAT_VERSION` sort TOUS les affiliés du lot d'un coup**
+  (le mandat doit être ré-accepté). À ne faire qu'en le sachant.
+
+Test : `tests/logic/registre-illisible.test.mts`, vérifié en rejouant
+les deux versions d'avant (l'erreur rendue comme « inconnu », la route
+qui répond 200) : les deux rougissent. Il refuse aussi
+`--experimental-strip-types` sur tout script `check:` : le serveur est
+en Node 20, et `check:cta-affilie` passe par `tsx`.
