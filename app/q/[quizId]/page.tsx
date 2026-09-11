@@ -25,20 +25,51 @@ import { echapperMotifLike } from "@/lib/db/motifLike";
 
 const CUSTOM_HOST_HEADER = "x-tipote-custom-host";
 
-async function resolveCustomDomainScope(): Promise<{ userId: string; projectId: string } | null> {
+/**
+ * Le (proprietaire, projet) qui possede le domaine perso par lequel la
+ * requete est arrivee.
+ *
+ * TROIS ETATS, ET ILS NE SE CONFONDENT PAS (porte de Tiquiz,
+ * 9 septembre 2026). Avant, la fonction rendait `null` aussi bien pour
+ * "on n'est pas sur un domaine perso" que pour "la requete a echoue" :
+ * dans le second cas le controle de locataire juste en dessous etait
+ * donc SAUTE, et le domaine d'une creatrice pouvait servir le quiz de
+ * quelqu'un d'autre. C'est exactement ce que le commentaire de ce
+ * controle interdit. Et l'erreur n'etait meme pas lue.
+ *
+ * "Je n'ai pas pu regarder" et "il n'y a rien" sont deux reponses
+ * differentes (regle du 23 aout). Le module quiz de Tiquiz est jumeau :
+ * un garde-fou qui ne protege qu'un des deux ne protege personne.
+ */
+type LocataireDuDomaine =
+  /** Pas de domaine perso : la page se sert normalement. */
+  | { surUnDomainePerso: false }
+  /** Domaine perso, locataire connu (ou aucune ligne verifiee). */
+  | { surUnDomainePerso: true; lisible: true; scope: { userId: string; projectId: string } | null }
+  /** Domaine perso, registre illisible : on ne sert RIEN. */
+  | { surUnDomainePerso: true; lisible: false };
+
+async function resolveCustomDomainScope(): Promise<LocataireDuDomaine> {
   const h = await headers();
   const host = h.get(CUSTOM_HOST_HEADER);
-  if (!host) return null;
-  const { data } = await supabaseAdmin
+  if (!host) return { surUnDomainePerso: false };
+  const { data, error } = await supabaseAdmin
     .from("custom_domains")
     .select("user_id, project_id")
     .ilike("hostname", echapperMotifLike(host))
     .eq("status", "verified")
     .maybeSingle();
+  if (error) {
+    // Le sens du repli est ASYMETRIQUE : un 404 de trop sur un domaine
+    // perso pendant une panne de base coute une page ; servir sans
+    // verifier coute le quiz d'une creatrice affiche chez une autre.
+    console.error("[q/page] registre des domaines perso illisible :", error.message);
+    return { surUnDomainePerso: true, lisible: false };
+  }
   const userId = (data as { user_id?: string } | null)?.user_id;
   const projectId = (data as { project_id?: string } | null)?.project_id;
-  if (!userId || !projectId) return null;
-  return { userId, projectId };
+  if (!userId || !projectId) return { surUnDomainePerso: true, lisible: true, scope: null };
+  return { surUnDomainePerso: true, lisible: true, scope: { userId, projectId } };
 }
 
 // Force dynamic rendering so quiz metadata/status is always fresh.
@@ -227,8 +258,10 @@ export default async function PublicQuizPage({ params, searchParams }: RouteCont
   // Custom-domain ownership gate: refuse to serve a quiz that
   // doesn't belong to the (user, project) that owns the hostname.
   // No-op on the main host where the header isn't set.
-  const scope = await resolveCustomDomainScope();
-  if (scope) {
+  const locataire = await resolveCustomDomainScope();
+  if (locataire.surUnDomainePerso) {
+    if (!locataire.lisible) notFound();
+    const scope = locataire.scope;
     const base = supabaseAdmin
       .from("quizzes")
       .select("user_id, project_id")
@@ -237,7 +270,7 @@ export default async function PublicQuizPage({ params, searchParams }: RouteCont
       ? base.eq("id", quizId).maybeSingle()
       : base.ilike("slug", echapperMotifLike(quizId)).maybeSingle());
     const row = data as { user_id?: string; project_id?: string | null } | null;
-    if (!row || row.user_id !== scope.userId || row.project_id !== scope.projectId) {
+    if (!scope || !row || row.user_id !== scope.userId || row.project_id !== scope.projectId) {
       notFound();
     }
   }

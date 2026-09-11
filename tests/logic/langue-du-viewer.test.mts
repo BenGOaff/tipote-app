@@ -173,6 +173,32 @@ describe("le JSON-LD et les pixels d'un quiz public etaient absents, en silence"
   });
 });
 
+describe("le domaine perso d'une creatrice ne sert que SES quiz", () => {
+  // Porte de Tiquiz, 9 septembre 2026. `resolveCustomDomainScope`
+  // rendait `null` aussi bien pour "on n'est pas sur un domaine perso"
+  // que pour "la requete a echoue" : dans le second cas le controle de
+  // locataire etait donc SAUTE, et le domaine d'une creatrice pouvait
+  // servir le quiz de quelqu'un d'autre. Le module quiz de Tiquiz est
+  // jumeau : un garde-fou qui ne protege qu'un des deux ne protege
+  // personne.
+  test("les trois etats sont distingues", () => {
+    assert.match(PAGE_QUIZ, /surUnDomainePerso: false/);
+    assert.match(PAGE_QUIZ, /surUnDomainePerso: true, lisible: false/);
+    assert.match(PAGE_QUIZ, /surUnDomainePerso: true, lisible: true/);
+  });
+
+  test("un registre illisible ne sert RIEN", () => {
+    // Le sens du repli est asymetrique : un 404 de trop pendant une
+    // panne coute une page, servir sans verifier coute le quiz d'une
+    // creatrice affiche chez une autre.
+    assert.match(PAGE_QUIZ, /if \(!locataire\.lisible\) notFound\(\);/);
+  });
+
+  test("l'erreur du registre est CRIEE", () => {
+    assert.match(PAGE_QUIZ, /registre des domaines perso illisible/);
+  });
+});
+
 describe("aucun tiret cadratin dans ce qui est vu par un visiteur", () => {
   test("les deux tables de messages", () => {
     const tout = [
