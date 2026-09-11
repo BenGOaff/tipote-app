@@ -350,6 +350,26 @@ grep -c '^CRON_SECRET=' ~/tipote-app/.env      # 1 = présente
 raison dans un terminal qui servira ensuite à un `npm run build` ou à un
 `pm2 restart --update-env`.
 
+**ET JAMAIS `. .env` DANS UNE CRONTAB (mesuré le 11 septembre 2026).**
+La crontab tourne sous `sh`, pas sous bash, et `sh` ne cherche pas
+`.env` dans le dossier courant : le journal disait
+`/bin/sh: 1: .: .env: not found`, et les HUIT lignes écrites ainsi
+n'avaient jamais tourné (le barème des affiliés, la maturation, les
+factures revendeurs, le rejeu des commissions). Une ligne de crontab lit
+la SEULE clé dont elle a besoin, dans l'ordre que Next utilise :
+
+```bash
+curl -fsS -H "X-Cron-Secret: $(grep -m1 -h '^CRON_SECRET=' /home/tipote/tipote-app/.env.local /home/tipote/tipote-app/.env 2>/dev/null | head -1 | cut -d= -f2- | tr -d '"\r')" https://app.tipote.com/api/cron/...
+```
+
+**Et sur le serveur de Tipote, `.env.local` EXISTE et passe devant
+`.env`** : il porte `TIPOTE_KEYS_ENCRYPTION_KEY`, les secrets vidéo et
+un `CRON_SECRET` différent de celui de `.env`. On ne le supprime pas
+(la clé de chiffrement n'est nulle part ailleurs) ; toute commande qui
+a besoin d'un secret lit `.env.local` d'abord. `npm run check:cron-secret`
+nomme le fichier qu'il a lu. Aucun secret ne s'écrit en clair dans la
+crontab : un `crontab -l` collé dans une conversation les expose.
+
 ## Workflow Git — RÈGLE ABSOLUE
 
 **Avant TOUT push, lire `CLAUDE_WORKFLOW.md`.**
