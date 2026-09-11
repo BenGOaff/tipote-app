@@ -96,6 +96,8 @@ changement de design porté ici se valide là-bas.
 | les bugs récurrents et les conventions | `CLAUDE_PITFALLS.md` |
 | sur quelle branche pousser | `CLAUDE_WORKFLOW.md` |
 | ce qui reste à reprendre à Systeme.io | `ROADMAP_SORTIE_SIO.md` (dépôt tiquiz) |
+| **par quoi reprendre, tout de suite** | **`PASSATION.md`** (dépôt tiquiz, daté du 9 septembre) |
+| **ce qui reste à faire, dit par Béné** | **`CHANTIERS.md`** (dépôt tiquiz) |
 
 **Béné ne lit pas les dossiers.** Tout ce qu'elle doit faire ou copier
 se met dans le message final, jamais dans un fichier qu'on lui demande
@@ -4635,6 +4637,43 @@ vert sur un fichier disparu.
 
 Test : `tests/logic/favicon-des-clientes.test.mts`, vérifié en rejouant
 la version d'avant (un `public/favicon.ico` recréé) : il rougit.
+
+## Le domaine perso d'une créatrice ne sert que SES quiz (9 septembre 2026)
+
+Trouvé côté Tiquiz en lisant les erreurs non lues de la page publique, et
+porté ici le jour même : **le module quiz des deux dépôts portait le même
+trou.**
+
+`resolveCustomDomainScope` rendait `null` dans DEUX cas différents :
+"on n'est pas sur un domaine perso" et "la requête a échoué". Dans le
+second, le contrôle de locataire juste en dessous était donc SAUTÉ, donc
+le domaine d'une créatrice pouvait servir le quiz de quelqu'un d'autre.
+C'est mot pour mot ce que le commentaire de ce contrôle interdit, et
+l'erreur n'était même pas lue.
+
+"Je n'ai pas pu regarder" et "il n'y a rien" sont deux réponses
+différentes (règle du 23 août), et c'est la troisième fois que ce dépôt
+paie la confusion : le plan retiré sur un contrôle en erreur (23 août),
+le lot de versement vide sur un `.in()` trop long (31 août), celui-ci.
+
+**Trois états maintenant, et le sens du repli est asymétrique** : un 404
+de trop sur un domaine perso pendant une panne de base coûte une page ;
+servir sans vérifier coûte le quiz d'une créatrice affiché chez une
+autre. Un registre illisible ne sert donc RIEN.
+
+Le détail complet, avec ce qui a été mesuré, vit dans l'`AGENTS.md` de
+TIQUIZ (section "LA VITESSE"). Ce qui reste différent ici, et c'est
+assumé : Tipote gate sur un couple (propriétaire, PROJET), pas seulement
+sur le propriétaire, parce que ses domaines persos sont attachés à un
+projet.
+
+**Ce qui N'A PAS été porté, et je le dis :** la livraison de la charge du
+quiz avec le HTML (le vrai chantier de vitesse de Tiquiz). Tipote a
+exactement la même architecture en trois vagues, donc le même gain
+l'attend, mais c'est un chantier à part et il n'est pas fait.
+
+Test : les 3 cas ajoutés à `tests/logic/langue-du-viewer.test.mts`,
+vérifiés en rejouant la version d'avant (les trois rougissent).
 
 ## « Je n'ai pas pu regarder » n'est pas « il n'y a personne » : le registre répond 503 (11 septembre 2026)
 
