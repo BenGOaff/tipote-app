@@ -4809,3 +4809,31 @@ de crontab est dans le message du jour.
 
 Test : `tests/logic/lot-jamais-deux-fois.test.mts`, vérifié en rejouant
 la version sans le garde (il rougit).
+
+### « unauthorized » sur le cron de maturation : trois valeurs, un contrôle (11 septembre 2026, le soir)
+
+Le premier essai sur le serveur a rendu `{"ok":false,"reason":"unauthorized"}`.
+Le corps JSON prouve que la route est déployée (une route absente rend
+la page 404 de Next). Le refus vient donc d'une VALEUR, et il y en a
+trois qui se ressemblent trait pour trait dans ce message :
+
+| Où | Ce qui peut être faux |
+|---|---|
+| le SOUS-SHELL de la crontab | `. .env` s'arrête sur une ligne que bash ne sait pas lire (une clé d'API avec un guillemet ou un `$(`), et `$CRON_SECRET` est VIDE. **Mesuré** : un `"` non fermé plus haut dans le fichier rend `${#CRON_SECRET}` = 0 |
+| le PROCESSUS | PM2 tient une valeur héritée d'un `--update-env`, et elle gagne sur tout fichier (panne du 22 août au soir) |
+| le FICHIER | la clé n'y est pas, ou le build date d'avant sa modification (`.next/standalone/.env`) |
+
+```bash
+npm run check:cron-secret
+```
+
+Il mesure les trois SÉPARÉMENT (longueur et « identique / différent »,
+jamais la valeur), puis appelle la route en local ET en public. **En GET,
+qui vérifie le secret et n'approuve RIEN** : sans ce GET, le seul test
+possible était d'approuver des commissions pour voir si le secret passe.
+La crontab, elle, reste en POST. Local 200 et public 401 accusent le
+chemin (Cloudflare), pas la valeur ; tout d'accord et 401 quand même, il
+le DIT au lieu d'inventer une cause (règle du 2 septembre).
+
+Test : `tests/logic/check-cron-secret.test.mts`, vérifié en rejouant le
+GET qui approuve (il rougit).
