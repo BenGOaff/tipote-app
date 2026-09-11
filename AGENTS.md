@@ -4677,11 +4677,13 @@ lecture du registre par paquets qui échoue arrête tout.
   `/admin/versements` (`app/api/affiliate/admin/versements/route.ts`).
   C'est le process : cliquer entre le 10 et le 13, AVANT de construire
   le lot. Un cron le ferait sans elle, et c'est sa décision.
-- **Le cron du barème (`app/api/cron/recompense-affilies`) n'a de
-  crontab écrit nulle part** dans les trois dépôts : la seule trace est
-  une ligne `curl` en commentaire de la route. S'il ne tourne pas, un
-  affilié à 11 filleuls reste à 40 %, sans erreur nulle part. Se vérifie
-  sur le serveur avec `crontab -l`.
+- 🚨 **Cette ligne disait que le cron du barème
+  (`app/api/cron/recompense-affilies`) n'avait de crontab nulle part.
+  C'EST PÉRIMÉ, mesuré le jour même** : Béné a collé son `crontab -l`,
+  et il y est, le 2 de chaque mois à 3 h (`0 3 2 * *`), suivi de
+  `remise-affilies` à 3 h 05. Ce que les trois dépôts ne portent pas,
+  c'est la LIGNE de crontab ; le serveur, lui, la porte. « Je n'ai pas
+  trouvé » n'est pas « il n'y a rien » (règle du 22 août).
 - **`trop-tard` ne vit que dans `pm2 logs`** : une commission déjà
   versée qu'un remboursement annule n'est écrite nulle part en base.
   C'est un cas pour un humain, et il faut lire le journal pour le savoir.
