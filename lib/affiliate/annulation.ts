@@ -99,3 +99,37 @@ export interface ResultatAnnulation {
 export function resultatVide(): ResultatAnnulation {
   return { annulees: 0, dejaCloses: 0, tropTard: 0, tropTardCents: 0 };
 }
+
+/**
+ * CE QU'ON ÉCRIT SUR UNE COMMISSION DÉJÀ VERSÉE QU'UN REMBOURSEMENT
+ * ANNULE (`trop-tard`).
+ *
+ * Avant le 11 septembre, ce cas ne vivait que dans `pm2 logs`. Il vit
+ * maintenant sur la ligne, dans des colonnes À CÔTÉ du statut : la
+ * ligne reste `paid`, dans son lot, avec son autofacture. On ne
+ * réécrit ni l'une ni l'autre, on note ce qu'il reste à récupérer.
+ *
+ * Rend `null` quand c'est DÉJÀ noté : un fournisseur rejoue ses
+ * webhooks, et compter deux fois la même somme ferait réclamer à
+ * l'affilié le double de ce qu'il a reçu.
+ */
+export interface CompensationAEcrire {
+  a_compenser_cents: number;
+  a_compenser_depuis: string;
+  a_compenser_motif: MotifAnnulation;
+}
+
+export function compensationAEcrire(
+  ligne: { commission_cents: number | null | undefined; a_compenser_cents?: number | null },
+  motif: MotifAnnulation,
+  maintenant: number,
+): CompensationAEcrire | null {
+  if (Number(ligne.a_compenser_cents ?? 0) > 0) return null;
+  const cents = Math.max(0, Math.round(Number(ligne.commission_cents ?? 0)));
+  if (cents <= 0) return null;
+  return {
+    a_compenser_cents: cents,
+    a_compenser_depuis: new Date(maintenant).toISOString(),
+    a_compenser_motif: motif,
+  };
+}

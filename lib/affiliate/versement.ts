@@ -170,7 +170,14 @@ export type RaisonEcartee =
   /** Sous le minimum : acquis, mais reporté au lot suivant. */
   | "sous-le-minimum"
   /** On ne connaît pas cette affiliée : ça ne doit jamais arriver en silence. */
-  | "affiliee-inconnue";
+  | "affiliee-inconnue"
+  /**
+   * Un lot figé porte déjà cette commission, et son marquage `paid` a
+   * raté en route (`commissions_non_marquees`). La remettre dans un lot
+   * la paierait DEUX fois : on l'écarte, et `preparerLot` répare le
+   * marquage. Voir `commissionsDejaDansDesLots`.
+   */
+  | "deja-dans-un-lot";
 
 export interface Ecartee {
   sa: string;
@@ -204,12 +211,26 @@ export function construireLot(
   commissions: readonly CommissionAVerser[],
   affiliees: readonly AffilieePayable[],
   minimumCents: number = MONTANT_MINIMUM_CENTS,
+  options: {
+    /**
+     * Les commissions qu'un lot figé porte DÉJÀ (identifiant de
+     * commission -> identifiant de lot), lues dans `affiliate_payouts`.
+     *
+     * `payout_id` ne suffit pas : c'est le marquage qui l'écrit, et
+     * c'est lui qui peut rater APRÈS que le lot existe. Sans cette
+     * liste, un marquage raté remettait la commission dans le lot
+     * suivant, et l'affilié était viré deux fois.
+     */
+    dejaDansUnLot?: ReadonlyMap<string, string>;
+  } = {},
 ): Lot {
   const parSa = new Map<string, AffilieePayable>();
   for (const a of affiliees) parSa.set(a.sa, a);
+  const dejaDansUnLot = options.dejaDansUnLot ?? new Map<string, string>();
 
   const cumul = new Map<string, { montant: number; ids: string[] }>();
   const autreDevise = new Map<string, { montant: number; ids: string[] }>();
+  const dejaVersees = new Map<string, { montant: number; ids: string[] }>();
   for (const c of commissions) {
     // On ne prend QUE les approuvées, et QUE celles qu'aucun lot n'a
     // déjà prises. Sans le second test, un lot construit deux fois
@@ -217,6 +238,20 @@ export function construireLot(
     if (String(c.status ?? "").trim().toLowerCase() !== "approved") continue;
     if (c.payout_id) continue;
     if (!Number.isFinite(c.commission_cents) || c.commission_cents <= 0) continue;
+
+    // ── UN LOT FIGÉ LA PORTE DÉJÀ : ELLE NE REPART PAS ──
+    //
+    // `payout_id` est vide, donc le marquage a raté après la création
+    // du lot. Le fichier SEPA de ce lot la contient peut être déjà. On
+    // l'ÉCARTE en le disant, jamais en silence : l'écran montre la
+    // somme et le lot, et `preparerLot` répare le marquage.
+    if (dejaDansUnLot.has(c.id)) {
+      const reprise = dejaVersees.get(c.sa) ?? { montant: 0, ids: [] };
+      reprise.montant += Math.round(c.commission_cents);
+      reprise.ids.push(c.id);
+      dejaVersees.set(c.sa, reprise);
+      continue;
+    }
 
     // ── UNE COMMISSION EN DOLLARS NE PART PAS DANS UN FICHIER EN EUROS ──
     //
@@ -249,6 +284,9 @@ export function construireLot(
 
   for (const [sa, { montant, ids }] of autreDevise) {
     ecartees.push({ sa, raison: "devise", montantCents: montant, commissionIds: ids });
+  }
+  for (const [sa, { montant, ids }] of dejaVersees) {
+    ecartees.push({ sa, raison: "deja-dans-un-lot", montantCents: montant, commissionIds: ids });
   }
 
   for (const [sa, { montant, ids }] of cumul) {
@@ -325,6 +363,68 @@ export function construireLot(
     totalCents: lignes.reduce((s, l) => s + l.montantCents, 0),
     totalParMethode,
   };
+}
+
+/** Un lot tel que `affiliate_payouts` le rend, réduit à ce qu'on lit ici. */
+export interface LotEnBase {
+  id: string;
+  statut: string | null;
+  lignes: unknown;
+}
+
+/**
+ * LES COMMISSIONS QU'UN LOT FIGÉ PORTE DÉJÀ.
+ *
+ * Rend `identifiant de commission -> identifiant de lot`, pour tous
+ * les lots qui ne sont PAS annulés : un lot annulé n'a payé personne,
+ * ses commissions redeviennent libres (voir `reouvertureDeLot`).
+ *
+ * C'est la deuxième moitié de « un lot ne paie jamais deux fois ». La
+ * première est `payout_id` sur la commission ; celle ci est écrite par
+ * le marquage, qui vient APRÈS la création du lot et qui peut rater.
+ * Entre les deux, une commission est dans un fichier SEPA et n'a
+ * aucune trace sur sa propre ligne. Cette fonction lit la trace là où
+ * elle existe : dans le lot.
+ *
+ * Une ligne illisible est IGNORÉE, jamais devinée : au pire on écarte
+ * une commission de moins, et `payout_id` la rattrape dès que le
+ * marquage passe.
+ */
+export function commissionsDejaDansDesLots(lots: readonly LotEnBase[]): Map<string, string> {
+  const sortie = new Map<string, string>();
+  for (const lot of lots) {
+    if (String(lot.statut ?? "").trim().toLowerCase() === "annule") continue;
+    if (!Array.isArray(lot.lignes)) continue;
+    for (const ligne of lot.lignes as unknown[]) {
+      const ids = (ligne as { commissionIds?: unknown })?.commissionIds;
+      if (!Array.isArray(ids)) continue;
+      for (const id of ids) {
+        if (typeof id === "string" && id && !sortie.has(id)) sortie.set(id, lot.id);
+      }
+    }
+  }
+  return sortie;
+}
+
+export type ReouvertureDeLot =
+  /** Le lot n'a pas été payé : ses commissions redeviennent versables. */
+  | "reouvrir"
+  /** Déjà payé, ou déjà annulé : on ne touche à rien. */
+  | "refuser";
+
+/**
+ * ANNULER UN LOT ROUVRE SES COMMISSIONS, OU NE FAIT RIEN.
+ *
+ * Avant ce garde, « annuler » ne changeait que le statut du lot : ses
+ * commissions restaient `paid`, donc l'affilié n'était JAMAIS payé, et
+ * rien ne le disait. Un lot `prepare` ou `exporte` (fichier téléchargé
+ * mais pas déposé) se rouvre. Un lot `paye` ne s'annule pas : l'argent
+ * est parti, et le défaire ici rendrait des commissions versables une
+ * deuxième fois.
+ */
+export function reouvertureDeLot(statut: string | null | undefined): ReouvertureDeLot {
+  const s = String(statut ?? "").trim().toLowerCase();
+  return s === "prepare" || s === "exporte" ? "reouvrir" : "refuser";
 }
 
 /**

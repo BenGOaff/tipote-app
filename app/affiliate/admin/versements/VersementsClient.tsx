@@ -21,7 +21,14 @@ interface Ligne {
 }
 interface Ecartee {
   sa: string;
-  raison: "affiliee-exclue" | "coordonnees" | "devise" | "profil-fiscal" | "sous-le-minimum" | "affiliee-inconnue";
+  raison:
+    | "affiliee-exclue"
+    | "coordonnees"
+    | "devise"
+    | "profil-fiscal"
+    | "sous-le-minimum"
+    | "affiliee-inconnue"
+    | "deja-dans-un-lot";
   montantCents: number;
 }
 interface Piece {
@@ -43,9 +50,19 @@ interface Lot {
   /** Le NOMBRE de virements, jamais les lignes : elles portent les IBAN. */
   nbLignes: number;
 }
+interface ACompenser {
+  commissionId: string;
+  sa: string;
+  email: string | null;
+  montantCents: number;
+  motif: string | null;
+  depuis: string | null;
+  lotId: string | null;
+}
 interface Reponse {
   ok?: boolean;
   apercu?: { lignes: Ligne[]; ecartees: Ecartee[]; totalCents: number } | null;
+  aCompenser?: { lisible: true; lignes: ACompenser[] } | { lisible: false; raison: string };
   lots?: Lot[];
   periode?: string;
   sepaConfigure?: boolean;
@@ -68,6 +85,8 @@ const RAISONS: Record<Ecartee["raison"], string> = {
   "profil-fiscal": "infos de facturation incomplètes ou mandat non accepté, à relancer",
   "sous-le-minimum": "sous 20 €, reporté au versement suivant",
   "affiliee-inconnue": "affiliée introuvable, à regarder",
+  "deja-dans-un-lot":
+    "déjà dans un lot figé dont le marquage avait raté : marquage réparé, ne repart pas",
 };
 
 const euros = (c: number) =>
@@ -252,6 +271,45 @@ export default function VersementsClient() {
           )}
         </CardContent>
       </Card>
+
+      {/* CE QUI EST PARTI À TORT SE VOIT ICI, PLUS SEULEMENT DANS pm2 logs.
+          Une commission déjà virée qu'un remboursement annule ne se
+          reprend pas : c'est un humain qui compense au lot suivant, ou
+          qui écrit à l'affilié. « Je n'ai pas pu lire » est dit à part. */}
+      {data?.aCompenser && (data.aCompenser.lisible === false || data.aCompenser.lignes.length > 0) && (
+        <Card>
+          <CardContent className="space-y-3 py-5 text-sm">
+            <h2 className="text-base font-semibold">À compenser à la main</h2>
+            {data.aCompenser.lisible === false ? (
+              <p className="text-amber-900 dark:text-amber-200">
+                Les compensations n&apos;ont pas pu être lues. Ce n&apos;est pas « rien à compenser » :
+                si la migration <code>20260911_commissions_a_compenser.sql</code> n&apos;est pas
+                passée, c&apos;est elle.
+              </p>
+            ) : (
+              <ul className="divide-y">
+                {data.aCompenser.lignes.map((c) => (
+                  <li key={c.commissionId} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
+                    <span className="font-mono text-xs">{c.sa}</span>
+                    <span className="flex-1 truncate text-muted-foreground">
+                      {c.email ?? "client inconnu"}, {c.motif ?? "motif inconnu"} le {jour(c.depuis)}
+                      {c.lotId ? `, versée dans le lot ${c.lotId.slice(0, 8)}` : ""}
+                    </span>
+                    <span className="font-semibold text-destructive">{euros(c.montantCents)}</span>
+                    <button
+                      type="button"
+                      onClick={() => void agir("compensation_reglee", { id: c.commissionId })}
+                      className="text-xs font-semibold text-emerald-700 hover:underline"
+                    >
+                      Réglé
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardContent className="space-y-3 py-5 text-sm">

@@ -25,11 +25,14 @@ import {
 } from "@/lib/affiliate/coordonnees";
 import {
   commissionApprouvable,
+  commissionsDejaDansDesLots,
   construireLot,
+  reouvertureDeLot,
   type AffilieePayable,
   type CommissionAVerser,
   type LigneLot,
   type Lot,
+  type LotEnBase,
 } from "@/lib/affiliate/versement";
 import { construireAutofacture } from "@/lib/affiliate/autofacture";
 import {
@@ -417,6 +420,32 @@ export async function preparerLot(): Promise<Lot | null> {
       return { lignes: [], ecartees: [], totalCents: 0, totalParMethode: { paypal: 0, virement: 0 } };
     }
 
+    // ── CE QU'UN LOT FIGÉ PORTE DÉJÀ, ET LE MARQUAGE QUI A RATÉ ──
+    //
+    // `figerLot` crée le lot PUIS marque les commissions `paid`. Entre
+    // les deux, une panne laisse des commissions `approved` sans
+    // `payout_id`, que ce filtre reprendrait au lot suivant : le même
+    // virement partirait deux fois, et rien ne le dirait. Le journal
+    // criait `commissions_non_marquees`, et c'est tout.
+    //
+    // On lit donc les lots eux mêmes (ils portent les identifiants de
+    // commission dans `lignes`), on ÉCARTE ce qui y est déjà, et on
+    // RÉPARE le marquage ici : le lot suivant répare le précédent.
+    //
+    // Une lecture ratée ARRÊTE tout : construire un lot sans savoir ce
+    // que les précédents ont pris est exactement la situation qu'on
+    // ferme. « Je n'ai pas pu regarder » n'est pas « il n'y a rien ».
+    const { data: lotsBruts, error: lotsErr } = await supabaseAdmin
+      .from(TABLE_LOTS)
+      .select("id, statut, lignes")
+      .neq("statut", "annule");
+    if (lotsErr) {
+      console.error(`[versement] lot NON prepare : les lots precedents sont illisibles (${lotsErr.message}).`);
+      return null;
+    }
+    const dejaDansUnLot = commissionsDejaDansDesLots((lotsBruts ?? []) as LotEnBase[]);
+    await reparerMarquage(commissions, dejaDansUnLot);
+
     const sas = [...new Set(commissions.map((c) => c.sa))];
     const lecture = await lireAffilieesParPaquets(sas);
     if (!lecture.ok) {
@@ -459,10 +488,50 @@ export async function preparerLot(): Promise<Lot | null> {
       };
     });
 
-    return construireLot(commissions, affiliees);
+    return construireLot(commissions, affiliees, undefined, { dejaDansUnLot });
   } catch (e) {
     console.error(`[versement] preparation du lot impossible : ${(e as Error).message}`);
     return null;
+  }
+}
+
+/**
+ * REMET `paid` + `payout_id` SUR CE QU'UN LOT PORTE DÉJÀ.
+ *
+ * Idempotent, best-effort, par lot : une commission `approved` sans
+ * `payout_id` qui figure dans les lignes d'un lot figé est une
+ * commission dont le marquage a raté. Une erreur ici ne bloque rien,
+ * parce que le filtre de `construireLot` protège déjà du double
+ * paiement ; elle est DITE, et le marquage sera retenté au prochain
+ * aperçu.
+ */
+async function reparerMarquage(
+  commissions: readonly CommissionAVerser[],
+  dejaDansUnLot: ReadonlyMap<string, string>,
+): Promise<void> {
+  const parLot = new Map<string, string[]>();
+  for (const c of commissions) {
+    const lot = dejaDansUnLot.get(c.id);
+    if (!lot) continue;
+    const ids = parLot.get(lot) ?? [];
+    ids.push(c.id);
+    parLot.set(lot, ids);
+  }
+  for (const [lot, ids] of parLot) {
+    const { error } = await supabaseAdmin
+      .from(TABLE_COMM)
+      .update({ status: "paid", paid_at: new Date().toISOString(), payout_id: lot })
+      .in("id", ids);
+    if (error) {
+      console.error(
+        `[versement] marquage du lot ${lot} toujours NON repare (${ids.length} commission(s)) : ${error.message}`,
+      );
+    } else {
+      console.warn(
+        `[versement] marquage du lot ${lot} REPARE : ${ids.length} commission(s) remise(s) en paid. ` +
+          `Elles etaient dans le fichier du lot sans etre marquees.`,
+      );
+    }
   }
 }
 
@@ -590,6 +659,40 @@ export async function marquerLot(
   statut: "exporte" | "paye" | "annule",
   par: string,
 ): Promise<boolean> {
+  // ── ANNULER UN LOT ROUVRE SES COMMISSIONS ──
+  //
+  // Avant, « annuler » ne touchait qu'au statut du lot : ses
+  // commissions restaient `paid`, donc l'affilié n'était JAMAIS payé
+  // pour ces ventes, et aucun écran ne le disait. La décision (un lot
+  // `paye` ne s'annule pas) vit dans `reouvertureDeLot`, pure.
+  //
+  // L'ORDRE compte : on rouvre les commissions D'ABORD, on annule le
+  // lot ENSUITE. L'inverse laisserait, sur une panne entre les deux,
+  // un lot annulé dont les commissions sont encore `paid` : exactement
+  // le trou qu'on ferme. Dans ce sens, une panne laisse un lot encore
+  // `exporte` avec des commissions déjà libres, que
+  // `commissionsDejaDansDesLots` écarte tant qu'il n'est pas annulé.
+  if (statut === "annule") {
+    const { data: lot, error: lectureErr } = await supabaseAdmin
+      .from(TABLE_LOTS).select("id, statut").eq("id", id).maybeSingle();
+    if (lectureErr || !lot) {
+      console.error(`[versement] lot ${id} illisible, annulation refusee : ${lectureErr?.message ?? "introuvable"}`);
+      return false;
+    }
+    if (reouvertureDeLot((lot as { statut: string | null }).statut) === "refuser") {
+      console.error(`[versement] lot ${id} est ${(lot as { statut: string | null }).statut} : il ne s'annule pas.`);
+      return false;
+    }
+    const { error: rouvreErr } = await supabaseAdmin
+      .from(TABLE_COMM)
+      .update({ status: "approved", paid_at: null, payout_id: null })
+      .eq("payout_id", id)
+      .eq("status", "paid");
+    if (rouvreErr) {
+      console.error(`[versement] lot ${id} NON annule : ses commissions n'ont pas pu etre rouvertes (${rouvreErr.message}).`);
+      return false;
+    }
+  }
   const maj: Record<string, unknown> = { statut };
   if (statut === "exporte") maj.exporte_le = new Date().toISOString();
   if (statut === "paye") {
@@ -717,4 +820,66 @@ export async function lireAutofacturesDuLot(lotId: string) {
     return [];
   }
   return data ?? [];
+}
+
+/** Une commission versée puis annulée, que l'admin doit récupérer à la main. */
+export interface ACompenser {
+  commissionId: string;
+  sa: string;
+  email: string | null;
+  montantCents: number;
+  motif: string | null;
+  depuis: string | null;
+  lotId: string | null;
+}
+
+/**
+ * LES COMMISSIONS À COMPENSER, ET « JE N'AI PAS PU LIRE » SE DIT.
+ *
+ * `lisible: false` quand la colonne n'existe pas encore (migration du
+ * 11 septembre) ou que la lecture rate : un écran qui afficherait « rien
+ * à compenser » sur une panne de lecture ferait croire que tout est
+ * réglé (règle du 23 août).
+ */
+export async function lireACompenser(): Promise<
+  { lisible: true; lignes: ACompenser[] } | { lisible: false; raison: string }
+> {
+  const { data, error } = await supabaseAdmin
+    .from(TABLE_COMM)
+    .select("id, sa, customer_email, a_compenser_cents, a_compenser_motif, a_compenser_depuis, payout_id")
+    .gt("a_compenser_cents", 0)
+    .is("a_compenser_regle_le", null)
+    .order("a_compenser_depuis", { ascending: true })
+    .limit(200);
+  if (error) {
+    console.error(`[versement] compensations illisibles : ${error.message}`);
+    return { lisible: false, raison: error.message };
+  }
+  return {
+    lisible: true,
+    lignes: ((data ?? []) as Record<string, unknown>[]).map((l) => ({
+      commissionId: String(l.id),
+      sa: String(l.sa),
+      email: (l.customer_email as string | null) ?? null,
+      montantCents: Number(l.a_compenser_cents ?? 0),
+      motif: (l.a_compenser_motif as string | null) ?? null,
+      depuis: (l.a_compenser_depuis as string | null) ?? null,
+      lotId: (l.payout_id as string | null) ?? null,
+    })),
+  };
+}
+
+/** L'humain a compensé (lot suivant, ou écrit à l'affilié) : on le note, on n'efface rien. */
+export async function reglerCompensation(commissionId: string, par: string): Promise<boolean> {
+  const { error } = await supabaseAdmin
+    .from(TABLE_COMM)
+    .update({ a_compenser_regle_le: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .eq("id", commissionId)
+    .gt("a_compenser_cents", 0);
+  if (error) {
+    console.error(`[versement] compensation ${commissionId} non reglee par ${par} : ${error.message}`);
+    return false;
+  }
+  console.log(`[versement] compensation ${commissionId} reglee par ${par}`);
+  return true;
 }

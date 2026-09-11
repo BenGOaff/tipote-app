@@ -4716,11 +4716,13 @@ lecture du registre par paquets qui échoue arrête tout.
   `/admin/versements` (`app/api/affiliate/admin/versements/route.ts`).
   C'est le process : cliquer entre le 10 et le 13, AVANT de construire
   le lot. Un cron le ferait sans elle, et c'est sa décision.
-- **Le cron du barème (`app/api/cron/recompense-affilies`) n'a de
-  crontab écrit nulle part** dans les trois dépôts : la seule trace est
-  une ligne `curl` en commentaire de la route. S'il ne tourne pas, un
-  affilié à 11 filleuls reste à 40 %, sans erreur nulle part. Se vérifie
-  sur le serveur avec `crontab -l`.
+- 🚨 **Cette ligne disait que le cron du barème
+  (`app/api/cron/recompense-affilies`) n'avait de crontab nulle part.
+  C'EST PÉRIMÉ, mesuré le jour même** : Béné a collé son `crontab -l`,
+  et il y est, le 2 de chaque mois à 3 h (`0 3 2 * *`), suivi de
+  `remise-affilies` à 3 h 05. Ce que les trois dépôts ne portent pas,
+  c'est la LIGNE de crontab ; le serveur, lui, la porte. « Je n'ai pas
+  trouvé » n'est pas « il n'y a rien » (règle du 22 août).
 - **`trop-tard` ne vit que dans `pm2 logs`** : une commission déjà
   versée qu'un remboursement annule n'est écrite nulle part en base.
   C'est un cas pour un humain, et il faut lire le journal pour le savoir.
@@ -4740,3 +4742,70 @@ les deux versions d'avant (l'erreur rendue comme « inconnu », la route
 qui répond 200) : les deux rougissent. Il refuse aussi
 `--experimental-strip-types` sur tout script `check:` : le serveur est
 en Node 20, et `check:cta-affilie` passe par `tsx`.
+
+## Le versement ne paie jamais deux fois, et ce qui est parti à tort se voit (11 septembre 2026, suite)
+
+Béné : "continue la suite logique, je veux un système ultra fiable de
+l'arrivée sur le site à la commande, en passant par les accès, les
+paiements et l'affiliation." Côté PAIE, trois trous d'argent vivaient
+dans le versement, et les trois ne se voyaient que dans `pm2 logs`.
+
+### 1. UN MARQUAGE RATÉ FAISAIT PAYER DEUX FOIS
+
+`figerLot` crée le lot, émet les autofactures, PUIS marque les
+commissions `paid`. Une panne entre le lot et le marquage laissait des
+commissions `approved` sans `payout_id`, que `preparerLot` reprenait le
+mois suivant : le même virement partait deux fois. Le journal criait
+`commissions_non_marquees`, et c'est tout.
+
+**Règle : la trace vit dans le LOT, et on la lit.** Les lignes de
+`affiliate_payouts` portent les identifiants de commission.
+`commissionsDejaDansDesLots` (pur) en fait une carte, `construireLot`
+l'accepte en option et ÉCARTE ce qu'un lot non annulé porte déjà
+(raison `deja-dans-un-lot`, affichée), et `preparerLot` RÉPARE le
+marquage au passage : le lot suivant répare le précédent. Une lecture
+ratée des lots ARRÊTE la préparation : on ne construit pas un lot sans
+savoir ce que les précédents ont pris.
+
+**L'ordre de `figerLot` ne bouge pas** (le lot, les factures, le
+marquage). Le double paiement est fermé par le filtre, pas par l'ordre,
+et une facture manquante se réémet là où un virement parti ne revient
+pas. Deux tests qui figeaient une POSITION dans le fichier ont rougi sur
+ce code juste : ils mesurent maintenant DANS `figerLot`.
+
+### 2. ANNULER UN LOT LAISSAIT SES COMMISSIONS « PAYÉES »
+
+`marquerLot(id, "annule")` ne changeait que le statut du lot. Ses
+commissions restaient `paid` : l'affilié n'était JAMAIS payé pour ces
+ventes, sans qu'aucun écran ne le dise. `reouvertureDeLot` (pur) décide
+: un lot `prepare` ou `exporte` se rouvre (ses commissions redeviennent
+`approved`, sans `payout_id`), un lot `paye` ne s'annule pas. Les
+commissions se rouvrent AVANT que le lot passe `annule` : dans l'autre
+ordre, une panne entre les deux referait exactement le trou.
+
+### 3. `trop-tard` S'ÉCRIT EN BASE
+
+Une commission déjà versée qu'un remboursement annule ne se reprend
+pas, et elle n'était écrite nulle part. `compensationAEcrire` (pur,
+idempotent sur un webhook rejoué) pose `a_compenser_cents`,
+`a_compenser_depuis` et `a_compenser_motif` À CÔTÉ du statut : la ligne
+reste `paid`, avec son lot et son autofacture. L'écran des versements
+affiche « À compenser à la main », avec un bouton « Réglé »
+(`a_compenser_regle_le`), et dit « je n'ai pas pu lire » quand la
+colonne manque, jamais « rien à compenser ».
+
+🚨 Migration : `supabase/migrations/20260911_commissions_a_compenser.sql`
+(Supabase de TIPOTE). Sans elle, le cas reste dans le journal comme
+avant, et rien d'autre ne casse (`annulerCommissionsDeLaVente` lit en
+`select("*")` pour ça).
+
+### 4. LA MATURATION NE DÉPEND PLUS D'UN CLIC
+
+`POST /api/cron/approuver-commissions` (X-Cron-Secret, temps constant)
+appelle `approuverCommissionsMures`, la même fonction que le bouton. La
+décision reste J+30 ; approuver tôt ne perd aucune annulation
+(`decideAnnulation` ne refuse que `paid` ou déjà dans un lot). La ligne
+de crontab est dans le message du jour.
+
+Test : `tests/logic/lot-jamais-deux-fois.test.mts`, vérifié en rejouant
+la version sans le garde (il rougit).

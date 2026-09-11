@@ -11,6 +11,7 @@
 import "server-only";
 
 import {
+  compensationAEcrire,
   decideAnnulation,
   resultatVide,
   type MotifAnnulation,
@@ -27,6 +28,7 @@ interface LigneCommission {
   payout_id: string | null;
   commission_cents: number | null;
   customer_email: string | null;
+  a_compenser_cents?: number | null;
 }
 
 /**
@@ -50,9 +52,14 @@ export async function annulerCommissionsDeLaVente(args: {
   const orderId = String(args.orderId ?? "").trim();
   if (!orderId) return sortie;
 
+  // `select("*")` volontaire : `a_compenser_cents` vient d'une migration
+  // du 11 septembre, et un select nominatif dessus ferait échouer la
+  // requête ENTIÈRE tant qu'elle n'est pas passée, donc laisser mûrir
+  // une commission remboursée. Rien de cette ligne ne repart vers un
+  // navigateur.
   const { data, error } = await supabaseAdmin
     .from(TABLE)
-    .select("id, sa, status, payout_id, commission_cents, customer_email")
+    .select("*")
     .eq("source_app", args.sourceApp)
     .eq("sio_order_id", orderId);
 
@@ -91,6 +98,10 @@ export async function annulerCommissionsDeLaVente(args: {
           `a ${l.sa} (${l.commission_cents ?? 0} c) alors que la vente est ${args.motif}. ` +
           `A recuperer a la main : compenser sur le lot suivant ou ecrire a l'affilie.`,
       );
+      // ET ÇA S'ÉCRIT EN BASE, pour l'écran des versements (11 septembre).
+      // Best-effort : la ligne reste `paid` quoi qu'il arrive, et une
+      // migration pas encore passée ne doit rien casser d'autre.
+      await noterCompensation(l, args.motif);
     }
   }
 
@@ -117,4 +128,20 @@ export async function annulerCommissionsDeLaVente(args: {
   }
 
   return sortie;
+}
+
+/**
+ * Note sur la ligne ce qu'il reste à récupérer. La décision (combien,
+ * et « déjà noté » sur un webhook rejoué) est dans `compensationAEcrire`.
+ */
+async function noterCompensation(l: LigneCommission, motif: MotifAnnulation): Promise<void> {
+  const maj = compensationAEcrire(l, motif, Date.now());
+  if (!maj) return;
+  const { error } = await supabaseAdmin.from(TABLE).update(maj).eq("id", l.id);
+  if (error) {
+    console.error(
+      `[affiliate/annulation] compensation NON notee sur ${l.id} (${error.message}). ` +
+        `Si la colonne manque : migration 20260911_commissions_a_compenser.sql.`,
+    );
+  }
 }
