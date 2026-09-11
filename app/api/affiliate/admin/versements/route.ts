@@ -32,11 +32,13 @@ import { periodeDe, type LigneLot } from "@/lib/affiliate/versement";
 import {
   approuverCommissionsMures,
   figerLot,
+  lireACompenser,
   lireAutofacturesDuLot,
   lireLot,
   lireLots,
   marquerLot,
   preparerLot,
+  reglerCompensation,
 } from "@/lib/affiliate/versementStore";
 
 export const runtime = "nodejs";
@@ -118,11 +120,12 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ ok: false, reason: "fichier_inconnu" }, { status: 400 });
   }
 
-  const [apercu, lots] = await Promise.all([preparerLot(), lireLots()]);
+  const [apercu, lots, aCompenser] = await Promise.all([preparerLot(), lireLots(), lireACompenser()]);
   return NextResponse.json({
     ok: true,
     apercu,
     lots,
+    aCompenser,
     periode: periodeDe(new Date()),
     // L'écran doit pouvoir dire "pose SEPA_DEBTOR_IBAN" plutôt que de
     // rendre un bouton qui échoue.
@@ -158,6 +161,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ ok: false, reason: sortie.reason }, { status: 409 });
     }
     return NextResponse.json({ ok: true, id: sortie.id });
+  }
+
+  if (body.action === "compensation_reglee") {
+    if (!body.id) return NextResponse.json({ ok: false, reason: "invalid_body" }, { status: 400 });
+    const ok = await reglerCompensation(body.id, admin);
+    return NextResponse.json({ ok }, { status: ok ? 200 : 500 });
   }
 
   if (body.action === "marquer") {

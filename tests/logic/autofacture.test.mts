@@ -383,9 +383,14 @@ describe("La chaîne qui produit vraiment la facture", () => {
   const store = lire("lib/affiliate/versementStore.ts");
 
   test("L'ORDRE : le lot d'abord, la facture ensuite, les commissions en dernier", () => {
-    const iLot = store.indexOf(".insert({\n        periode: args.periode");
-    const iFacture = store.indexOf("await emettreAutofacturesDuLot(");
-    const iPaid = store.indexOf('.update({ status: "paid"');
+    // DANS `figerLot`, pas dans le fichier entier : depuis le 11 septembre
+    // `reparerMarquage` écrit aussi `status: "paid"`, plus haut dans le
+    // fichier, et un test qui fige une position rougirait sur un code
+    // juste (leçon du 8 septembre, un chemin sur disque n'est pas un fait).
+    const figer = store.slice(store.indexOf("export async function figerLot"));
+    const iLot = figer.indexOf(".insert({\n        periode: args.periode");
+    const iFacture = figer.indexOf("await emettreAutofacturesDuLot(");
+    const iPaid = figer.indexOf('.update({ status: "paid"');
     assert.ok(iLot > 0 && iFacture > 0 && iPaid > 0, "une des trois étapes a disparu");
     // Avant le lot, la facture n'aurait pas d'identifiant de versement
     // à porter. Après le marquage, une panne laisserait des commissions

@@ -610,7 +610,11 @@ describe("Le cycle de versement, vu de la structure", () => {
     // L'inverse laisserait des commissions marquées `paid` pointant vers
     // un lot qui n'existe pas : de l'argent qu'on croit versé, sans
     // trace de virement.
-    const store = lire("lib/affiliate/versementStore.ts");
+    // Mesuré DANS `figerLot` : `reparerMarquage` écrit aussi `paid`, plus
+    // haut, pour un lot qui existe déjà (11 septembre).
+    const store = lire("lib/affiliate/versementStore.ts").slice(
+      lire("lib/affiliate/versementStore.ts").indexOf("export async function figerLot"),
+    );
     const creation = store.indexOf(".from(TABLE_LOTS)\n      .insert(");
     const marquage = store.indexOf('status: "paid"');
     assert.ok(creation > 0 && marquage > 0);
