@@ -21,6 +21,15 @@
 //       https://app.tipote.com/api/cron/approuver-commissions )
 //
 // Le secret est comparé en temps constant (audit du 24 août).
+//
+// -- GET : VÉRIFIER LE SECRET SANS RIEN APPROUVER ----------------------
+//
+// 11 septembre 2026, premier essai sur le serveur : `unauthorized`. Trois
+// valeurs pouvaient être fausses (le sous-shell, le processus, le
+// fichier), et la seule façon de le savoir était d'appeler la route, donc
+// d'APPROUVER des commissions pour faire un test. Le GET répond 200 avec
+// le même contrôle et aucune écriture : c'est lui que
+// `npm run check:cron-secret` appelle. La crontab, elle, reste en POST.
 
 import { NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
@@ -38,6 +47,13 @@ function autorise(req: NextRequest): boolean {
   const recu = req.headers.get("x-cron-secret")?.trim() || "";
   if (recu.length !== CRON_SECRET.length) return false;
   return timingSafeEqual(Buffer.from(recu), Buffer.from(CRON_SECRET));
+}
+
+export async function GET(req: NextRequest): Promise<NextResponse> {
+  if (!autorise(req)) {
+    return NextResponse.json({ ok: false, reason: "unauthorized" }, { status: 401 });
+  }
+  return NextResponse.json({ ok: true, action: "aucune", info: "secret accepte ; la maturation se lance en POST" });
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {

@@ -11,6 +11,7 @@
     "dev": "next dev",
     "prebuild": "node scripts/check-build-env.mjs",
     "check:supabase-keys": "node scripts/check-supabase-keys.mjs",
+    "check:cron-secret": "node scripts/check-cron-secret.mjs",
     "build": "next build",
     "postbuild": "node scripts/postbuild-standalone-static.cjs",
     "start": "next start",
