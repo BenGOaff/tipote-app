@@ -4930,9 +4930,22 @@ ligne.
 exercé contre le PostgREST de production (aucune base joignable d'ici).
 `imatch` est dans la liste des opérateurs du client (`postgrest-js`
 2.90) et de PostgREST ; si le serveur le refusait, le repli tient et le
-journal le dit. À vérifier après déploiement, sur un vrai achat d'un
-inscrit en alias : la ligne `[affiliate/conversion] la recherche par
-alias a ete refusee` ne doit PAS apparaître dans `pm2 logs tipote-prod`.
+journal le dit.
+
+**Et le contrôle DISTINGUE, parce que l'acceptation laisse une trace**
+(une par processus). Béné a lancé `grep -c "refusee"` avant le
+déploiement et lu `0` : ce zéro ne disait rien, le code n'était pas sur
+le serveur, et même déployé il ne séparait pas « accepté » de « jamais
+exercé ». Après déploiement, une fois qu'une vente ou une inscription
+est passée :
+
+```bash
+pm2 logs tipote-prod --nostream --lines 2000 | grep -c "recherche par alias est acceptee"
+```
+
+`1` ou plus = la base accepte le motif. `0` avec une ligne `refusee` =
+le repli exact tourne, et il faut regarder PostgREST. `0` sans rien =
+aucune vente ni inscription n'est encore passée par là, on ne sait pas.
 
 **Ce qui reste sur l'adresse brute, et c'est voulu :** la déduplication
 24 h de `track` et `sio-conversion` compare `(email, sa)` tels quels. Un

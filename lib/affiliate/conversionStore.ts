@@ -17,6 +17,12 @@ import { planchierRattachement } from "@/lib/affiliate/fenetreAttribution";
 
 type Conversion = { id: string; sa: string; email: string };
 
+// UNE trace par processus quand la base ACCEPTE le motif. Sans elle, un
+// `grep -c "refusee"` qui rend 0 ne distingue pas "la base a accepte" de
+// "personne n'a encore achete", et un controle qui ne distingue pas ce
+// qu'il est cense distinguer est pire qu'un controle absent (22 aout).
+let aliasAccepteDit = false;
+
 /**
  * Le rattachement le plus ANCIEN de cette personne, toutes formes de son
  * adresse confondues. `null` quand elle n'en a pas, ou quand la base n'a
@@ -41,6 +47,10 @@ export async function premiereConversionDeLaPersonne(
     if (plancher) requete = requete.gte("created_at", plancher);
     const { data, error } = await requete.order("created_at", { ascending: true }).limit(10);
     if (!error) {
+      if (!aliasAccepteDit) {
+        aliasAccepteDit = true;
+        console.log("[affiliate/conversion] la recherche par alias est acceptee par la base.");
+      }
       const ligne = premiereLigneDeLaPersonne((data ?? []) as Conversion[], exact);
       return ligne ? { id: ligne.id, sa: ligne.sa } : null;
     }

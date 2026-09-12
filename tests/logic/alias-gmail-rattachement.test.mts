@@ -140,6 +140,9 @@ describe("une seule lecture, et les deux lecteurs l'appellent", () => {
     const src = sansCommentaires(lire("lib/affiliate/conversionStore.ts"));
     assert.match(src, /\.filter\("email", "imatch", motif\)/, "la base filtre par le motif d'alias");
     assert.match(src, /premiereLigneDeLaPersonne\(/, "le JavaScript décide, pas la base");
+    // Et l'acceptation laisse UNE trace : sans elle, "0 refus" ne
+    // distingue pas "accepté" de "jamais exercé".
+    assert.match(src, /console\.log\("\[affiliate\/conversion\] la recherche par alias est acceptee/);
     // Le repli exact vit APRÈS la lecture par alias, et il est annoncé.
     const alias = src.indexOf('"imatch"');
     const cri = src.indexOf("console.error");
