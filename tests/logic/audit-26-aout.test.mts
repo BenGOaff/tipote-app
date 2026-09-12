@@ -353,9 +353,15 @@ describe("Les regles du programme, comme chez Systeme.io", () => {
     // Celui qui a AMENÉ la personne la garde. Trier du plus récent
     // donnerait le contact au dernier affilié dont il a croisé un lien,
     // ce qui viderait de son sens la promesse "à vie".
-    const src = lire("lib/affiliate/attribution.ts");
-    const bloc = src.slice(src.indexOf("async function findRecentConversion"));
-    assert.match(bloc.slice(0, 900), /\.order\("created_at", \{ ascending: true \}\)/);
+    // La lecture a déménagé dans `conversionStore.ts` le 12 septembre
+    // (alias Gmail compris) : c'est LÀ que l'ordre se lit, et les DEUX
+    // requêtes du fichier (par alias, puis exacte en repli) le portent.
+    const src = lire("lib/affiliate/conversionStore.ts");
+    const ordres = src.match(/\.order\("created_at", \{ ascending: true \}\)/g) ?? [];
+    assert.equal(ordres.length, 2, "les deux lectures du rattachement trient du plus ancien");
+    assert.doesNotMatch(src, /ascending: false/);
+    // Et `attributeSale` passe bien par cette lecture là.
+    assert.match(lire("lib/affiliate/attribution.ts"), /premiereConversionDeLaPersonne\(email\)/);
   });
 
   test("UNE INSCRIPTION GRATUITE RATTACHE VRAIMENT", () => {

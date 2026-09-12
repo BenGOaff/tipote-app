@@ -350,6 +350,26 @@ grep -c '^CRON_SECRET=' ~/tipote-app/.env      # 1 = présente
 raison dans un terminal qui servira ensuite à un `npm run build` ou à un
 `pm2 restart --update-env`.
 
+**ET JAMAIS `. .env` DANS UNE CRONTAB (mesuré le 11 septembre 2026).**
+La crontab tourne sous `sh`, pas sous bash, et `sh` ne cherche pas
+`.env` dans le dossier courant : le journal disait
+`/bin/sh: 1: .: .env: not found`, et les HUIT lignes écrites ainsi
+n'avaient jamais tourné (le barème des affiliés, la maturation, les
+factures revendeurs, le rejeu des commissions). Une ligne de crontab lit
+la SEULE clé dont elle a besoin, dans l'ordre que Next utilise :
+
+```bash
+curl -fsS -H "X-Cron-Secret: $(grep -m1 -h '^CRON_SECRET=' /home/tipote/tipote-app/.env.local /home/tipote/tipote-app/.env 2>/dev/null | head -1 | cut -d= -f2- | tr -d '"\r')" https://app.tipote.com/api/cron/...
+```
+
+**Et sur le serveur de Tipote, `.env.local` EXISTE et passe devant
+`.env`** : il porte `TIPOTE_KEYS_ENCRYPTION_KEY`, les secrets vidéo et
+un `CRON_SECRET` différent de celui de `.env`. On ne le supprime pas
+(la clé de chiffrement n'est nulle part ailleurs) ; toute commande qui
+a besoin d'un secret lit `.env.local` d'abord. `npm run check:cron-secret`
+nomme le fichier qu'il a lu. Aucun secret ne s'écrit en clair dans la
+crontab : un `crontab -l` collé dans une conversation les expose.
+
 ## Workflow Git — RÈGLE ABSOLUE
 
 **Avant TOUT push, lire `CLAUDE_WORKFLOW.md`.**
@@ -4726,10 +4746,11 @@ lecture du registre par paquets qui échoue arrête tout.
 - **`trop-tard` ne vit que dans `pm2 logs`** : une commission déjà
   versée qu'un remboursement annule n'est écrite nulle part en base.
   C'est un cas pour un humain, et il faut lire le journal pour le savoir.
-- **La conversion se cherche sur l'adresse BRUTE**, pas normalisée :
-  quelqu'un inscrit en `a+x@gmail.com` qui achète en `a@gmail.com` ne
-  retrouve pas son rattachement par email (le `?ref=` du lien, lui,
-  marche). L'anti-auto-affiliation, elle, normalise.
+- 🚨 **Cette ligne disait que la conversion se cherchait sur l'adresse
+  BRUTE, pas normalisée. C'EST PÉRIMÉ depuis le 12 septembre** (Béné :
+  "oui on normalise pour gmail stp"), corrigé en place plutôt
+  qu'empilé : voir la section « Le rattachement retrouve sa personne,
+  alias compris » plus bas.
 - **`figerLot` marque les commissions `paid` APRÈS les autofactures** :
   si ce marquage échoue, les lignes restent `approved` sans `payout_id`
   et rentreraient dans le lot suivant. Le journal le crie
@@ -4858,3 +4879,70 @@ commande avec ce nom dedans.
 Un contrôle qui ne distingue pas ce qu'il est censé distinguer est pire
 qu'un contrôle absent, et celui là a envoyé Béné réparer une crontab qui
 n'avait rien. Vérifié en rejouant la version d'avant : le test rougit.
+
+## Le rattachement retrouve sa personne, alias compris (Béné, 12 septembre 2026)
+
+"Oui on normalise pour gmail stp."
+
+Jusque là, la conversion (le rattachement à vie d'un inscrit à son
+affilié) se cherchait sur l'adresse BRUTE : quelqu'un inscrit en
+`bene+tiquiz@gmail.com` qui achetait ensuite en `bene@gmail.com` ne
+retrouvait pas son affilié par cette voie. Le `?ref=` du lien, lui,
+marchait ; un achat fait sans repasser par le lien perdait la
+commission, en silence. **L'anti-auto-affiliation normalisait DÉJÀ**
+(`memeAdresse.ts`, 26 août) : on protégeait la fraude mieux que
+l'affilié honnête, deux règles pour la même question et la plus faible
+sur l'argent.
+
+### On ne réécrit pas la règle en SQL, la base FILTRE et le JavaScript DÉCIDE
+
+On ne peut pas énumérer les alias d'une adresse (chaque `+truc` en est
+un), et normaliser en SQL voudrait dire écrire la règle une DEUXIÈME
+fois, dans une autre langue, à un endroit qu'aucun test ne charge :
+c'est le motif des deux jumeaux qui divergent, payé six fois ici.
+
+| Le fichier | Ce qu'il fait |
+|---|---|
+| `lib/affiliate/aliasAdresse.ts` (pur) | `motifAliasAdresse()` fabrique une expression régulière qui ne reconnaît QUE les formes de la même boîte ; `premiereLigneDeLaPersonne()` tranche avec `normaliserAdresse`, LA MÊME fonction que l'anti-auto-affiliation |
+| `lib/affiliate/conversionStore.ts` | la seule lecture : `imatch` (le `~*` de Postgres) sur le motif, tri du plus ancien, et le module pur choisit |
+| `attributeSale` et `POST /api/affiliate/rattacher` | l'appellent tous les deux, aucun ne garde sa propre requête |
+
+**Chez Gmail** : les points, le `+suffixe`, la casse et `googlemail.com`
+sont la même boîte. **Ailleurs** : le `+` est accepté, les points sont
+LITTÉRAUX (`jean.dupont@` et `jeandupont@` peuvent être deux personnes,
+et les confondre refuserait une commission légitime). Tout caractère
+qui a un sens en expression régulière est échappé, et c'est testé
+caractère par caractère : un `.` de domaine non échappé matcherait
+`exampleXcom`.
+
+**LE PREMIER RATTACHEMENT GAGNE, alias compris** : la première ligne du
+plus ancien au plus récent qui désigne la personne, quelle que soit la
+forme sous laquelle elle s'est inscrite.
+
+**Quand la base refuse le motif, on retombe sur l'exact et on le CRIE.**
+Un PostgREST qui ne connaîtrait pas `imatch` ferait échouer la requête :
+sans repli, ce serait ZÉRO rattachement pour tout le monde, donc zéro
+commission, sans qu'un écran le dise. Le repli est la lecture d'avant le
+12 septembre, moins large et jamais plus fausse, et `pm2 logs` porte la
+ligne.
+
+**Ce qui n'est PAS mesuré, et qui se dit :** le motif n'a pas été
+exercé contre le PostgREST de production (aucune base joignable d'ici).
+`imatch` est dans la liste des opérateurs du client (`postgrest-js`
+2.90) et de PostgREST ; si le serveur le refusait, le repli tient et le
+journal le dit. À vérifier après déploiement, sur un vrai achat d'un
+inscrit en alias : la ligne `[affiliate/conversion] la recherche par
+alias a ete refusee` ne doit PAS apparaître dans `pm2 logs tipote-prod`.
+
+**Ce qui reste sur l'adresse brute, et c'est voulu :** la déduplication
+24 h de `track` et `sio-conversion` compare `(email, sa)` tels quels. Un
+alias y crée une deuxième ligne pour le MÊME affilié, ce qui ne change
+rien à l'attribution (le premier gagne, c'est le même `sa`) et gonfle
+seulement son compteur d'un. Pas de quoi ajouter une lecture par motif
+sur le chemin chaud d'un snippet public.
+
+Test : `tests/logic/alias-gmail-rattachement.test.mts`, vérifié en
+rejouant QUATRE versions fautives (le motif sans points optionnels, le
+choix qui rend la première ligne sans juger, le repli exact retiré,
+`rattacher` qui garde sa propre requête) : les quatre rougissent.
+

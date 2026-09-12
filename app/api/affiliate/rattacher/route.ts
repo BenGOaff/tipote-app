@@ -30,6 +30,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { premiereConversionDeLaPersonne } from "@/lib/affiliate/conversionStore";
 import { REF_MIN_LENGTH, sanitizeRef } from "@/lib/affiliate/ref";
 import { SA_RE } from "@/lib/affiliate/saFormat";
 import { echapperMotifLike } from "@/lib/db/motifLike";
@@ -118,10 +119,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // amené la personne la garde. Écrire une ligne de plus à chaque
   // passage ne changerait donc rien à l'attribution, mais gonflerait la
   // table et ferait mentir le compteur de conversions de l'affilié.
-  const { data: deja } = await supabaseAdmin
-    .from("affiliate_conversions").select("id, sa").eq("email", email).limit(1).maybeSingle();
+  //
+  // Alias compris (12 septembre 2026) : la MÊME lecture que la
+  // commission, sinon un inscrit en `bene+x@gmail.com` serait rattaché
+  // une deuxième fois en `bene@gmail.com`, à un autre affilié peut être.
+  const deja = await premiereConversionDeLaPersonne(email);
   if (deja) {
-    const dejaSa = (deja as { sa: string }).sa;
+    const dejaSa = deja.sa;
     return NextResponse.json({
       ok: true,
       reason: dejaSa === sa ? "deja_rattache" : "rattache_a_un_autre",
