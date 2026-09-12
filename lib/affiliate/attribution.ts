@@ -13,12 +13,12 @@
 // Si Systeme.io retry le webhook on ignore silencieusement.
 
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { premiereConversionDeLaPersonne } from "@/lib/affiliate/conversionStore";
 import { REF_MIN_LENGTH, sanitizeRef } from "@/lib/affiliate/ref";
 import { memePersonne } from "@/lib/affiliate/memeAdresse";
 // LE RATTACHEMENT EST À VIE, et la décision vit dans un module PUR :
 // ce fichier importe `supabaseAdmin`, donc aucun test ne peut
 // l'importer. Voir `fenetreAttribution.ts`.
-import { planchierRattachement } from "@/lib/affiliate/fenetreAttribution";
 import {
   COMMISSION_RATES,
   htFromTtcCents,
@@ -216,23 +216,14 @@ async function saDepuisRef(brut: string | null | undefined): Promise<string | nu
  * personne qui la garde. Trier du plus récent donnerait le contact au
  * dernier affilié dont il a croisé un lien, ce qui viderait de son sens
  * la promesse "il reste son affilié à vie".
+ *
+ * ALIAS COMPRIS depuis le 12 septembre 2026 (`bene+x@gmail.com` et
+ * `b.e.n.e@gmail.com` sont `bene@gmail.com`) : la lecture vit dans
+ * `conversionStore.ts`, la règle dans `aliasAdresse.ts`, et le
+ * rattachement à l'inscription lit la MÊME fonction.
  */
 async function findRecentConversion(email: string): Promise<{ id: string; sa: string } | null> {
-  let requete = supabaseAdmin
-    .from("affiliate_conversions")
-    .select("id, sa")
-    .eq("email", email.toLowerCase());
-  const plancher = planchierRattachement();
-  if (plancher) requete = requete.gte("created_at", plancher);
-  const { data, error } = await requete
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
-  if (error) {
-    console.error("[affiliate/attribution] findRecentConversion error:", error.message);
-    return null;
-  }
-  return (data as { id: string; sa: string } | null) ?? null;
+  return premiereConversionDeLaPersonne(email);
 }
 
 /**
