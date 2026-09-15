@@ -4959,3 +4959,45 @@ rejouant QUATRE versions fautives (le motif sans points optionnels, le
 choix qui rend la première ligne sans juger, le repli exact retiré,
 `rattacher` qui garde sa propre requête) : les quatre rougissent.
 
+
+## `&nbsp;` en clair sur la case de consentement (Béné, 15 septembre 2026)
+
+"Putain pourquoi j'ai encore du &nbsp; sur les pages publiques !!!
+Exactement le genre de trucs de merde qui me font perdre des clients
+tous les jours !!!"
+
+Vu pendant le test GoHighLevel, sur un quiz public : la case disait
+`J'accepte la politique de confidentialité&nbsp;` en toutes lettres.
+
+**La cause est celle de Christian (1er septembre), dans une autre robe :
+une chaîne peut porter une ENTITÉ sans porter la moindre balise.** Le
+texte de consentement vient d'un champ riche, et un contentEditable
+colle `&nbsp;` à la place d'une espace de fin sans poser de balise
+autour. `ConsentText` regardait s'il y avait une balise pour choisir
+entre "rendre en HTML" et "rendre en texte" : l'entité partait donc dans
+la branche texte, et React affiche une entité telle quelle dans un noeud
+de texte, puisque rien ne la décode.
+
+**Et c'était la neuvième fois que ce viewer décodait une entité "pour
+ce champ là"** : la description, l'insight, la projection,
+l'introduction, le bonus... chacune ajoutée le jour où quelqu'un l'a vue
+en clair, et la case de consentement oubliée. Une règle recopiée finit
+toujours par en oublier un.
+
+**Règle : `lib/quiz/consentement.ts` décide de la FORME, une fois, et le
+texte brut sort DÉCODÉ.** `formeDuConsentement(raw)` rend `html` (une
+balise, l'écran sanitise) ou `texte` (décodé, l'écran rend un noeud de
+texte). L'écran ne rend plus jamais `raw`, et le test l'exige sur la
+source des deux viewers. `decouperSurLeLibelle` cherche le libellé dans
+le texte DÉCODÉ : avant, un `&nbsp;` collé entre deux mots du libellé
+faisait rater l'aiguille, et le lien partait à côté des mots au lieu de
+dessus.
+
+**Le viewer de Tipote n'avait AUCUN décodeur.** Tiquiz portait
+`decodeHtmlEntities` depuis mai et l'appliquait à neuf champs ; Tipote
+rendait ces neuf champs bruts. Un garde-fou qui ne protège qu'un des
+deux jumeaux ne protège personne : le décodeur y est porté, et les neuf
+champs y passent.
+
+Test : `tests/logic/consentement-sans-entite.test.mts`, dans les deux
+dépôts, vérifié en rejouant les deux viewers d'avant (il rougit).

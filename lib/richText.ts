@@ -241,6 +241,33 @@ export function isSafeUrl(url: string): boolean {
   return SAFE_URL_RE.test(url.trim());
 }
 
+// Decode les entités HTML nommées/numériques les plus fréquentes SANS
+// toucher aux balises ni aux espaces (contrairement à stripHtml, qui
+// supprime les balises et écrase les blancs). À utiliser quand on rend un
+// champ auteur en TEXTE BRUT (JSX children) alors qu'il peut contenir un
+// `&nbsp;` collé par le contentEditable : sans ça, l'entité apparait en
+// clair. Porté de Tiquiz le 15 septembre 2026 : ce viewer rendait neuf
+// champs auteur sans le décoder, dont la case de consentement.
+export function decodeHtmlEntities(input: string | null | undefined): string {
+  if (!input || input.indexOf("&") === -1) return input ?? "";
+  return input
+    .replace(/&nbsp;/g, " ")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&#(\d+);/g, (_m, n) => {
+      const code = Number(n);
+      return Number.isFinite(code) ? String.fromCodePoint(code) : "";
+    })
+    .replace(/&#x([0-9a-fA-F]+);/g, (_m, n) => {
+      const code = parseInt(n, 16);
+      return Number.isFinite(code) ? String.fromCodePoint(code) : "";
+    })
+    // &amp; en dernier, sinon on double-décode `&amp;nbsp;`.
+    .replace(/&amp;/g, "&");
+}
+
 // Strip all HTML tags AND decode HTML entities — used for short previews,
 // OpenGraph metadata, navigator.share titles, etc. Le précédent stripHtml
 // laissait `&nbsp;`, `&amp;`, `&#39;`… visibles en clair dans les aperçus

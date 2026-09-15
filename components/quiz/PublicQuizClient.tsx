@@ -28,7 +28,8 @@ import {
   isColorDark,
 } from "@/lib/quizBranding";
 import { QuizPanelMedia } from "@/components/quiz/QuizPanelMedia";
-import { sanitizeRichText, stripHtml } from "@/lib/richText";
+import { sanitizeRichText, stripHtml, decodeHtmlEntities } from "@/lib/richText";
+import { decouperSurLeLibelle, formeDuConsentement } from "@/lib/quiz/consentement";
 import {
   introTextWidthPct,
   introTextWidthStyle,
@@ -2803,7 +2804,7 @@ export default function PublicQuizClient({
   const introRich = isHtml(quiz.introduction);
   // Split introduction into lines — lines starting with ✓/✔/- become checkmarks
   // (legacy plain-text rendering kept for quizzes created before the rich-text editor)
-  const introLines = introRich ? [] : (quiz.introduction ?? "").split("\n").filter((l) => l.trim());
+  const introLines = introRich ? [] : decodeHtmlEntities(quiz.introduction).split("\n").filter((l) => l.trim());
   const bulletLines: string[] = [];
   const descLines: string[] = [];
   introLines.forEach((line) => {
@@ -4271,7 +4272,7 @@ export default function PublicQuizClient({
                                   dangerouslySetInnerHTML={{ __html: sanitizeRichText(desc) }}
                                 />
                               ) : (
-                                <p className="text-muted-foreground text-sm leading-relaxed whitespace-pre-line">{desc}</p>
+                                <p className="text-muted-foreground text-sm leading-relaxed whitespace-pre-line">{decodeHtmlEntities(desc)}</p>
                               );
                             })()}
                             {r.image_url && slot === "after_description" && (
@@ -4291,7 +4292,7 @@ export default function PublicQuizClient({
                                       dangerouslySetInnerHTML={{ __html: sanitizeRichText(ins) }}
                                     />
                                   ) : (
-                                    <p className="text-sm leading-relaxed whitespace-pre-line">{ins}</p>
+                                    <p className="text-sm leading-relaxed whitespace-pre-line">{decodeHtmlEntities(ins)}</p>
                                   )}
                                 </div>
                               );
@@ -4313,7 +4314,7 @@ export default function PublicQuizClient({
                                       dangerouslySetInnerHTML={{ __html: sanitizeRichText(proj) }}
                                     />
                                   ) : (
-                                    <p className="text-sm leading-relaxed whitespace-pre-line">{proj}</p>
+                                    <p className="text-sm leading-relaxed whitespace-pre-line">{decodeHtmlEntities(proj)}</p>
                                   )}
                                 </div>
                               );
@@ -4477,7 +4478,7 @@ export default function PublicQuizClient({
                   dangerouslySetInnerHTML={{ __html: sanitizeRichText(desc) }}
                 />
               ) : (
-                <p className={`text-muted-foreground ${RESULT_BODY_CLASS} whitespace-pre-line`}>{desc}</p>
+                <p className={`text-muted-foreground ${RESULT_BODY_CLASS} whitespace-pre-line`}>{decodeHtmlEntities(desc)}</p>
               );
             })()}
 
@@ -4507,7 +4508,7 @@ export default function PublicQuizClient({
                       dangerouslySetInnerHTML={{ __html: sanitizeRichText(ins) }}
                     />
                   ) : (
-                    <p className={`${RESULT_BODY_CLASS} whitespace-pre-line`}>{ins}</p>
+                    <p className={`${RESULT_BODY_CLASS} whitespace-pre-line`}>{decodeHtmlEntities(ins)}</p>
                   )}
                 </div>
               );
@@ -4535,7 +4536,7 @@ export default function PublicQuizClient({
                       dangerouslySetInnerHTML={{ __html: sanitizeRichText(proj) }}
                     />
                   ) : (
-                    <p className={`${RESULT_BODY_CLASS} whitespace-pre-line`}>{proj}</p>
+                    <p className={`${RESULT_BODY_CLASS} whitespace-pre-line`}>{decodeHtmlEntities(proj)}</p>
                   )}
                 </div>
               );
@@ -4569,7 +4570,7 @@ export default function PublicQuizClient({
                         />
                       ) : (
                         <p className={`${RESULT_BODY_CLASS} whitespace-pre-line ${shell.bodyToneClass}`}>
-                          {body}
+                          {decodeHtmlEntities(body)}
                         </p>
                       ))}
                     </div>
@@ -4759,7 +4760,7 @@ export default function PublicQuizClient({
             <Card className="p-4 border-dashed flex items-center gap-2 text-green-600 dark:text-green-400">
               <CheckCircle2 className="w-5 h-5 shrink-0" />
               <span className="text-sm font-medium whitespace-pre-line">
-                {(quiz.bonus_unlocked_message?.trim() || t.bonusUnlocked)}
+                {decodeHtmlEntities(quiz.bonus_unlocked_message?.trim() || "") || t.bonusUnlocked}
               </span>
             </Card>
           )}
@@ -4826,17 +4827,18 @@ function ConsentText({ text, privacyUrl, locale }: { text: string | null; privac
   const raw = isStoredDefault ? t.defaultConsent : text!;
 
   // Adeline (18 mai 2026) : le consent text peut maintenant être
-  // rich-text (gras / couleur / taille / police). Si on détecte du
-  // HTML on rend via sanitizeRichText + dangerouslySetInnerHTML —
-  // c'est l'éditeur qui pose le lien <a> directement, donc on n'a
-  // plus besoin de patcher le needle. Le défaut localisé reste plain
-  // text et passe par l'ancien code (needle-link injection).
-  const looksLikeHtml = /<[a-z][\s\S]*?>/i.test(raw);
-  if (looksLikeHtml) {
-    const alreadyHasLink = /<a\s[^>]*href=/i.test(raw);
+  // rich-text (gras / couleur / taille / police). S'il y a une balise on
+  // rend via sanitizeRichText + dangerouslySetInnerHTML : c'est l'éditeur
+  // qui pose le lien <a> directement. Sinon c'est du texte, et il sort
+  // DÉCODÉ (Béné, 15 septembre 2026 : `confidentialité&nbsp;` affiché en
+  // clair, une entité sans balise). La forme se décide dans
+  // `lib/quiz/consentement.ts`, jamais ici : on ne rend plus `raw`.
+  const forme = formeDuConsentement(raw);
+  if (forme.genre === "html") {
+    const alreadyHasLink = forme.porteUnLien;
     return (
       <span className="tipote-quiz-rich tipote-quiz-rich-inline">
-        <span dangerouslySetInnerHTML={{ __html: sanitizeRichText(raw) }} />
+        <span dangerouslySetInnerHTML={{ __html: sanitizeRichText(forme.html) }} />
         {/* Si l'auteur n'a pas inséré son propre lien et qu'on a un
             privacy_url renseigné, on l'affiche en suffixe pour ne pas
             faire disparaître la politique de confidentialité. */}
@@ -4858,16 +4860,13 @@ function ConsentText({ text, privacyUrl, locale }: { text: string | null; privac
     );
   }
 
-  if (!privacyUrl) return <span>{raw}</span>;
-
-  const needle = t.consentNeedle;
-  const idx = raw.toLowerCase().indexOf(needle);
+  const texte = forme.texte;
+  if (!privacyUrl) return <span>{texte}</span>;
 
   // If the needle is found in the text, make it a clickable link inline
-  if (idx !== -1) {
-    const before = raw.slice(0, idx);
-    const match = raw.slice(idx, idx + needle.length);
-    const after = raw.slice(idx + needle.length);
+  const morceaux = decouperSurLeLibelle(texte, t.consentNeedle);
+  if (morceaux) {
+    const { avant: before, libelle: match, apres: after } = morceaux;
 
     return (
       <span>
@@ -4889,7 +4888,7 @@ function ConsentText({ text, privacyUrl, locale }: { text: string | null; privac
   // Fallback: needle not found in text — show consent text + separate visible link
   return (
     <span>
-      {raw}{" "}
+      {texte}{" "}
       <a
         href={ensureExternalUrl(privacyUrl)}
         target="_blank"
