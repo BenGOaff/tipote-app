@@ -13,11 +13,8 @@
 
 import { useTranslations } from "next-intl";
 import { Plus, Trash2 } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import {
   MAX_CHAMPS_PERSONNALISES,
-  MAX_LIBELLE_CHAMP,
-  MAX_PLACEHOLDER_CHAMP,
   nouvelIdChamp,
   type ChampPersonnalise,
 } from "@/lib/quiz/champsPersonnalises";
@@ -52,24 +49,19 @@ export default function ChampsPersonnalisesEditor({ ns, champs, onChange }: Prop
       </div>
       {champs.map((c) => (
         <div key={c.id} className="rounded-lg border bg-muted/30 p-2.5 space-y-2">
+          {/* LE NOM ET L'EXEMPLE S'ÉCRIVENT DANS L'APERÇU (16 septembre
+              2026). Ils avaient leur champ ici, et depuis que le libellé
+              est du texte riche posé sur le formulaire, il y avait DEUX
+              endroits pour nommer la même chose : le libellé riche gagne
+              à l'affichage, donc taper ici n'aurait plus rien changé à
+              l'écran, en silence. C'est la mécanique WYSIWYG du reste de
+              l'éditeur (le titre, le sous-titre, la case de consentement,
+              le bouton), et il n'y a plus qu'une source. Cette colonne
+              garde ce que l'aperçu ne peut pas dire : ajouter, retirer,
+              rendre obligatoire. */}
           <div className="flex items-start gap-2">
-            <div className="flex-1 space-y-1.5 min-w-0">
-              <Input
-                value={c.label}
-                maxLength={MAX_LIBELLE_CHAMP}
-                onChange={(e) => modifier(c.id, { label: e.target.value })}
-                placeholder={t("customFieldLabelPh")}
-                className="h-8 text-sm"
-                aria-label={t("customFieldLabelPh")}
-              />
-              <Input
-                value={c.placeholder}
-                maxLength={MAX_PLACEHOLDER_CHAMP}
-                onChange={(e) => modifier(c.id, { placeholder: e.target.value })}
-                placeholder={t("customFieldPlaceholderPh")}
-                className="h-8 text-sm"
-                aria-label={t("customFieldPlaceholderPh")}
-              />
+            <div className="flex-1 min-w-0 text-sm truncate" title={c.label}>
+              {c.label.trim() || <span className="text-muted-foreground italic">{t("customFieldNoName")}</span>}
             </div>
             <button
               type="button"

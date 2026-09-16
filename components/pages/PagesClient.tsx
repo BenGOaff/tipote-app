@@ -8,6 +8,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useMemo } from "react";
+import { stripHtml } from "@/lib/texteBrut";
 import { useTranslations, useLocale } from "next-intl";
 import {
   Plus, FileText, ShoppingCart, Trash2, Copy,
@@ -59,10 +60,12 @@ const TITLE_STOPWORDS = new Set([
 
 function tokenizeForSimilarity(s: string): Set<string> {
   if (!s) return new Set();
+  // UNE SEULE PORTE (16 septembre 2026). Le retrait maison laissait les
+  // ENTITES : un `&nbsp;` devenait le jeton "nbsp", present dans tous les
+  // titres mis en forme, donc deux pages sans rapport se ressemblaient.
   return new Set(
-    s.toLowerCase()
+    stripHtml(s).toLowerCase()
       .normalize("NFD").replace(/[̀-ͯ]/g, "") // strip diacritics
-      .replace(/<[^>]*>/g, " ")                              // strip HTML tags from rich-text titles
       .replace(/[^a-z0-9]+/g, " ")
       .split(/\s+/)
       .filter((w) => w.length >= 3 && !TITLE_STOPWORDS.has(w)),
@@ -523,7 +526,7 @@ export default function PagesClient({ userEmail }: { userEmail: string }) {
                         <div className="flex-1">
                           <h3 className="font-semibold text-base mb-1">{t("similarPageTitle")}</h3>
                           <p className="text-sm text-muted-foreground">
-                            « <span className="font-medium text-foreground">{(duplicateMatch.title || "").replace(/<[^>]*>/g, "").slice(0, 100)}</span> »
+                            « <span className="font-medium text-foreground">{stripHtml(duplicateMatch.title).slice(0, 100)}</span> »
                             {" — "}
                             {duplicateMatch.status === "published" ? t("statusPublished") : t("statusDraft")}, {t("modifiedOn", { date: new Date(duplicateMatch.updated_at).toLocaleDateString() })}
                           </p>

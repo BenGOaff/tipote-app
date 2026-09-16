@@ -12,6 +12,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { stripHtml } from "@/lib/texteBrut";
 import { checkRateLimit } from "@/lib/aiRateLimit";
 import { resolveAnthropicModel } from "@/lib/anthropicModel";
 import { sanitizeAiText } from "@/lib/aiTextSanitizer";
@@ -113,7 +114,6 @@ export async function POST(
     return NextResponse.json({ ok: false, error: "Quiz not found" }, { status: 404 });
   }
 
-  const stripHtml = (s: string | null | undefined) => String(s ?? "").replace(/<[^>]*>/g, "").trim();
   const quizTitle = stripHtml((quiz as any).title) || "Quiz";
   const quizIntro = stripHtml((quiz as any).introduction).slice(0, 600);
   const localeTag = String((quiz as any).locale ?? "fr");

@@ -8,6 +8,7 @@
 // existe mais en indices, pas en texte (drame Béné 22 juin 2026).
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { stripHtml } from "@/lib/texteBrut";
 import { buildQuestionPositions, resolveQuestionPosition } from "@/lib/quiz/questionIdentity";
 
 export interface ResolvedAnswer {
@@ -27,11 +28,12 @@ interface RawAnswer {
   stars?: number;
 }
 
+// UNE SEULE PORTE VERS LE TEXTE BRUT (16 septembre 2026). Ces reponses
+// sont rendues en TEXTE dans l'admin, les exports et les emails : un
+// `&nbsp;` non decode s'y affichait en clair, exactement le retour du
+// client sur les statistiques d'un sondage.
 function strip(s: unknown): string {
-  return String(s ?? "")
-    .replace(/<[^>]*>/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
+  return stripHtml(String(s ?? ""));
 }
 
 /**

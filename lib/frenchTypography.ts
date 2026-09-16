@@ -200,6 +200,17 @@ export function reparerEntitesCassees(texte: string): string {
 
 const TAG_OR_ENTITY = /<[^>]*>|&(?:#\d+|#x[0-9a-fA-F]+|[a-zA-Z][a-zA-Z0-9]*);/g;
 
+/** La ponctuation francaise, en TETE d'un fragment, et qui TERMINE. */
+const PONCTUATION_EN_TETE = /^[:;!?](?=[\s)\]}»"'.,…!?]|$)/;
+/** Le meme jeu de caracteres que `AVANT`, sur UN seul caractere. */
+const AVANT_UN_SEUL = new RegExp(`^${AVANT}$`, "u");
+/**
+ * Les balises de mise en forme EN LIGNE, a travers lesquelles le texte
+ * continue. Tout le reste (`br`, `div`, `p`, `li`, `img`, les titres)
+ * coupe la ligne ou le bloc : on n'y pose pas d'espace derriere.
+ */
+const BALISE_EN_LIGNE = /^<\/?(?:b|i|u|s|em|strong|span|a|mark|small|sub|sup|font|code|abbr)\b[^>]*>$/i;
+
 /**
  * Chaîne HTML : on ne transforme QUE le texte visible.
  *
@@ -224,14 +235,42 @@ export function applyFrenchTypographyToHtml(
 
   let out = "";
   let cursor = 0;
+  // LA PONCTUATION QUI TOMBE JUSTE APRES UNE BALISE (16 septembre 2026).
+  //
+  // `<b>Prêt</b>?` ne recevait JAMAIS son espace : le decoupage met le
+  // `?` seul en tete de son fragment, et tous les motifs exigent une
+  // lettre DEVANT. Une question ecrite en gras restait donc fautive pour
+  // toujours, et personne ne pouvait la corriger a la main puisque
+  // l'enregistrement suivant ne la touchait pas non plus.
+  //
+  // C'est la meme famille que l'entite : ce sont les champs MIS EN FORME
+  // qui se comportaient autrement que les autres.
+  //
+  // On garde donc le dernier caractere VISIBLE, et on ne le garde qu'a
+  // travers une balise de mise en forme EN LIGNE. Un `<br>`, un `<div>`
+  // ou une image remettent la memoire a zero : poser une insecable en
+  // tete de ligne mettrait une espace au debut du paragraphe.
+  let dernierVisible = "";
+  const insererApresBalise = (fragment: string): string => {
+    if (!dernierVisible || !PONCTUATION_EN_TETE.test(fragment)) return fragment;
+    if (!AVANT_UN_SEUL.test(dernierVisible)) return fragment;
+    return NBSP + fragment;
+  };
   TAG_OR_ENTITY.lastIndex = 0;
   let match: RegExpExecArray | null;
   while ((match = TAG_OR_ENTITY.exec(html)) !== null) {
-    out += fixFragment(html.slice(cursor, match.index));
+    const brut = html.slice(cursor, match.index);
+    const corrige = fixFragment(insererApresBalise(brut));
+    out += corrige;
+    if (corrige) dernierVisible = corrige.slice(-1);
     out += match[0]; // la balise ou l'entité, telle quelle
+    // Une ENTITE compte comme du visible qu'on ne sait pas lire : on
+    // oublie, plutot que de poser une espace derriere un `&nbsp;`.
+    if (!match[0].startsWith("<") || !BALISE_EN_LIGNE.test(match[0])) dernierVisible = "";
     cursor = match.index + match[0].length;
   }
-  out += fixFragment(html.slice(cursor));
+  const dernier = html.slice(cursor);
+  out += fixFragment(insererApresBalise(dernier));
   return out;
 }
 

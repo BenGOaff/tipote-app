@@ -5,6 +5,7 @@
 // ✅ Uses Claude (Anthropic) for content generation — NOT OpenAI.
 
 import { NextRequest } from "next/server";
+import { stripHtml } from "@/lib/texteBrut";
 import { z } from "zod";
 
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
@@ -181,9 +182,11 @@ const InputSchema = z.object({
 // ---------- Slug generation ----------
 
 function generateSlug(title: string): string {
-  const base = (title || "ma-page")
-    .replace(/<[^>]*>/g, " ")      // Strip HTML tags (e.g. <br>, <span>)
-    .replace(/&[a-z]+;/gi, " ")    // Strip HTML entities
+  // UNE SEULE PORTE (16 septembre 2026). Le retrait maison ne connaissait
+  // que les entites NOMMEES : un `&#233;` restait, et `&eacute;`
+  // disparaissait au lieu de devenir un `e`. `stripHtml` decode, donc le
+  // NFD juste en dessous rend enfin la bonne lettre dans le slug.
+  const base = stripHtml(title || "ma-page")
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -641,7 +644,7 @@ export async function POST(req: NextRequest) {
 
         // Strip HTML tags from title for clean slug/display
         const rawTitle = contentData.hero_title || contentData.headline || contentData.main_headline || "Ma page";
-        const title = rawTitle.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+        const title = stripHtml(rawTitle);
         const slug = generateSlug(title);
 
         const pageRow = {

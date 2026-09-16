@@ -389,7 +389,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
 // une. Sans ce repli, un deploiement en avance sur la migration ferait
 // repondre 404 a TOUS les quiz publics (drame survey_thanks_*, 2 juin,
 // deux heures hors ligne).
-    const QUIZ_COLS_NEW = "tie_break,other_results_position,intro_start_mode,custom_fields";
+    const QUIZ_COLS_NEW = "tie_break,other_results_position,intro_start_mode,custom_fields,capture_labels";
 
     let quizRes = await admin
       .from("quizzes")

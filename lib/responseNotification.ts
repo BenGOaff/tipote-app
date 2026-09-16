@@ -9,6 +9,7 @@
 // Réutilise l'infra email brandée de Tipote (lib/email.ts). Contenu FR,
 // aucun tiret long (règle anti-IA).
 import "server-only";
+import { stripHtml } from "@/lib/texteBrut";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { sendEmail, canSendEmailToday } from "@/lib/email";
 import { resolveAppUrl } from "@/lib/authLinks";
@@ -27,18 +28,6 @@ function esc(s: string): string {
  * l'email on veut le TEXTE seul, sinon le destinataire voit le balisage brut
  * (drame Gwenn 19 juil 2026). Ne change rien au rendu de l'app.
  */
-function stripHtml(input: string | null | undefined): string {
-  return String(input ?? "")
-    .replace(/<[^>]*>/g, " ")
-    .replace(/&nbsp;/gi, " ")
-    .replace(/&amp;/gi, "&")
-    .replace(/&lt;/gi, "<")
-    .replace(/&gt;/gi, ">")
-    .replace(/&quot;/gi, '"')
-    .replace(/&#0*39;|&apos;|&rsquo;/gi, "'")
-    .replace(/\s+/g, " ")
-    .trim();
-}
 
 export interface ResponseNotificationArgs {
   ownerUserId: string;

@@ -28,7 +28,8 @@ import {
   isColorDark,
 } from "@/lib/quizBranding";
 import { QuizPanelMedia } from "@/components/quiz/QuizPanelMedia";
-import { sanitizeRichText, stripHtml } from "@/lib/richText";
+import { sanitizeRichText, stripHtml, decodeHtmlEntities } from "@/lib/richText";
+import { resoudreChampsCapture, grouperEnLignes } from "@/lib/quiz/champsCapture";
 import {
   introTextWidthPct,
   introTextWidthStyle,
@@ -38,7 +39,8 @@ import {
 } from "@/lib/quiz/introLayout";
 import { answerGridClass, answerImageGridClass, resolveAnswerLayout } from "@/lib/quiz/answerLayout";
 import { answerImageRender } from "@/lib/quiz/answerImage";
-import { champsManquants, champsVisibles, sanitizeChampsPersonnalises } from "@/lib/quiz/champsPersonnalises";
+import { champsManquants, sanitizeChampsPersonnalises } from "@/lib/quiz/champsPersonnalises";
+import { decouperSurLeLibelle, formeDuConsentement } from "@/lib/quiz/consentement";
 import {
   resolveQuestionAlign,
   resolveQuestionAnswerLayout,
@@ -276,6 +278,10 @@ type PublicQuizData = {
   /** Les champs personnalisés du formulaire (16 septembre 2026), lus par
    *  sanitizeChampsPersonnalises : une valeur illisible vaut "aucun champ". */
   custom_fields?: unknown;
+  /** Le libellé riche et le placeholder de chaque champ de capture, par
+   *  clé (16 septembre 2026). Lu par `resoudreChampsCapture` : vide ou
+   *  illisible vaut "les défauts d'avant", donc aucun quiz ne bouge. */
+  capture_labels?: unknown;
   phone_required?: boolean | null;
   first_name_required?: boolean | null;
   last_name_required?: boolean | null;
@@ -1312,6 +1318,55 @@ export default function PublicQuizClient({
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const t = getT(quiz?.locale, quiz?.address_form);
+
+  // LE FORMULAIRE DE CAPTURE, CHAMP PAR CHAMP (Béné, 16 septembre 2026).
+  // Quels champs, dans quel ordre, avec quel libellé et quel placeholder :
+  // la décision vit dans lib/quiz/champsCapture.ts, et l'aperçu de
+  // l'éditeur appelle la MÊME fonction. Les défauts sont ceux d'avant,
+  // dans la langue du quiz : un quiz qui n'a jamais été retouché rend
+  // exactement ce qu'il rendait.
+  const champsCapture = useMemo(
+    () =>
+      quiz
+        ? resoudreChampsCapture(quiz, {
+            mode: "visiteur",
+            prenomSurCapture: showFirstNameOnCapture(quiz, firstName.trim().length > 0),
+            prenomObligatoire: firstNameRequiredOnCapture(quiz, quiz.first_name_required),
+            defauts: {
+              first_name: t.firstNamePlaceholder,
+              last_name: t.lastNamePlaceholder,
+              email: "Email",
+              phone: t.phonePlaceholder,
+              country: t.countryPlaceholder,
+              emailPlaceholder: t.emailPlaceholder,
+            },
+          })
+        : [],
+    [quiz, firstName, t],
+  );
+  const lignesCapture = useMemo(() => grouperEnLignes(champsCapture), [champsCapture]);
+  // La valeur saisie et son setter, par clé de champ : le rendu ne
+  // connaît que la clé que le module lui donne.
+  const valeurCapture = (cle: string): string => {
+    switch (cle) {
+      case "first_name": return firstName;
+      case "last_name": return lastName;
+      case "email": return email;
+      case "phone": return phone;
+      case "country": return country;
+      default: return customValues[cle] ?? "";
+    }
+  };
+  const ecrireCapture = (cle: string, v: string) => {
+    switch (cle) {
+      case "first_name": setFirstName(v); break;
+      case "last_name": setLastName(v); break;
+      case "email": setEmail(v); break;
+      case "phone": setPhone(v); break;
+      case "country": setCountry(v); break;
+      default: setCustomValues((prev) => ({ ...prev, [cle]: v })); break;
+    }
+  };
 
   // Axes de score du quiz (mode scoring uniquement). Vide = pas d'axes,
   // tout le multi-axes est inerte (quiz existants inchangés).
@@ -2831,7 +2886,7 @@ export default function PublicQuizClient({
   const introRich = isHtml(quiz.introduction);
   // Split introduction into lines — lines starting with ✓/✔/- become checkmarks
   // (legacy plain-text rendering kept for quizzes created before the rich-text editor)
-  const introLines = introRich ? [] : (quiz.introduction ?? "").split("\n").filter((l) => l.trim());
+  const introLines = introRich ? [] : decodeHtmlEntities(quiz.introduction).split("\n").filter((l) => l.trim());
   const bulletLines: string[] = [];
   const descLines: string[] = [];
   introLines.forEach((line) => {
@@ -3754,124 +3809,59 @@ export default function PublicQuizClient({
             })()}
 
             <div className="space-y-4">
-              {/* Convention SaaS classique : asterisk rouge sur les
-                  champs obligatoires, aucun badge sur les optionnels.
-                  L'email est obligatoire d'office. Les autres champs
-                  sont obligatoires ssi le créateur a flippé le toggle
-                  correspondant dans l'éditeur (cf. Adeline + Hugo,
-                  18 mai 2026). */}
-              {/* LE PRÉNOM SE DEMANDE À UN SEUL MOMENT (Béné, 25 août
-                  2026). Quand il a été demandé sur l'écran de
-                  personnalisation, cette case ne réapparaît pas ici :
-                  c'était un champ pré-rempli de plus à franchir juste
-                  avant l'email, c'est à dire à l'endroit exact où on
-                  perd le visiteur. La décision vient de
-                  lib/quiz/firstNameAsk.ts, la MÊME fonction que
-                  l'aperçu de l'éditeur. */}
-              {(showFirstNameOnCapture(quiz, firstName.trim().length > 0) || quiz.capture_last_name) && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {showFirstNameOnCapture(quiz, firstName.trim().length > 0) && (
-                    <div className="space-y-1.5">
-                      <label className="text-sm font-medium">
-                        {t.firstNamePlaceholder}
-                        {firstNameRequiredOnCapture(quiz, quiz.first_name_required) && <span className="text-destructive ml-0.5">*</span>}
-                      </label>
-                      <Input
-                        type="text"
-                        value={firstName}
-                        onChange={(e) => setFirstName(e.target.value)}
-                        className="h-11 bg-white text-slate-900 border-slate-300 placeholder:text-slate-400 dark:bg-white dark:text-slate-900 dark:border-slate-300"
-                        required={firstNameRequiredOnCapture(quiz, quiz.first_name_required)}
+              {/* LE FORMULAIRE, CHAMP PAR CHAMP (Béné, 16 septembre 2026).
+                  "TOUT doit être éditable donc si je clique sur Prénom dans
+                  le quiz, je dois pouvoir écrire Entre ton prénom."
+
+                  Quels champs, dans quel ordre, avec quel libellé riche et
+                  quel placeholder : `resoudreChampsCapture` décide, et
+                  `grouperEnLignes` dit lesquels se partagent une ligne.
+                  L'aperçu de l'éditeur appelle les DEUX : un aperçu qui
+                  recompose la liste à la main finit toujours par mentir.
+
+                  Ce qui n'a pas bougé : l'astérisque rouge sur un champ
+                  obligatoire et rien sur les autres (Adeline + Hugo,
+                  18 mai 2026), l'email toujours présent et toujours
+                  obligatoire, et le prénom demandé à UN seul moment
+                  (lib/quiz/firstNameAsk.ts, Béné 25 août 2026). */}
+              {lignesCapture.map((ligne) => {
+                const champs = ligne.map((c) => (
+                  <div key={c.cle} className="space-y-1.5">
+                    <label className="text-sm font-medium" htmlFor={`cap-${c.cle}`}>
+                      <span
+                        className="tipote-quiz-rich tipote-quiz-rich-inline"
+                        dangerouslySetInnerHTML={{ __html: sanitizeRichText(c.labelHtml) }}
                       />
-                    </div>
-                  )}
-                  {quiz.capture_last_name && (
-                    <div className="space-y-1.5">
-                      <label className="text-sm font-medium">
-                        {t.lastNamePlaceholder}
-                        {quiz.last_name_required && <span className="text-destructive ml-0.5">*</span>}
-                      </label>
-                      <Input
-                        type="text"
-                        value={lastName}
-                        onChange={(e) => setLastName(e.target.value)}
-                        className="h-11 bg-white text-slate-900 border-slate-300 placeholder:text-slate-400 dark:bg-white dark:text-slate-900 dark:border-slate-300"
-                        required={!!quiz.last_name_required}
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium">
-                  Email
-                  <span className="text-destructive ml-0.5">*</span>
-                </label>
-                <Input
-                  type="email"
-                  placeholder={t.emailPlaceholder}
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && (captureBefore ? handleCaptureContinue() : handleSubmitEmail())}
-                  className="h-11 bg-white text-slate-900 border-slate-300 placeholder:text-slate-400 dark:bg-white dark:text-slate-900 dark:border-slate-300"
-                  required
-                />
-              </div>
-
-              {quiz.capture_phone && (
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium">
-                    {t.phonePlaceholder}
-                    {quiz.phone_required && <span className="text-destructive ml-0.5">*</span>}
-                  </label>
-                  <Input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="h-11 bg-white text-slate-900 border-slate-300 placeholder:text-slate-400 dark:bg-white dark:text-slate-900 dark:border-slate-300"
-                    required={!!quiz.phone_required}
-                  />
-                </div>
-              )}
-
-              {quiz.capture_country && (
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium">
-                    {t.countryPlaceholder}
-                    {quiz.country_required && <span className="text-destructive ml-0.5">*</span>}
-                  </label>
-                  <Input
-                    type="text"
-                    value={country}
-                    onChange={(e) => setCountry(e.target.value)}
-                    className="h-11 bg-white text-slate-900 border-slate-300 placeholder:text-slate-400 dark:bg-white dark:text-slate-900 dark:border-slate-300"
-                    required={!!quiz.country_required}
-                  />
-                </div>
-              )}
-
-              {/* LES CHAMPS PERSONNALISÉS (16 septembre 2026). Le libellé,
-                  le placeholder et l'astérisque viennent de la créatrice ;
-                  quels champs s'affichent vient du module (un champ sans
-                  libellé est gardé en base et jamais montré). */}
-              {champsVisibles(sanitizeChampsPersonnalises(quiz.custom_fields)).map((c) => (
-                <div key={c.id} className="space-y-1.5">
-                  <label className="text-sm font-medium" htmlFor={`cf-${c.id}`}>
-                    {c.label}
-                    {c.required && <span className="text-destructive ml-0.5">*</span>}
-                  </label>
-                  <Input
-                    id={`cf-${c.id}`}
-                    type="text"
-                    value={customValues[c.id] ?? ""}
-                    placeholder={c.placeholder || undefined}
-                    onChange={(e) => setCustomValues((v) => ({ ...v, [c.id]: e.target.value }))}
-                    className="h-11 bg-white text-slate-900 border-slate-300 placeholder:text-slate-400 dark:bg-white dark:text-slate-900 dark:border-slate-300"
-                    required={c.required}
-                  />
-                </div>
-              ))}
+                      {c.required && <span className="text-destructive ml-0.5">*</span>}
+                    </label>
+                    <Input
+                      id={`cap-${c.cle}`}
+                      type={c.type}
+                      value={valeurCapture(c.cle)}
+                      placeholder={c.placeholder || undefined}
+                      onChange={(e) => ecrireCapture(c.cle, e.target.value)}
+                      onKeyDown={
+                        c.cle === "email"
+                          ? (e) => e.key === "Enter" && (captureBefore ? handleCaptureContinue() : handleSubmitEmail())
+                          : undefined
+                      }
+                      className="h-11 bg-white text-slate-900 border-slate-300 placeholder:text-slate-400 dark:bg-white dark:text-slate-900 dark:border-slate-300"
+                      required={c.required}
+                    />
+                  </div>
+                ));
+                // Une ligne de demi-largeurs garde sa grille à deux
+                // colonnes même quand elle n'a qu'un champ : sinon le
+                // prénom seul s'étirerait sur toute la largeur alors
+                // qu'il tenait sur la moitié.
+                return ligne[0].demiLargeur ? (
+                  <div key={ligne[0].cle} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {champs}
+                  </div>
+                ) : (
+                  champs
+                );
+              })}
 
               {/* Consent checkbox is opt-out per quiz (show_consent_checkbox).
                   Why a <div> + click handler instead of <label>: a <label>
@@ -4321,7 +4311,7 @@ export default function PublicQuizClient({
                                   dangerouslySetInnerHTML={{ __html: sanitizeRichText(desc) }}
                                 />
                               ) : (
-                                <p className="text-muted-foreground text-sm leading-relaxed whitespace-pre-line">{desc}</p>
+                                <p className="text-muted-foreground text-sm leading-relaxed whitespace-pre-line">{decodeHtmlEntities(desc)}</p>
                               );
                             })()}
                             {r.image_url && slot === "after_description" && (
@@ -4341,7 +4331,7 @@ export default function PublicQuizClient({
                                       dangerouslySetInnerHTML={{ __html: sanitizeRichText(ins) }}
                                     />
                                   ) : (
-                                    <p className="text-sm leading-relaxed whitespace-pre-line">{ins}</p>
+                                    <p className="text-sm leading-relaxed whitespace-pre-line">{decodeHtmlEntities(ins)}</p>
                                   )}
                                 </div>
                               );
@@ -4363,7 +4353,7 @@ export default function PublicQuizClient({
                                       dangerouslySetInnerHTML={{ __html: sanitizeRichText(proj) }}
                                     />
                                   ) : (
-                                    <p className="text-sm leading-relaxed whitespace-pre-line">{proj}</p>
+                                    <p className="text-sm leading-relaxed whitespace-pre-line">{decodeHtmlEntities(proj)}</p>
                                   )}
                                 </div>
                               );
@@ -4527,7 +4517,7 @@ export default function PublicQuizClient({
                   dangerouslySetInnerHTML={{ __html: sanitizeRichText(desc) }}
                 />
               ) : (
-                <p className={`text-muted-foreground ${RESULT_BODY_CLASS} whitespace-pre-line`}>{desc}</p>
+                <p className={`text-muted-foreground ${RESULT_BODY_CLASS} whitespace-pre-line`}>{decodeHtmlEntities(desc)}</p>
               );
             })()}
 
@@ -4557,7 +4547,7 @@ export default function PublicQuizClient({
                       dangerouslySetInnerHTML={{ __html: sanitizeRichText(ins) }}
                     />
                   ) : (
-                    <p className={`${RESULT_BODY_CLASS} whitespace-pre-line`}>{ins}</p>
+                    <p className={`${RESULT_BODY_CLASS} whitespace-pre-line`}>{decodeHtmlEntities(ins)}</p>
                   )}
                 </div>
               );
@@ -4585,7 +4575,7 @@ export default function PublicQuizClient({
                       dangerouslySetInnerHTML={{ __html: sanitizeRichText(proj) }}
                     />
                   ) : (
-                    <p className={`${RESULT_BODY_CLASS} whitespace-pre-line`}>{proj}</p>
+                    <p className={`${RESULT_BODY_CLASS} whitespace-pre-line`}>{decodeHtmlEntities(proj)}</p>
                   )}
                 </div>
               );
@@ -4619,7 +4609,7 @@ export default function PublicQuizClient({
                         />
                       ) : (
                         <p className={`${RESULT_BODY_CLASS} whitespace-pre-line ${shell.bodyToneClass}`}>
-                          {body}
+                          {decodeHtmlEntities(body)}
                         </p>
                       ))}
                     </div>
@@ -4809,7 +4799,7 @@ export default function PublicQuizClient({
             <Card className="p-4 border-dashed flex items-center gap-2 text-green-600 dark:text-green-400">
               <CheckCircle2 className="w-5 h-5 shrink-0" />
               <span className="text-sm font-medium whitespace-pre-line">
-                {(quiz.bonus_unlocked_message?.trim() || t.bonusUnlocked)}
+                {decodeHtmlEntities(quiz.bonus_unlocked_message?.trim() || "") || t.bonusUnlocked}
               </span>
             </Card>
           )}
@@ -4876,17 +4866,18 @@ function ConsentText({ text, privacyUrl, locale }: { text: string | null; privac
   const raw = isStoredDefault ? t.defaultConsent : text!;
 
   // Adeline (18 mai 2026) : le consent text peut maintenant être
-  // rich-text (gras / couleur / taille / police). Si on détecte du
-  // HTML on rend via sanitizeRichText + dangerouslySetInnerHTML —
-  // c'est l'éditeur qui pose le lien <a> directement, donc on n'a
-  // plus besoin de patcher le needle. Le défaut localisé reste plain
-  // text et passe par l'ancien code (needle-link injection).
-  const looksLikeHtml = /<[a-z][\s\S]*?>/i.test(raw);
-  if (looksLikeHtml) {
-    const alreadyHasLink = /<a\s[^>]*href=/i.test(raw);
+  // rich-text (gras / couleur / taille / police). S'il y a une balise on
+  // rend via sanitizeRichText + dangerouslySetInnerHTML : c'est l'éditeur
+  // qui pose le lien <a> directement. Sinon c'est du texte, et il sort
+  // DÉCODÉ (Béné, 15 septembre 2026 : `confidentialité&nbsp;` affiché en
+  // clair, une entité sans balise). La forme se décide dans
+  // `lib/quiz/consentement.ts`, jamais ici : on ne rend plus `raw`.
+  const forme = formeDuConsentement(raw);
+  if (forme.genre === "html") {
+    const alreadyHasLink = forme.porteUnLien;
     return (
       <span className="tipote-quiz-rich tipote-quiz-rich-inline">
-        <span dangerouslySetInnerHTML={{ __html: sanitizeRichText(raw) }} />
+        <span dangerouslySetInnerHTML={{ __html: sanitizeRichText(forme.html) }} />
         {/* Si l'auteur n'a pas inséré son propre lien et qu'on a un
             privacy_url renseigné, on l'affiche en suffixe pour ne pas
             faire disparaître la politique de confidentialité. */}
@@ -4908,16 +4899,13 @@ function ConsentText({ text, privacyUrl, locale }: { text: string | null; privac
     );
   }
 
-  if (!privacyUrl) return <span>{raw}</span>;
-
-  const needle = t.consentNeedle;
-  const idx = raw.toLowerCase().indexOf(needle);
+  const texte = forme.texte;
+  if (!privacyUrl) return <span>{texte}</span>;
 
   // If the needle is found in the text, make it a clickable link inline
-  if (idx !== -1) {
-    const before = raw.slice(0, idx);
-    const match = raw.slice(idx, idx + needle.length);
-    const after = raw.slice(idx + needle.length);
+  const morceaux = decouperSurLeLibelle(texte, t.consentNeedle);
+  if (morceaux) {
+    const { avant: before, libelle: match, apres: after } = morceaux;
 
     return (
       <span>
@@ -4939,7 +4927,7 @@ function ConsentText({ text, privacyUrl, locale }: { text: string | null; privac
   // Fallback: needle not found in text — show consent text + separate visible link
   return (
     <span>
-      {raw}{" "}
+      {texte}{" "}
       <a
         href={ensureExternalUrl(privacyUrl)}
         target="_blank"

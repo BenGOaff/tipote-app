@@ -79,6 +79,8 @@ export const QUIZ_SNAPSHOT_KEYS = [
   "country_required",
   // Les champs personnalisés du formulaire (16 septembre 2026).
   "custom_fields",
+  // Les libellés riches et placeholders de tous les champs de capture (16 septembre 2026).
+  "capture_labels",
   "show_consent_checkbox",
   "show_results_breakdown",
   "scoring_axes",
@@ -184,6 +186,8 @@ export const SURVEY_SNAPSHOT_KEYS = [
   "country_required",
   // Les champs personnalisés du formulaire (16 septembre 2026).
   "custom_fields",
+  // Les libellés riches et placeholders de tous les champs de capture (16 septembre 2026).
+  "capture_labels",
   "show_consent_checkbox",
   "ask_first_name",
   "ask_gender",

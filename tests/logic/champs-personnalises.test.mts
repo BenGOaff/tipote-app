@@ -128,7 +128,13 @@ test("les colonnes d'export couvrent PLUSIEURS quiz, un id une colonne, le premi
 
 test("le viewer public affiche les champs, valide l'obligatoire et les ENVOIE", () => {
   const src = lire("components/quiz/PublicQuizClient.tsx");
-  assert.ok(src.includes("champsVisibles(sanitizeChampsPersonnalises(quiz.custom_fields))"), "le rendu passe par champsVisibles");
+  // Depuis le 16 septembre, le viewer ne filtre plus lui-meme : il demande
+  // la liste a `resoudreChampsCapture(quiz, { mode: "visiteur" })`, qui
+  // appelle `champsVisibles` en interne. Le FAIT est le meme (un champ sans
+  // nom ne s'affiche jamais chez le visiteur) et il est tenu par
+  // tests/logic/champs-capture.test.mts. Figer la FORME ici ferait rougir
+  // le test sur une correction juste.
+  assert.ok(src.includes('mode: "visiteur"'), "le rendu demande la liste au module, en disant QUI regarde");
   assert.ok(src.includes("custom_fields: customValues"), "le corps envoye porte custom_fields");
   assert.equal((src.match(/champsManquants\(/g) ?? []).length, 2, "les DEUX chemins de validation (capture avant / apres) verifient l'obligatoire");
   assert.ok(src.includes("customFieldRequiredError"), "le message nomme le champ manquant");
@@ -164,7 +170,7 @@ test("les deux editeurs portent le champ dans l'instantane d'autosave, la sauveg
     assert.ok(src.includes("<ChampsPersonnalisesEditor"), `${p} : le composant partage`);
     assert.ok(src.includes("custom_fields: customFields"), `${p} : la sauvegarde et l'instantane`);
     assert.ok(src.includes("setCustomFields(sanitizeChampsPersonnalises(q.custom_fields))"), `${p} : le chargement passe par sanitize`);
-    assert.ok(src.includes("champsVisibles(customFields).map"), `${p} : l'apercu suit la MEME regle que le viewer`);
+    assert.ok(src.includes('mode: "apercu"'), `${p} : l'apercu demande la liste au MEME module que le viewer`);
   }
   const snap = lire("lib/quiz/editorSnapshot.ts");
   assert.equal((snap.match(/"custom_fields",/g) ?? []).length, 2, "dans les DEUX listes d'instantane");

@@ -786,7 +786,7 @@ export default function LeadsPageClient({ leads: initialLeads, error, plan = "fr
                   <div className="space-y-2">
                     {detailLead.quiz_answers.map((qa, i) => (
                       <div key={i} className="p-3 rounded-lg bg-muted/50 space-y-1">
-                        <p className="text-xs font-medium text-muted-foreground">{qa.question_text}</p>
+                        <p className="text-xs font-medium text-muted-foreground">{stripHtml(qa.question_text)}</p>
                         <p className="text-sm font-medium">{qa.answer_text}</p>
                       </div>
                     ))}
