@@ -9,6 +9,7 @@ import { decryptLeadPII } from "@/lib/piiCrypto";
 import { computeLockedLeadIds } from "@/lib/leadLock";
 import { isPaidPlan } from "@/lib/planLimits";
 import LeadsPageClient from "@/components/leads/LeadsPageClient";
+import { colonnesChampsPersonnalises } from "@/lib/quiz/champsPersonnalises";
 
 const MASK = "••••••";
 const MASK_EMAIL = "•••@•••.•••";
@@ -36,6 +37,17 @@ export default async function LeadsPage() {
 
   const { data, error } = await query;
 
+  // Les champs personnalisés des quiz de la personne : leurs LIBELLÉS font
+  // les colonnes (16 septembre 2026). Le lead ne porte que l'id et la
+  // valeur, donc renommer un champ suit partout. Best-effort : la colonne
+  // peut ne pas exister encore, et la page des leads ne doit pas tomber.
+  const { data: quizzesChamps, error: champsErr } = await supabase
+    .from("quizzes")
+    .select("id, custom_fields")
+    .eq("user_id", session.user.id);
+  if (champsErr) console.error("[leads] custom_fields illisible :", champsErr.message);
+  const colonnesPerso = colonnesChampsPersonnalises((quizzesChamps ?? []) as Array<{ custom_fields?: unknown }>);
+
   // Free-tier lock: compute which leads the creator is allowed to see in
   // clear text. Locked rows skip decryption entirely so plaintext PII never
   // reaches the client bundle — the eventual UI blur is decoration on top.
@@ -62,6 +74,7 @@ export default async function LeadsPage() {
         last_name: MASK,
         phone: MASK,
         quiz_answers: null,
+        custom_fields: null,
         source: l.source ?? "quiz",
         source_name: l.source_name ?? null,
         quiz_result_title: MASK,
@@ -76,6 +89,7 @@ export default async function LeadsPage() {
       id,
       ...pii,
       quiz_answers: (pii.quiz_answers ?? null) as Array<{ question_text: string; answer_text: string }> | null,
+      custom_fields: (l.custom_fields ?? null) as Record<string, string> | null,
       source: l.source ?? "quiz",
       source_name: l.source_name ?? null,
       quiz_result_title: l.quiz_result_title ?? null,
@@ -92,6 +106,7 @@ export default async function LeadsPage() {
       error={error?.message}
       plan={plan}
       lockedCount={lockedIds.size}
+      colonnesPerso={colonnesPerso}
     />
   );
 }

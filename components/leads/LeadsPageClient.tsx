@@ -4,6 +4,7 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { valeurChamp } from "@/lib/quiz/champsPersonnalises";
 
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
@@ -62,6 +63,8 @@ export type Lead = {
   source: string;
   source_name: string | null;
   quiz_answers: Array<{ question_text: string; answer_text: string }> | null;
+  /** Les champs personnalisés du formulaire, {id: valeur} (16 septembre 2026). */
+  custom_fields?: Record<string, string> | null;
   quiz_result_title: string | null;
   exported_sio: boolean;
   meta: Record<string, unknown> | null;
@@ -75,6 +78,9 @@ type Props = {
   error?: string;
   plan?: string;
   lockedCount?: number;
+  /** Les colonnes des champs personnalisés : l'union de ceux de tous les
+   *  quiz, un par id, sous son libellé du jour (lib/quiz/champsPersonnalises.ts). */
+  colonnesPerso?: Array<{ id: string; label: string }>;
 };
 
 const SOURCES = ["quiz", "landing_page", "website", "manual"] as const;
@@ -97,7 +103,7 @@ function formatDate(dateStr: string, locale: string): string {
   }
 }
 
-export default function LeadsPageClient({ leads: initialLeads, error, plan = "free", lockedCount = 0 }: Props) {
+export default function LeadsPageClient({ leads: initialLeads, error, plan = "free", lockedCount = 0, colonnesPerso = [] }: Props) {
   const router = useRouter();
   const { toast } = useToast();
   const t = useTranslations("leads");
@@ -132,7 +138,8 @@ export default function LeadsPageClient({ leads: initialLeads, error, plan = "fr
         (l) =>
           l.email.toLowerCase().includes(q) ||
           (l.first_name ?? "").toLowerCase().includes(q) ||
-          (l.last_name ?? "").toLowerCase().includes(q)
+          (l.last_name ?? "").toLowerCase().includes(q) ||
+          colonnesPerso.some((c) => (valeurChamp(l.custom_fields, c.id) ?? "").toLowerCase().includes(q))
       );
     }
     if (sourceFilter !== "all") {
@@ -716,6 +723,20 @@ export default function LeadsPageClient({ leads: initialLeads, error, plan = "fr
                         <span>{formatDate(detailLead.created_at, "fr")}</span>
                       </div>
                     </div>
+                    {/* Les champs personnalisés du formulaire, sous leur libellé du jour. */}
+                    {colonnesPerso.some((c) => valeurChamp(detailLead.custom_fields, c.id)) && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {colonnesPerso.map((c) => {
+                          const v = valeurChamp(detailLead.custom_fields, c.id);
+                          return v ? (
+                            <div key={c.id} className="text-sm">
+                              <span className="text-muted-foreground">{c.label} : </span>
+                              <span className="break-words">{v}</span>
+                            </div>
+                          ) : null;
+                        })}
+                      </div>
+                    )}
                   </>
                 )}
               </div>

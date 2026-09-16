@@ -8,6 +8,7 @@
 // Mêmes conventions que /aggregate-responses.
 
 import { PRIORITY_RULES, capSecondary } from "@/lib/prompts/priority";
+import { champsVisibles, lignesPromptChamps, sanitizeChampsPersonnalises, statsChamps, type StatChamp } from "@/lib/quiz/champsPersonnalises";
 import { resolveAnthropicModel } from "@/lib/anthropicModel";
 import { callClaude, getClaudeApiKey } from "@/lib/claude";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -80,6 +81,9 @@ export interface AggregatedQuestion {
 export interface SurveyAggregate {
   totalResponses: number;
   questions: AggregatedQuestion[];
+  /** Les champs personnalises du formulaire (16 septembre 2026), pour le
+   *  prompt. Optionnel : un sondage sans champ n'ajoute rien au modele. */
+  champs?: StatChamp[];
 }
 
 export interface SurveyAnalysisResult {
@@ -273,7 +277,20 @@ export async function aggregateSurvey(
     };
   });
 
-  return { totalResponses, questions: aggregatedQuestions };
+  // Les champs personnalises, best-effort : la colonne peut manquer, et
+  // une analyse ne doit jamais echouer pour un bloc facultatif.
+  let champs: StatChamp[] = [];
+  try {
+    const { data: q, error } = await supabaseAdmin.from("quizzes").select("custom_fields").eq("id", quizId).maybeSingle();
+    const liste = error ? [] : sanitizeChampsPersonnalises((q as { custom_fields?: unknown } | null)?.custom_fields);
+    if (champsVisibles(liste).length > 0) {
+      const { data: rows, error: e2 } = await supabaseAdmin
+        .from("quiz_leads").select("custom_fields").eq("quiz_id", quizId).order("created_at", { ascending: false }).limit(500);
+      if (!e2) champs = statsChamps(liste, (rows ?? []) as Array<{ custom_fields?: unknown }>);
+    }
+  } catch { /* facultatif */ }
+
+  return { totalResponses, questions: aggregatedQuestions, champs };
 }
 
 /**
@@ -307,6 +324,8 @@ export async function generateSurveyAnalysis(
 
   const lines: string[] = [`Sondage : "${surveyTitle}"`, `Nombre de participants : ${aggregate.totalResponses}`, ""];
   lines.push(...renderQuestionsForPrompt(aggregate.questions, aggregate.totalResponses, { samples: 25 }));
+  const lignesChamps = lignesPromptChamps(aggregate.champs ?? []);
+  if (lignesChamps.length > 0) lines.push("", ...lignesChamps);
 
   const userPrompt = lines.join("\n");
 
