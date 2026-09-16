@@ -11,6 +11,7 @@
 // dans quiz_leads (via aggregateSurvey). Appel Claude direct (tier opus).
 
 import { resolveAnthropicModel } from "@/lib/anthropicModel";
+import { champsVisibles, lignesPromptChamps, sanitizeChampsPersonnalises, statsChamps, type StatChamp } from "@/lib/quiz/champsPersonnalises";
 import { buildClaudeMessageBody } from "@/lib/claudeRequest";
 import { sanitizeAiText } from "@/lib/aiTextSanitizer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -74,6 +75,10 @@ export interface QuizInsightsAggregate {
     exportedSio: number;
   };
   resultDistribution: { title: string; count: number; pct: number }[];
+  /** Les champs personnalises du formulaire : taux de remplissage et
+   *  valeurs frequentes (16 septembre 2026). La MEME fonction que l'ecran
+   *  de statistiques, sinon l'IA et l'ecran finissent par se contredire. */
+  champsPersonnalises: StatChamp[];
   funnel: { index: number; text: string; views: number; answers: number; dropPct: number }[];
   /** Verdict partage avec l'ecran de stats : ce qu'on a le droit de
    *  conclure, et sur QUELLE question (cf. lib/quiz/funnelSignal.ts).
@@ -131,6 +136,31 @@ export interface QuizInsightsResult {
 }
 
 /** Agrege tout ce dont l'IA a besoin. `userId` scope la securite. */
+/**
+ * Les champs personnalises du formulaire, agreges pour le prompt. Deux
+ * requetes A PART et best-effort : la colonne peut ne pas exister encore,
+ * et une analyse ne doit jamais echouer pour un bloc facultatif. On lit
+ * les 500 leads les plus recents : c'est ce que le modele peut lire.
+ */
+async function lireStatsChampsPersonnalises(quizId: string): Promise<StatChamp[]> {
+  try {
+    const { data: q, error } = await supabaseAdmin.from("quizzes").select("custom_fields").eq("id", quizId).maybeSingle();
+    if (error) return [];
+    const champs = sanitizeChampsPersonnalises((q as { custom_fields?: unknown } | null)?.custom_fields);
+    if (champsVisibles(champs).length === 0) return [];
+    const { data: rows, error: e2 } = await supabaseAdmin
+      .from("quiz_leads")
+      .select("custom_fields")
+      .eq("quiz_id", quizId)
+      .order("created_at", { ascending: false })
+      .limit(500);
+    if (e2) return [];
+    return statsChamps(champs, (rows ?? []) as Array<{ custom_fields?: unknown }>);
+  } catch {
+    return [];
+  }
+}
+
 export async function aggregateQuizInsights(
   quizId: string,
   userId: string,
@@ -162,6 +192,7 @@ export async function aggregateQuizInsights(
   ]);
   const leads = leadsCount ?? 0;
   const exported = exportedCount ?? 0;
+  const champsPersonnalises = await lireStatsChampsPersonnalises(quizId);
 
   // ── Vues + completions : max(compteur denormalise, quiz_events) ──
   const [viewsEv, startsEv, completesEv] = await Promise.all([
@@ -367,6 +398,7 @@ export async function aggregateQuizInsights(
   const survey = await aggregateSurvey(quizId, userId);
 
   return {
+    champsPersonnalises,
     title: stripHtml(String(quiz.title ?? "")).trim() || "Sans titre",
     mode,
     metrics: { views, viewsReliable, starts, completions, completionRate, leads, captureRate, exportedSio: exported },
@@ -438,6 +470,9 @@ function renderAggregateForPrompt(a: QuizInsightsAggregate): string {
     `- Leads exportes vers Systeme.io : ${m.exportedSio}`,
     "",
   ];
+  const lignesChamps = lignesPromptChamps(a.champsPersonnalises ?? []);
+  if (lignesChamps.length > 0) lines.push(...lignesChamps, "");
+
   if (a.resultDistribution.length > 0) {
     lines.push("PROFILS DE RESULTAT (repartition des leads) :");
     for (const r of a.resultDistribution) lines.push(`- ${r.title} : ${r.pct}% (${r.count})`);

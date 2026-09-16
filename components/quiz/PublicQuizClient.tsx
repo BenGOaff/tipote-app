@@ -38,6 +38,7 @@ import {
 } from "@/lib/quiz/introLayout";
 import { answerGridClass, answerImageGridClass, resolveAnswerLayout } from "@/lib/quiz/answerLayout";
 import { answerImageRender } from "@/lib/quiz/answerImage";
+import { champsManquants, champsVisibles, sanitizeChampsPersonnalises } from "@/lib/quiz/champsPersonnalises";
 import {
   resolveQuestionAlign,
   resolveQuestionAnswerLayout,
@@ -272,6 +273,9 @@ type PublicQuizData = {
   capture_last_name?: boolean | null;
   capture_phone?: boolean | null;
   capture_country?: boolean | null;
+  /** Les champs personnalisés du formulaire (16 septembre 2026), lus par
+   *  sanitizeChampsPersonnalises : une valeur illisible vaut "aucun champ". */
+  custom_fields?: unknown;
   phone_required?: boolean | null;
   first_name_required?: boolean | null;
   last_name_required?: boolean | null;
@@ -365,6 +369,8 @@ type QuizTranslations = {
   firstNameRequiredError: string;
   lastNameRequiredError: string;
   countryRequiredError: string;
+  /** Un champ personnalisé obligatoire laissé vide ; `{label}` porte son libellé. */
+  customFieldRequiredError: string;
   viewResult: string;
   /** Défaut du bouton de validation en mode sondage (pas de "résultats").
    *  Optionnel : fallback sur viewResult si absent. */
@@ -546,6 +552,7 @@ const translations: Record<string, QuizTranslations> = {
     firstNameRequiredError: "Le prénom est obligatoire.",
     lastNameRequiredError: "Le nom est obligatoire.",
     countryRequiredError: "Le pays est obligatoire.",
+    customFieldRequiredError: "Le champ {label} est obligatoire.",
     viewResult: "Acc\u00e9der aux r\u00e9sultats",
     surveySubmit: "Valider mes r\u00e9ponses",
     privacyPolicy: "Politique de confidentialit\u00e9",
@@ -623,6 +630,7 @@ const translations: Record<string, QuizTranslations> = {
     firstNameRequiredError: "Le prénom est obligatoire.",
     lastNameRequiredError: "Le nom est obligatoire.",
     countryRequiredError: "Le pays est obligatoire.",
+    customFieldRequiredError: "Le champ {label} est obligatoire.",
     viewResult: "Acc\u00e9der aux r\u00e9sultats",
     surveySubmit: "Valider mes r\u00e9ponses",
     privacyPolicy: "Politique de confidentialit\u00e9",
@@ -691,6 +699,7 @@ const translations: Record<string, QuizTranslations> = {
     firstNameRequiredError: "First name is required.",
     lastNameRequiredError: "Last name is required.",
     countryRequiredError: "Country is required.",
+    customFieldRequiredError: "The field {label} is required.",
     viewResult: "See my results",
     surveySubmit: "Submit my answers",
     privacyPolicy: "Privacy policy",
@@ -759,6 +768,7 @@ const translations: Record<string, QuizTranslations> = {
     firstNameRequiredError: "El nombre es obligatorio.",
     lastNameRequiredError: "El apellido es obligatorio.",
     countryRequiredError: "El país es obligatorio.",
+    customFieldRequiredError: "El campo {label} es obligatorio.",
     viewResult: "Ver mis resultados",
     surveySubmit: "Enviar mis respuestas",
     privacyPolicy: "Pol\u00edtica de privacidad",
@@ -827,6 +837,7 @@ const translations: Record<string, QuizTranslations> = {
     firstNameRequiredError: "Vorname ist erforderlich.",
     lastNameRequiredError: "Nachname ist erforderlich.",
     countryRequiredError: "Land ist erforderlich.",
+    customFieldRequiredError: "Das Feld {label} ist erforderlich.",
     viewResult: "Mein Ergebnis sehen",
     surveySubmit: "Antworten absenden",
     privacyPolicy: "Datenschutzerkl\u00e4rung",
@@ -895,6 +906,7 @@ const translations: Record<string, QuizTranslations> = {
     firstNameRequiredError: "O nome é obrigatório.",
     lastNameRequiredError: "O sobrenome é obrigatório.",
     countryRequiredError: "O país é obrigatório.",
+    customFieldRequiredError: "O campo {label} é obrigatório.",
     viewResult: "Ver meu resultado",
     surveySubmit: "Enviar as minhas respostas",
     privacyPolicy: "Pol\u00edtica de privacidade",
@@ -963,6 +975,7 @@ const translations: Record<string, QuizTranslations> = {
     firstNameRequiredError: "Il nome è obbligatorio.",
     lastNameRequiredError: "Il cognome è obbligatorio.",
     countryRequiredError: "Il paese è obbligatorio.",
+    customFieldRequiredError: "Il campo {label} è obbligatorio.",
     viewResult: "Vedi il mio risultato",
     surveySubmit: "Invia le mie risposte",
     privacyPolicy: "Informativa sulla privacy",
@@ -1031,6 +1044,7 @@ const translations: Record<string, QuizTranslations> = {
     firstNameRequiredError: "الاسم الأول مطلوب.",
     lastNameRequiredError: "اسم العائلة مطلوب.",
     countryRequiredError: "البلد مطلوب.",
+    customFieldRequiredError: "الحقل {label} مطلوب.",
     viewResult: "\u0639\u0631\u0636 \u0627\u0644\u0646\u062a\u0627\u0626\u062c",
     surveySubmit: "\u0625\u0631\u0633\u0627\u0644 \u0625\u062c\u0627\u0628\u0627\u062a\u064a",
     privacyPolicy: "\u0633\u064a\u0627\u0633\u0629 \u0627\u0644\u062e\u0635\u0648\u0635\u064a\u0629",
@@ -1270,6 +1284,8 @@ export default function PublicQuizClient({
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
   const [country, setCountry] = useState("");
+  // Les champs personnalisés : la valeur saisie, rangée par id de champ.
+  const [customValues, setCustomValues] = useState<Record<string, string>>({});
   const [gender, setGender] = useState<"m" | "f" | "x" | null>(null);
   const [consent, setConsent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -2298,6 +2314,8 @@ export default function PublicQuizClient({
     if (quiz?.capture_last_name && quiz?.last_name_required && !lastName.trim()) { setSubmitError(t.lastNameRequiredError); return; }
     if (quiz?.capture_phone && quiz?.phone_required && !phone.trim()) { setSubmitError(t.phoneRequiredError); return; }
     if (quiz?.capture_country && quiz?.country_required && !country.trim()) { setSubmitError(t.countryRequiredError); return; }
+    const manquantAvant = champsManquants(sanitizeChampsPersonnalises(quiz?.custom_fields), customValues)[0];
+    if (manquantAvant) { setSubmitError(t.customFieldRequiredError.replace("{label}", manquantAvant.label)); return; }
     setSubmitError(null);
     setStep("quiz");
   };
@@ -2321,6 +2339,13 @@ export default function PublicQuizClient({
     }
     if (quiz?.capture_country && quiz?.country_required && !country.trim()) {
       setSubmitError(t.countryRequiredError);
+      return;
+    }
+    // Les champs personnalisés obligatoires : la décision vient du module,
+    // le message porte le libellé DE CE champ, jamais un "champ requis" nu.
+    const champManquant = champsManquants(sanitizeChampsPersonnalises(quiz?.custom_fields), customValues)[0];
+    if (champManquant) {
+      setSubmitError(t.customFieldRequiredError.replace("{label}", champManquant.label));
       return;
     }
     setSubmitting(true);
@@ -2381,6 +2406,9 @@ export default function PublicQuizClient({
             last_name: lastName.trim() || undefined,
             phone: phone.trim() || undefined,
             country: country.trim() || undefined,
+            // Les champs personnalisés, {id: valeur}. Le serveur ne garde
+            // que les ids qui existent sur le quiz.
+            custom_fields: customValues,
             gender: gender ?? undefined,
             result_id: profile?.id ?? null,
             consent_given: consent,
@@ -3822,6 +3850,28 @@ export default function PublicQuizClient({
                   />
                 </div>
               )}
+
+              {/* LES CHAMPS PERSONNALISÉS (16 septembre 2026). Le libellé,
+                  le placeholder et l'astérisque viennent de la créatrice ;
+                  quels champs s'affichent vient du module (un champ sans
+                  libellé est gardé en base et jamais montré). */}
+              {champsVisibles(sanitizeChampsPersonnalises(quiz.custom_fields)).map((c) => (
+                <div key={c.id} className="space-y-1.5">
+                  <label className="text-sm font-medium" htmlFor={`cf-${c.id}`}>
+                    {c.label}
+                    {c.required && <span className="text-destructive ml-0.5">*</span>}
+                  </label>
+                  <Input
+                    id={`cf-${c.id}`}
+                    type="text"
+                    value={customValues[c.id] ?? ""}
+                    placeholder={c.placeholder || undefined}
+                    onChange={(e) => setCustomValues((v) => ({ ...v, [c.id]: e.target.value }))}
+                    className="h-11 bg-white text-slate-900 border-slate-300 placeholder:text-slate-400 dark:bg-white dark:text-slate-900 dark:border-slate-300"
+                    required={c.required}
+                  />
+                </div>
+              ))}
 
               {/* Consent checkbox is opt-out per quiz (show_consent_checkbox).
                   Why a <div> + click handler instead of <label>: a <label>

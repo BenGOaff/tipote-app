@@ -59,6 +59,7 @@ import {
   type SurveyQuestionLike,
 } from "@/lib/survey/format";
 import { stripHtml } from "@/lib/richText";
+import { champsVisibles, valeurChamp, type ChampPersonnalise } from "@/lib/quiz/champsPersonnalises";
 
 type ResponsesLead = {
   id: string;
@@ -70,6 +71,8 @@ type ResponsesLead = {
   flagged?: boolean | null;
   answers: SurveyAnswerLike[] | null;
   created_at: string;
+  /** Les champs personnalisés du formulaire, {id: valeur} (16 septembre 2026). */
+  custom_fields?: unknown;
 };
 
 export function SurveyResponsesTable({
@@ -79,16 +82,20 @@ export function SurveyResponsesTable({
   locale,
   onToggleFlag,
   onDelete,
+  champs = [],
 }: {
   quizId: string;
   questions: SurveyQuestionLike[];
   leads: ResponsesLead[];
+  /** Les champs personnalisés du formulaire : une colonne chacun, après la date. */
+  champs?: ChampPersonnalise[];
   locale?: string | null;
   onToggleFlag?: (leadId: string, flagged: boolean) => void;
   /** Rend les ids VRAIMENT supprimés. Absent = suppression indisponible. */
   onDelete?: (leadIds: string[]) => Promise<string[]>;
 }) {
   const t = useTranslations("survey");
+  const champsAffiches = champsVisibles(champs);
   const [query, setQuery] = useState("");
   const [onlyFlagged, setOnlyFlagged] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -102,7 +109,7 @@ export function SurveyResponsesTable({
       const byQ = indexAnswers(l.answers, questions);
       const cells = questions.map((q, qi) => formatSurveyAnswer(q, byQ.get(qi), locale));
       const name = [l.first_name, l.last_name].filter(Boolean).join(" ").trim();
-      const haystack = [name, l.email, l.phone, l.country, ...cells]
+      const haystack = [name, l.email, l.phone, l.country, ...champsAffiches.map((c) => valeurChamp(l.custom_fields, c.id) ?? ""), ...cells]
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
@@ -177,7 +184,7 @@ export function SurveyResponsesTable({
     );
   }
 
-  const colCount = questions.length + (onDelete ? 4 : 3);
+  const colCount = questions.length + champsAffiches.length + (onDelete ? 4 : 3);
 
   return (
     <div className="space-y-3">
@@ -265,6 +272,9 @@ export function SurveyResponsesTable({
                   {t("colRespondent")}
                 </th>
                 <th className="px-3 py-2 font-semibold whitespace-nowrap">{t("colDate")}</th>
+                {champsAffiches.map((c) => (
+                  <th key={c.id} className="px-3 py-2 font-semibold min-w-[140px] max-w-[240px] align-bottom leading-snug">{c.label}</th>
+                ))}
                 {questions.map((q, qi) => (
                   <th
                     key={qi}
@@ -319,6 +329,11 @@ export function SurveyResponsesTable({
                     <td className="px-3 py-2 whitespace-nowrap text-muted-foreground text-xs">
                       {new Date(lead.created_at).toLocaleDateString()}
                     </td>
+                    {champsAffiches.map((c) => (
+                      <td key={c.id} className="px-3 py-2 max-w-[240px] whitespace-pre-wrap break-words">
+                        {valeurChamp(lead.custom_fields, c.id) ?? <span className="text-muted-foreground/50">-</span>}
+                      </td>
+                    ))}
                     {cells.map((cell, qi) => (
                       <td key={qi} className="px-3 py-2 max-w-[280px] whitespace-pre-wrap break-words">
                         {cell || <span className="text-muted-foreground/50">-</span>}

@@ -4959,3 +4959,93 @@ rejouant QUATRE versions fautives (le motif sans points optionnels, le
 choix qui rend la première ligne sans juger, le repli exact retiré,
 `rattacher` qui garde sa propre requête) : les quatre rougissent.
 
+
+## Un champ personnalisé dans le formulaire de capture (retour client, 16 septembre 2026)
+
+"Possibilité d'ajouter un champ personnalisé dans la capture des infos
+sur un quiz ou un sondage : l'user ajoute, personnalise le champ et le
+placeholder : la donnée est stockée, exploitée par l'analyse IA, les
+stats et exportée proprement."
+
+**Règle : `lib/quiz/champsPersonnalises.ts` décide, personne d'autre.**
+Module PUR, identique à l'octet près dans les deux dépôts (Tiquiz et
+Tipote), appelé par le serveur (PATCH du quiz, capture d'un lead), les
+deux éditeurs, le viewer public, les exports, les statistiques et les
+deux prompts d'analyse. Une règle recopiée dans chacun de ces endroits
+finirait par en oublier un : c'est le défaut sorti six fois dans ces
+dépôts.
+
+```bash
+cmp lib/quiz/champsPersonnalises.ts ../tiquiz/lib/quiz/champsPersonnalises.ts
+```
+
+**Trois décisions à ne pas défaire :**
+
+1. **UN CHAMP A UNE IDENTITÉ STABLE (`id`, forme `cf_xxxxxx`), et la
+   valeur du lead est rangée sous cet id, jamais sous le libellé.**
+   Renommer "Ta ville" en "Ville" ne perd donc aucune donnée, et la
+   colonne d'export porte le libellé DU JOUR. C'est la règle de
+   `quiz_questions.id` (1er août 2026), transposée au formulaire.
+2. **SANITIZE NE LÈVE JAMAIS.** Ce qui arrive du navigateur (l'éditeur
+   comme le visiteur) est nettoyé et borné (5 champs, 60 caractères de
+   libellé, 300 de valeur) ; l'illisible est ignoré, jamais refusé. Une
+   capture ne doit jamais échouer à cause d'un champ optionnel.
+3. **UN CHAMP SANS LIBELLÉ EST GARDÉ EN BASE ET JAMAIS AFFICHÉ.**
+   L'autosave passe à chaque frappe : jeter un champ que la créatrice
+   n'a pas encore nommé le ferait disparaître sous ses yeux. Le viewer ne
+   montre que `champsVisibles()`, et l'éditeur DIT que le champ est
+   invisible tant qu'il n'a pas de nom.
+
+**La colonne peut ne pas exister encore, et RIEN ne casse :** le PATCH
+rejoue sans `custom_fields` (comme `tie_break`), la capture écrit le lead
+sans ses valeurs et crie, la charge publique tente la colonne dans
+`QUIZ_COLS_NEW` et jamais dans la liste stable, la page des leads et les
+exports retombent sur la liste d'avant. La liste des champs du quiz est
+lue dans une requête À PART par la route de capture : l'ajouter au
+select principal ferait répondre 404 à toutes les captures (drame
+`survey_thanks_*`, 2 juin).
+
+**Les statistiques et l'IA sortent de la MÊME fonction** (`statsChamps`
+puis `lignesPromptChamps`) : taux de remplissage et valeurs fréquentes,
+dans l'onglet Résultats ET dans le prompt d'insights (et celui du
+sondage). Un quiz sans champ n'ajoute rien au modèle.
+
+**Où la valeur vit :** `quiz_leads.custom_fields` ({id: valeur}) dans
+les deux dépôts, et chez Tipote aussi `leads.custom_fields` (le CRM),
+en clair comme `phone`. Le CRM de Tipote résout les libellés en lisant
+`quizzes.custom_fields` de la personne.
+
+**Ce qui n'est PAS fait, et qui se dit :** la valeur n'est envoyée ni
+à Systeme.io ni à GoHighLevel (les champs de contact y demandent un
+mappage par outil). Elle vit chez nous, dans l'export CSV, les stats et
+l'IA. C'est une décision de Béné, pas un oubli.
+
+🚨 Migration : `supabase/migrations/20260916_champs_personnalises.sql`,
+sur les DEUX Supabase.
+
+Test : `tests/logic/champs-personnalises.test.mts`, le même dans les deux
+dépôts, vérifié en rejouant la version d'avant (le viewer qui n'envoie
+plus `custom_fields` : il rougit).
+
+## Le bouton "Publier" est un interrupteur Actif / Désactivé (retour client, 16 septembre 2026)
+
+"Clarifier le bouton 'publier' d'un quiz : remplacer par target : actif -
+désactivé avec vert sur activé et grisé sur désactivé. Plus simple, plus
+compréhensible."
+
+Le bouton disait un GESTE ("Publier", puis "Désactiver"), et il fallait
+deviner l'état en lisant le libellé : un bouton qui dit "Publier" veut
+dire que le quiz est... hors ligne. `components/quiz/StatutToggle.tsx`
+(identique dans les deux dépôts) dit l'ÉTAT : vert et "Actif", gris et
+"Désactivé", `role="switch"` avec `aria-checked`.
+
+**Il ne décide de rien** : `actif` vient du statut, `onToggle` est le
+MÊME `handleToggleStatus` qu'avant (PATCH, toast, confettis). Les
+libellés sont des props parce que les deux dépôts n'ont pas le même
+namespace (`quizEditor` chez Tiquiz, `quizDetail` chez Tipote). Le toast
+et l'aide du lien de partage disent "activé" au lieu de "publié" dans les
+7 langues : une aide qui dit "clique sur Publier" pour un bouton qui
+n'existe plus envoie chercher au mauvais endroit.
+
+Test : `tests/logic/statut-toggle.test.mts`, vérifié en rejouant la
+version d'avant (le vert remplacé par la couleur des boutons : il rougit).

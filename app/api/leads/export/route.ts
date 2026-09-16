@@ -2,6 +2,7 @@
 // GET — export leads as CSV (decrypts PII before export)
 
 import { NextRequest, NextResponse } from "next/server";
+import { colonnesChampsPersonnalises, valeurChamp } from "@/lib/quiz/champsPersonnalises";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { getUserDEK } from "@/lib/piiKeys";
@@ -79,6 +80,12 @@ export async function GET(req: NextRequest) {
         return { ...row, ...pii };
       });
 
+    // Les champs personnalisés : une colonne par champ, sous son libellé,
+    // en fin de ligne (16 septembre 2026). Best-effort : la colonne peut
+    // manquer, et l'export ne doit pas échouer pour ça.
+    const { data: quizzesChamps } = await supabase.from("quizzes").select("id, custom_fields").eq("user_id", user.id);
+    const colonnesPerso = colonnesChampsPersonnalises((quizzesChamps ?? []) as Array<{ custom_fields?: unknown }>);
+
     const headers = [
       "Email",
       "Prénom",
@@ -89,6 +96,7 @@ export async function GET(req: NextRequest) {
       "Résultat quiz",
       "Exporté Systeme.io",
       "Date de capture",
+      ...colonnesPerso.map((c) => escapeCsv(c.label)),
     ];
 
     const rows = leads.map((lead: any) => [
@@ -101,6 +109,7 @@ export async function GET(req: NextRequest) {
       escapeCsv(lead.quiz_result_title),
       lead.exported_sio ? "Oui" : "Non",
       lead.created_at ? new Date(lead.created_at).toLocaleDateString("fr-FR") : "",
+      ...colonnesPerso.map((c) => escapeCsv(valeurChamp(lead.custom_fields, c.id))),
     ]);
 
     const csv = [

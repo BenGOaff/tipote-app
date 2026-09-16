@@ -21,6 +21,7 @@ import {
   YAxis,
 } from "recharts";
 import { Card, CardContent } from "@/components/ui/card";
+import { champsVisibles, statsChamps, valeurChamp, type ChampPersonnalise } from "@/lib/quiz/champsPersonnalises";
 import { Button } from "@/components/ui/button";
 import {
   Eye,
@@ -101,6 +102,8 @@ type Lead = {
   affiliate_ref?: string | null;
   affiliate_canal?: string | null;
   created_at: string;
+  /** Les champs personnalisés du formulaire, {id: valeur} (16 septembre 2026). */
+  custom_fields?: unknown;
 };
 
 type Props = {
@@ -116,6 +119,9 @@ type Props = {
   // de reponses dans la synthese a l'ecran (donut, barres par question,
   // tooltip) et on ne garde QUE les pourcentages. N'affecte pas l'export CSV.
   hideCounts?: boolean;
+  /** Les champs personnalisés du formulaire de capture (16 septembre 2026) :
+   *  une colonne chacun dans la table des leads, et le taux de remplissage. */
+  champsPersonnalises?: ChampPersonnalise[];
 };
 
 function formatPct(n: number, total: number): string {
@@ -144,9 +150,14 @@ export default function QuizResultsAnalytics({
   results,
   onExportCSV,
   hideCounts = false,
+  champsPersonnalises = [],
 }: Props) {
   const t = useTranslations("quizDetail");
   const locale = useLocale();
+  // Les champs personnalisés : ce qui s'affiche ici et ce que lit
+  // l'analyse IA sortent de la MÊME fonction (lib/quiz/champsPersonnalises.ts).
+  const champsAffiches = champsVisibles(champsPersonnalises);
+  const statsDesChamps = useMemo(() => statsChamps(champsPersonnalises, leads), [champsPersonnalises, leads]);
   const [copiedQuestion, setCopiedQuestion] = useState<number | null>(null);
 
   async function copyTexts(questionIndex: number, texts: string[]) {
@@ -793,6 +804,33 @@ export default function QuizResultsAnalytics({
         </div>
       )}
 
+      {/* Champs personnalisés : taux de remplissage et valeurs fréquentes. */}
+      {statsDesChamps.length > 0 && leads.length > 0 && (
+        <div className="grid gap-4 sm:grid-cols-2">
+          {statsDesChamps.map((s) => (
+            <Card key={s.id}>
+              <CardContent className="pt-5 space-y-2">
+                <div className="flex items-baseline justify-between gap-3">
+                  <h4 className="font-semibold text-sm truncate">{s.label}</h4>
+                  <span className="text-xs text-muted-foreground shrink-0">{formatPct(s.remplis, s.total)}</span>
+                </div>
+                <p className="text-xs text-muted-foreground">{t("customFieldFilled", { n: s.remplis, total: s.total })}</p>
+                {s.top.length > 0 && (
+                  <ul className="text-sm space-y-1">
+                    {s.top.map((v) => (
+                      <li key={v.valeur} className="flex items-center justify-between gap-3">
+                        <span className="truncate">{v.valeur}</span>
+                        {!hideCounts && <span className="text-xs text-muted-foreground shrink-0">{v.n}</span>}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
       {/* Leads table */}
       <div className="flex items-center justify-between">
         <h3 className="font-bold text-lg">{t("leadsCount", { count: leads.length })}</h3>
@@ -817,6 +855,9 @@ export default function QuizResultsAnalytics({
                 <tr className="border-b bg-muted/50">
                   <th className="text-start px-4 py-3">{t("email")}</th>
                   <th className="text-start px-4 py-3">{t("firstName")}</th>
+                  {champsAffiches.map((c) => (
+                    <th key={c.id} className="text-start px-4 py-3">{c.label}</th>
+                  ))}
                   <th className="text-start px-4 py-3">{t("result")}</th>
                   <th className="text-start px-4 py-3">{t("date")}</th>
                 </tr>
@@ -826,6 +867,9 @@ export default function QuizResultsAnalytics({
                   <tr key={l.id} className="border-b">
                     <td className="px-4 py-3 font-medium">{l.email}</td>
                     <td className="px-4 py-3">{l.first_name ?? "—"}</td>
+                    {champsAffiches.map((c) => (
+                      <td key={c.id} className="px-4 py-3 max-w-[240px] truncate">{valeurChamp(l.custom_fields, c.id) ?? "—"}</td>
+                    ))}
                     <td className="px-4 py-3">{stripHtml(l.result_title ?? "") || "—"}</td>
                     <td className="px-4 py-3 text-muted-foreground">
                       {l.created_at
