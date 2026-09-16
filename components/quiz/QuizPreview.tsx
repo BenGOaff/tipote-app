@@ -155,7 +155,7 @@ export default function QuizPreview({
                 </div>
 
                 <h2 className="text-xl sm:text-2xl font-bold mb-6" style={{ color: primaryColor }}>
-                  {questions[currentQ].question_text || t("defaultQuestion")}
+                  {stripHtml(questions[currentQ].question_text) || t("defaultQuestion")}
                 </h2>
 
                 <div className="space-y-3 w-full max-w-md">
@@ -242,7 +242,7 @@ export default function QuizPreview({
                     className="px-8 py-3 rounded-xl text-white font-semibold transition-all hover:opacity-90 shadow-md"
                     style={{ backgroundColor: accentColor }}
                   >
-                    {results[0].cta_text}
+                    {stripHtml(results[0].cta_text)}
                   </button>
                 )}
               </>

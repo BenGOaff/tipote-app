@@ -12,6 +12,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import { stripHtml } from "@/lib/texteBrut";
 import { ensureExternalUrl } from "@/lib/url";
 import ToastNotificationOverlay from "@/components/widgets/ToastNotificationOverlay";
 import SocialShareOverlay from "@/components/widgets/SocialShareOverlay";
@@ -369,11 +370,11 @@ export default function PublicPageClient({ page: serverPage, slug, toastWidgetId
             onClick={(e) => e.stopPropagation()}
           >
             <h2 style={{ fontSize: "1.4rem", fontWeight: 700, marginBottom: 8, textAlign: "center" }}>
-              {page.capture_heading || txt.defaultHeading}
+              {stripHtml(page.capture_heading) || txt.defaultHeading}
             </h2>
             {page.capture_subtitle && (
               <p style={{ color: "#666", textAlign: "center", marginBottom: 20, fontSize: "0.95rem" }}>
-                {page.capture_subtitle}
+                {stripHtml(page.capture_subtitle)}
               </p>
             )}
 

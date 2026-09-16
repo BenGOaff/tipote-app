@@ -75,6 +75,16 @@ import { buildSurveyEditorSnapshot, diffEditorSnapshot } from "@/lib/quiz/editor
 import { SessionLostBanner } from "@/components/editor/SessionLostBanner";
 import { answerImageRender } from "@/lib/quiz/answerImage";
 import { champsVisibles, sanitizeChampsPersonnalises, valeurChamp, type ChampPersonnalise } from "@/lib/quiz/champsPersonnalises";
+import {
+  appliquerLibelle,
+  appliquerPlaceholder,
+  elaguerLibelles,
+  grouperEnLignes,
+  resoudreChampsCapture,
+  sanitizeLibellesCapture,
+  type LibellesCapture,
+} from "@/lib/quiz/champsCapture";
+import { firstNameRequiredOnCapture, showFirstNameOnCapture } from "@/lib/quiz/firstNameAsk";
 import ChampsPersonnalisesEditor from "@/components/quiz/ChampsPersonnalisesEditor";
 import StatutToggle from "@/components/quiz/StatutToggle";
 import { stripHtml } from "@/lib/richText";
@@ -539,6 +549,14 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   const [countryRequired, setCountryRequired] = useState(false);
   // Les champs personnalisés du formulaire (16 septembre 2026).
   const [customFields, setCustomFields] = useState<ChampPersonnalise[]>([]);
+  // `quizzes.capture_labels` : le libelle et le placeholder de chaque
+  // champ de capture, par cle. Il entre dans l'instantane comme tout
+  // reglage editable, ET dans les dependances du memo : sans la
+  // dependance, le memo ne se recalcule pas, donc ecrire un libelle ne
+  // declenche AUCUN enregistrement, et rien ne le dit.
+  // `SURVEY_SNAPSHOT_KEYS` le reclame, et le compilateur refuse un
+  // appelant qui l'oublie : c'est exactement ce qu'il a fait.
+  const [captureLabels, setCaptureLabels] = useState<LibellesCapture>({});
   // Defaults to true so older quizzes (no column value yet) keep showing
   // the GDPR-style checkbox. Only flips when the creator opts out.
   const [showConsentCheckbox, setShowConsentCheckbox] = useState(true);
@@ -721,6 +739,78 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   }, []);
 
   // ─── Autosave snapshot ────────────────────────────────────────
+  // L'APERÇU DU FORMULAIRE DE CAPTURE (Béné, 16 septembre 2026).
+  // Même module que le viewer public et que l'éditeur de quiz : la
+  // liste, l'ordre, les libellés riches et les placeholders viennent de
+  // `resoudreChampsCapture`. `mode: "apercu"` est la seule différence,
+  // et elle ne porte que sur un champ personnalisé pas encore nommé.
+  //
+  // LE PRÉNOM SUIT LA MÊME RÈGLE QUE LE VIEWER (lib/quiz/firstNameAsk.ts).
+  // Cet aperçu montrait la case Prénom même quand le prénom est demandé
+  // sur l'écran d'accueil : le visiteur, lui, ne la voyait pas.
+  const champsCaptureApercu = useMemo(
+    () =>
+      resoudreChampsCapture(
+        {
+          capture_last_name: captureLastName,
+          capture_phone: capturePhone,
+          capture_country: captureCountry,
+          last_name_required: lastNameRequired,
+          phone_required: phoneRequired,
+          country_required: countryRequired,
+          custom_fields: customFields,
+          capture_labels: captureLabels,
+        },
+        {
+          mode: "apercu",
+          prenomSurCapture: showFirstNameOnCapture(
+            { ask_first_name: askFirstName, capture_first_name: captureFirstName },
+            false,
+          ),
+          prenomObligatoire: firstNameRequiredOnCapture(
+            { ask_first_name: askFirstName, capture_first_name: captureFirstName },
+            firstNameRequired,
+          ),
+          defauts: {
+            first_name: t("csvFirstName"),
+            last_name: t("csvLastName"),
+            email: t("email"),
+            phone: t("phone"),
+            country: t("country"),
+            emailPlaceholder: "",
+          },
+        },
+      ),
+    [
+      captureLastName, capturePhone, captureCountry,
+      lastNameRequired, phoneRequired, countryRequired,
+      customFields, captureLabels,
+      askFirstName, captureFirstName, firstNameRequired, t,
+    ],
+  );
+  const lignesCaptureApercu = useMemo(() => grouperEnLignes(champsCaptureApercu), [champsCaptureApercu]);
+
+  // Le module écrit LES DEUX états d'un bloc : pour un champ
+  // personnalisé, le nom en texte nu suit le libellé riche, parce que
+  // c'est lui que lisent le CSV, le CRM, les statistiques et l'IA.
+  const majLibelleCapture = useCallback((cle: string, html: string) => {
+    const apres = appliquerLibelle({ champs: customFields, libelles: captureLabels }, cle, html);
+    setCustomFields(apres.champs);
+    setCaptureLabels(apres.libelles);
+  }, [customFields, captureLabels]);
+  const majPlaceholderCapture = useCallback((cle: string, texte: string) => {
+    const apres = appliquerPlaceholder({ champs: customFields, libelles: captureLabels }, cle, texte);
+    setCustomFields(apres.champs);
+    setCaptureLabels(apres.libelles);
+  }, [customFields, captureLabels]);
+  // L'éditeur de champs rend un TABLEAU entier : c'est ici qu'on rattrape
+  // un champ supprimé, sinon son libellé reste dans `capture_labels` pour
+  // toujours.
+  const majChampsPersonnalises = useCallback((champs: ChampPersonnalise[]) => {
+    setCustomFields(champs);
+    setCaptureLabels((prev) => elaguerLibelles(champs, prev));
+  }, []);
+
   const autosaveSnapshot = useMemo(() => buildSurveyEditorSnapshot({
     title,
     introduction,
@@ -748,6 +838,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     phone_required: phoneRequired,
     country_required: countryRequired,
     custom_fields: customFields,
+    capture_labels: captureLabels,
     show_consent_checkbox: showConsentCheckbox,
     ask_first_name: askFirstName,
     ask_gender: askGender,
@@ -779,6 +870,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     resultInsightHeading, resultProjectionHeading,
     captureFirstName, captureLastName, capturePhone, captureCountry,
     firstNameRequired, lastNameRequired, phoneRequired, countryRequired, customFields,
+    captureLabels,
     showConsentCheckbox, askFirstName, askGender,
     shareMessage, locale, sioShareTagName, sioCaptureTag, status,
     fontFamily, primaryColor, bgColor, textColor,
@@ -825,6 +917,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     if (typeof s.phone_required === "boolean") setPhoneRequired(s.phone_required);
     if (typeof s.country_required === "boolean") setCountryRequired(s.country_required);
     if (Array.isArray(s.custom_fields)) setCustomFields(sanitizeChampsPersonnalises(s.custom_fields));
+    if (s.capture_labels) setCaptureLabels(sanitizeLibellesCapture(s.capture_labels));
     if (typeof s.show_consent_checkbox === "boolean") setShowConsentCheckbox(s.show_consent_checkbox);
     if (typeof s.ask_first_name === "boolean") setAskFirstName(s.ask_first_name);
     if (typeof s.ask_gender === "boolean") setAskGender(s.ask_gender);
@@ -960,6 +1053,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       setFirstNameRequired(q.first_name_required ?? false); setLastNameRequired(q.last_name_required ?? false);
       setPhoneRequired(q.phone_required ?? false); setCountryRequired(q.country_required ?? false);
       setCustomFields(sanitizeChampsPersonnalises(q.custom_fields));
+      setCaptureLabels(sanitizeLibellesCapture((q as { capture_labels?: unknown }).capture_labels));
       setAskFirstName(Boolean((q as unknown as Record<string, unknown>).ask_first_name));
       setAskGender(Boolean((q as unknown as Record<string, unknown>).ask_gender));
       // Surveys ignore virality / bonus.
@@ -1035,6 +1129,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
           phone_required: q.phone_required ?? false,
           country_required: q.country_required ?? false,
           custom_fields: sanitizeChampsPersonnalises(q.custom_fields),
+          capture_labels: sanitizeLibellesCapture((q as { capture_labels?: unknown }).capture_labels),
           show_consent_checkbox: (q as { show_consent_checkbox?: boolean | null }).show_consent_checkbox !== false,
           ask_first_name: Boolean((q as unknown as Record<string, unknown>).ask_first_name),
           ask_gender: Boolean((q as unknown as Record<string, unknown>).ask_gender),
@@ -1428,6 +1523,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
           first_name_required: firstNameRequired, last_name_required: lastNameRequired,
           phone_required: phoneRequired, country_required: countryRequired,
           custom_fields: customFields,
+          capture_labels: captureLabels,
           ask_first_name: askFirstName, ask_gender: askGender,
           // Surveys never gate on virality / bonus — keep server-side defaults.
           share_message: shareMessage, locale: locale || null,
@@ -1978,7 +2074,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                       <Plus className="w-3.5 h-3.5" /> {t("addElement")}
                     </button>
                   )}
-                  <ChampsPersonnalisesEditor ns="quizDetail" champs={customFields} onChange={setCustomFields} />
+                  <ChampsPersonnalisesEditor ns="quizDetail" champs={customFields} onChange={majChampsPersonnalises} />
                   {/* Tag Systeme.io applique a chaque lead du sondage. Les
                       sondages n'ont pas de resultat, donc pas de tag par
                       profil comme les quiz : ce tag unique remplace cette
@@ -2537,15 +2633,37 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                   <RichTextEdit singleLine value={captureHeading || t("previewCaptureHeadingDefaultSurvey")} onChange={setCaptureHeading} onImageUpload={handleRichTextImageUpload} className="text-2xl sm:text-4xl font-bold text-center" placeholder={t("captureTitlePlaceholder")} />
                   <RichTextEdit value={captureSubtitle || t("previewCaptureSubtitleDefaultSurvey")} onChange={setCaptureSubtitle} onImageUpload={handleRichTextImageUpload} className="text-muted-foreground text-center text-base" placeholder={t("captureSubtitlePlaceholder")} />
                   <div className="space-y-3 max-w-md mx-auto">
-                    {(captureFirstName || captureLastName) && <div className="grid grid-cols-2 gap-3">
-                      {captureFirstName && <div><label className="text-sm text-muted-foreground">{t("csvFirstName")}</label><Input readOnly className="mt-1 bg-muted/20" /></div>}
-                      {captureLastName && <div><label className="text-sm text-muted-foreground">{t("csvLastName")}</label><Input readOnly className="mt-1 bg-muted/20" /></div>}
-                    </div>}
-                    <div><label className="text-sm text-muted-foreground">{t("email")}</label><Input readOnly className="mt-1 bg-muted/20" /></div>
-                    {capturePhone && <div><label className="text-sm text-muted-foreground">{t("phoneOptional")}</label><Input readOnly className="mt-1 bg-muted/20" /></div>}
-                    {champsVisibles(customFields).map((c) => (
-                      <div key={c.id}><label className="text-sm text-muted-foreground">{c.label}{c.required && <span className="text-destructive ml-0.5">*</span>}</label><Input readOnly placeholder={c.placeholder} className="mt-1 bg-muted/20" /></div>
-                    ))}
+                    {/* CHAQUE CHAMP EST ÉDITABLE, LIBELLÉ ET PLACEHOLDER.
+                        La case grise EST le placeholder : ce qu'elle y tape
+                        est exactement ce que le visiteur lira dedans. */}
+                    {lignesCaptureApercu.map((ligne) => {
+                      const champs = ligne.map((c) => (
+                        <div key={c.cle} className={c.sansNom ? "opacity-60" : undefined}>
+                          <div className="text-sm text-muted-foreground flex items-start gap-0.5">
+                            <RichTextEdit
+                              singleLine
+                              value={c.labelHtml}
+                              onChange={(html) => majLibelleCapture(c.cle, html)}
+                              className="text-sm flex-1"
+                              placeholder={t("previewCaptureLabelPh")}
+                            />
+                            {c.required && <span className="text-destructive">*</span>}
+                          </div>
+                          <Input
+                            value={c.placeholder}
+                            onChange={(e) => majPlaceholderCapture(c.cle, e.target.value)}
+                            placeholder={t("previewCapturePlaceholderPh")}
+                            className="mt-1 bg-muted/20"
+                          />
+                        </div>
+                      ));
+                      return ligne[0].demiLargeur ? (
+                        <div key={ligne[0].cle} className="grid grid-cols-2 gap-3">{champs}</div>
+                      ) : (
+                        champs
+                      );
+                    })}
+                    <p className="text-[11px] text-muted-foreground italic">{t("previewCaptureFieldHint")}</p>
                   </div>
                   {showConsentCheckbox && (
                     <div className="max-w-md mx-auto flex items-start gap-2 text-sm text-muted-foreground">

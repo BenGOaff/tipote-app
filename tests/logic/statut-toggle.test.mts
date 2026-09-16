@@ -25,6 +25,19 @@ test("l'interrupteur est un switch accessible, vert quand actif, gris sinon", ()
   assert.ok(src.includes("{actif ? libelles.on : libelles.off}"), "le libelle dit l'ETAT");
 });
 
+test("le curseur est borne DANS le rail : un left explicite, jamais la position statique (capture Bene, 16 septembre 2026)", () => {
+  // Sans `left`, un element `absolute` garde sa position statique, et dans
+  // un rail `inline-block` pose dans un bouton `inline-flex` elle n'est pas
+  // le bord du rail : le curseur blanc se posait SUR le mot "Actif".
+  const src = lire("components/quiz/StatutToggle.tsx");
+  const curseur = src.match(/<span\s+className=\{`absolute[^`]*`\}/);
+  assert.ok(curseur, "le curseur est le span absolute");
+  assert.ok(/\bleft-0\.5\b/.test(curseur![0]), "le curseur porte left-0.5, comme le SettingsToggle qui marche");
+  assert.ok(!/translate-x-0\.5/.test(curseur![0]), "la position de repos vient du left, pas d'un translate qui s'ajoute a la position statique");
+  // Le libelle ne se coupe pas : c'est lui que Bene ne voyait plus.
+  assert.ok(/className="whitespace-nowrap">\{actif \? libelles\.on : libelles\.off\}/.test(src), "le libelle est en nowrap");
+});
+
 test("les deux editeurs l'appellent, et plus aucun bouton Publier ne reste en tete", () => {
   for (const p of ["components/quiz/QuizDetailClient.tsx", "components/quiz/SurveyDetailClient.tsx"]) {
     const src = lire(p);

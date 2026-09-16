@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import { ImageCropDialog } from "@/components/quiz/ImageCropDialog";
 import { sanitizeRichText, isSafeUrl } from "@/lib/richText";
+import { stripHtml } from "@/lib/texteBrut";
 import { HexColorPicker } from "react-colorful";
 import { QuizVarInserter, type QuizVarFlags } from "@/components/quiz/QuizVarInserter";
 import { useUserPalettes } from "@/components/editor/PalettesContext";
@@ -1228,8 +1229,10 @@ export function RichTextEdit({
   );
 }
 
+// UNE SEULE PORTE VERS LE TEXTE BRUT (16 septembre 2026). Celle-ci ne
+// decodait que `&nbsp;` : un `&amp;` ou un `&#39;` sortait en clair.
 function stripTagsQuick(html: string): string {
-  return html.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim();
+  return stripHtml(html);
 }
 
 function ToolbarBtn(props: React.ButtonHTMLAttributes<HTMLButtonElement> & { children: React.ReactNode }) {

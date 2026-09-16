@@ -29,6 +29,8 @@
 
 /** Longueurs acceptées. En dessous ce n'est pas un prénom, au dessus
  *  c'est une phrase qui casserait la mise en page. */
+import { stripHtml } from "@/lib/texteBrut";
+
 const MIN = 2;
 const MAX = 24;
 
@@ -41,7 +43,10 @@ export function prenomPublic(displayName: string | null | undefined): string | n
   // Ce champ est saisi par une affiliée et rendu dans une page : on
   // retire tout ce qui ressemble à une balise AVANT de découper, sinon
   // un `<b>Jocelyne` donnerait un premier mot inutilisable.
-  brut = brut.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  // `stripHtml` retire les balises ET decode les entites : sans le
+  // decodage, un `Jocelyne&nbsp;B.` sortait tel quel dans la phrase que
+  // lit son prospect (16 septembre 2026).
+  brut = stripHtml(brut);
   if (!brut) return null;
   // Une adresse email n'est pas un prénom, même partielle.
   if (brut.includes("@")) return null;
