@@ -5,7 +5,8 @@
 // PATCH: mark share + auto-apply share tag in Systeme.io
 
 import { NextRequest, NextResponse } from "next/server";
-import { sanitizeChampsPersonnalises, sanitizeValeursChamps, type ValeursChamps } from "@/lib/quiz/champsPersonnalises";
+import { sanitizeChampsPersonnalises, sanitizeValeursChamps, type ChampPersonnalise, type ValeursChamps } from "@/lib/quiz/champsPersonnalises";
+import { champsContactPersonnalises, type ChampContactPerso } from "@/lib/integrations/champsContact";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { getUserDEK } from "@/lib/piiKeys";
@@ -255,6 +256,58 @@ async function enrichSioContact(
     });
   } catch (e) {
     console.error("[Systeme.io enrich] Error:", e);
+  }
+}
+
+// -- LES CHAMPS PERSONNALISÉS DU FORMULAIRE (16 septembre 2026) -----------
+//
+// Un slug INCONNU est accepté et ignoré par Systeme.io (mesuré le
+// 25 août 2026 côté Tiquiz) : écrire la valeur sans avoir créé le champ ne
+// rend aucune erreur, et la valeur disparaît. On ASSURE donc le champ
+// (`POST /contact_fields`, 422 = il existe déjà) AVANT d'écrire, et jamais
+// l'inverse. Le `fieldName` est le libellé du jour : sur un champ qui
+// existe déjà, un PATCH le renomme. Le slug est STABLE (`tipote_cf_xxxxxx`,
+// dérivé de l'id du champ) : un libellé renommé ne fabrique pas un
+// deuxième champ. Le résultat est MÉMORISÉ par clé et par champ pour la
+// vie du processus.
+//
+// Ce client vit dans la route, comme le reste de l'envoi Systeme.io de
+// Tipote (il n'a pas de `lib/integrations/adaptateurs`) ; la DÉCISION
+// (quels champs, quel nom, quel slug) est dans le module pur partagé.
+
+const SIO_PREFIXE_CHAMP = "tipote";
+const champsAssures = new Map<string, true>();
+const MAX_CHAMPS_ASSURES = 5000;
+
+async function assurerChampContactSio(apiKey: string, slug: string, fieldName: string): Promise<boolean> {
+  const memo = `${apiKey.length}:${apiKey.slice(-8)}|${slug}|${fieldName}`;
+  if (champsAssures.has(memo)) return true;
+  const create = await sioFetch(apiKey, "/contact_fields", { method: "POST", body: { fieldName, slug } });
+  let assure = create.ok;
+  if (!create.ok && create.status === 422) {
+    const patch = await sioFetch(apiKey, `/contact_fields/${encodeURIComponent(slug)}`, { method: "PATCH", body: { fieldName } });
+    assure = patch.ok || patch.status === 422;
+  }
+  if (!assure) {
+    console.warn(`[Systeme.io champ] ${slug} ni cree ni retrouve (${create.status}) : la valeur ne sera pas ecrite.`);
+    return false;
+  }
+  if (champsAssures.size >= MAX_CHAMPS_ASSURES) champsAssures.clear();
+  champsAssures.set(memo, true);
+  return true;
+}
+
+async function ecrireChampsPersonnalisesSio(apiKey: string, contactId: number, champs: readonly ChampContactPerso[]) {
+  try {
+    const fields: { slug: string; value: string }[] = [];
+    for (const c of champs) {
+      if (await assurerChampContactSio(apiKey, c.slug, c.nom)) fields.push({ slug: c.slug, value: c.valeur });
+    }
+    if (fields.length === 0) return;
+    const res = await sioFetch(apiKey, `/contacts/${contactId}`, { method: "PATCH", body: { fields } });
+    if (!res.ok) console.warn(`[Systeme.io champ] ecriture refusee (${res.status}) pour ${fields.length} champ(s) personnalise(s).`);
+  } catch (e) {
+    console.error("[Systeme.io champ] Error:", e);
   }
 }
 
@@ -724,8 +777,8 @@ function colonneInconnue(err: { code?: string | null; message?: string | null } 
 }
 
 /**
- * Ce que le visiteur a saisi dans les champs personnalisés du formulaire
- * (16 septembre 2026), nettoyé contre la liste des champs du quiz.
+ * Les champs personnalisés du formulaire (16 septembre 2026) et ce que le
+ * visiteur y a saisi, nettoyé contre la liste des champs du quiz.
  *
  * La liste est lue dans une requête À PART, et best-effort : ajouter
  * `custom_fields` au select principal ferait répondre 404 à TOUTES les
@@ -733,18 +786,22 @@ function colonneInconnue(err: { code?: string | null; message?: string | null } 
  * 2 juin). Ici, une colonne absente coûte les valeurs de ces champs,
  * jamais le lead.
  */
-async function lireValeursChampsPersonnalises(
+async function lireChampsPersonnalises(
   admin: typeof supabaseAdmin,
   quizId: string,
   brut: unknown,
-): Promise<ValeursChamps> {
-  if (!brut || typeof brut !== "object" || Array.isArray(brut) || Object.keys(brut as object).length === 0) return {};
+): Promise<{ champs: ChampPersonnalise[]; valeurs: ValeursChamps }> {
+  const rien = { champs: [] as ChampPersonnalise[], valeurs: {} as ValeursChamps };
+  if (!brut || typeof brut !== "object" || Array.isArray(brut) || Object.keys(brut as object).length === 0) return rien;
   const { data, error } = await admin.from("quizzes").select("custom_fields").eq("id", quizId).maybeSingle();
   if (error) {
     console.error("[quiz/public] custom_fields illisible, valeurs ignorees :", error.message);
-    return {};
+    return rien;
   }
-  return sanitizeValeursChamps(brut, sanitizeChampsPersonnalises((data as { custom_fields?: unknown } | null)?.custom_fields));
+  // Les CHAMPS sont rendus avec les valeurs : c'est leur libellé qui
+  // nomme le champ de contact chez Systeme.io.
+  const champs = sanitizeChampsPersonnalises((data as { custom_fields?: unknown } | null)?.custom_fields);
+  return { champs, valeurs: sanitizeValeursChamps(brut, champs) };
 }
 
 export async function POST(req: NextRequest, context: RouteContext) {
@@ -789,7 +846,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
     const rawGender = String(body.gender ?? "").trim().toLowerCase();
     const gender: "m" | "f" | "x" | null = rawGender === "m" || rawGender === "f" || rawGender === "x" ? rawGender : null;
     const answers = Array.isArray(body.answers) ? body.answers : null;
-    const valeursChamps = await lireValeursChampsPersonnalises(admin, quizId, body.custom_fields);
+    const { champs: champsPerso, valeurs: valeursChamps } = await lireChampsPersonnalises(admin, quizId, body.custom_fields);
     const colonnesChamps: Record<string, unknown> =
       Object.keys(valeursChamps).length > 0 ? { custom_fields: valeursChamps } : {};
     // Snapshot des scores multi-axes (mode scoring uniquement). Validé
@@ -1142,6 +1199,13 @@ export async function POST(req: NextRequest, context: RouteContext) {
           // 2. Enrich contact with quiz result as custom field
           if (resultTitle) {
             await enrichSioContact(apiKey, sioContactId, resultTitle);
+          }
+
+          // 2b. Les champs personnalisés du formulaire, dans la fiche contact
+          // (Béné, 16 septembre 2026), nommés par leur libellé du jour.
+          const champsContact = champsContactPersonnalises(SIO_PREFIXE_CHAMP, champsPerso, valeursChamps);
+          if (champsContact.length > 0) {
+            await ecrireChampsPersonnalisesSio(apiKey, sioContactId, champsContact);
           }
 
           // 3. Auto-enroll in SIO course if configured

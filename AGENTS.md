@@ -5015,10 +5015,11 @@ les deux dépôts, et chez Tipote aussi `leads.custom_fields` (le CRM),
 en clair comme `phone`. Le CRM de Tipote résout les libellés en lisant
 `quizzes.custom_fields` de la personne.
 
-**Ce qui n'est PAS fait, et qui se dit :** la valeur n'est envoyée ni
-à Systeme.io ni à GoHighLevel (les champs de contact y demandent un
-mappage par outil). Elle vit chez nous, dans l'export CSV, les stats et
-l'IA. C'est une décision de Béné, pas un oubli.
+🚨 **Ce paragraphe disait "la valeur n'est envoyée ni à Systeme.io ni à
+GoHighLevel, c'est une décision de Béné". C'EST PÉRIMÉ le jour même**
+(Béné : "oui il faut envoyer à systeme io et ghl"), corrigé en place
+plutôt qu'empilé : voir la section suivante. Tipote n'a pas de
+GoHighLevel, seule la moitié Systeme.io s'applique ici.
 
 🚨 Migration : `supabase/migrations/20260916_champs_personnalises.sql`,
 sur les DEUX Supabase.
@@ -5026,6 +5027,57 @@ sur les DEUX Supabase.
 Test : `tests/logic/champs-personnalises.test.mts`, le même dans les deux
 dépôts, vérifié en rejouant la version d'avant (le viewer qui n'envoie
 plus `custom_fields` : il rougit).
+
+## Les champs personnalisés partent dans la fiche contact Systeme.io (Béné, 16 septembre 2026)
+
+"Oui il faut envoyer à systeme io et ghl."
+
+Le matin, la valeur d'un champ personnalisé vivait chez nous (le lead,
+le CRM, l'export, les stats, l'IA) et nulle part ailleurs. Le soir, elle
+part dans la fiche contact Systeme.io, après le profil, avec le reste du
+lead. **Le détail des mesures (les deux API, `field_value` contre
+`fieldValue`, les scopes GoHighLevel) vit dans l'`AGENTS.md` de
+TIQUIZ** : Tipote n'a pas de GoHighLevel, seule la moitié Systeme.io
+s'applique ici.
+
+### CE QUI DÉCIDE, ET OÙ
+
+`lib/integrations/champsContact.ts`, identique à l'octet près dans les
+deux dépôts :
+
+```bash
+cmp lib/integrations/champsContact.ts ../tiquiz/lib/integrations/champsContact.ts
+```
+
+`champsContactPersonnalises("tipote", champs, valeurs)` ne fait partir
+que ce qui a un libellé ET une valeur, sous un slug STABLE dérivé de
+l'identité du champ (`tipote_cf_xxxxxx`) : renommer le libellé garde le
+même champ chez Systeme.io, et c'est le `fieldName` qui suit le libellé
+du jour. Le préfixe `tipote` est le nôtre, comme `tipote_quiz_result` :
+Tiquiz écrit `tiquiz_`, et les deux apps n'écrivent jamais dans les
+mêmes champs.
+
+### L'ORDRE QUI COMPTE : ASSURER, PUIS ÉCRIRE
+
+Un slug INCONNU est accepté et IGNORÉ par Systeme.io (mesuré le 25 août
+côté Tiquiz) : écrire la valeur sans avoir créé le champ ne rend aucune
+erreur, et la valeur disparaît. `ecrireChampsPersonnalisesSio` (dans la
+route, comme le reste du client Systeme.io de Tipote) fait donc
+`POST /contact_fields {fieldName, slug}` pour chaque champ (un 422 veut
+dire "il existe", et on le RENOMME au libellé du jour), PUIS un seul
+`PATCH /contacts/{id}` avec les valeurs. Mémorisé par clé et par champ
+pour la vie du processus. Best-effort : un échec journalise, le lead est
+déjà écrit.
+
+`lireChampsPersonnalises` rend maintenant les CHAMPS avec les valeurs :
+c'est leur libellé qui nomme le champ de contact.
+
+**Ce qui n'est pas mesuré :** aucun appel n'a été exercé contre une
+vraie clé Systeme.io d'ici. Deux versions fautives rejouées rougissent
+(l'écriture avant la création, le préfixe de Tiquiz).
+
+Test : `tests/logic/champs-vers-le-crm.test.mts`, le même dans les deux
+dépôts.
 
 ## Le bouton "Publier" est un interrupteur Actif / Désactivé (retour client, 16 septembre 2026)
 
