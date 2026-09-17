@@ -85,7 +85,7 @@ import {
   type LibellesCapture,
 } from "@/lib/quiz/champsCapture";
 import { firstNameRequiredOnCapture, showFirstNameOnCapture } from "@/lib/quiz/firstNameAsk";
-import ChampsPersonnalisesEditor from "@/components/quiz/ChampsPersonnalisesEditor";
+import ChampsCaptureEditor from "@/components/quiz/ChampsCaptureEditor";
 import StatutToggle from "@/components/quiz/StatutToggle";
 import { stripHtml } from "@/lib/richText";
 import { alignBlockMarginClass, alignJustifyClass, alignTextClass, resolveBlockAlign } from "@/lib/quiz/textAlign";
@@ -346,29 +346,6 @@ function InlineEdit({ value, onChange, multiline, className, placeholder, style,
         </div>
       )}
     </div>
-  );
-}
-
-// Rounded pill used in the capture-form settings panel
-function CapturePill({ label, active, locked, onToggle }: {
-  label: string; active: boolean; locked?: boolean; onToggle?: () => void;
-}) {
-  const base = "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors border";
-  if (locked) {
-    return <span className={`${base} bg-muted text-muted-foreground border-border`}>{label}</span>;
-  }
-  if (active) {
-    return (
-      <button type="button" onClick={onToggle} className={`${base} bg-primary/10 text-primary border-primary/30 hover:bg-primary/15`}>
-        {label}
-        <X className="w-3 h-3 opacity-60" />
-      </button>
-    );
-  }
-  return (
-    <button type="button" onClick={onToggle} className={`${base} bg-background text-muted-foreground border-dashed border-border hover:text-foreground hover:border-primary/30`}>
-      <Plus className="w-3 h-3" /> {label}
-    </button>
   );
 }
 
@@ -2002,79 +1979,18 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                     <h3 className="text-sm font-semibold">{t("captureFormTitle")}</h3>
                     <p className="text-[11px] text-muted-foreground leading-snug">{t("captureFormDesc")}</p>
                   </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    <CapturePill label={t("pillEmail")} active locked />
-                    <CapturePill label={t("pillFirstName")} active={captureFirstName} onToggle={() => setCaptureFirstName(!captureFirstName)} />
-                    <CapturePill label={t("pillLastName")} active={captureLastName} onToggle={() => setCaptureLastName(!captureLastName)} />
-                    <CapturePill label={t("pillPhone")} active={capturePhone} onToggle={() => setCapturePhone(!capturePhone)} />
-                    <CapturePill label={t("pillCountry")} active={captureCountry} onToggle={() => setCaptureCountry(!captureCountry)} />
-                  </div>
-                  {/* Position de la capture : avant ou apres les questions.
-                      Christelle 12 juillet 2026 : "demander emails + prenom
-                      AVANT les questions". */}
-                  <SettingsToggle
-                    label={t("surveyCaptureBeforeLabel")}
-                    hint={t("surveyCaptureBeforeHint")}
-                    checked={captureBeforeQuestions}
-                    onChange={setCaptureBeforeQuestions}
+                  {/* UN SEUL ENDROIT POUR TOUT CE QU'ON DEMANDE AU
+                      VISITEUR (Béné, 17 septembre 2026). Même composant que
+                      l'éditeur de quiz, et que les deux éditeurs de Tiquiz. */}
+                  <ChampsCaptureEditor
+                    ns="quizDetail"
+                    prenom={{ actif: captureFirstName, setActif: setCaptureFirstName, obligatoire: firstNameRequired, setObligatoire: setFirstNameRequired }}
+                    nom={{ actif: captureLastName, setActif: setCaptureLastName, obligatoire: lastNameRequired, setObligatoire: setLastNameRequired }}
+                    telephone={{ actif: capturePhone, setActif: setCapturePhone, obligatoire: phoneRequired, setObligatoire: setPhoneRequired }}
+                    pays={{ actif: captureCountry, setActif: setCaptureCountry, obligatoire: countryRequired, setObligatoire: setCountryRequired }}
+                    champs={customFields}
+                    onChangeChamps={majChampsPersonnalises}
                   />
-                  {/* Masque le nombre brut de reponses dans la synthese
-                      (onglet Tendances) et n'affiche que les %. */}
-                  <SettingsToggle
-                    label={t("optionHideResponseCounts")}
-                    hint={t("optionHideResponseCountsHint")}
-                    checked={hideResponseCounts}
-                    onChange={setHideResponseCounts}
-                  />
-                  {/* Notifications email par sondage (Gwenn 19 juil 2026). */}
-                  <SettingsToggle
-                    label={t("optionNotifyResponses")}
-                    hint={t("optionNotifyResponsesHint")}
-                    checked={notifyResponses}
-                    onChange={setNotifyResponses}
-                  />
-                  {(captureFirstName || captureLastName || capturePhone || captureCountry) && (
-                    <div className="flex flex-col gap-1.5 pt-1">
-                      {captureFirstName && (
-                        <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
-                          <input type="checkbox" checked={firstNameRequired} onChange={(e) => setFirstNameRequired(e.target.checked)} className="h-3.5 w-3.5 accent-primary" />
-                          <span>{t("fieldFirstNameRequiredToggle")}</span>
-                        </label>
-                      )}
-                      {captureLastName && (
-                        <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
-                          <input type="checkbox" checked={lastNameRequired} onChange={(e) => setLastNameRequired(e.target.checked)} className="h-3.5 w-3.5 accent-primary" />
-                          <span>{t("fieldLastNameRequiredToggle")}</span>
-                        </label>
-                      )}
-                      {capturePhone && (
-                        <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
-                          <input type="checkbox" checked={phoneRequired} onChange={(e) => setPhoneRequired(e.target.checked)} className="h-3.5 w-3.5 accent-primary" />
-                          <span>{t("fieldPhoneRequired")}</span>
-                        </label>
-                      )}
-                      {captureCountry && (
-                        <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
-                          <input type="checkbox" checked={countryRequired} onChange={(e) => setCountryRequired(e.target.checked)} className="h-3.5 w-3.5 accent-primary" />
-                          <span>{t("fieldCountryRequiredToggle")}</span>
-                        </label>
-                      )}
-                    </div>
-                  )}
-                  {(!captureFirstName || !captureLastName || !capturePhone || !captureCountry) && (
-                    <button
-                      onClick={() => {
-                        if (!captureFirstName) setCaptureFirstName(true);
-                        else if (!captureLastName) setCaptureLastName(true);
-                        else if (!capturePhone) setCapturePhone(true);
-                        else if (!captureCountry) setCaptureCountry(true);
-                      }}
-                      className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg bg-muted/60 hover:bg-muted text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      <Plus className="w-3.5 h-3.5" /> {t("addElement")}
-                    </button>
-                  )}
-                  <ChampsPersonnalisesEditor ns="quizDetail" champs={customFields} onChange={majChampsPersonnalises} />
                   {/* Tag Systeme.io applique a chaque lead du sondage. Les
                       sondages n'ont pas de resultat, donc pas de tag par
                       profil comme les quiz : ce tag unique remplace cette

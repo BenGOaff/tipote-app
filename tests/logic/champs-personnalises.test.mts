@@ -18,6 +18,7 @@
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { test } from "node:test";
+import { CHEMIN_EDITEUR_CAPTURE, SOURCE_EDITEUR_CAPTURE } from "./aide/editeurCapture.mts";
 import {
   MAX_CHAMPS_PERSONNALISES,
   MAX_VALEUR_CHAMP,
@@ -167,7 +168,7 @@ test("la charge publique tente custom_fields dans les colonnes RECENTES, jamais 
 test("les deux editeurs portent le champ dans l'instantane d'autosave, la sauvegarde et le composant partage", () => {
   for (const p of ["components/quiz/QuizDetailClient.tsx", "components/quiz/SurveyDetailClient.tsx"]) {
     const src = lire(p);
-    assert.ok(src.includes("<ChampsPersonnalisesEditor"), `${p} : le composant partage`);
+    assert.ok(src.includes("<ChampsCaptureEditor"), `${p} : le composant partage`);
     assert.ok(src.includes("custom_fields: customFields"), `${p} : la sauvegarde et l'instantane`);
     assert.ok(src.includes("setCustomFields(sanitizeChampsPersonnalises(q.custom_fields))"), `${p} : le chargement passe par sanitize`);
     assert.ok(src.includes('mode: "apercu"'), `${p} : l'apercu demande la liste au MEME module que le viewer`);
@@ -177,8 +178,8 @@ test("les deux editeurs portent le champ dans l'instantane d'autosave, la sauveg
 });
 
 test("le composant d'edition ne fabrique pas son propre format d'id", () => {
-  const src = lire("components/quiz/ChampsPersonnalisesEditor.tsx");
-  assert.ok(src.includes("nouvelIdChamp("));
+  const src = SOURCE_EDITEUR_CAPTURE;
+  assert.ok(src.includes("nouvelIdChamp("), CHEMIN_EDITEUR_CAPTURE);
   assert.ok(!/id:\s*`cf_/.test(src), "un id ecrit a la main divergerait du format que le serveur accepte");
 });
 
@@ -194,7 +195,7 @@ test("aucune phrase des nouvelles cles ne porte de tiret cadratin, dans les 7 la
   for (const lang of ["fr", "en", "es", "it", "pt", "pt-BR", "ar"]) {
     const d = JSON.parse(readFileSync(`messages/${lang}.json`, "utf8"));
     const ns = d.quizEditor ?? d.quizDetail;
-    for (const k of ["customFieldsTitle", "customFieldAdd", "customFieldLabelPh", "customFieldPlaceholderPh", "customFieldRequired", "customFieldRemove", "customFieldsMax", "customFieldUnnamed"]) {
+    for (const k of ["addField", "fieldEmail", "fieldFirstName", "fieldLastName", "customFieldRequired", "customFieldRequiredNamed", "customFieldNoName", "customFieldsMax", "customFieldUnnamed"]) {
       assert.equal(typeof ns[k], "string", `${lang}.${k}`);
       assert.ok(!/[—–]/.test(ns[k]), `${lang}.${k} porte un tiret cadratin`);
     }

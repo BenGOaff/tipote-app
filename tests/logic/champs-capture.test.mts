@@ -21,6 +21,7 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
+import { SOURCE_EDITEUR_CAPTURE } from "./aide/editeurCapture.mts";
 import {
   CLES_CHAMPS_INTEGRES,
   MAX_LIBELLE_RICHE,
@@ -274,7 +275,7 @@ test("le nom d'un champ personnalisé ne s'écrit qu'à UN endroit", () => {
   // formulaire, le riche GAGNE à l'affichage : taper dans la colonne
   // n'aurait plus rien changé à l'écran, en silence. Elle garde ce que
   // l'aperçu ne peut pas dire (ajouter, retirer, rendre obligatoire).
-  const src = lire("components/quiz/ChampsPersonnalisesEditor.tsx");
+  const src = SOURCE_EDITEUR_CAPTURE;
   assert.equal(/modifier\(c\.id, \{ label:/.test(src), false, "le nom se tape encore dans la colonne");
   assert.equal(/modifier\(c\.id, \{ placeholder:/.test(src), false, "l'exemple se tape encore dans la colonne");
   // Ce qui reste, et qui n'a pas sa place dans l'aperçu.
