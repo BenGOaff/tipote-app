@@ -5381,3 +5381,99 @@ figeaient `champsVisibles(quiz.custom_fields)` dans le viewer et
 module qui filtre maintenant. Ils visent le FAIT (`mode: "visiteur"`,
 `mode: "apercu"`), pas la forme. **Un garde-fou qui fige une FORMULATION
 empêche de corriger la formulation** : neuvième fois.
+
+## Un seul endroit pour TOUT ce qu'on demande au visiteur (Béné, 17 septembre 2026)
+
+« Au lieu de "ajouter un élément" en haut, tu mets "ajouter un champ" et
+c'est d'office un champ personnalisé qui prend le nom que l'user lui donne
+dans l'éditeur de quiz. Il devient "rendre obligatoire", exactement comme
+le prénom, sur option. Pas besoin d'expliquer [...] ça c'est notre
+tambouille interne, l'user s'en fout. Donc pour les infos demandées : un
+seul endroit où on trouve TOUT : prénom, nom, téléphone, champ
+personnalisé etc. Et bien sûr le nom du champ personnalisé doit faire la
+même taille que le reste dans l'éditeur à gauche, il n'a aucune raison
+d'être écrit en 14px alors que le reste est en 12px. »
+
+La colonne portait DEUX blocs pour une seule question (« qu'est-ce que je
+demande au visiteur ? ») : une rangée de pastilles pour les champs
+intégrés, puis une section « Champs personnalisés » avec son titre, son
+explication, ses cartes et son propre bouton d'ajout.
+
+**Règle : `components/quiz/ChampsCaptureEditor.tsx`, et il n'y a plus
+qu'une rangée.** Les champs personnalisés sont des pastilles comme le
+téléphone ou le pays, leur case « obligatoire » est dans la MÊME liste que
+celle du prénom, et un seul bouton ajoute un champ.
+
+| | avant | après |
+|---|---|---|
+| endroits à lire | 2 | **1** |
+| boutons d'ajout | 2 | **1**, et il ajoute un champ personnalisé |
+| le nom d'un champ | `text-sm` (14px) | `text-xs` (12px), comme tout le reste |
+| l'explication interne | 3 lignes | **retirée** |
+
+**L'ANCIEN BOUTON NE FAISAIT RIEN DE NEUF.** « Ajouter un élément »
+rallumait le premier champ intégré éteint, c'est à dire exactement ce que
+fait déjà la pastille en pointillés juste au dessus. Deux gestes pour une
+seule chose, et le geste qui manquait (ajouter un champ à soi) était
+enterré dans l'autre bloc.
+
+### L'ASTÉRISQUE SE CALCULE, elle ne s'écrit plus dans la traduction
+
+« Nom* » était figé dans `fieldLastNameRequired` alors que le nom n'est
+obligatoire que si la case est cochée : la pastille annonçait une
+contrainte que le visiteur ne subissait pas, pendant que « Téléphone » n'en
+annonçait aucune dans les deux cas. `avecEtoile(label, obligatoire)` la
+pose, pour un champ personnalisé comme pour un champ intégré, et la case à
+cocher la fait apparaître sous les yeux de la créatrice.
+
+Les libellés perdent donc leur étoile dans les 7 langues, et leurs clés
+disent enfin ce qu'elles portent : `fieldEmail`, `fieldFirstName`,
+`fieldLastName`, `fieldPhone`, `fieldCountry`. **Elles sont les MÊMES dans
+les deux dépôts** (Tipote portait `pillEmail` et compagnie), donc le
+composant résout ses libellés lui même et aucun appelant n'écrit de phrase.
+
+### CE QUE LE PORTAGE A TROUVÉ, ET QUI VIVAIT EN QUATRE EXEMPLAIRES
+
+Ce bloc était recopié dans les QUATRE éditeurs (quiz et sondage, des deux
+dépôts), `CapturePill` compris. Une règle recopiée finit toujours par en
+oublier un :
+
+- le pilote du prénom déjà demandé à l'accueil n'existait que côté QUIZ ;
+- et Tipote y portait `label="Prénom (demandé au début)"` **écrit en dur,
+  en français**, dans une interface qui existe en 7 langues. Il lit
+  maintenant `fieldFirstNameFromIntro`, comme Tiquiz.
+
+**Trois choses à ne pas défaire :**
+
+1. **Le nom d'un champ ne se tape QUE dans l'aperçu** (règle du
+   16 septembre). La pastille l'affiche, la croix retire le champ, et c'est
+   tout : un deuxième endroit pour le nommer serait un endroit où taper
+   sans que l'écran change.
+2. **Un champ sans nom est gardé et n'est jamais montré au visiteur**, et
+   la colonne le DIT (l'autosave passe à chaque frappe : le jeter le ferait
+   disparaître sous ses yeux).
+3. **La pastille verrouillée n'a pas de case « obligatoire »** : elle
+   décrirait un champ qui n'est pas sur ce formulaire.
+
+Aucune migration : rien ne change en base, et aucun quiz en ligne ne bouge.
+
+🚨 Fichier SUPPRIMÉ dans les DEUX dépôts :
+`components/quiz/ChampsPersonnalisesEditor.tsx`. Un module mort est un
+piège que le prochain passage rebranche en croyant réparer.
+
+**Et QUATRE garde-fous ont rougi sur du code juste**, parce qu'ils
+figeaient le CHEMIN `components/quiz/ChampsPersonnalisesEditor.tsx`.
+Troisième fois après `pageDuSite.mts` et `chargePublique.mts` : **un chemin
+sur disque n'est pas un fait.** `tests/logic/aide/editeurCapture.mts`
+CHERCHE le composant à son marqueur (`nouvelIdChamp(`) et refuse les deux
+cas qui comptent : introuvable (il a vraiment disparu) ou trouvé DEUX fois
+(deux colonnes de réglages, donc deux endroits pour nommer la même chose,
+ce que ce chantier vient justement de fermer).
+
+Test : `tests/logic/un-seul-endroit-capture.test.mts` (9 cas, le même dans
+les deux dépôts), vérifié en rejouant NEUF versions fautives (les champs
+personnalisés sortis de la rangée, le bouton qui rallume un champ intégré,
+l'explication interne remise, le nom repassé en 14px, l'étoile figée dans
+la traduction, le composant qui diverge chez le jumeau, un éditeur qui
+garde sa propre rangée, le libellé verrouillé écrit en dur, la case
+obligatoire retirée d'un champ personnalisé) : les neuf rougissent.
