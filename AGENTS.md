@@ -537,7 +537,27 @@ sed -n '<debut>,<fin>p' AGENTS_HISTORIQUE.md # lire une section
 
 **Avant de toucher à un chantier, on lit SA section**, comme avant : le
 fichier est le même, il n'est simplement plus recopié dans chaque
-conversation. Les voici, dans l'ordre :
+conversation.
+
+### OÙ UNE SESSION ÉCRIT SON RÉCIT
+
+**Dans `AGENTS_HISTORIQUE.md`, à la fin. Pas ici.** Ce fichier est
+recollé AVANT chacun des messages de Béné, dans toutes ses
+conversations : ce qu'on y ajoute, elle le paie à chaque tour, et c'est
+comme ça qu'il est passé à 279 904 octets.
+
+On ne touche au socle que pour une règle qui s'applique à CHAQUE tour
+(le style, git, les migrations, les tests avant push, l'argent, les
+secrets), et **on retire alors ce qu'elle remplace**.
+
+`tests/logic/socle-agents.test.mts` le tient : il borne la taille de ce
+fichier, il exige que l'historique existe encore, et il refuse un
+`@AGENTS_HISTORIQUE.md` dans `CLAUDE.md` (qui rebrancherait le mégaoctet
+d'un coup, sans que ça se voie sur aucun écran). Une consigne écrite
+dans un fichier que personne ne relit n'est pas une règle : c'est une
+mesure qui le tient, et elle rougit avant le push.
+
+Les sections déplacées, dans l'ordre :
 
 - Espace affilié = sous-domaine, le pathname N'A PAS /affiliate (drame Gwenn 8 juin 2026)
 - Distribution par résultat — RÈGLE UNIQUE (drame Gwenn 8 juin 2026)
