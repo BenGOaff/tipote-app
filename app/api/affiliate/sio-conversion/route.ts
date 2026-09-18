@@ -259,7 +259,10 @@ export async function POST(req: NextRequest) {
 
     const { error } = await supabaseAdmin
       .from("affiliate_conversions")
-      .insert({ email, sa, page_url: pageUrl });
+      // D'OÙ VIENT CE RATTACHEMENT (18 septembre 2026) : un tunnel
+      // Systeme.io. Mesuré chez eux, pas chez nous : c'est une origine
+      // à part, et l'écran la nomme.
+      .insert({ email, sa, origine: "import_sio", page_url: pageUrl });
     if (error) {
       console.error("[affiliate/sio-conversion] insert failed:", error.message);
       return NextResponse.json(

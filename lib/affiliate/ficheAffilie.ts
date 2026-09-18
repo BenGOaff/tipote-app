@@ -43,6 +43,20 @@ export interface Filleul {
   email: string;
   /** Quand il est arrivé par son lien. */
   arriveLe: string | null;
+  /**
+   * COMMENT IL LUI A ÉTÉ RATTACHÉ (18 septembre 2026).
+   *
+   * Béné : "je dois tout savoir sur tout, de façon fiable et sécurisée."
+   *
+   * `clic`, `inscription`, `vente` sont MESURÉS : on a vu la requête.
+   * `manuel` et `import_sio` sont DÉCLARÉS : quelqu'un l'a décidé, ou
+   * l'a repris d'ailleurs. Les deux sont légitimes et ne se confondent
+   * pas, et c'est exactement ce qu'il faut savoir le jour où deux
+   * affiliés se disputent le même client.
+   *
+   * `null` : ligne antérieure au 18 septembre, origine non mesurée.
+   */
+  origine: string | null;
   achats: AchatFilleul[];
   /** Ce qu'il a rapporté, annulations exclues, en euros seulement. */
   gagneCents: number;
@@ -120,7 +134,20 @@ export function construireFiche(args: {
   sa: string;
   /** ancien identifiant -> identifiant courant. */
   alias: ReadonlyMap<string, string>;
-  conversions: readonly { sa: string; email?: string | null; created_at?: string | null }[];
+  conversions: readonly {
+    sa: string;
+    email?: string | null;
+    created_at?: string | null;
+    /**
+     * D'OÙ VIENT CE RATTACHEMENT (18 septembre 2026).
+     *
+     * `clic`, `inscription`, `vente`, `import_sio`, `manuel`. `null`
+     * pour toute ligne antérieure : leur origine n'a jamais été
+     * mesurée, et écrire `clic` dessus serait une affirmation que
+     * personne n'a faite.
+     */
+    origine?: string | null;
+  }[];
   commissions: readonly (CommissionAVerser & {
     customer_email?: string | null;
     product_name?: string | null;
@@ -150,7 +177,7 @@ export function construireFiche(args: {
     const cle = email.trim().toLowerCase();
     const vu = parEmail.get(cle);
     if (vu) return vu;
-    const neuf: Filleul = { email: cle, arriveLe: null, achats: [], gagneCents: 0 };
+    const neuf: Filleul = { email: cle, arriveLe: null, origine: null, achats: [], gagneCents: 0 };
     parEmail.set(cle, neuf);
     return neuf;
   };
@@ -164,7 +191,14 @@ export function construireFiche(args: {
     // c'est ce rattachement qui vaut à vie.
     const t = Date.parse(String(c.created_at ?? ""));
     const actuelle = f.arriveLe ? Date.parse(f.arriveLe) : Infinity;
-    if (Number.isFinite(t) && t < actuelle) f.arriveLe = String(c.created_at);
+    if (Number.isFinite(t) && t < actuelle) {
+      f.arriveLe = String(c.created_at);
+      // L'ORIGINE SUIT LA DATE, et pas l'inverse : c'est le rattachement
+      // qui vaut a vie qu'on decrit, pas le dernier passage. Les
+      // dissocier ferait afficher "clic" sur une date de rattachement
+      // manuel, ce qui est exactement le melange qu'on ferme.
+      f.origine = String(c.origine ?? "").trim() || null;
+    }
   }
 
   for (const c of args.commissions) {

@@ -5032,3 +5032,72 @@ affilié, qui a payé, et dont l'encaissement ne porte AUCUNE commission.
 de paiement.** Pas d'IBAN, pas d'adresse PayPal : un tableau de bord
 affiche des montants dus, il ne verse rien, et une route qui donne plus
 que nécessaire finit par servir à autre chose.
+
+## Un rattachement dit d'où il vient, et il devient opposable (Béné, 18 septembre 2026)
+
+*« Je dois être sûre que untel est envoyé par untel et que untel a envoyé
+telle et telle et telle personne. Ça doit marcher dans les deux sens, je
+dois tout savoir sur tout, de façon fiable et sécurisée. »*
+
+Le récit complet vit dans `tiquiz/AGENTS_HISTORIQUE.md`, section « Le
+registre devient opposable ». Ce dépôt porte **le registre**, donc il
+porte la moitié qui compte.
+
+### CE QUI MANQUAIT, ET CE QUE ÇA COÛTAIT
+
+`affiliate_conversions` disait QUI et QUAND, jamais COMMENT. Un
+rattachement décidé à la main s'y lisait donc **exactement comme un clic
+mesuré**. Le jour où deux affiliés se disputent le même client, il n'y a
+rien à opposer à personne : un registre inutile au moment précis où on
+en a besoin.
+
+Trois colonnes (`origine`, `decide_par`, `note`) et cinq origines, qui
+se rangent en **trois forces de preuve** :
+
+- **mesuré** (`clic`, `inscription`, `vente`) : on a vu la requête ;
+- **déclaré** (`manuel`, `import_sio`) : quelqu'un l'a décidé ;
+- **inconnu** (`null`) : ligne antérieure au 18 septembre.
+
+**`null` n'est pas un défaut à combler**, c'est la vérité : écrire `clic`
+sur les lignes existantes serait une affirmation que personne n'a faite.
+Aucune ligne n'a été touchée.
+
+Les quatre chemins écrivent leur origine (`track` -> `clic`, `rattacher`
+-> `inscription`, `sio-conversion` -> `import_sio`, la route manuelle ->
+`manuel`), et un test le tient chemin par chemin.
+
+### `/api/partner/affilies/rattachement`, ET POURQUOI ELLE EST À PART
+
+`/api/affiliate/rattacher` est AUTOMATIQUE : appelée à chaque
+inscription, elle ne remplace jamais rien, elle n'a personne à qui
+demander. Celle ci est un geste HUMAIN : elle peut remplacer, elle exige
+une signature, elle écrit une trace nommée.
+
+**Le pouvoir de remplacer n'a rien à faire dans un chemin qui s'ouvre
+mille fois par jour.** Une porte dangereuse ne se range pas à côté d'une
+porte qui sert tout le temps.
+
+### LE PREMIER RATTACHEMENT GAGNE, ET L'ÉCRASER EST UN GESTE
+
+`verdictRattachementManuel` (pur, testé) rend cinq verdicts, et celui
+qui compte est **`conflit`** : quand la personne appartient déjà à
+quelqu'un d'autre, on ne refuse pas et on n'écrase pas, **on exige que
+ce soit dit**. `remplacer` est un paramètre SÉPARÉ, jamais une
+conséquence : c'est la mécanique de `base` (26 août), et elle empêche de
+prendre à un affilié pour donner à un autre par accident.
+
+**Un remplacement écrit une ligne NEUVE et retire l'ancienne**, il ne
+l'édite pas : éditer réécrirait l'histoire et effacerait le fait qu'il y
+a eu un remplacement.
+
+**Un geste manuel se signe**, et `decide_par` vient de la session admin
+côté Tiquiz, jamais du corps de la requête : un client qui pourrait
+écrire qui a décidé ferait de la trace une décoration, sur un geste qui
+vaut 40 % de chaque échéance pour toujours.
+
+### ET `orderId` SUR LES COMMISSIONS, LA VEILLE
+
+`/api/partner/affiliate-payouts` rend la clé d'encaissement depuis le
+17 septembre. Sans elle, Tiquiz ne pouvait comparer que des totaux.
+
+Filet : `tests/logic/rattachement-manuel.test.mts`.
