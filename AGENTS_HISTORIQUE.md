@@ -5001,3 +5001,34 @@ l'explication interne remise, le nom repassé en 14px, l'étoile figée dans
 la traduction, le composant qui diverge chez le jumeau, un éditeur qui
 garde sa propre rangée, le libellé verrouillé écrit en dur, la case
 obligatoire retirée d'un champ personnalisé) : les neuf rougissent.
+
+## La clé de la commission sort enfin du registre (17 septembre 2026)
+
+Béné, sur une vente encaissée la veille : *« il faut être sûre à 200 %
+qu'un affilié ne va pas perdre sa com parce que notre système aurait
+foiré. »*
+
+Le chantier est côté Tiquiz (le récit complet vit dans
+`tiquiz/AGENTS_HISTORIQUE.md`, section « La vente qui n'était identifiée
+nulle part »). **Ce dépôt n'a bougé que d'un champ, et c'est ce champ qui
+rend la garantie possible.**
+
+`/api/partner/affiliate-payouts` rendait les lignes de commission sans
+leur `sio_order_id`. Tiquiz pouvait donc lire la LISTE des commissions,
+mais **pas répondre à « et CETTE vente là, elle a payé qui ? »** : il ne
+pouvait que comparer des totaux, c'est à dire deviner. Et deviner sur de
+l'argent dû à quelqu'un, c'est exactement ce qu'on refuse.
+
+La réponse porte maintenant `orderId` (et `sourceApp`). C'est la clé que
+Tiquiz et l'Atelier ont eux mêmes envoyée (`stripe:<facture>`,
+`paypal:<vente>`, `sio_order_<numero>`) : **aucune donnée nouvelle n'est
+exposée**, c'est leur propre référence de paiement qui leur revient.
+
+`npm run audit:affiliation`, côté Tiquiz, rapproche par cette clé, en
+lecture seule, et cherche un cas précis : une personne RATTACHÉE à un
+affilié, qui a payé, et dont l'encaissement ne porte AUCUNE commission.
+
+**La route reste en LECTURE SEULE et ne rend toujours aucune coordonnée
+de paiement.** Pas d'IBAN, pas d'adresse PayPal : un tableau de bord
+affiche des montants dus, il ne verse rien, et une route qui donne plus
+que nécessaire finit par servir à autre chose.
