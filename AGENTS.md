@@ -287,7 +287,7 @@ alors que ces trois bugs vivent dans des fonctions.
 
 ```bash
 npm run test:logic     # runner natif Node, ~1s, aucune dependance
-npm run test:visual    # 99/99 côté Tiquiz, uniquement si le design/UX bouge
+npm run test:visual    # 209 passes côté Tiquiz, uniquement si le design/UX bouge
 npx tsc --noEmit       # exit 0
 ```
 
@@ -632,3 +632,4 @@ Les sections déplacées, dans l'ordre :
 - `&nbsp;` en clair : la cause était NOTRE PROPRE sanitize (16 septembre 2026)
 - TOUT le formulaire de capture est éditable (Béné, 16 septembre 2026)
 - Un seul endroit pour TOUT ce qu'on demande au visiteur (Béné, 17 septembre 2026)
+- La clé de la commission sort enfin du registre (17 septembre 2026)

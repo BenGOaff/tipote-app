@@ -41,6 +41,15 @@ const MAX_LIGNES = 5000;
 
 interface RawCommission {
   sa?: string | null;
+  /**
+   * LA CLÉ DE L'ENCAISSEMENT QUI A CRÉÉ CETTE COMMISSION.
+   *
+   * C'est exactement ce que Tiquiz et l'Atelier envoient dans
+   * `sio_order_id` (`stripe:<facture>`, `paypal:<vente>`,
+   * `sio_order_<numero>`).
+   */
+  sio_order_id?: string | null;
+  source_app?: string | null;
   product_name?: string | null;
   sale_amount_cents?: number | null;
   commission_cents?: number | null;
@@ -91,6 +100,22 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         return {
           source: "tiquiz" as const,
           sa: String(r.sa).trim(),
+          // LA CLÉ DE L'ENCAISSEMENT, RENDUE DEPUIS LE 17 SEPTEMBRE 2026.
+          //
+          // Béné : "il faut être sûre à 200 % qu'un affilié ne va pas
+          // perdre sa com parce que notre système aurait foiré."
+          //
+          // Sans elle, Tiquiz pouvait lire la LISTE des commissions
+          // mais pas répondre à "et CETTE vente là, elle a payé qui ?".
+          // Il ne pouvait que comparer des totaux, c'est à dire deviner.
+          // `npm run audit:affiliation` (dépôt tiquiz) rapproche
+          // maintenant chaque encaissement de sa commission par cette
+          // clé, en lecture seule.
+          //
+          // Aucune donnée nouvelle n'est exposée : c'est la référence
+          // de paiement que Tiquiz a lui même envoyée.
+          orderId: String(r.sio_order_id ?? "").trim() || null,
+          sourceApp: String(r.source_app ?? "").trim() || null,
           name: info?.name ?? null,
           email: info?.email ?? null,
           productName: r.product_name ?? null,
