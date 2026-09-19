@@ -87,7 +87,7 @@ export async function GET(
     const [convRes, commRes, factRes, tauxRes] = await Promise.all([
       supabaseAdmin
         .from("affiliate_conversions")
-        .select("sa, email, created_at")
+        .select("sa, email, created_at, origine")
         .in("sa", siens)
         .limit(5000),
       supabaseAdmin
@@ -119,7 +119,10 @@ export async function GET(
     const fiche = construireFiche({
       sa,
       alias,
-      conversions: (convRes.data as { sa: string; email: string | null; created_at: string | null }[] | null) ?? [],
+      conversions:
+        (convRes.data as
+          | { sa: string; email: string | null; created_at: string | null; origine: string | null }[]
+          | null) ?? [],
       commissions: (commRes.data as never[] | null) ?? [],
       maintenant: Date.now(),
     });

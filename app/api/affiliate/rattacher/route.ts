@@ -133,9 +133,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     });
   }
 
+  // D'OÙ VIENT CE RATTACHEMENT (18 septembre 2026). Sans cette ligne,
+  // un rattachement manuel décidé par Béné est indiscernable d'une vraie
+  // inscription sur un lien, et il n'y a plus rien à opposer à personne
+  // le jour où deux affiliés se disputent le même client.
   const { error } = await supabaseAdmin.from("affiliate_conversions").insert({
     email,
     sa,
+    origine: "inscription",
     page_url: String(body.page_url ?? "").slice(0, 500) || null,
   });
   if (error) {

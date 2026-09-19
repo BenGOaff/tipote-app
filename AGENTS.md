@@ -633,3 +633,4 @@ Les sections déplacées, dans l'ordre :
 - TOUT le formulaire de capture est éditable (Béné, 16 septembre 2026)
 - Un seul endroit pour TOUT ce qu'on demande au visiteur (Béné, 17 septembre 2026)
 - La clé de la commission sort enfin du registre (17 septembre 2026)
+- Un rattachement dit d'où il vient, et il devient opposable (Béné, 18 septembre 2026)

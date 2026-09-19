@@ -179,9 +179,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     if (dup) {
       return NextResponse.json({ ok: true, deduped: true }, { headers });
     }
+    // D'OÙ VIENT CE RATTACHEMENT (18 septembre 2026) : un clic suivi
+    // d'un optin, mesuré par le snippet. C'est la preuve la plus forte,
+    // et elle ne doit pas se confondre avec un geste manuel.
     const { error } = await supabaseAdmin.from("affiliate_conversions").insert({
       email: cleanEmail,
       sa,
+      origine: "clic",
       page_url: pageUrl,
       user_agent: userAgent,
     });
